@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario - Dasic ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
+    <script src="/static/js/auth.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-slate-900 transition-colors duration-300 flex h-screen overflow-hidden">
+
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <header class="bg-white dark:bg-slate-800 shadow-md p-6 z-10 flex justify-between items-center border-b border-gray-200 dark:border-slate-700">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white tracking-tight">Maestro de Productos</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Gestión de catálogo, precios y existencias</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 transition transform active:scale-95">
+                    <i class="fas fa-file-download"></i> 
+                    <span class="hidden md:inline">Exportar Excel</span>
+                </button>
+
+                <label class="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 transition transform active:scale-95">
+                    <i class="fas fa-file-upload"></i>
+                    <span class="hidden md:inline">Importar CSV</span>
+                    <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="subirCSV()">
+                </label>
+
+                <button onclick="abrirModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 transition transform active:scale-95">
+                    <i class="fas fa-plus"></i> 
+                    <span class="hidden md:inline">Nuevo Producto</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 p-6 overflow-auto bg-gray-50 dark:bg-slate-900">
+            
+            <div class="mb-6 flex gap-4">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="text" id="buscador" placeholder="Buscar por catálogo, marca, descripción..." 
+                           onkeyup="filtrarTabla()"
+                           class="w-full pl-11 p-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition">
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-300 dark:border-slate-600 text-sm text-gray-500 dark:text-gray-400 shadow-sm flex items-center gap-2">
+                    <span class="font-bold text-gray-800 dark:text-white" id="totalCount">0</span> Productos
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 dark:bg-slate-700 text-xs uppercase text-gray-500 dark:text-gray-300 font-bold tracking-wider">
+                            <tr>
+                                <th class="p-4 w-16 text-center"><i class="fas fa-image"></i></th>
+                                <th class="p-4">Catálogo</th>
+                                <th class="p-4">Marca</th>
+                                <th class="p-4">Descripción</th>
+                                <th class="p-4 text-right">Costo Base</th>
+                                <th class="p-4 text-center">Moneda</th>
+                                <th class="p-4 text-center">T. Entrega</th>
+                                <th class="p-4 text-center">Stock</th>
+                                <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaProductos" class="text-sm divide-y divide-gray-100 dark:divide-slate-700">
+                            </tbody>
+                    </table>
+                </div>
+                
+                <div id="loading" class="hidden p-12 text-center text-gray-400">
+                    <i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-indigo-500"></i>
+                    <p>Cargando inventario...</p>
+                </div>
+
+                <div id="emptyState" class="hidden p-12 text-center text-gray-400">
+                    <i class="fas fa-box-open text-4xl mb-4"></i>
+                    <p>No se encontraron productos.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="modalProducto" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl transform transition-all scale-100 overflow-hidden">
+            
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-900">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">Registrar Producto</h2>
+                <button onclick="cerrarModal()" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="p-6">
+                <form id="formProducto" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Catálogo #</label>
+                            <input type="text" id="p_cat" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Marca</label>
+                            <input type="text" id="p_marca" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej: Balluff">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Descripción</label>
+                        <textarea id="p_desc" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none h-20 resize-none" required></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Costo Prov.</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-400">$</span>
+                                <input type="number" step="0.01" id="p_costo" class="w-full pl-6 p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white outline-none" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Moneda</label>
+                            <select id="p_moneda" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white outline-none">
+                                <option value="USD">USD ($)</option>
+                                <option value="MXN">MXN ($)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Stock Inicial</label>
+                            <input type="number" id="p_stock" value="0" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Tiempo Entrega</label>
+                            <input type="text" id="p_tiempo" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white outline-none" placeholder="Ej: 3-5 días">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">URL Imagen</label>
+                            <input type="text" id="p_img" class="w-full p-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-white outline-none" placeholder="http://...">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+                <button onclick="cerrarModal()" class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition">Cancelar</button>
+                <button onclick="guardarProducto()" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg transition transform active:scale-95">Guardar Producto</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+    <script>
+        let productosCache = [];
+
+        // --- 1. CARGA DE DATOS ---
+        async function cargarInventario() {
+            const loading = document.getElementById('loading');
+            const tabla = document.getElementById('tablaProductos');
+            const empty = document.getElementById('emptyState');
+            
+            tabla.innerHTML = '';
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/inventario/', {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+                });
+                
+                if (!res.ok) throw new Error("Error en API");
+                
+                productosCache = await res.json();
+                document.getElementById('totalCount').innerText = productosCache.length;
+                
+                renderTabla(productosCache);
+            } catch (e) { 
+                console.error(e); 
+                tabla.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">Error cargando datos.</td></tr>`;
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // --- 2. RENDERIZADO ---
+        function renderTabla(lista) {
+            const tbody = document.getElementById('tablaProductos');
+            const empty = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if(lista.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            lista.forEach(p => {
+                // Stock Badge Logic
+                let stockBadge = '';
+                if(p.stock_actual <= 0) stockBadge = '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-bold">Agotado</span>';
+                else if(p.stock_actual < 5) stockBadge = `<span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-bold">Bajo (${p.stock_actual})</span>`;
+                else stockBadge = `<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">${p.stock_actual}</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 dark:hover:bg-slate-700/50 transition border-b border-gray-100 dark:border-slate-700 group text-gray-700 dark:text-gray-300";
+                tr.innerHTML = `
+                    <td class="p-4 text-center">
+                        <div class="w-10 h-10 bg-gray-200 dark:bg-slate-600 rounded-lg overflow-hidden mx-auto border dark:border-slate-500">
+                            ${p.imagen_url ? `<img src="${p.imagen_url}" class="w-full h-full object-cover">` : '<i class="fas fa-cube text-gray-400 mt-3"></i>'}
+                        </div>
+                    </td>
+                    <td class="p-4 font-bold text-indigo-600 dark:text-indigo-400 select-all">${p.numero_catalogo}</td>
+                    <td class="p-4 text-xs"><span class="bg-gray-200 dark:bg-slate-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300 font-semibold">${p.marca || 'GEN'}</span></td>
+                    <td class="p-4 text-xs max-w-xs truncate" title="${p.descripcion}">${p.descripcion}</td>
+                    <td class="p-4 text-right font-mono font-medium">$${p.costo_proveedor.toFixed(2)}</td>
+                    <td class="p-4 text-center text-xs font-bold ${p.moneda_compra === 'USD' ? 'text-green-600 dark:text-green-400' : 'text-orange-500'}">${p.moneda_compra}</td>
+                    <td class="p-4 text-center text-xs text-gray-500 dark:text-gray-400">${p.tiempo_entrega || '-'}</td>
+                    <td class="p-4 text-center">${stockBadge}</td>
+                    <td class="p-4 text-center">
+                        <button class="text-gray-400 hover:text-indigo-500 transition"><i class="fas fa-edit"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 3. FUNCIONES DE CARGA Y CREACIÓN ---
+        
+        function abrirModal() { document.getElementById('modalProducto').classList.remove('hidden'); }
+        function cerrarModal() { document.getElementById('modalProducto').classList.add('hidden'); }
+
+        async function guardarProducto() {
+            // Recolectar datos
+            const payload = {
+                numero_catalogo: document.getElementById('p_cat').value,
+                descripcion: document.getElementById('p_desc').value,
+                marca: document.getElementById('p_marca').value,
+                costo_proveedor: parseFloat(document.getElementById('p_costo').value) || 0,
+                moneda_compra: document.getElementById('p_moneda').value,
+                stock_actual: parseInt(document.getElementById('p_stock').value) || 0,
+                tiempo_entrega: document.getElementById('p_tiempo').value,
+                imagen_url: document.getElementById('p_img').value
+            };
+
+            if(!payload.numero_catalogo || !payload.descripcion) return alert("Faltan campos obligatorios");
+
+            try {
+                const res = await fetch('/api/inventario/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    cerrarModal();
+                    document.getElementById('formProducto').reset();
+                    cargarInventario(); // Recargar tabla
+                    alert("✅ Producto creado correctamente");
+                } else {
+                    const err = await res.json();
+                    alert("❌ Error: " + (err.detail || "Error desconocido"));
+                }
+            } catch (e) {
+                alert("Error de conexión");
+            }
+        }
+
+        async function subirCSV() {
+            const input = document.getElementById('csvFile');
+            if(input.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+
+            // Feedback visual simple
+            const originalTitle = document.title;
+            document.title = "Subiendo...";
+
+            try {
+                const res = await fetch('/api/inventario/upload-csv', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },
+                    body: formData
+                });
+                const data = await res.json();
+                
+                alert(`📦 Carga Masiva Completada:\n\n✨ Nuevos: ${data.nuevos}\n🔄 Actualizados: ${data.actualizados}`);
+                cargarInventario();
+            } catch (e) {
+                alert("Error al subir el archivo CSV. Verifica el formato.");
+            } finally {
+                input.value = '';
+                document.title = originalTitle;
+            }
+        }
+
+        // --- 4. EXPORTAR A EXCEL (Cliente-Side) ---
+        function exportarExcel() {
+            if(productosCache.length === 0) return alert("No hay datos para exportar");
+
+            // Crear CSV Header
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Catalogo,Marca,Descripcion,Costo,Moneda,Stock,TiempoEntrega\n";
+
+            // Llenar filas
+            productosCache.forEach(p => {
+                // Escapar comas en descripción para no romper el CSV
+                const cleanDesc = p.descripcion ? `"${p.descripcion.replace(/"/g, '""')}"` : "";
+                const row = [
+                    p.numero_catalogo,
+                    p.marca || "",
+                    cleanDesc,
+                    p.costo_proveedor,
+                    p.moneda_compra,
+                    p.stock_actual,
+                    p.tiempo_entrega || ""
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            // Descargar
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Inventario_Dasic_" + new Date().toISOString().slice(0,10) + ".csv");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function filtrarTabla() {
+            const q = document.getElementById('buscador').value.toLowerCase();
+            const filtrados = productosCache.filter(p => 
+                p.numero_catalogo.toLowerCase().includes(q) ||
+                p.descripcion.toLowerCase().includes(q) ||
+                (p.marca && p.marca.toLowerCase().includes(q))
+            );
+            renderTabla(filtrados);
+        }
+
+        // Init
+        cargarInventario();
+    </script>
+</body>
+</html>

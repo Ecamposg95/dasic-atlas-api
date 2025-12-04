@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Dasic ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/static/js/auth.js"></script> </head>
+<body class="bg-gray-100 flex h-screen overflow-hidden">
+
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 p-8 overflow-auto">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Bienvenido, <span id="userDisplay" class="text-blue-600">Usuario</span></h1>
+                <p class="text-gray-500">Resumen de operaciones del día</p>
+            </div>
+            <div class="text-sm text-gray-400">
+                <i class="far fa-calendar-alt"></i> Hoy es <span id="fechaHoy"></span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-gray-500 text-xs font-bold uppercase">Cotizaciones Hoy</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">0</h3>
+                    </div>
+                    <i class="fas fa-file-invoice text-3xl text-blue-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-gray-500 text-xs font-bold uppercase">Ventas Cerradas</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">$0.00</h3>
+                    </div>
+                    <i class="fas fa-dollar-sign text-3xl text-green-200"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-orange-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-gray-500 text-xs font-bold uppercase">Por Cobrar</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">$0.00</h3>
+                    </div>
+                    <i class="fas fa-hand-holding-usd text-3xl text-orange-200"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-gray-500 text-xs font-bold uppercase">Clientes Activos</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">0</h3>
+                    </div>
+                    <i class="fas fa-users text-3xl text-purple-200"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 h-64 flex items-center justify-center text-gray-400">
+            <p>Aquí irán gráficos de rendimiento (Próxima actualización)</p>
+        </div>
+
+    </main>
+
+    <script src="/static/js/navbar.js"></script>
+    <script>
+        document.getElementById('userDisplay').innerText = sessionStorage.getItem('user');
+        document.getElementById('fechaHoy').innerText = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    </script>
+</body>
+</html>
