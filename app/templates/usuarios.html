@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios - DASIC ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
+    <div id="sidebar-container"></div>
+
+    <main class="ml-64 mt-16 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Equipo de Trabajo</h2>
+                <p class="text-sm text-gray-500">Gestiona accesos y roles del sistema</p>
+            </div>
+            <button onclick="abrirModal()" class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-lg shadow transition">
+                <i class="fas fa-user-shield mr-2"></i> Nuevo Usuario
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full leading-normal">
+                <thead class="bg-slate-800 text-white">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-bold uppercase">Nombre</th>
+                        <th class="px-5 py-3 text-left text-xs font-bold uppercase">Email (Acceso)</th>
+                        <th class="px-5 py-3 text-center text-xs font-bold uppercase">Rol</th>
+                        <th class="px-5 py-3 text-center text-xs font-bold uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-usuarios"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="modal-user" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+            <button onclick="document.getElementById('modal-user').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Registrar Usuario</h3>
+            
+            <form id="form-user" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Nombre Completo</label>
+                    <input type="text" id="u-nombre" required class="w-full border rounded p-2">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Correo Electrónico</label>
+                    <input type="email" id="u-email" required class="w-full border rounded p-2">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Contraseña</label>
+                    <input type="password" id="u-pass" required class="w-full border rounded p-2" placeholder="******">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-600">Rol</label>
+                    <select id="u-rol" class="w-full border rounded p-2 bg-white">
+                        <option value="vendedor">Vendedor (Solo Ventas/Clientes)</option>
+                        <option value="asistente">Asistente (Inventario/Compras)</option>
+                        <option value="admin">Administrador (Total)</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-blue-900 text-white font-bold py-2 rounded hover:bg-blue-800">Crear Usuario</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', cargarUsuarios);
+
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch('/api/usuarios/', { headers: { 'Authorization': `Bearer ${token}` } });
+                
+                if (res.status === 403) {
+                    document.querySelector('main').innerHTML = '<div class="text-center p-10 text-red-500 font-bold">⛔ Acceso restringido solo para Administradores</div>';
+                    return;
+                }
+
+                const usuarios = await res.json();
+                const tbody = document.getElementById('tabla-usuarios');
+                tbody.innerHTML = '';
+
+                usuarios.forEach(u => {
+                    let badge = '';
+                    if(u.rol === 'admin') badge = 'bg-red-100 text-red-800';
+                    else if(u.rol === 'asistente') badge = 'bg-blue-100 text-blue-800';
+                    else badge = 'bg-green-100 text-green-800';
+
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-5 py-4 font-bold text-gray-700">${u.nombre}</td>
+                            <td class="px-5 py-4 text-gray-600">${u.email}</td>
+                            <td class="px-5 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${badge}">${u.rol}</span></td>
+                            <td class="px-5 py-4 text-center">
+                                <button onclick="eliminar(${u.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        document.getElementById('form-user').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre: document.getElementById('u-nombre').value,
+                email: document.getElementById('u-email').value,
+                password: document.getElementById('u-pass').value,
+                rol: document.getElementById('u-rol').value,
+                activo: true
+            };
+
+            try {
+                const res = await fetch('/api/usuarios/', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if(res.ok) {
+                    Swal.fire('Creado', 'Usuario registrado exitosamente', 'success');
+                    document.getElementById('modal-user').classList.add('hidden');
+                    document.getElementById('form-user').reset();
+                    cargarUsuarios();
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Error', err.detail, 'error');
+                }
+            } catch(e) { console.error(e); }
+        });
+
+        function abrirModal() { document.getElementById('modal-user').classList.remove('hidden'); }
+        
+        async function eliminar(id) {
+            if(!confirm('¿Eliminar usuario? Esta acción no se puede deshacer.')) return;
+            const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if(res.ok) { cargarUsuarios(); } else { Swal.fire('Error', 'No puedes eliminarte a ti mismo o no tienes permisos', 'error'); }
+        }
+    </script>
+</body>
+</html>

@@ -9,7 +9,7 @@ import services
 from schemas import UsuarioCreate, RolUsuario
 
 # Importamos todos los módulos de lógica (Routers)
-from routers import auth, productos, ventas, clientes, compras
+from routers import auth, productos, ventas, clientes, compras, usuarios
 
 # 1. Crear las tablas en la Base de Datos (si no existen)
 models.Base.metadata.create_all(bind=engine)
@@ -39,7 +39,7 @@ app.include_router(productos.router)
 app.include_router(ventas.router)
 app.include_router(clientes.router)
 app.include_router(compras.router)
-
+app.include_router(usuarios.router)
 # 5. RUTAS VISUALES (FRONTEND - VISTAS HTML)
 
 @app.get("/", response_class=HTMLResponse)
@@ -78,6 +78,14 @@ async def view_compras(request: Request):
 @app.get("/ventas/cotizador", response_class=HTMLResponse)
 async def view_cotizador(request: Request):
     return templates.TemplateResponse("cotizador.html", {"request": request})
+
+@app.get("/reportes", response_class=HTMLResponse)
+async def view_reportes(request: Request):
+    return templates.TemplateResponse("reportes.html", {"request": request})
+
+@app.get("/usuarios", response_class=HTMLResponse)
+async def view_usuarios(request: Request):
+    return templates.TemplateResponse("usuarios.html", {"request": request})
 
 # 6. EVENTO DE ARRANQUE (Crear Super Admin)
 @app.on_event("startup")

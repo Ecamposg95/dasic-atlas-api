@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reportes Financieros - DASIC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
+    <div id="sidebar-container"></div>
+
+    <main class="ml-64 mt-16 p-6">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Reporte de Utilidad y Márgenes</h2>
+
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">Ventas Totales (Histórico)</p>
+                <h3 class="text-3xl font-bold text-gray-800" id="total-ventas">$0.00</h3>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">Costo Estimado</p>
+                <h3 class="text-3xl font-bold text-gray-800" id="total-costos">$0.00</h3>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">Utilidad Bruta</p>
+                <h3 class="text-3xl font-bold text-green-600" id="total-utilidad">$0.00</h3>
+                <p class="text-xs text-gray-400 mt-1" id="margen-pct">Margen: 0%</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h3 class="font-bold text-gray-700 mb-4">Rentabilidad por Producto (Top 10)</h3>
+            <canvas id="profitChart" height="100"></canvas>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 font-bold text-gray-700">Análisis de Inventario (Potencial de Venta)</div>
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800 text-white uppercase text-xs">
+                    <tr>
+                        <th class="p-3">Producto</th>
+                        <th class="p-3 text-right">Costo Unit.</th>
+                        <th class="p-3 text-right">Precio Venta</th>
+                        <th class="p-3 text-right">Ganancia x Unidad</th>
+                        <th class="p-3 text-center">Margen %</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-reporte"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="/static/js/navbar.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Obtenemos TODOS los productos (donde están los costos y precios)
+            const resProd = await fetch('/api/productos/?limit=2000', { headers: { 'Authorization': `Bearer ${token}` } });
+            const productos = await resProd.json();
+
+            // 2. Obtenemos VENTAS (Para calcular volumen real)
+            // Nota: Para un reporte exacto de ventas pasadas, necesitaríamos que el endpoint de historial
+            // devolviera el detalle de productos. Como ahorita el historial es simplificado, 
+            // haremos este reporte basado en "Inventario Valuado" (Potencial).
+            
+            generarReporteInventario(productos);
+        });
+
+        function generarReporteInventario(productos) {
+            let costoTotalInventario = 0;
+            let ventaTotalInventario = 0;
+            const labels = [];
+            const dataProfit = [];
+
+            const tbody = document.getElementById('tabla-reporte');
+            
+            // Ordenar por mayor margen de ganancia ($)
+            productos.sort((a, b) => (b.precio_publico - b.costo_compra) - (a.precio_publico - a.costo_compra));
+
+            productos.forEach((p, index) => {
+                const costo = parseFloat(p.costo_compra || 0);
+                const precio = parseFloat(p.precio_publico || 0);
+                const stock = parseInt(p.stock_actual || 0);
+                
+                // Cálculos
+                const gananciaUnit = precio - costo;
+                const margen = precio > 0 ? ((gananciaUnit / precio) * 100).toFixed(1) : 0;
+
+                // Acumuladores Globales (Valuación de inventario)
+                if(stock > 0) {
+                    costoTotalInventario += (costo * stock);
+                    ventaTotalInventario += (precio * stock);
+                }
+
+                // Llenar Gráfica (Top 10 productos más rentables)
+                if (index < 10) {
+                    labels.push(p.sku);
+                    dataProfit.push(gananciaUnit);
+                }
+
+                // Llenar Tabla
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">
+                            <div class="font-bold text-gray-800">${p.nombre}</div>
+                            <div class="text-xs text-gray-500">${p.sku}</div>
+                        </td>
+                        <td class="p-3 text-right text-red-600">$${costo.toFixed(2)}</td>
+                        <td class="p-3 text-right text-blue-600">$${precio.toFixed(2)}</td>
+                        <td class="p-3 text-right font-bold text-green-600">$${gananciaUnit.toFixed(2)}</td>
+                        <td class="p-3 text-center">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${margen > 30 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                ${margen}%
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Actualizar KPIs Superiores (Proyección si se vende todo el stock actual)
+            const utilidadPotencial = ventaTotalInventario - costoTotalInventario;
+            const margenGlobal = ventaTotalInventario > 0 ? ((utilidadPotencial / ventaTotalInventario) * 100).toFixed(1) : 0;
+
+            document.getElementById('total-ventas').innerText = `$${ventaTotalInventario.toLocaleString()}`;
+            document.getElementById('total-costos').innerText = `$${costoTotalInventario.toLocaleString()}`;
+            document.getElementById('total-utilidad').innerText = `$${utilidadPotencial.toLocaleString()}`;
+            document.getElementById('margen-pct').innerText = `Margen Promedio Global: ${margenGlobal}%`;
+
+            // Renderizar Gráfica
+            new Chart(document.getElementById('profitChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ganancia por Unidad ($)',
+                        data: dataProfit,
+                        backgroundColor: '#10b981',
+                        borderRadius: 5
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+    </script>
+</body>
+</html>

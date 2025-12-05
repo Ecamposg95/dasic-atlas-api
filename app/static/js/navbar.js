@@ -22,6 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
         { name: "Clientes", link: "/clientes", icon: "fas fa-users" },
         { name: "Inventario", link: "/inventario", icon: "fas fa-boxes" },
         { name: "Compras", link: "/compras", icon: "fas fa-truck" },
+        { name: "Reportes", link: "/reportes", icon: "fas fa-chart-pie" },
+        { name: "Equipo", link: "/usuarios", icon: "fas fa-user-shield" },
     ];
 
     const path = window.location.pathname;
