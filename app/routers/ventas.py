@@ -15,7 +15,7 @@ from models import EstatusOrden, TipoMovimiento
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
-# --- PLANTILLA PDF CON TÉRMINOS Y CONDICIONES ---
+# --- PLANTILLA PDF PROFESIONAL (DISEÑO FINAL) ---
 PDF_TEMPLATE_VENTA = """
 <!DOCTYPE html>
 <html lang="es">
@@ -58,7 +58,7 @@ PDF_TEMPLATE_VENTA = """
         .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #475569; }
         .grand-total { font-size: 20px; font-weight: bold; color: #1e3a8a; border-top: 2px solid #1e3a8a; padding-top: 10px; margin-top: 5px; }
 
-        /* --- AQUÍ ESTÁ EL TEXTO QUE PEDISTE --- */
+        /* CONDICIONES */
         .terms-box { border-top: 1px solid #cbd5e1; padding-top: 20px; margin-top: 40px; font-size: 11px; color: #475569; }
         .terms-title { font-weight: bold; text-transform: uppercase; margin-bottom: 10px; color: #1e3a8a; }
         .bank-info { background: #eff6ff; padding: 10px; border-radius: 6px; margin-top: 10px; display: inline-block; width: 100%; box-sizing: border-box; }
@@ -120,7 +120,7 @@ PDF_TEMPLATE_VENTA = """
                     <td>
                         {{ item.producto.nombre }}
                         {% if item.descuento_aplicado > 0 %}
-                            <span class="desc-text">(Descuento aplicado: {{ item.descuento_aplicado|int }}%)</span>
+                            <span class="desc-text">(Desc. {{ item.descuento_aplicado|int }}%)</span>
                         {% endif %}
                     </td>
                     <td class="text-center">{{ item.cantidad }}</td>
@@ -153,15 +153,12 @@ PDF_TEMPLATE_VENTA = """
             <ul>
                 <li>Precios sujetos a cambio sin previo aviso. Cotización en Moneda Nacional.</li>
                 <li>Vigencia de la cotización: <strong>15 días naturales</strong>.</li>
-                <li>Tiempo de entrega sujeto a disponibilidad de stock al momento de confirmar el pedido.</li>
-                <li>En caso de requerir factura, favor de solicitarla dentro del mismo mes de compra.</li>
+                <li>Tiempo de entrega sujeto a disponibilidad de stock.</li>
                 <li>{{ orden.observaciones or "Sin observaciones adicionales." }}</li>
             </ul>
 
             <div class="bank-info">
-                <strong>DATOS BANCARIOS PARA TRANSFERENCIA:</strong><br>
-                Banco: <strong>BBVA Bancomer</strong> &nbsp;|&nbsp; Beneficiario: <strong>DASIC S.A. DE C.V.</strong><br>
-                Cuenta: <strong>0123 4567 89</strong> &nbsp;|&nbsp; CLABE: <strong>012 345 67890123456 7</strong>
+                <strong>DATOS BANCARIOS:</strong> BBVA Bancomer | DASIC S.A. DE C.V. | Cuenta: 0123 4567 89
             </div>
         </div>
 
@@ -173,8 +170,7 @@ PDF_TEMPLATE_VENTA = """
 </html>
 """
 
-# --- ENDPOINTS ---
-
+# --- 1. CREAR ORDEN (POST) ---
 @router.post("/", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
 def crear_orden(
     orden_data: schemas.OrdenVentaCreate,
@@ -207,12 +203,13 @@ def crear_orden(
             producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
             if not producto: raise HTTPException(404, f"Producto {item.producto_id} no existe")
             
+            # Stock (Solo si es venta directa)
             if tipo_orden != EstatusOrden.COTIZACION:
                 if producto.stock_actual < item.cantidad:
                     raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
                 producto.stock_actual -= item.cantidad
 
-            # LÓGICA DE DESCUENTOS (Backend)
+            # Cálculo de Precio con Descuento
             precio_base = producto.precio_publico
             descuento_dec = Decimal(item.descuento) / 100
             precio_final = precio_base * (1 - descuento_dec)
@@ -231,6 +228,7 @@ def crear_orden(
 
         nueva_orden.total = total_orden
         
+        # Deuda (Solo si es venta directa)
         if tipo_orden == EstatusOrden.PENDIENTE:
             total_con_iva = total_orden * Decimal("1.16")
             deuda = models.TransaccionCliente(
@@ -251,38 +249,60 @@ def crear_orden(
         db.rollback()
         raise e
 
-# Historial
-@router.get("/historial")
-def listar_historial(limit: int = 50, db: Session = Depends(database.get_db)):
-    ordenes = db.query(models.OrdenVenta)\
-        .order_by(desc(models.OrdenVenta.fecha_creacion))\
-        .limit(limit).all()
-    
-    return [{
-        "id": o.id,
-        "folio": o.folio,
-        "fecha": o.fecha_creacion,
-        "cliente": o.cliente.nombre_empresa,
-        "total": o.total,
-        "estatus": o.estatus
-    } for o in ordenes]
-
-# PDF
-@router.get("/{id}/pdf", response_class=HTMLResponse)
-def generar_pdf(id: int, db: Session = Depends(database.get_db)):
+# --- 2. EDITAR COTIZACIÓN (PUT) ---
+@router.put("/{id}", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
+def actualizar_orden(
+    id: int,
+    orden_update: schemas.OrdenVentaCreate,
+    db: Session = Depends(database.get_db)
+):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
-    if not orden: raise HTTPException(404)
+    if not orden: raise HTTPException(404, "Orden no encontrada")
+    
+    if orden.estatus != EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
 
-    iva = orden.total * Decimal("0.16")
-    gran_total = orden.total + iva
-    tipo_doc = "COTIZACIÓN" if orden.estatus == EstatusOrden.COTIZACION else "NOTA DE VENTA"
+    try:
+        # Actualizar cabecera
+        orden.cliente_id = orden_update.cliente_id
+        orden.observaciones = orden_update.observaciones
+        
+        # Borrar detalles viejos
+        db.query(models.DetalleOrden).filter(models.DetalleOrden.orden_id == id).delete()
+        
+        total_orden = Decimal(0)
+        
+        # Insertar nuevos
+        for item in orden_update.detalles:
+            producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
+            if not producto: raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
 
-    env = Environment(loader=BaseLoader())
-    return env.from_string(PDF_TEMPLATE_VENTA).render(
-        orden=orden, iva=iva, gran_total=gran_total, tipo_doc=tipo_doc
-    )
+            precio_base = producto.precio_publico
+            descuento_dec = Decimal(item.descuento) / 100
+            precio_final = precio_base * (1 - descuento_dec)
+            
+            subtotal = precio_final * item.cantidad
+            total_orden += subtotal
+            
+            db.add(models.DetalleOrden(
+                orden_id=orden.id,
+                producto_id=producto.id,
+                cantidad=item.cantidad,
+                precio_unitario=precio_final,
+                descuento_aplicado=item.descuento,
+                subtotal=subtotal
+            ))
+            
+        orden.total = total_orden
+        db.commit()
+        db.refresh(orden)
+        return orden
 
-# Convertir
+    except Exception as e:
+        db.rollback()
+        raise e
+
+# --- 3. CONVERTIR COTIZACIÓN A VENTA (POST) ---
 @router.post("/{id}/convertir", dependencies=[Depends(allow_all_staff)])
 def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
@@ -290,14 +310,17 @@ def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
         raise HTTPException(400, "Orden no válida para conversión")
 
     try:
+        # Descontar Stock
         for det in orden.detalles:
             if det.producto.stock_actual < det.cantidad:
                 raise HTTPException(400, f"Stock insuficiente para {det.producto.sku}")
             det.producto.stock_actual -= det.cantidad
         
+        # Cambiar Estatus y Folio
         orden.estatus = EstatusOrden.PENDIENTE
         orden.folio = orden.folio.replace("COT", "VTA")
         
+        # Generar Deuda
         total_con_iva = orden.total * Decimal("1.16")
         db.add(models.TransaccionCliente(
             cliente_id=orden.cliente_id,
@@ -313,3 +336,58 @@ def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
     except Exception as e:
         db.rollback()
         raise e
+
+# --- 4. LISTAR HISTORIAL ---
+@router.get("/historial")
+def listar_historial(limit: int = 50, db: Session = Depends(database.get_db)):
+    ordenes = db.query(models.OrdenVenta)\
+        .order_by(desc(models.OrdenVenta.fecha_creacion))\
+        .limit(limit).all()
+    
+    return [{
+        "id": o.id,
+        "folio": o.folio,
+        "fecha": o.fecha_creacion,
+        "cliente": o.cliente.nombre_empresa,
+        "total": o.total,
+        "estatus": o.estatus
+    } for o in ordenes]
+
+# --- 5. DETALLE JSON (PARA EDICIÓN) ---
+@router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
+def obtener_detalle_orden(id: int, db: Session = Depends(database.get_db)):
+    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    if not orden: raise HTTPException(404)
+    
+    detalles = []
+    for d in orden.detalles:
+        detalles.append({
+            "producto": {"id": d.producto.id, "sku": d.producto.sku, "nombre": d.producto.nombre},
+            "cantidad": d.cantidad,
+            "precio_unitario": d.precio_unitario,
+            "descuento_aplicado": d.descuento_aplicado,
+            "subtotal": d.subtotal
+        })
+        
+    return {
+        "id": orden.id,
+        "folio": orden.folio,
+        "cliente_id": orden.cliente_id,
+        "observaciones": orden.observaciones,
+        "detalles": detalles
+    }
+
+# --- 6. GENERAR PDF ---
+@router.get("/{id}/pdf", response_class=HTMLResponse)
+def generar_pdf(id: int, db: Session = Depends(database.get_db)):
+    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    if not orden: raise HTTPException(404)
+
+    iva = orden.total * Decimal("0.16")
+    gran_total = orden.total + iva
+    tipo_doc = "COTIZACIÓN" if orden.estatus == EstatusOrden.COTIZACION else "NOTA DE VENTA"
+
+    env = Environment(loader=BaseLoader())
+    return env.from_string(PDF_TEMPLATE_VENTA).render(
+        orden=orden, iva=iva, gran_total=gran_total, tipo_doc=tipo_doc
+    )

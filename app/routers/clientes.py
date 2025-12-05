@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from decimal import Decimal
 from datetime import datetime
+from fastapi.responses import HTMLResponse
+from jinja2 import Environment, BaseLoader
 
 import database
 import models
@@ -125,3 +127,104 @@ def registrar_pago_cliente(
     except Exception as e:
         db.rollback()
         raise e
+    
+    
+    # Plantilla HTML para Estado de Cuenta
+PDF_TEMPLATE_EDO_CTA = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Estado de Cuenta - {{ cliente.nombre_empresa }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; padding: 30px; font-size: 12px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px; }
+        .title { font-size: 20px; font-weight: bold; color: #1e3a8a; text-transform: uppercase; }
+        .client-box { background: #f8fafc; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #1e3a8a; color: white; padding: 8px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #eee; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .cargo { color: #dc2626; } /* Rojo */
+        .abono { color: #16a34a; } /* Verde */
+        .saldo-final { margin-top: 20px; text-align: right; font-size: 16px; font-weight: bold; padding: 10px; background: #eff6ff; }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <div>
+            <div class="title">DASIC ERP</div>
+            <div>Soluciones Industriales S.A. de C.V.</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="title">ESTADO DE CUENTA</div>
+            <div>Fecha Emisión: {{ fecha_hoy }}</div>
+        </div>
+    </div>
+
+    <div class="client-box">
+        <strong>Cliente:</strong> {{ cliente.nombre_empresa }}<br>
+        <strong>Atención:</strong> {{ cliente.contacto_nombre }}<br>
+        <strong>RFC:</strong> {{ cliente.rfc_tax_id or "N/A" }} | <strong>Tel:</strong> {{ cliente.telefono }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="15%">Fecha</th>
+                <th width="40%">Concepto / Referencia</th>
+                <th width="15%" class="text-right">Cargos (Ventas)</th>
+                <th width="15%" class="text-right">Abonos (Pagos)</th>
+                <th width="15%" class="text-right">Saldo Acumulado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Lógica para calcular saldo acumulado línea por línea #}
+            {% set ns = namespace(saldo=0) %}
+            
+            {% for m in movimientos %}
+                {% if m.tipo.value == 'cargo' %}
+                    {% set ns.saldo = ns.saldo + m.monto %}
+                {% else %}
+                    {% set ns.saldo = ns.saldo - m.monto %}
+                {% endif %}
+            <tr>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>{{ m.descripcion }}</td>
+                <td class="text-right cargo">
+                    {% if m.tipo.value == 'cargo' %}${{ "{:,.2f}".format(m.monto) }}{% else %}-{% endif %}
+                </td>
+                <td class="text-right abono">
+                    {% if m.tipo.value == 'abono' %}${{ "{:,.2f}".format(m.monto) }}{% else %}-{% endif %}
+                </td>
+                <td class="text-right font-bold">${{ "{:,.2f}".format(ns.saldo) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="saldo-final">
+        Saldo Total Pendiente: ${{ "{:,.2f}".format(cliente.saldo_actual) }}
+    </div>
+</body>
+</html>
+"""
+
+@router.get("/{cliente_id}/pdf-estado-cuenta", response_class=HTMLResponse)
+def generar_pdf_estado_cuenta(cliente_id: int, db: Session = Depends(database.get_db)):
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente: raise HTTPException(404, "Cliente no encontrado")
+    
+    # Traemos movimientos antiguos primero para calcular el saldo histórico correctamente
+    movimientos = db.query(models.TransaccionCliente)\
+        .filter(models.TransaccionCliente.cliente_id == cliente_id)\
+        .order_by(models.TransaccionCliente.fecha.asc())\
+        .all()
+
+    env = Environment(loader=BaseLoader())
+    return env.from_string(PDF_TEMPLATE_EDO_CTA).render(
+        cliente=cliente, 
+        movimientos=movimientos,
+        fecha_hoy=datetime.now().strftime('%d/%m/%Y %H:%M')
+    )
