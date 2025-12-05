@@ -1,101 +1,127 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
+from decimal import Decimal
 from datetime import datetime
-from .. import database, models, schemas, auth
 
-router = APIRouter()
+import database
+import models
+import schemas
+from auth import get_current_user, allow_all_staff, allow_admin_asistente
+from models import TipoMovimiento, RolUsuario
 
-# --- CRUD Básico ---
-@router.get("/")
-def listar_clientes(db: Session = Depends(database.get_db)):
-    return db.query(models.Cliente).all()
+router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 
-@router.post("/")
-def crear_cliente(data: schemas.ClienteCreate, db: Session = Depends(database.get_db)):
-    cliente = models.Cliente(
-        nombre=data.nombre,
-        compania=data.compania,
-        email=data.email,
-        telefono=data.telefono,
-        direccion=data.direccion,
-        rfc=data.rfc,
-        dias_credito=data.dias_credito
-    )
-    db.add(cliente)
+# --- 1. LISTAR CLIENTES (CON SALDO) ---
+@router.get("/", response_model=List[schemas.ClienteResponse], dependencies=[Depends(allow_all_staff)])
+def listar_clientes(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Lista todos los clientes. El campo 'saldo_actual' permite ver rápidamente quién debe dinero.
+    """
+    clientes = db.query(models.Cliente).offset(skip).limit(limit).all()
+    return clientes
+
+# --- 2. CREAR CLIENTE ---
+@router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
+def crear_cliente(
+    cliente: schemas.ClienteCreate,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Permite registrar un nuevo cliente. Accesible para Vendedores.
+    """
+    # Verificar si el email o nombre ya existe para evitar duplicados
+    if db.query(models.Cliente).filter(models.Cliente.email == cliente.email).first():
+        raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
+
+    nuevo_cliente = models.Cliente(**cliente.model_dump())
+    db.add(nuevo_cliente)
     db.commit()
-    db.refresh(cliente)
+    db.refresh(nuevo_cliente)
+    return nuevo_cliente
+
+# --- 3. OBTENER DETALLE CLIENTE ---
+@router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
+def obtener_cliente(
+    cliente_id: int,
+    db: Session = Depends(database.get_db)
+):
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
 
-# --- MÓDULO FINANCIERO (Estado de Cuenta) ---
-
-@router.get("/{cliente_id}/estado-cuenta")
-def ver_estado_cuenta(cliente_id: int, db: Session = Depends(database.get_db)):
-    """Obtiene historial de movimientos y saldo al día"""
+# --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
+@router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
+def ver_estado_cuenta(
+    cliente_id: int,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Muestra el historial financiero:
+    - CARGO: Ventas (Deuda aumenta)
+    - ABONO: Pagos (Deuda disminuye)
+    """
     cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
-    if not cliente: raise HTTPException(status_code=404, detail="Cliente no existe")
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
-    # Ordenar movimientos del más reciente al más antiguo
-    movimientos = db.query(models.MovimientoCuenta)\
-        .filter(models.MovimientoCuenta.cliente_id == cliente_id)\
-        .order_by(models.MovimientoCuenta.fecha.desc()).all()
+    # Traemos las transacciones ordenadas por fecha reciente
+    movimientos = db.query(models.TransaccionCliente)\
+        .filter(models.TransaccionCliente.cliente_id == cliente_id)\
+        .order_by(models.TransaccionCliente.fecha.desc())\
+        .all()
         
-    return {
-        "cliente": cliente.nombre,
-        "limite_credito_dias": cliente.dias_credito,
-        "saldo_pendiente": cliente.saldo_actual,
-        "movimientos": movimientos
-    }
+    return movimientos
 
-@router.post("/{cliente_id}/registrar-pago")
-def registrar_pago(cliente_id: int, monto: float, referencia: str, db: Session = Depends(database.get_db)):
-    """Registra un ABONO (El cliente paga)"""
+# --- 5. REGISTRAR PAGO (SOLO ADMIN/ASISTENTE) ---
+@router.post("/{cliente_id}/registrar-pago", dependencies=[Depends(allow_admin_asistente)])
+def registrar_pago_cliente(
+    cliente_id: int,
+    monto: Decimal,
+    descripcion: str = "Abono a cuenta",
+    nota_id: int = None, # Opcional: Si el pago es específico para una nota
+    db: Session = Depends(database.get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    """
+    Registra un pago del cliente (ABONO).
+    Esto reduce la deuda en 'saldo_actual' y crea un registro histórico.
+    """
     cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
-    # 1. Crear Movimiento
-    abono = models.MovimientoCuenta(
-        cliente_id=cliente_id,
-        tipo="ABONO",
-        monto=monto,
-        referencia=referencia,
-        descripcion="Pago recibido de cliente",
-        fecha=datetime.now()
-    )
-    
-    # 2. Actualizar Saldo Global
-    cliente.saldo_actual -= monto
-    
-    db.add(abono)
-    db.commit()
-    return {"mensaje": "Pago registrado", "nuevo_saldo": cliente.saldo_actual}
+    if monto <= 0:
+        raise HTTPException(status_code=400, detail="El monto del pago debe ser mayor a 0")
 
-@router.post("/convertir-nota-remision/{cotizacion_id}")
-def convertir_a_deuda(cotizacion_id: int, db: Session = Depends(database.get_db)):
-    """
-    Convierte una Cotización 'Aceptada' en DEUDA real (CARGO).
-    Esto sucede cuando entregas la mercancía (Nota de Remisión).
-    """
-    cot = db.query(models.Cotizacion).filter(models.Cotizacion.id == cotizacion_id).first()
-    if not cot: raise HTTPException(404, "Cotización no encontrada")
-    
-    if cot.estado == "Entregada":
-        raise HTTPException(400, "Esta cotización ya fue procesada como deuda")
-    
-    # 1. Crear Cargo
-    cargo = models.MovimientoCuenta(
-        cliente_id=cot.cliente_id,
-        tipo="CARGO",
-        monto=cot.total_neto,
-        referencia=cot.folio,
-        descripcion=f"Nota de Remisión / Entrega {cot.folio}",
-        fecha=datetime.now()
-    )
-    
-    # 2. Actualizar Saldo Cliente
-    cot.cliente.saldo_actual += cot.total_neto
-    
-    # 3. Actualizar Estatus Cotización
-    cot.estado = "Entregada" # O "Nota Generada"
-    
-    db.add(cargo)
-    db.commit()
-    return {"mensaje": "Deuda registrada exitosamente"}
+    try:
+        # 1. Crear la transacción de ABONO
+        nuevo_abono = models.TransaccionCliente(
+            cliente_id=cliente.id,
+            tipo=TipoMovimiento.ABONO,
+            monto=monto,
+            descripcion=f"PAGO RECIBIDO: {descripcion} (Reg. por {current_user.nombre})",
+            referencia_id=nota_id # Puede ser null
+        )
+        db.add(nuevo_abono)
+        
+        # 2. Actualizar el saldo del cliente
+        # Nota: Al ser abono, RESTAMOS al saldo (Saldo positivo = Deuda)
+        cliente.saldo_actual -= monto
+        
+        db.commit()
+        
+        return {
+            "mensaje": "Pago registrado exitosamente",
+            "nuevo_saldo": cliente.saldo_actual,
+            "transaccion_id": nuevo_abono.id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise e

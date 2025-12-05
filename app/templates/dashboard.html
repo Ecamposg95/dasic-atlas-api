@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - DASIC ERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <script>
+        if (!localStorage.getItem('token')) { window.location.href = "/"; }
+    </script>
+
+    <div id="sidebar-container"></div>
+
+    <main>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Ventas del Mes</p>
+                        <h3 class="text-2xl font-bold text-gray-800">$0.00</h3>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-full text-blue-600">
+                        <i class="fas fa-dollar-sign w-6 h-6 text-center"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Clientes</p>
+                        <h3 id="totalClientes" class="text-2xl font-bold text-gray-800">Cargando...</h3>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-full text-purple-600">
+                        <i class="fas fa-users w-6 h-6 text-center"></i>
+                    </div>
+                </div>
+            </div>
+            
+             <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-orange-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Inventario Bajo</p>
+                        <h3 class="text-2xl font-bold text-gray-800">2</h3>
+                    </div>
+                    <div class="p-3 bg-orange-100 rounded-full text-orange-600">
+                        <i class="fas fa-exclamation-triangle w-6 h-6 text-center"></i>
+                    </div>
+                </div>
+            </div>
+
+             <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Cotizaciones</p>
+                        <h3 class="text-2xl font-bold text-gray-800">5</h3>
+                    </div>
+                    <div class="p-3 bg-green-100 rounded-full text-green-600">
+                        <i class="fas fa-file-invoice w-6 h-6 text-center"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4 text-gray-700">Bienvenido al sistema</h3>
+            <p class="text-gray-600">Selecciona una opción del menú lateral para comenzar.</p>
+        </div>
+
+    </main>
+
+    <script src="/static/js/navbar.js"></script>
+
+    <script>
+        // Cargar datos reales
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            try {
+                // Pequeña prueba de conexión para traer clientes
+                const res = await fetch('/api/clientes/?limit=1', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    // Aquí podrías poner el número real si tu API lo devolviera
+                    document.getElementById('totalClientes').innerText = "Activos";
+                }
+            } catch (error) { console.error(error); }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario Pro - DASIC ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
+
+    <div id="sidebar-container"></div>
+
+    <main>
+        
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">📦 Inventario Maestro</h2>
+                <p class="text-sm text-gray-500">Gestiona productos, precios y existencias.</p>
+            </div>
+
+            <div class="flex gap-2">
+                <div class="relative">
+                    <input type="text" id="buscador" placeholder="Buscar SKU o Nombre..." 
+                        class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 w-64 transition">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+
+                <button onclick="document.getElementById('file-upload').click()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition" title="Importar CSV">
+                    <i class="fas fa-file-upload"></i>
+                </button>
+                <input type="file" id="file-upload" class="hidden" accept=".csv" onchange="importarCSV(this)">
+
+                <button onclick="exportarCSV()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow transition" title="Exportar Inventario">
+                    <i class="fas fa-file-download"></i>
+                </button>
+
+                <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow font-bold transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Nuevo
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider">SKU / Info</th>
+                            <th class="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider">Stock</th>
+                            <th class="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider">P. Público</th>
+                            <th class="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider hidden" id="th-costo">Costo</th>
+                            <th class="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-productos" class="text-sm">
+                        <tr><td colspan="5" class="py-10 text-center text-gray-400">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-5 py-4 border-t bg-gray-50 text-gray-600 text-xs flex justify-between">
+                <span id="contador-registros">0 registros</span>
+                <span>DASIC ERP System</span>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal-producto" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative animate-fade-in-down">
+            
+            <button onclick="cerrarModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2" id="modal-titulo">Nuevo Producto</h3>
+            
+            <form id="form-producto" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="prod-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">SKU (Código)</label>
+                    <input type="text" id="prod-sku" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500 uppercase">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Nombre del Producto</label>
+                    <input type="text" id="prod-nombre" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
+                    <textarea id="prod-desc" rows="2" class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-3 gap-4 bg-blue-50 p-3 rounded-lg">
+                    <div>
+                        <label class="block text-xs font-bold text-blue-800 mb-1">P. Público</label>
+                        <input type="number" id="prod-publico" step="0.01" required class="w-full border border-blue-200 rounded p-1 text-right font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-blue-800 mb-1">P. Mayorista</label>
+                        <input type="number" id="prod-mayorista" step="0.01" class="w-full border border-blue-200 rounded p-1 text-right">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-blue-800 mb-1">P. Distribuidor</label>
+                        <input type="number" id="prod-distribuidor" step="0.01" class="w-full border border-blue-200 rounded p-1 text-right">
+                    </div>
+                </div>
+
+                <div id="div-admin-fields" class="md:col-span-2 grid grid-cols-3 gap-4 bg-red-50 p-3 rounded-lg hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-red-800 mb-1">Costo Compra</label>
+                        <input type="number" id="prod-costo" step="0.01" class="w-full border border-red-200 rounded p-1 text-right">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-red-800 mb-1">Stock Actual</label>
+                        <input type="number" id="prod-stock" class="w-full border border-red-200 rounded p-1 text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-red-800 mb-1">Stock Mínimo</label>
+                        <input type="number" id="prod-min" value="5" class="w-full border border-red-200 rounded p-1 text-center">
+                    </div>
+                </div>
+                
+                <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 shadow">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let allProducts = [];
+        let esAdminGlobal = false;
+        const token = localStorage.getItem('token');
+
+        // --- INICIALIZAR ---
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarDatos();
+            
+            // Evento Buscador
+            document.getElementById('buscador').addEventListener('input', (e) => {
+                filtrarTabla(e.target.value);
+            });
+
+            // Evento Guardar Formulario
+            document.getElementById('form-producto').addEventListener('submit', guardarProducto);
+        });
+
+        // --- CARGAR DATOS ---
+        async function cargarDatos() {
+            try {
+                const res = await fetch('/api/productos/?limit=500', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(!res.ok) throw new Error("Error API");
+                
+                allProducts = await res.json();
+                
+                // Detectar Admin (si el primer item tiene costo)
+                if (allProducts.length > 0 && allProducts[0].hasOwnProperty('costo_compra')) {
+                    esAdminGlobal = true;
+                    document.getElementById('th-costo').classList.remove('hidden');
+                    document.getElementById('div-admin-fields').classList.remove('hidden');
+                }
+
+                filtrarTabla(''); // Render inicial
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo cargar el inventario', 'error');
+            }
+        }
+
+        // --- RENDERIZAR TABLA ---
+        function filtrarTabla(texto) {
+            texto = texto.toLowerCase();
+            const tbody = document.getElementById('tabla-productos');
+            tbody.innerHTML = '';
+
+            const filtrados = allProducts.filter(p => 
+                p.nombre.toLowerCase().includes(texto) || p.sku.toLowerCase().includes(texto)
+            );
+
+            document.getElementById('contador-registros').innerText = `${filtrados.length} productos encontrados`;
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-400">No se encontraron productos</td></tr>`;
+                return;
+            }
+
+            filtrados.forEach(p => {
+                // Formateo seguro
+                const precio = parseFloat(p.precio_publico).toFixed(2);
+                let celdaCosto = '';
+                
+                if (esAdminGlobal) {
+                    const costo = parseFloat(p.costo_compra || 0).toFixed(2);
+                    celdaCosto = `<td class="px-5 py-3 text-right font-mono text-gray-500">$${costo}</td>`;
+                }
+
+                let badgeColor = p.stock_actual <= p.stock_minimo ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 border-b border-gray-100 transition";
+                tr.innerHTML = `
+                    <td class="px-5 py-3">
+                        <div class="flex items-center">
+                            <div class="bg-gray-200 text-gray-600 font-bold rounded p-2 text-xs mr-3 w-12 text-center">
+                                ${p.sku.substring(0,3)}
+                            </div>
+                            <div>
+                                <p class="text-gray-900 font-bold text-sm">${p.nombre}</p>
+                                <p class="text-gray-400 text-xs font-mono uppercase tracking-wide">${p.sku}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeColor}">
+                            ${p.stock_actual}
+                        </span>
+                    </td>
+                    <td class="px-5 py-3 text-right font-bold text-blue-600">
+                        $${precio}
+                    </td>
+                    ${celdaCosto}
+                    <td class="px-5 py-3 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button onclick='editarProducto(${JSON.stringify(p)})' class="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 p-2 rounded transition" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="eliminarProducto(${p.id})" class="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded transition" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- CRUD FUNCIONES ---
+
+        function abrirModal() {
+            document.getElementById('form-producto').reset();
+            document.getElementById('prod-id').value = '';
+            document.getElementById('modal-titulo').innerText = "Nuevo Producto";
+            document.getElementById('modal-producto').classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-producto').classList.add('hidden');
+        }
+
+        function editarProducto(p) {
+            document.getElementById('prod-id').value = p.id;
+            document.getElementById('prod-sku').value = p.sku;
+            document.getElementById('prod-nombre').value = p.nombre;
+            document.getElementById('prod-desc').value = p.descripcion;
+            document.getElementById('prod-publico').value = p.precio_publico;
+            document.getElementById('prod-mayorista').value = p.precio_mayorista;
+            document.getElementById('prod-distribuidor').value = p.precio_distribuidor;
+            
+            if(esAdminGlobal) {
+                document.getElementById('prod-costo').value = p.costo_compra;
+                document.getElementById('prod-stock').value = p.stock_actual;
+                document.getElementById('prod-min').value = p.stock_minimo;
+            }
+
+            document.getElementById('modal-titulo').innerText = "Editar Producto";
+            document.getElementById('modal-producto').classList.remove('hidden');
+        }
+
+        async function guardarProducto(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const metodo = id ? 'PUT' : 'POST';
+            const url = id ? `/api/productos/${id}` : '/api/productos/';
+
+            // Construir Objeto
+            const data = {
+                sku: document.getElementById('prod-sku').value.toUpperCase(),
+                nombre: document.getElementById('prod-nombre').value,
+                descripcion: document.getElementById('prod-desc').value,
+                precio_publico: parseFloat(document.getElementById('prod-publico').value),
+                precio_mayorista: parseFloat(document.getElementById('prod-mayorista').value) || 0,
+                precio_distribuidor: parseFloat(document.getElementById('prod-distribuidor').value) || 0,
+                stock_minimo: parseInt(document.getElementById('prod-min').value) || 5,
+                // Solo admin
+                costo_compra: parseFloat(document.getElementById('prod-costo').value) || 0,
+                stock_actual: parseInt(document.getElementById('prod-stock').value) || 0
+            };
+
+            try {
+                const res = await fetch(url, {
+                    method: metodo,
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    cerrarModal();
+                    Swal.fire({icon: 'success', title: 'Guardado', timer: 1500, showConfirmButton: false});
+                    cargarDatos(); // Recargar tabla
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Error', err.detail || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Error de conexión', 'error');
+            }
+        }
+
+        async function eliminarProducto(id) {
+            const result = await Swal.fire({
+                title: '¿Eliminar producto?',
+                text: "Esta acción es irreversible",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Eliminar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/productos/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        Swal.fire('Eliminado', '', 'success');
+                        cargarDatos();
+                    } else {
+                        Swal.fire('Error', 'No tienes permisos', 'error');
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        // --- IMPORTAR / EXPORTAR ---
+
+        async function exportarCSV() {
+            try {
+                const res = await fetch('/api/productos/exportar/csv', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `inventario_dasic_${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click();
+                } else {
+                    Swal.fire('Error', 'Solo Admin puede exportar', 'warning');
+                }
+            } catch (e) { Swal.fire('Error', 'Error de descarga', 'error'); }
+        }
+
+        async function importarCSV(input) {
+            const file = input.files[0];
+            if(!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                Swal.fire({title: 'Subiendo...', didOpen: () => Swal.showLoading()});
+                
+                const res = await fetch('/api/productos/upload-csv', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const result = await res.json();
+                
+                if(res.ok) {
+                    Swal.fire('Carga Completada', `Creados: ${result.creados}`, 'success');
+                    cargarDatos();
+                } else {
+                    Swal.fire('Error', 'Error procesando archivo', 'error');
+                }
+            } catch (e) { Swal.fire('Error', 'Error de red', 'error'); }
+            
+            input.value = ''; // Limpiar input para poder subir el mismo archivo si es necesario
+        }
+
+    </script>
+</body>
+</html>

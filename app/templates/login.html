@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DASIC ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex justify-center items-center">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-900">DASIC ERP</h1>
+            <p class="text-gray-500 text-sm">Sistema de Gestión Integral</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico</label>
+                <input type="email" id="email" required 
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    placeholder="admin@dasic.com">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>
+                <input type="password" id="password" required 
+                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    placeholder="••••••">
+            </div>
+            
+            <div id="errorMessage" class="hidden text-red-500 text-xs text-center"></div>
+
+            <button type="submit" 
+                class="w-full bg-blue-900 text-white font-bold py-2 px-4 rounded hover:bg-blue-800 transition duration-300">
+                Ingresar
+            </button>
+        </form>
+    </div>
+
+   <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMessage');
+
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 1. Guardar el Token
+                    localStorage.setItem('token', data.access_token);
+                    
+                    // 2. Mostrar mensaje (Opcional, puedes quitarlo si quieres entrar directo)
+                    // alert("¡Login Exitoso! Redirigiendo...");
+
+                    // 3. REDIRIGIR AL DASHBOARD (¡ESTA ES LA CLAVE!)
+                    window.location.href = "/dashboard"; 
+
+                } else {
+                    errorMsg.innerText = "Credenciales incorrectas.";
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMsg.innerText = "Error de conexión.";
+                errorMsg.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

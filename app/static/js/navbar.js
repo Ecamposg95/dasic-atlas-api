@@ -2,24 +2,34 @@ document.addEventListener("DOMContentLoaded", () => {
     // 1. OBTENER ELEMENTOS PRINCIPALES
     const sidebarContainer = document.getElementById("sidebar-container");
     const mainContent = document.querySelector('main');
-    const body = document.body;
 
-    // Usuario actual
-    const user = sessionStorage.getItem('user') || 'Admin';
+    // 2. OBTENER USUARIO DEL TOKEN (Lógica FastAPI)
+    let user = 'Admin';
+    const token = localStorage.getItem('token');
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            user = payload.sub.split('@')[0]; // Toma el nombre antes del @
+        } catch (e) {
+            console.error("Error leyendo usuario del token");
+        }
+    }
 
-    // 2. DEFINICIÓN DE MÓDULOS (Links)
+    // 3. DEFINICIÓN DE MÓDULOS (Rutas FastAPI)
     const menuItems = [
-        { name: "Dashboard", link: "/static/index.html", icon: "fas fa-chart-line" },
-        { name: "Cotizador", link: "/static/cotizador.html", icon: "fas fa-cash-register" },
-        { name: "CRM & Clientes", link: "/static/clientes.html", icon: "fas fa-users" },
-        { name: "Inventario", link: "/static/inventario.html", icon: "fas fa-boxes" },
+        { name: "Dashboard", link: "/dashboard", icon: "fas fa-chart-line" },
+        { name: "Cotizador", link: "/ventas/cotizador", icon: "fas fa-cash-register" }, // Ajustaremos estas rutas luego
+        { name: "Clientes", link: "/clientes", icon: "fas fa-users" },
+        { name: "Inventario", link: "/inventario", icon: "fas fa-boxes" },
+        { name: "Compras", link: "/compras", icon: "fas fa-truck" },
     ];
 
     const path = window.location.pathname;
     let linksHtml = "";
 
     menuItems.forEach(item => {
-        const isActive = path.includes(item.link);
+        // Lógica para marcar activo (si la URL contiene el link)
+        const isActive = path === item.link || path.startsWith(item.link); 
         const activeClass = "bg-blue-600 text-white shadow-md transform translate-x-1";
         const inactiveClass = "text-gray-400 hover:bg-gray-800 hover:text-white";
 
@@ -31,9 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     });
 
-    // 3. HTML DEL SIDEBAR (Usuario Abajo)
+    // 4. HTML DEL SIDEBAR (Tu diseño original restaurado)
     const sidebarHtml = `
-        <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 shadow-2xl z-50 font-sans">
+        <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 shadow-2xl z-50 font-sans transition-all duration-300 border-r border-slate-800">
             <div class="h-16 flex items-center px-6 border-b border-gray-700 bg-slate-950">
                 <i class="fas fa-layer-group text-blue-500 text-2xl mr-3"></i>
                 <div>
@@ -51,8 +61,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow">
                         ${user.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                        <p class="text-sm font-bold text-white">${user}</p>
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-bold text-white truncate w-32" title="${user}">${user}</p>
                         <p class="text-xs text-green-400 flex items-center gap-1">
                             <span class="w-2 h-2 bg-green-500 rounded-full"></span> En línea
                         </p>
@@ -62,11 +72,13 @@ document.addEventListener("DOMContentLoaded", () => {
         </aside>
     `;
 
-    // 4. HTML DEL HEADER (Botones Tema y Salir)
+    // 5. HTML DEL HEADER (Con Tema y Botón de Salir)
+    const currentPageName = menuItems.find(i => path.includes(i.link))?.name || 'Panel Principal';
+    
     const headerHtml = `
-        <header class="h-16 bg-white shadow-sm fixed top-0 right-0 left-64 z-40 flex justify-between items-center px-6 transition-colors duration-300 dark:bg-slate-800 dark:border-b dark:border-slate-700">
-            <h2 class="text-xl font-bold text-gray-700 dark:text-gray-200">
-                ${menuItems.find(i => path.includes(i.link))?.name || 'Dasic ERP'}
+        <header class="h-16 bg-white shadow-sm fixed top-0 right-0 left-64 z-40 flex justify-between items-center px-6 transition-all duration-300 dark:bg-slate-800 dark:border-b dark:border-slate-700">
+            <h2 class="text-xl font-bold text-gray-700 dark:text-gray-200 capitalize">
+                ${currentPageName}
             </h2>
 
             <div class="flex items-center gap-4">
@@ -76,51 +88,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 <div class="h-6 w-px bg-gray-300 dark:bg-slate-600"></div>
 
-                <button onclick="logout()" class="flex items-center gap-2 text-red-500 hover:text-red-700 font-medium text-sm px-3 py-1 rounded hover:bg-red-50 transition">
+                <button onclick="logout()" class="flex items-center gap-2 text-red-500 hover:text-red-700 font-medium text-sm px-3 py-1 rounded hover:bg-red-50 transition dark:hover:bg-slate-700">
                     <i class="fas fa-sign-out-alt"></i> Salir
                 </button>
             </div>
         </header>
     `;
 
-    // 5. HTML DEL FOOTER (Powered By + Reloj)
+    // 6. HTML DEL FOOTER (Restaurado Smart Site + Reloj)
     const footerHtml = `
-        <footer class="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 p-2 px-6 flex justify-between items-center text-xs text-gray-500 z-40 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
+        <footer class="fixed bottom-0 right-0 left-64 bg-white border-t border-gray-200 p-2 px-6 flex justify-between items-center text-xs text-gray-500 z-40 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400 transition-all duration-300">
             <div class="flex items-center gap-1">
                 <span>Powered by</span>
                 <span class="font-bold text-slate-700 dark:text-white flex items-center gap-1">
-                    <i class="fas fa-bolt text-yellow-500"></i> SMART SITE
+                    <i class="fas fa-bolt text-yellow-500"></i> Smart Site Company SAS de CV 
                 </span>
             </div>
             <div class="font-mono font-bold" id="live-clock">--:--:--</div>
         </footer>
     `;
 
-    // 6. INYECTAR Y AJUSTAR LAYOUT
+    // 7. INYECCIÓN EN EL DOM
     if (sidebarContainer) {
         sidebarContainer.innerHTML = sidebarHtml;
         
-        // Inyectar Header antes del Main
+        // Inyectar Header
         const headerDiv = document.createElement('div');
         headerDiv.innerHTML = headerHtml;
-        document.body.insertBefore(headerDiv.firstElementChild, mainContent);
+        document.body.insertBefore(headerDiv.firstElementChild, document.body.firstChild);
 
-        // Inyectar Footer al final del Body
+        // Inyectar Footer
         const footerDiv = document.createElement('div');
         footerDiv.innerHTML = footerHtml;
         document.body.appendChild(footerDiv.firstElementChild);
 
-        // Ajustar márgenes del contenido principal para que no quede tapado
+        // Ajustar Main para que no quede debajo
         if (mainContent) {
-            mainContent.classList.add('ml-64', 'mt-16', 'mb-8', 'dark:bg-slate-900'); // Margen Izq, Top y Bottom
-            mainContent.style.minHeight = "calc(100vh - 4rem)"; // Altura completa menos header
+            mainContent.classList.add('ml-64', 'mt-16', 'mb-10', 'p-6', 'transition-all', 'duration-300', 'dark:bg-slate-900'); 
+            mainContent.style.minHeight = "calc(100vh - 4rem)";
         }
     }
 
-    // 7. INICIAR RELOJ
+    // 8. INICIAR RELOJ Y TEMA
     startClock();
     
-    // 8. CARGAR TEMA PREVIO
+    // Cargar tema previo
     if(localStorage.getItem('theme') === 'dark') {
         document.documentElement.classList.add('dark');
         const icon = document.getElementById('theme-icon');
@@ -131,9 +143,9 @@ document.addEventListener("DOMContentLoaded", () => {
 // --- FUNCIONES GLOBALES ---
 
 function logout() {
-    if(confirm("¿Cerrar sesión?")) {
-        sessionStorage.removeItem('token');
-        window.location.href = '/static/login.html';
+    if(confirm("¿Cerrar sesión en DASIC ERP?")) {
+        localStorage.removeItem('token');
+        window.location.href = '/'; 
     }
 }
 
@@ -157,6 +169,7 @@ function startClock() {
         const el = document.getElementById('live-clock');
         if (el) {
             const now = new Date();
+            // Formato amigable: 05/12/2025 10:30:45 AM
             el.innerText = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
         }
     }

@@ -1,201 +1,193 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from .. import database, models, schemas
+from typing import List, Union
 import csv
-import codecs
 import io
+import models
+import schemas
+import database
+from auth import get_current_user, allow_admin, allow_admin_asistente, allow_all_staff
+from models import RolUsuario
 
-router = APIRouter()
+router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
-# --- READ: Listar Productos (Con Búsqueda Opcional) ---
-@router.get("/", response_model=List[schemas.ProductoCreate]) 
+# --- 1. OBTENER PRODUCTOS (LISTADO INTELIGENTE) ---
+@router.get("/", response_model=Union[List[schemas.ProductoResponseAdmin], List[schemas.ProductoResponseVendedor]])
 def listar_productos(
-    q: Optional[str] = Query(None, description="Búsqueda por catálogo, descripción o marca"),
     skip: int = 0, 
-    limit: int = 1000, 
+    limit: int = 500, # Aumentamos el límite por defecto
+    db: Session = Depends(database.get_db),
+    current_user: models.Usuario = Depends(allow_all_staff)
+):
+    """
+    Lista productos. 
+    - Admin/Asistente ven el Costo.
+    - Vendedores solo ven Precios de Venta y Stock.
+    """
+    productos = db.query(models.Producto).offset(skip).limit(limit).all()
+
+    # Lógica de "Camaleón": Decidimos qué schema usar según el rol
+    if current_user.rol in [RolUsuario.ADMIN, RolUsuario.ASISTENTE]:
+        return [schemas.ProductoResponseAdmin.model_validate(p) for p in productos]
+    
+    return [schemas.ProductoResponseVendedor.model_validate(p) for p in productos]
+
+# --- 2. OBTENER UN SOLO PRODUCTO ---
+@router.get("/{id}", response_model=Union[schemas.ProductoResponseAdmin, schemas.ProductoResponseVendedor])
+def obtener_producto(
+    id: int, 
+    db: Session = Depends(database.get_db),
+    current_user: models.Usuario = Depends(allow_all_staff)
+):
+    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    if current_user.rol in [RolUsuario.ADMIN, RolUsuario.ASISTENTE]:
+        return schemas.ProductoResponseAdmin.model_validate(producto)
+    return schemas.ProductoResponseVendedor.model_validate(producto)
+
+# --- 3. CREAR PRODUCTO (SOLO ADMIN/ASISTENTE) ---
+@router.post("/", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
+def crear_producto(
+    producto: schemas.ProductoCreate, 
     db: Session = Depends(database.get_db)
 ):
-    query = db.query(models.Producto)
-    
-    if q:
-        search = f"%{q}%"
-        query = query.filter(
-            (models.Producto.numero_catalogo.ilike(search)) |
-            (models.Producto.descripcion.ilike(search)) |
-            (models.Producto.marca.ilike(search))
-        )
-    
-    return query.offset(skip).limit(limit).all()
+    # Verificar si el SKU ya existe
+    db_producto = db.query(models.Producto).filter(models.Producto.sku == producto.sku).first()
+    if db_producto:
+        raise HTTPException(status_code=400, detail=f"El SKU '{producto.sku}' ya existe.")
 
-# --- READ: Obtener un solo producto ---
-@router.get("/{id}", response_model=schemas.ProductoCreate)
-def obtener_producto(id: int, db: Session = Depends(database.get_db)):
-    prod = db.query(models.Producto).filter(models.Producto.id == id).first()
-    if not prod:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return prod
-
-# --- CREATE: Crear Producto Manual ---
-@router.post("/")
-def crear_producto(prod: schemas.ProductoCreate, db: Session = Depends(database.get_db)):
-    # 1. Validar duplicados por catálogo
-    if db.query(models.Producto).filter(models.Producto.numero_catalogo == prod.numero_catalogo).first():
-        raise HTTPException(status_code=400, detail=f"El catálogo '{prod.numero_catalogo}' ya existe.")
-
-    # 2. Crear instancia
-    nuevo = models.Producto(
-        numero_catalogo=prod.numero_catalogo,
-        descripcion=prod.descripcion,
-        marca=prod.marca,
-        costo_proveedor=prod.costo_proveedor,
-        moneda_compra=prod.moneda_compra,
-        tiempo_entrega=prod.tiempo_entrega,
-        stock_actual=prod.stock_actual,
-        imagen_url=prod.imagen_url
-    )
-    
-    # 3. Guardar
-    db.add(nuevo)
+    nuevo_producto = models.Producto(**producto.model_dump())
+    db.add(nuevo_producto)
     db.commit()
-    db.refresh(nuevo)
-    return nuevo
+    db.refresh(nuevo_producto)
+    return nuevo_producto
 
-# --- UPDATE: Editar Producto ---
-@router.put("/{id}")
-def actualizar_producto(id: int, prod: schemas.ProductoCreate, db: Session = Depends(database.get_db)):
-    existente = db.query(models.Producto).filter(models.Producto.id == id).first()
-    if not existente:
+# --- 4. ACTUALIZAR PRODUCTO ---
+@router.put("/{id}", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
+def actualizar_producto(
+    id: int,
+    producto_update: schemas.ProductoUpdate,
+    db: Session = Depends(database.get_db)
+):
+    db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
-    # Actualizar campos
-    existente.numero_catalogo = prod.numero_catalogo
-    existente.descripcion = prod.descripcion
-    existente.marca = prod.marca
-    existente.costo_proveedor = prod.costo_proveedor
-    existente.moneda_compra = prod.moneda_compra
-    existente.tiempo_entrega = prod.tiempo_entrega
-    existente.stock_actual = prod.stock_actual
-    existente.imagen_url = prod.imagen_url
-    
-    db.commit()
-    db.refresh(existente)
-    return {"msg": "Producto actualizado correctamente", "producto": existente}
 
-# --- DELETE: Eliminar Producto ---
-@router.delete("/{id}")
+    # Actualizamos solo los campos enviados
+    update_data = producto_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_producto, key, value)
+
+    db.commit()
+    db.refresh(db_producto)
+    return db_producto
+
+# --- 5. ELIMINAR PRODUCTO (SOLO ADMIN) ---
+@router.delete("/{id}", dependencies=[Depends(allow_admin)])
 def eliminar_producto(id: int, db: Session = Depends(database.get_db)):
-    prod = db.query(models.Producto).filter(models.Producto.id == id).first()
-    if not prod:
+    db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     
-    # Validar si está en cotizaciones (Integridad Referencial)
-    # Si tienes activado cascade delete en SQL esto no es necesario, pero es buena práctica
-    if db.query(models.CotizacionDetalle).filter(models.CotizacionDetalle.producto_id == id).first():
-        raise HTTPException(status_code=400, detail="No se puede eliminar: El producto está en cotizaciones activas.")
-
-    db.delete(prod)
+    db.delete(db_producto)
     db.commit()
-    return {"msg": "Producto eliminado"}
+    return {"mensaje": "Producto eliminado correctamente"}
 
-# --- EXTRAS: CARGA MASIVA INTELIGENTE ---
-@router.post("/upload-csv")
-async def cargar_inventario_csv(file: UploadFile = File(...), db: Session = Depends(database.get_db)):
+# --- 6. CARGA MASIVA CSV (IMPORTAR) ---
+@router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
+async def cargar_inventario_csv(
+    file: UploadFile = File(...), 
+    db: Session = Depends(database.get_db)
+):
     """
-    Procesa archivos CSV de Inventario.
-    Soporta columnas: 'Catalog #', 'Nombre Catalogo', 'Description', 'Unit Price Prov', etc.
+    Importa productos desde CSV.
+    Columnas esperadas: sku, nombre, precio_publico, costo, stock
     """
-    
-    # Leer contenido y decodificar
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser CSV")
+
+    # Leer el archivo en memoria
     content = await file.read()
-    decoded = content.decode('utf-8-sig') # utf-8-sig maneja el BOM de Excel
-    csv_reader = csv.DictReader(io.StringIO(decoded))
-    
-    nuevos = 0
-    actualizados = 0
-    errores = 0
+    decoded_content = content.decode('utf-8-sig') # utf-8-sig maneja BOM de Excel
+    csv_reader = csv.DictReader(io.StringIO(decoded_content))
+
+    registros_nuevos = 0
+    registros_actualizados = 0
+    errores = []
 
     for row in csv_reader:
         try:
-            # 1. Normalizar Keys (Quitar espacios extra y BOMs raros)
-            row = {k.strip(): v for k, v in row.items() if k}
+            # Normalizar claves del CSV (quitar espacios, minúsculas)
+            row = {k.strip().lower(): v for k, v in row.items()}
             
-            # 2. Mapeo Flexible de Columnas (Para soportar tus varios formatos de Excel)
-            catalogo = row.get('Catalog #') or row.get('Nombre Catalogo') or row.get('Numero de Parte')
-            if not catalogo: continue # Saltar fila vacía
-
-            descripcion = row.get('Description') or row.get('Descripción') or "Sin descripción"
-            marca = row.get('MARCA') or row.get('Marca') or "Genérico"
+            sku = row.get('sku')
+            if not sku: continue # Saltar filas vacías
             
-            # Precio (Limpiar símbolos $ y ,)
-            precio_raw = row.get('Unit Price Prov') or row.get('Precio') or row.get('Costo') or "0"
-            try:
-                costo = float(str(precio_raw).replace('$', '').replace(',', '').strip())
-            except: 
-                costo = 0.0
-
-            # Moneda
-            moneda_raw = row.get('Divisa Proveedor') or row.get('Moneda') or 'MXN'
-            moneda = 'MXN' if 'MN' in moneda_raw or 'Peso' in moneda_raw else 'USD'
-
-            # Stock
-            try:
-                stock = int(float(row.get('Inventario') or row.get('Stock') or 0))
-            except:
-                stock = 0
-
-            tiempo = row.get('T. Entrega') or row.get('Tiempo Entrega') or '1-2 Semanas'
-            proveedor_nombre = row.get('Proveedor1') or row.get('Proveedor')
-
-            # 3. Lógica de Proveedor (Crear si no existe)
-            prov_id = None
-            if proveedor_nombre:
-                prov = db.query(models.Proveedor).filter(models.Proveedor.nombre == proveedor_nombre).first()
-                if not prov:
-                    prov = models.Proveedor(nombre=proveedor_nombre)
-                    db.add(prov)
-                    db.commit()
-                    db.refresh(prov)
-                prov_id = prov.id
-
-            # 4. Upsert Producto (Actualizar o Insertar)
-            producto = db.query(models.Producto).filter(models.Producto.numero_catalogo == catalogo).first()
-
-            if producto:
-                # Actualizar
-                producto.descripcion = descripcion
-                producto.marca = marca
-                producto.costo_proveedor = costo
-                producto.moneda_compra = moneda
-                producto.stock_actual = stock
-                producto.tiempo_entrega = tiempo
-                if prov_id: producto.proveedor_id = prov_id
-                actualizados += 1
+            # Buscar si existe para actualizar (Upsert)
+            producto_existente = db.query(models.Producto).filter(models.Producto.sku == sku).first()
+            
+            if producto_existente:
+                # Actualizar Stock y Precios si vienen en el CSV
+                if 'stock' in row: producto_existente.stock_actual += int(row['stock'])
+                if 'precio_publico' in row: producto_existente.precio_publico = float(row['precio_publico'])
+                if 'costo' in row: producto_existente.costo_compra = float(row['costo'])
+                registros_actualizados += 1
             else:
-                # Insertar
+                # Crear nuevo
                 nuevo_prod = models.Producto(
-                    numero_catalogo=catalogo,
-                    descripcion=descripcion,
-                    marca=marca,
-                    costo_proveedor=costo,
-                    moneda_compra=moneda,
-                    stock_actual=stock,
-                    tiempo_entrega=tiempo,
-                    proveedor_id=prov_id
+                    sku=sku.upper(),
+                    nombre=row.get('nombre', 'Sin Nombre'),
+                    descripcion=row.get('descripcion', ''),
+                    precio_publico=float(row.get('precio_publico', 0)),
+                    precio_mayorista=float(row.get('precio_mayorista', 0)),
+                    precio_distribuidor=float(row.get('precio_distribuidor', 0)),
+                    costo_compra=float(row.get('costo', 0)),
+                    stock_actual=int(row.get('stock', 0)),
+                    stock_minimo=int(row.get('stock_minimo', 5))
                 )
                 db.add(nuevo_prod)
-                nuevos += 1
+                registros_nuevos += 1
                 
         except Exception as e:
-            print(f"Error en fila {row}: {e}")
-            errores += 1
-            continue
+            errores.append(f"Error en SKU {row.get('sku', '?')}: {str(e)}")
 
     db.commit()
-    
     return {
-        "mensaje": "Proceso finalizado",
-        "nuevos": nuevos,
-        "actualizados": actualizados,
+        "mensaje": "Proceso completado",
+        "creados": registros_nuevos,
+        "actualizados": registros_actualizados,
         "errores": errores
     }
+
+# --- 7. EXPORTAR CSV (DESCARGAR) ---
+@router.get("/exportar/csv", dependencies=[Depends(allow_admin_asistente)])
+def exportar_productos_csv(db: Session = Depends(database.get_db)):
+    """Genera y descarga un archivo CSV con todo el inventario"""
+    productos = db.query(models.Producto).all()
+    
+    # Crear archivo en memoria
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Encabezados
+    writer.writerow([
+        'SKU', 'Nombre', 'Descripción', 'Stock Actual', 'Stock Mínimo', 
+        'Costo', 'Precio Público', 'Precio Mayorista', 'Precio Distribuidor'
+    ])
+    
+    # Datos
+    for p in productos:
+        writer.writerow([
+            p.sku, p.nombre, p.descripcion, p.stock_actual, p.stock_minimo,
+            p.costo_compra, p.precio_publico, p.precio_mayorista, p.precio_distribuidor
+        ])
+    
+    output.seek(0)
+    
+    # StreamingResponse permite descargar el archivo al vuelo
+    response = StreamingResponse(iter([output.getvalue()]), media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=inventario_dasic.csv"
+    return response

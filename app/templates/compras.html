@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compras Avanzadas - DASIC ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        /* Ajuste para inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
+
+    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
+    
+    <div id="sidebar-container"></div>
+
+    <main class="flex-1 overflow-y-auto p-6">
+        
+        <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Centro de Compras</h2>
+                <p class="text-sm text-gray-500">Gestión de Abastecimiento y Cuentas por Pagar</p>
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="bg-white p-3 rounded-lg shadow border-l-4 border-red-500 min-w-[180px]">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Por Pagar</p>
+                    <p class="text-xl font-bold text-red-600" id="kpi-deuda">$0.00</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow border-l-4 border-blue-500 min-w-[180px]">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Compras Mes</p>
+                    <p class="text-xl font-bold text-gray-800" id="kpi-compras">0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mb-6">
+            <button onclick="abrirModalCompra()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow font-bold transition flex items-center">
+                <i class="fas fa-plus-circle mr-2"></i> Registrar Compra
+            </button>
+            <button onclick="abrirModalProveedor()" class="bg-white text-gray-700 border hover:bg-gray-50 px-5 py-2 rounded-lg shadow transition flex items-center">
+                <i class="fas fa-user-plus mr-2"></i> Nuevo Proveedor
+            </button>
+        </div>
+
+        <div class="bg-white rounded-t-lg shadow-sm border-b border-gray-200">
+            <ul class="flex text-sm font-medium text-center text-gray-500">
+                <li class="mr-2">
+                    <button onclick="cambiarTab('prov')" id="btn-tab-prov" class="inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active transition">
+                        <i class="fas fa-users mr-2"></i> Directorio & Deudas
+                    </button>
+                </li>
+                <li class="mr-2">
+                    <button onclick="cambiarTab('hist')" id="btn-tab-hist" class="inline-block p-4 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 rounded-t-lg transition">
+                        <i class="fas fa-history mr-2"></i> Historial de Órdenes
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div id="tab-prov" class="bg-white rounded-b-lg shadow p-4">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">Proveedor</th>
+                            <th class="px-6 py-3">Contacto</th>
+                            <th class="px-6 py-3 text-right">Saldo (Deuda)</th>
+                            <th class="px-6 py-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-proveedores">
+                        <tr><td colspan="4" class="p-4 text-center">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-hist" class="bg-white rounded-b-lg shadow p-4 hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3"># OC</th>
+                            <th class="px-6 py-3">Fecha</th>
+                            <th class="px-6 py-3">Proveedor</th>
+                            <th class="px-6 py-3 text-right">Total</th>
+                            <th class="px-6 py-3 text-center">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-historial">
+                        <tr><td colspan="5" class="p-4 text-center">Cargando historial...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal-compra" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col relative overflow-hidden">
+            
+            <div class="bg-slate-900 p-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-lg"><i class="fas fa-shopping-bag mr-2"></i> Generar Orden de Compra</h3>
+                <button onclick="cerrarModal('modal-compra')" class="hover:text-red-300 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                
+                <div class="w-full md:w-1/3 bg-gray-50 p-5 border-r flex flex-col gap-4 overflow-y-auto">
+                    
+                    <div>
+                        <label class="text-xs font-bold text-gray-600">Proveedor</label>
+                        <select id="compra-prov" class="w-full border rounded p-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"></select>
+                    </div>
+                    
+                    <div>
+                        <label class="text-xs font-bold text-gray-600">Referencia / Factura</label>
+                        <input id="compra-folio" type="text" class="w-full border rounded p-2 text-sm" placeholder="Ej. FAC-1234">
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded border shadow-sm">
+                        <label class="text-xs font-bold text-gray-600">Agregar Producto</label>
+                        <input type="text" id="compra-buscador" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Buscar por SKU o Nombre...">
+                        
+                        <div id="compra-resultados" class="mt-1 max-h-40 overflow-y-auto hidden border-t pt-1"></div>
+                        
+                        <button onclick="crearProductoRapido()" class="w-full mt-2 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 rounded font-bold transition flex items-center justify-center">
+                            <i class="fas fa-magic mr-1"></i> ¿No existe? Crear Producto
+                        </button>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t">
+                        <div class="flex justify-between text-xl font-bold text-gray-800">
+                            <span>Total:</span> <span id="compra-total">$0.00</span>
+                        </div>
+                        <button onclick="guardarCompra()" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded shadow transition">
+                            <i class="fas fa-check-double mr-2"></i> Confirmar Entrada
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-2/3 p-0 overflow-y-auto bg-white">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-600 sticky top-0 shadow-sm">
+                            <tr>
+                                <th class="p-3">Producto</th>
+                                <th class="p-3 text-center w-20">Cant.</th>
+                                <th class="p-3 text-right w-24">Costo</th>
+                                <th class="p-3 text-right w-24">Subtotal</th>
+                                <th class="p-3 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-compra-items" class="divide-y divide-gray-100">
+                            <tr><td colspan="5" class="p-10 text-center text-gray-400 italic">Agrega productos para iniciar la orden</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-pago" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96 animate-fade-in-down">
+            <h3 class="font-bold mb-2 text-lg text-gray-800">Registrar Pago Saliente</h3>
+            <p class="text-sm text-gray-500 mb-4">Abonar a: <b id="pago-prov-nombre" class="text-blue-600"></b></p>
+            <input type="hidden" id="pago-prov-id">
+            
+            <label class="block text-xs font-bold text-gray-700 mb-1">Monto a Pagar</label>
+            <input type="number" id="pago-monto" class="w-full border rounded p-2 mb-3 text-right font-bold text-lg focus:ring-2 focus:ring-green-500" placeholder="0.00">
+            
+            <label class="block text-xs font-bold text-gray-700 mb-1">Referencia Bancaria</label>
+            <input type="text" id="pago-ref" class="w-full border rounded p-2 mb-4" placeholder="Ej. Transferencia SPEI">
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="cerrarModal('modal-pago')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancelar</button>
+                <button onclick="enviarPago()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition">Pagar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-prov" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 class="font-bold mb-4 text-lg">Nuevo Proveedor</h3>
+            <form id="form-prov" class="space-y-3">
+                <input type="text" id="prov-nombre" placeholder="Nombre Empresa" required class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="prov-contacto" placeholder="Contacto Principal" required class="w-full border rounded p-2">
+                <input type="text" id="prov-tel" placeholder="Teléfono" class="w-full border rounded p-2">
+                <input type="email" id="prov-email" placeholder="Email" class="w-full border rounded p-2">
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="cerrarModal('modal-prov')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold transition">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let carrito = [];
+        let catalogo = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarProveedores();
+            cargarHistorial();
+            cargarCatalogo();
+            
+            // Eventos del buscador
+            const inputBuscador = document.getElementById('compra-buscador');
+            inputBuscador.addEventListener('input', (e) => filtrarCatalogo(e.target.value));
+            inputBuscador.addEventListener('focus', () => filtrarCatalogo(inputBuscador.value));
+            
+            // Cerrar lista al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!document.getElementById('compra-resultados').contains(e.target) && e.target !== inputBuscador) {
+                    document.getElementById('compra-resultados').classList.add('hidden');
+                }
+            });
+        });
+
+        // --- GESTIÓN DE TABS ---
+        function cambiarTab(tab) {
+            document.getElementById('tab-prov').classList.add('hidden');
+            document.getElementById('tab-hist').classList.add('hidden');
+            document.getElementById('btn-tab-prov').className = "inline-block p-4 border-b-2 border-transparent hover:text-gray-600 rounded-t-lg transition";
+            document.getElementById('btn-tab-hist').className = "inline-block p-4 border-b-2 border-transparent hover:text-gray-600 rounded-t-lg transition";
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`btn-tab-${tab}`).className = "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active transition";
+        }
+
+        // --- CARGA DE DATOS ---
+        async function cargarProveedores() {
+            try {
+                const res = await fetch('/api/compras/proveedores', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('tabla-proveedores');
+                const select = document.getElementById('compra-prov');
+                tbody.innerHTML = '';
+                select.innerHTML = '<option value="">-- Selecciona un Proveedor --</option>';
+                
+                let deudaTotal = 0;
+
+                if (data.length === 0) tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay proveedores registrados</td></tr>';
+
+                data.forEach(p => {
+                    const saldo = parseFloat(p.saldo_actual);
+                    deudaTotal += saldo;
+                    
+                    tbody.innerHTML += `
+                        <tr class="bg-white border-b hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 font-medium text-gray-900">${p.nombre_empresa}</td>
+                            <td class="px-6 py-4 text-gray-600">${p.contacto_nombre}</td>
+                            <td class="px-6 py-4 text-right font-mono font-bold ${saldo > 0 ? 'text-red-600' : 'text-green-600'}">
+                                $${saldo.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button onclick="abrirModalPago(${p.id}, '${p.nombre_empresa}')" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase bg-blue-50 px-3 py-1 rounded">
+                                    <i class="fas fa-wallet mr-1"></i> Pagar
+                                </button>
+                            </td>
+                        </tr>`;
+                    
+                    select.innerHTML += `<option value="${p.id}">${p.nombre_empresa}</option>`;
+                });
+                
+                document.getElementById('kpi-deuda').innerText = `$${deudaTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+            } catch(e) { console.error(e); }
+        }
+
+        async function cargarHistorial() {
+            try {
+                const res = await fetch('/api/compras/historial?limit=20', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                const tbody = document.getElementById('tabla-historial');
+                tbody.innerHTML = '';
+                
+                document.getElementById('kpi-compras').innerText = data.length;
+
+                if (data.length === 0) tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">Sin historial reciente</td></tr>';
+
+                data.forEach(o => {
+                    tbody.innerHTML += `
+                        <tr class="bg-white border-b hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 font-bold text-gray-800">#OC-${o.id}</td>
+                            <td class="px-6 py-4">${new Date(o.fecha).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 text-gray-600">${o.proveedor}</td>
+                            <td class="px-6 py-4 text-right font-mono font-bold">$${o.total.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                            <td class="px-6 py-4 text-center">
+                                <a href="/api/compras/${o.id}/imprimir" target="_blank" class="text-red-500 hover:text-red-700 text-lg transition" title="Ver PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            </td>
+                        </tr>`;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function cargarCatalogo() {
+            try {
+                const res = await fetch('/api/productos/?limit=1000', { headers: { 'Authorization': `Bearer ${token}` } });
+                catalogo = await res.json();
+            } catch (e) { console.error("Error cargando catálogo", e); }
+        }
+
+        // --- LÓGICA DE COMPRA ---
+        function filtrarCatalogo(texto) {
+            const txt = texto ? texto.toLowerCase() : '';
+            const div = document.getElementById('compra-resultados');
+            div.innerHTML = '';
+            
+            // Mostrar lista completa si está vacío, o filtrar
+            const matches = txt.length < 1 
+                ? catalogo.slice(0, 10) // Top 10 si vacío
+                : catalogo.filter(p => p.nombre.toLowerCase().includes(txt) || p.sku.toLowerCase().includes(txt));
+            
+            div.classList.remove('hidden');
+            
+            if(matches.length === 0) {
+                div.innerHTML = '<div class="p-3 text-xs text-gray-500 text-center">No encontrado. Usa el botón azul para crearlo.</div>';
+                return;
+            }
+
+            matches.slice(0, 8).forEach(p => {
+                const el = document.createElement('div');
+                el.className = "p-2 hover:bg-blue-50 cursor-pointer text-xs border-b flex justify-between items-center transition";
+                el.innerHTML = `
+                    <div>
+                        <span class="font-bold text-gray-700">${p.sku}</span><br>
+                        <span class="text-gray-500">${p.nombre.substring(0, 30)}...</span>
+                    </div>
+                    <span class="font-bold text-blue-600 bg-blue-50 px-2 rounded">$${p.costo_compra || 0}</span>`;
+                el.onclick = () => agregarItemCompra(p);
+                div.appendChild(el);
+            });
+        }
+
+        function agregarItemCompra(p) {
+            document.getElementById('compra-resultados').classList.add('hidden');
+            document.getElementById('compra-buscador').value = '';
+
+            const existe = carrito.find(i => i.id === p.id);
+            if(existe) {
+                existe.cantidad++;
+            } else {
+                carrito.push({
+                    id: p.id, sku: p.sku, nombre: p.nombre,
+                    cantidad: 1, costo: p.costo_compra || 0
+                });
+            }
+            renderCarrito();
+        }
+
+        function renderCarrito() {
+            const tb = document.getElementById('tabla-compra-items');
+            tb.innerHTML = '';
+            let total = 0;
+
+            if (carrito.length === 0) {
+                tb.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-400 italic">Orden vacía</td></tr>';
+                document.getElementById('compra-total').innerText = "$0.00";
+                return;
+            }
+
+            carrito.forEach((i, idx) => {
+                const sub = i.cantidad * i.costo;
+                total += sub;
+                tb.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3 text-xs">
+                            <div class="font-bold text-gray-800">${i.sku}</div>
+                            <div class="text-gray-500 truncate w-48">${i.nombre}</div>
+                        </td>
+                        <td class="p-3 text-center">
+                            <input type="number" min="1" value="${i.cantidad}" onchange="updItem(${idx}, 'cant', this.value)" class="w-16 border rounded text-center p-1 focus:ring-blue-500">
+                        </td>
+                        <td class="p-3 text-right">
+                            <input type="number" step="0.01" value="${i.costo}" onchange="updItem(${idx}, 'costo', this.value)" class="w-24 border rounded text-right p-1 bg-yellow-50 focus:bg-white transition">
+                        </td>
+                        <td class="p-3 text-right font-bold text-gray-700">$${sub.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="p-3 text-center text-red-400 hover:text-red-600 cursor-pointer transition" onclick="delItem(${idx})"><i class="fas fa-trash-alt"></i></td>
+                    </tr>`;
+            });
+            document.getElementById('compra-total').innerText = `$${total.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        }
+
+        function updItem(idx, tipo, val) {
+            if(tipo === 'cant') carrito[idx].cantidad = parseInt(val) || 1;
+            if(tipo === 'costo') carrito[idx].costo = parseFloat(val) || 0;
+            renderCarrito();
+        }
+        function delItem(idx) { carrito.splice(idx, 1); renderCarrito(); }
+
+        // --- SOURCING (CORREGIDO PARA EVITAR ERROR 422) ---
+        async function crearProductoRapido() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Nuevo Producto (Sourcing)',
+                html:
+                    '<input id="sw-sku" class="swal2-input" placeholder="SKU (Mín. 2 letras)" style="text-transform:uppercase">' +
+                    '<input id="sw-nom" class="swal2-input" placeholder="Nombre Producto">' +
+                    '<input id="sw-cost" type="number" class="swal2-input" placeholder="Costo ($)">' +
+                    '<input id="sw-pv" type="number" class="swal2-input" placeholder="Precio Venta ($)">',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Crear y Agregar',
+                preConfirm: () => {
+                    return [
+                        document.getElementById('sw-sku').value.trim(),
+                        document.getElementById('sw-nom').value.trim(),
+                        document.getElementById('sw-cost').value,
+                        document.getElementById('sw-pv').value
+                    ]
+                }
+            });
+
+            if (formValues) {
+                const [sku, nombre, costo, precio] = formValues;
+                
+                // Validaciones Previas
+                if(sku.length < 2) return Swal.fire('Error', 'El SKU debe tener al menos 2 caracteres', 'warning');
+                if(nombre.length < 2) return Swal.fire('Error', 'El Nombre es muy corto', 'warning');
+
+                // Payload completo para evitar Error 422
+                const payload = {
+                    sku: sku.toUpperCase(),
+                    nombre: nombre,
+                    descripcion: "Producto creado desde Módulo de Compras", // Campo obligatorio oculto
+                    stock_actual: 0,
+                    costo_compra: parseFloat(costo) || 0,
+                    precio_publico: parseFloat(precio) || 0,
+                    precio_mayorista: parseFloat(precio) || 0, // Rellenamos para evitar nulls
+                    precio_distribuidor: parseFloat(precio) || 0,
+                    stock_minimo: 1,
+                    imagen_url: ""
+                };
+
+                try {
+                    const res = await fetch('/api/productos/', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if(res.ok) {
+                        const nuevoProd = await res.json();
+                        catalogo.push(nuevoProd); 
+                        agregarItemCompra(nuevoProd); // Lo agrega directo a la tabla de compra
+                        
+                        Swal.fire({
+                            icon: 'success', 
+                            title: 'Producto Creado',
+                            text: 'Se agregó a la orden y al catálogo',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        const errorData = await res.json();
+                        console.error("Detalle del error:", errorData);
+                        Swal.fire('Error de Validación', JSON.stringify(errorData.detail), 'error');
+                    }
+                } catch(e) { 
+                    console.error(e);
+                    Swal.fire('Error', 'Fallo de conexión', 'error'); 
+                }
+            }
+        }
+
+        async function guardarCompra() {
+            const pid = document.getElementById('compra-prov').value;
+            if(!pid || carrito.length === 0) return Swal.fire('Atención', 'Selecciona proveedor y al menos un producto', 'warning');
+            
+            const payload = {
+                proveedor_id: parseInt(pid),
+                folio_factura: document.getElementById('compra-folio').value || 'S/F',
+                detalles: carrito.map(c => ({
+                    producto_id: c.id,
+                    cantidad: c.cantidad,
+                    costo_unitario: c.costo
+                }))
+            };
+            
+            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+            
+            try {
+                const res = await fetch('/api/compras/registrar-entrada', {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                if(res.ok) {
+                    const d = await res.json();
+                    await Swal.fire({
+                        icon: 'success', title: 'Entrada Registrada', 
+                        text: 'Inventario actualizado correctamente',
+                        showDenyButton: true, confirmButtonText: 'Nueva Orden', denyButtonText: 'Imprimir PDF'
+                    }).then(r => {
+                        if(r.isDenied) window.open(`/api/compras/${d.id}/imprimir`, '_blank');
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', 'No se pudo guardar la orden', 'error');
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- PAGO A PROVEEDORES ---
+        function abrirModalPago(id, nombre) {
+            document.getElementById('pago-prov-id').value = id;
+            document.getElementById('pago-prov-nombre').innerText = nombre;
+            document.getElementById('modal-pago').classList.remove('hidden');
+        }
+
+        async function enviarPago() {
+            const id = document.getElementById('pago-prov-id').value;
+            const monto = document.getElementById('pago-monto').value;
+            const ref = document.getElementById('pago-ref').value || "Efectivo";
+            
+            if(!monto || parseFloat(monto) <= 0) return Swal.fire('Error', 'Monto inválido', 'warning');
+
+            const res = await fetch(`/api/compras/registrar-pago?proveedor_id=${id}&monto=${monto}&ref=${ref}`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${token}`}
+            });
+            
+            if(res.ok) {
+                Swal.fire('Pago Registrado', 'Deuda actualizada', 'success');
+                cerrarModal('modal-pago');
+                cargarProveedores();
+            } else {
+                Swal.fire('Error', 'No se pudo procesar el pago', 'error');
+            }
+        }
+
+        // --- PROVEEDOR ---
+        document.getElementById('form-prov').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const d = {
+                nombre_empresa: document.getElementById('prov-nombre').value,
+                contacto_nombre: document.getElementById('prov-contacto').value,
+                telefono: document.getElementById('prov-tel').value || "N/A",
+                email: document.getElementById('prov-email').value || "sin@email.com"
+            };
+            const res = await fetch('/api/compras/proveedores', {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+                body: JSON.stringify(d)
+            });
+            if(res.ok) {
+                Swal.fire('Guardado', '', 'success');
+                cerrarModal('modal-prov');
+                cargarProveedores();
+            } else {
+                Swal.fire('Error', 'Verifica los datos', 'error');
+            }
+        });
+
+        // UTILIDADES
+        function abrirModalCompra() { carrito=[]; renderCarrito(); document.getElementById('modal-compra').classList.remove('hidden'); }
+        function abrirModalProveedor() { document.getElementById('modal-prov').classList.remove('hidden'); }
+        function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    </script>
+</body>
+</html>

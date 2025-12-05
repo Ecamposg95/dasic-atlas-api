@@ -1,126 +1,188 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Float, Text, DECIMAL
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from .database import Base
+from sqlalchemy.sql import func
+import enum
+from database import Base 
 
-# --- USUARIOS (Sistema de Login y Permisos) ---
+# --- ENUMS PARA CONTROL ESTRICTO ---
+class RolUsuario(str, enum.Enum):
+    ADMIN = "admin"
+    ASISTENTE = "asistente"
+    VENDEDOR = "vendedor"
+
+class EstatusOrden(str, enum.Enum):
+    COTIZACION = "cotizacion" 
+    PENDIENTE = "pendiente"   
+    PAGADA = "pagada"         
+    CANCELADA = "cancelada"
+
+class TipoMovimiento(str, enum.Enum):
+    CARGO = "cargo"   
+    ABONO = "abono"   
+
+# --- USUARIOS ---
 class Usuario(Base):
     __tablename__ = "usuarios"
+
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    rol = Column(String, default="asistente") # 'admin', 'ventas', 'almacen'
+    nombre = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    rol = Column(Enum(RolUsuario), default=RolUsuario.VENDEDOR)
     activo = Column(Boolean, default=True)
-
-# --- INVENTARIO (Productos y Proveedores) ---
-class Proveedor(Base):
-    __tablename__ = "proveedores"
-    id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String, unique=True, index=True)
-    telefono = Column(String, nullable=True)
-    email = Column(String, nullable=True)
     
-    productos = relationship("Producto", back_populates="proveedor")
+    ventas = relationship("OrdenVenta", back_populates="vendedor")
 
+# --- PRODUCTOS E INVENTARIO ---
 class Producto(Base):
     __tablename__ = "productos"
+
     id = Column(Integer, primary_key=True, index=True)
-    numero_catalogo = Column(String, unique=True, index=True) # El ID principal de búsqueda
-    descripcion = Column(Text)
-    marca = Column(String, index=True, nullable=True) # Ej: Balluff, Festo
+    sku = Column(String(50), unique=True, index=True, nullable=False)
+    nombre = Column(String(150), index=True, nullable=False)
+    descripcion = Column(Text, nullable=True)
+    imagen_url = Column(String(255), nullable=True)
     
-    # Costos y Monedas
-    costo_proveedor = Column(Float, default=0.0) # Unit Price Prov
-    moneda_compra = Column(String, default="USD") # USD o MXN
-    tiempo_entrega = Column(String, nullable=True)
-    
-    # Inventario y Multimedia
     stock_actual = Column(Integer, default=0)
-    stock_minimo = Column(Integer, default=5) 
-    ubicacion = Column(String, nullable=True) # Ej: Pasillo 3
-    imagen_url = Column(String, nullable=True) # URL de la foto
+    stock_minimo = Column(Integer, default=5)
+    
+    costo_compra = Column(DECIMAL(10, 2), default=0.00) 
+    precio_publico = Column(DECIMAL(10, 2), default=0.00)
+    precio_mayorista = Column(DECIMAL(10, 2), default=0.00)
+    precio_distribuidor = Column(DECIMAL(10, 2), default=0.00)
+    
+    promociones = relationship("Promocion", back_populates="producto")
+    detalles_orden = relationship("DetalleOrden", back_populates="producto")
+    # Nueva relación para compras
+    detalles_compra = relationship("DetalleCompra", back_populates="producto")
 
-    proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
-    proveedor = relationship("Proveedor", back_populates="productos")
+class Promocion(Base):
+    __tablename__ = "promociones"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    producto_id = Column(Integer, ForeignKey("productos.id"))
+    nombre_promo = Column(String(100))
+    descuento_porcentaje = Column(Integer)
+    fecha_inicio = Column(DateTime)
+    fecha_fin = Column(DateTime)
+    activa = Column(Boolean, default=True)
+    
+    producto = relationship("Producto", back_populates="promociones")
 
-# --- CRM Y FINANZAS (Clientes y Cuentas por Cobrar) ---
+# --- TERCEROS ---
 class Cliente(Base):
     __tablename__ = "clientes"
-    id = Column(Integer, primary_key=True, index=True)
-    
-    # Datos Principales
-    compania = Column(String, index=True) # Razón Social / Empresa (¡Campo Agregado!)
-    nombre = Column(String, index=True)   # Nombre del Contacto
-    rfc = Column(String, nullable=True)
-    
-    # Contacto
-    email = Column(String, nullable=True)
-    telefono = Column(String, nullable=True)
-    direccion = Column(Text, nullable=True)
-    
-    # Finanzas (Crédito)
-    dias_credito = Column(Integer, default=30)
-    saldo_actual = Column(Float, default=0.0) # Cuánto deben actualmente
-    
-    movimientos = relationship("MovimientoCuenta", back_populates="cliente")
-    cotizaciones = relationship("Cotizacion", back_populates="cliente")
 
-class MovimientoCuenta(Base):
-    """
-    Libro Mayor por Cliente:
-    Registra cuando se genera una deuda (Nota Remisión) y cuando pagan.
-    """
-    __tablename__ = "movimientos_cuenta"
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_empresa = Column(String(150), index=True)
+    contacto_nombre = Column(String(100))
+    rfc_tax_id = Column(String(50), nullable=True)
+    email = Column(String(100))
+    telefono = Column(String(20))
+    direccion = Column(Text)
+    
+    saldo_actual = Column(DECIMAL(12, 2), default=0.00) 
+    
+    ordenes = relationship("OrdenVenta", back_populates="cliente")
+    transacciones = relationship("TransaccionCliente", back_populates="cliente")
+
+class Proveedor(Base):
+    __tablename__ = "proveedores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_empresa = Column(String(150), index=True)
+    contacto_nombre = Column(String(100))
+    telefono = Column(String(20))
+    email = Column(String(100))
+    
+    saldo_actual = Column(DECIMAL(12, 2), default=0.00) 
+    
+    compras = relationship("OrdenCompra", back_populates="proveedor")
+    transacciones = relationship("TransaccionProveedor", back_populates="proveedor")
+
+# --- FINANZAS ---
+class TransaccionCliente(Base):
+    __tablename__ = "transacciones_clientes"
+    
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
-    fecha = Column(DateTime, default=datetime.now)
+    tipo = Column(Enum(TipoMovimiento))
+    monto = Column(DECIMAL(12, 2), nullable=False)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    descripcion = Column(String(200))
+    referencia_id = Column(Integer, nullable=True)
     
-    tipo = Column(String) # 'CARGO' (Deuda nueva) o 'ABONO' (Pago recibido)
-    monto = Column(Float)
-    referencia = Column(String) # Folio Cotización o # Transferencia
-    descripcion = Column(String)
-    
-    cliente = relationship("Cliente", back_populates="movimientos")
+    cliente = relationship("Cliente", back_populates="transacciones")
 
-# --- VENTAS (Cotizaciones) ---
-class Cotizacion(Base):
-    __tablename__ = "cotizaciones"
-    id = Column(Integer, primary_key=True, index=True)
-    folio = Column(String, unique=True, index=True) # Ej: C-2512001
+class TransaccionProveedor(Base):
+    __tablename__ = "transacciones_proveedores"
     
+    id = Column(Integer, primary_key=True, index=True)
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
+    tipo = Column(Enum(TipoMovimiento))
+    monto = Column(DECIMAL(12, 2), nullable=False)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    descripcion = Column(String(200))
+    
+    proveedor = relationship("Proveedor", back_populates="transacciones")
+
+# --- VENTAS ---
+class OrdenVenta(Base):
+    __tablename__ = "ordenes_venta"
+
+    id = Column(Integer, primary_key=True, index=True)
+    folio = Column(String(20), unique=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    vendedor_id = Column(Integer, ForeignKey("usuarios.id"))
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+    fecha_vencimiento = Column(DateTime, nullable=True)
     
-    fecha = Column(DateTime, default=datetime.now)
+    estatus = Column(Enum(EstatusOrden), default=EstatusOrden.COTIZACION)
+    total = Column(DECIMAL(12, 2), default=0.00)
+    observaciones = Column(Text, nullable=True)
     
-    # Configuración Financiera del Documento
-    moneda_salida = Column(String) # USD o MXN (Lo que ve el cliente)
-    tipo_cambio_usado = Column(Float) # El TC fijado ese día
-    total_neto = Column(Float)
-    
-    # Estados: 'Borrador', 'Finalizada', 'Entregada' (Deuda), 'Pagada', 'Cancelada'
-    estado = Column(String, default="Borrador") 
+    cliente = relationship("Cliente", back_populates="ordenes")
+    vendedor = relationship("Usuario", back_populates="ventas")
+    detalles = relationship("DetalleOrden", back_populates="orden", cascade="all, delete-orphan")
 
-    cliente = relationship("Cliente", back_populates="cotizaciones")
-    detalles = relationship("CotizacionDetalle", back_populates="cotizacion")
-
-class CotizacionDetalle(Base):
-    __tablename__ = "cotizacion_detalles"
+class DetalleOrden(Base):
+    __tablename__ = "detalles_orden"
+    
     id = Column(Integer, primary_key=True, index=True)
-    cotizacion_id = Column(Integer, ForeignKey("cotizaciones.id"))
-    producto_id = Column(Integer, ForeignKey("productos.id"), nullable=True)
+    orden_id = Column(Integer, ForeignKey("ordenes_venta.id"))
+    producto_id = Column(Integer, ForeignKey("productos.id"))
     
-    # Snapshot de datos (por si el producto cambia de precio después)
-    cantidad = Column(Integer)
-    descripcion_historica = Column(String) 
+    cantidad = Column(Integer, nullable=False)
+    precio_unitario = Column(DECIMAL(10, 2), nullable=False)
+    descuento_aplicado = Column(DECIMAL(10, 2), default=0.00)
+    subtotal = Column(DECIMAL(12, 2), nullable=False)
     
-    # Cálculos Matemáticos Guardados
-    costo_unitario_snapshot = Column(Float) # Costo real en ese momento
-    margen_aplicado = Column(Float) # % de ganancia
-    descuento_aplicado = Column(Float) # % descuento
+    orden = relationship("OrdenVenta", back_populates="detalles")
+    producto = relationship("Producto", back_populates="detalles_orden")
+
+# --- COMPRAS (ACTUALIZADO) ---
+class OrdenCompra(Base):
+    __tablename__ = "ordenes_compra"
     
-    precio_venta_final = Column(Float) # Precio unitario final al cliente
-    subtotal_linea = Column(Float) # precio * cantidad
+    id = Column(Integer, primary_key=True, index=True)
+    proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+    total = Column(DECIMAL(12, 2))
+    estatus = Column(String(20), default="recibido") 
     
-    cotizacion = relationship("Cotizacion", back_populates="detalles")
-    producto = relationship("Producto")
+    proveedor = relationship("Proveedor", back_populates="compras")
+    # Relación con los detalles (NUEVO)
+    detalles = relationship("DetalleCompra", back_populates="orden", cascade="all, delete-orphan")
+
+class DetalleCompra(Base):
+    __tablename__ = "detalles_compra"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    orden_compra_id = Column(Integer, ForeignKey("ordenes_compra.id"))
+    producto_id = Column(Integer, ForeignKey("productos.id"))
+    
+    cantidad = Column(Integer, nullable=False)
+    costo_unitario = Column(DECIMAL(10, 2), nullable=False)
+    
+    orden = relationship("OrdenCompra", back_populates="detalles")
+    producto = relationship("Producto", back_populates="detalles_compra")

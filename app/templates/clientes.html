@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes - DASIC ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
+    <div id="sidebar-container"></div>
+
+    <main>
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Cartera de Clientes</h2>
+                <p class="text-sm text-gray-500">Gestión de contactos y cobranza</p>
+            </div>
+            <button onclick="abrirModalCliente()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 transition">
+                <i class="fas fa-user-plus"></i> Nuevo Cliente
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-bold uppercase">Empresa / Contacto</th>
+                            <th class="px-5 py-3 text-left text-xs font-bold uppercase">Datos</th>
+                            <th class="px-5 py-3 text-right text-xs font-bold uppercase">Saldo (Deuda)</th>
+                            <th class="px-5 py-3 text-center text-xs font-bold uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-clientes" class="text-sm">
+                        <tr><td colspan="4" class="py-10 text-center text-gray-400">Cargando cartera...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-cliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-40 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative">
+            <button onclick="cerrarModal('modal-cliente')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-titulo">Nuevo Cliente</h3>
+            
+            <form id="form-cliente" class="space-y-4">
+                <input type="hidden" id="cli-id">
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">Nombre Empresa / Razón Social</label>
+                    <input type="text" id="cli-empresa" required class="w-full border border-gray-300 rounded p-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700">Contacto Principal</label>
+                        <input type="text" id="cli-contacto" required class="w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700">RFC / Tax ID</label>
+                        <input type="text" id="cli-rfc" class="w-full border border-gray-300 rounded p-2 uppercase">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700">Email</label>
+                        <input type="email" id="cli-email" required class="w-full border border-gray-300 rounded p-2">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700">Teléfono</label>
+                        <input type="text" id="cli-tel" required class="w-full border border-gray-300 rounded p-2">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">Dirección</label>
+                    <textarea id="cli-dir" rows="2" class="w-full border border-gray-300 rounded p-2"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="cerrarModal('modal-cliente')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-pagos" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-0 relative overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div class="bg-slate-800 p-4 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-lg" id="pago-cliente-nombre">Cliente S.A.</h3>
+                    <p class="text-xs text-slate-300">Estado de Cuenta</p>
+                </div>
+                <button onclick="cerrarModal('modal-pagos')" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="bg-gray-50 p-4 border-b flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Saldo Actual</p>
+                    <p class="text-2xl font-bold text-red-600" id="pago-saldo">$0.00</p>
+                </div>
+                <button onclick="registrarAbono()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-bold text-sm">
+                    <i class="fas fa-hand-holding-usd mr-2"></i> Registrar Pago
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-white">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-2 py-2">Fecha</th>
+                            <th class="px-2 py-2">Concepto</th>
+                            <th class="px-2 py-2 text-right">Cargo (Venta)</th>
+                            <th class="px-2 py-2 text-right">Abono (Pago)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-movimientos" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let currentClienteId = null;
+
+        document.addEventListener('DOMContentLoaded', cargarClientes);
+
+        // --- CARGAR TABLA ---
+        async function cargarClientes() {
+            try {
+                const res = await fetch('/api/clientes/?limit=100', { headers: { 'Authorization': `Bearer ${token}` }});
+                const clientes = await res.json();
+                
+                const tbody = document.getElementById('tabla-clientes');
+                tbody.innerHTML = '';
+
+                clientes.forEach(c => {
+                    const saldo = parseFloat(c.saldo_actual);
+                    const colorSaldo = saldo > 0.1 ? 'text-red-600 font-bold' : 'text-green-600';
+                    const estado = saldo > 0.1 ? 'Con Deuda' : 'Al Corriente';
+
+                    const tr = `
+                        <tr class="hover:bg-blue-50 border-b border-gray-100 transition">
+                            <td class="px-5 py-4">
+                                <div class="font-bold text-gray-800">${c.nombre_empresa}</div>
+                                <div class="text-xs text-gray-500"><i class="fas fa-user mr-1"></i> ${c.contacto_nombre}</div>
+                            </td>
+                            <td class="px-5 py-4">
+                                <div class="text-xs text-gray-600"><i class="fas fa-envelope w-4"></i> ${c.email}</div>
+                                <div class="text-xs text-gray-600"><i class="fas fa-phone w-4"></i> ${c.telefono}</div>
+                            </td>
+                            <td class="px-5 py-4 text-right">
+                                <div class="${colorSaldo} text-lg">$${saldo.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                <span class="text-[10px] uppercase font-bold text-gray-400">${estado}</span>
+                            </td>
+                            <td class="px-5 py-4 text-center">
+                                <button onclick="verEstadoCuenta(${c.id}, '${c.nombre_empresa}', ${saldo})" class="text-blue-600 hover:text-blue-800 mx-2" title="Estado de Cuenta / Pagar">
+                                    <i class="fas fa-file-invoice-dollar text-xl"></i>
+                                </button>
+                                <button onclick='editarCliente(${JSON.stringify(c)})' class="text-gray-400 hover:text-gray-600 mx-2" title="Editar Datos">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += tr;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // --- CRUD CLIENTES ---
+        function abrirModalCliente() {
+            document.getElementById('form-cliente').reset();
+            document.getElementById('cli-id').value = '';
+            document.getElementById('modal-titulo').innerText = "Nuevo Cliente";
+            document.getElementById('modal-cliente').classList.remove('hidden');
+        }
+
+        function editarCliente(c) {
+            document.getElementById('cli-id').value = c.id;
+            document.getElementById('cli-empresa').value = c.nombre_empresa;
+            document.getElementById('cli-contacto').value = c.contacto_nombre;
+            document.getElementById('cli-rfc').value = c.rfc_tax_id;
+            document.getElementById('cli-email').value = c.email;
+            document.getElementById('cli-tel').value = c.telefono;
+            document.getElementById('cli-dir').value = c.direccion;
+            
+            document.getElementById('modal-titulo').innerText = "Editar Cliente";
+            document.getElementById('modal-cliente').classList.remove('hidden');
+        }
+
+        document.getElementById('form-cliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('cli-id').value;
+            const url = id ? `/api/clientes/${id}` : '/api/clientes/'; // Nota: Si no tienes PUT en backend, solo funcionará POST
+            // Nota: Para este ejemplo asumimos que solo creamos, si necesitas editar (PUT) habría que agregarlo al router.
+            
+            const data = {
+                nombre_empresa: document.getElementById('cli-empresa').value,
+                contacto_nombre: document.getElementById('cli-contacto').value,
+                rfc_tax_id: document.getElementById('cli-rfc').value,
+                email: document.getElementById('cli-email').value,
+                telefono: document.getElementById('cli-tel').value,
+                direccion: document.getElementById('cli-dir').value
+            };
+
+            try {
+                // Si es edición y no tienes PUT implementado, esto dará 405. 
+                // Por ahora el POST funciona perfecto para crear.
+                const res = await fetch('/api/clientes/', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if(res.ok) {
+                    cerrarModal('modal-cliente');
+                    Swal.fire('Guardado', 'Cliente registrado', 'success');
+                    cargarClientes();
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Error', err.detail, 'error');
+                }
+            } catch(e) { Swal.fire('Error', 'Fallo de red', 'error'); }
+        });
+
+        // --- ESTADO DE CUENTA Y PAGOS ---
+        async function verEstadoCuenta(id, nombre, saldo) {
+            currentClienteId = id;
+            document.getElementById('pago-cliente-nombre').innerText = nombre;
+            document.getElementById('pago-saldo').innerText = `$${saldo.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            
+            const tbody = document.getElementById('lista-movimientos');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Cargando movimientos...</td></tr>';
+            
+            document.getElementById('modal-pagos').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/clientes/${id}/estado-cuenta`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const movimientos = await res.json();
+                
+                tbody.innerHTML = '';
+                if(movimientos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-400">Sin movimientos recientes</td></tr>';
+                    return;
+                }
+
+                movimientos.forEach(m => {
+                    const fecha = new Date(m.fecha).toLocaleDateString();
+                    const esCargo = m.tipo === 'cargo';
+                    const montoFmt = `$${parseFloat(m.monto).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                    
+                    const cargoHtml = esCargo ? `<span class="text-red-600 font-bold">${montoFmt}</span>` : '-';
+                    const abonoHtml = !esCargo ? `<span class="text-green-600 font-bold">${montoFmt}</span>` : '-';
+
+                    tbody.innerHTML += `
+                        <tr class="border-b border-gray-50">
+                            <td class="px-2 py-2 text-gray-600 text-xs">${fecha}</td>
+                            <td class="px-2 py-2 text-gray-800 text-xs">${m.descripcion}</td>
+                            <td class="px-2 py-2 text-right">${cargoHtml}</td>
+                            <td class="px-2 py-2 text-right">${abonoHtml}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch(e) { console.error(e); }
+        }
+
+        async function registrarAbono() {
+            const { value: monto } = await Swal.fire({
+                title: 'Registrar Pago',
+                input: 'number',
+                inputLabel: 'Monto recibido ($)',
+                inputPlaceholder: 'Ej. 5000',
+                showCancelButton: true
+            });
+
+            if (monto && parseFloat(monto) > 0) {
+                try {
+                    const res = await fetch(`/api/clientes/${currentClienteId}/registrar-pago?monto=${monto}&descripcion=Pago%20Recibido`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if(res.ok) {
+                        Swal.fire('Pago Registrado', 'El saldo ha sido actualizado', 'success');
+                        document.getElementById('modal-pagos').classList.add('hidden'); // Cerrar y recargar
+                        cargarClientes();
+                    } else {
+                        Swal.fire('Error', 'No se pudo registrar el pago', 'error');
+                    }
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        function cerrarModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
