@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <i class="fas fa-layer-group text-cyan-400 text-2xl mr-3 filter drop-shadow-md"></i>
                 <div>
                     <h1 class="font-bold text-xl tracking-wide text-white">DASIC</h1>
-                    <p class="text-[9px] text-cyan-200 uppercase tracking-[0.2em] font-semibold">ERP System</p>
+                    <p class="text-[9px] text-cyan-200 uppercase tracking-[0.2em] font-semibold">DATAX ERP System</p>
                 </div>
             </div>
 
@@ -128,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="flex items-center gap-1.5 group cursor-default">
                 <span>Powered by</span>
                 <span class="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 group-hover:text-blue-600 transition-colors">
-                    <i class="fas fa-bolt text-yellow-500"></i> SMART SITE
+                    <i class="fas fa-bolt text-yellow-500"></i> Smart Site Company SAS de CV
                 </span>
             </div>
             <div class="font-mono font-bold tracking-widest text-slate-500" id="live-clock">--:--:--</div>

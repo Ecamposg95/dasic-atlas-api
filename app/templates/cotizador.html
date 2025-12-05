@@ -3,126 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador Pro - DASIC ERP</title>
+    <title>Cotizador - DASIC ERP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }; // IMPORTANTE PARA MODO OSCURO
+    </script>
     <style>
-        /* Ocultar flechas en inputs numéricos */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .original-price { text-decoration: line-through; font-size: 0.75rem; color: #9ca3af; margin-right: 4px; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .original-price { text-decoration: line-through; font-size: 0.7rem; color: #ef4444; opacity: 0.8; }
+        /* Scroll fino */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans h-screen flex flex-col">
+<body class="font-sans h-screen overflow-hidden text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-950 transition-colors">
 
     <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
     <div id="sidebar-container"></div>
 
-    <main class="flex-1 overflow-y-auto p-6">
+    <main class="flex-1 flex flex-col p-4 overflow-hidden h-full">
         
-        <div class="mb-6 border-b border-gray-300">
+        <div class="mb-4 border-b border-slate-300 dark:border-slate-700 flex-none">
             <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
                 <li class="mr-2">
-                    <button onclick="cambiarTab('nuevo')" id="tab-btn-nuevo" class="inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active">
+                    <button onclick="cambiarTab('nuevo')" id="tab-btn-nuevo" class="inline-block p-3 border-b-2 border-blue-600 text-blue-600 rounded-t-lg active dark:text-blue-400 dark:border-blue-400 transition-colors">
                         <i class="fas fa-cash-register mr-2"></i> Cotizador
                     </button>
                 </li>
                 <li class="mr-2">
-                    <button onclick="cambiarTab('historial')" id="tab-btn-historial" class="inline-block p-4 border-b-2 border-transparent hover:text-gray-600 rounded-t-lg">
+                    <button onclick="cambiarTab('historial')" id="tab-btn-historial" class="inline-block p-3 border-b-2 border-transparent hover:text-slate-600 hover:border-slate-300 rounded-t-lg dark:hover:text-slate-300 transition-colors">
                         <i class="fas fa-history mr-2"></i> Historial
                     </button>
                 </li>
             </ul>
         </div>
 
-        <div id="view-nuevo">
+        <div id="view-nuevo" class="flex-1 flex flex-col gap-4 overflow-hidden">
             
-            <div class="bg-white p-4 rounded-lg shadow mb-4 border-l-4 border-green-500">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-l-4 border-cyan-500 flex-none">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div class="md:col-span-2">
-                        <label class="text-xs font-bold text-gray-500 uppercase">Cliente</label>
-                        <select id="select-cliente" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-green-500"></select>
+                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Cliente</label>
+                        <select id="select-cliente" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none"></select>
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Moneda</label>
-                        <select id="select-moneda" onchange="cambiarMoneda()" class="w-full border rounded p-2 text-sm font-bold bg-gray-50">
-                            <option value="MXN" selected>🇲🇽 MXN (Pesos)</option>
-                            <option value="USD">🇺🇸 USD (Dólares)</option>
+                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Moneda</label>
+                        <select id="select-moneda" onchange="cambiarMoneda()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                            <option value="MXN" selected>🇲🇽 MXN</option>
+                            <option value="USD">🇺🇸 USD</option>
                         </select>
                     </div>
                     <div id="div-tc" class="opacity-50 pointer-events-none">
-                        <label class="text-xs font-bold text-gray-500 uppercase">T.C.</label>
-                        <input type="number" id="input-tc" value="20.00" onchange="recalculer()" class="w-full border rounded p-2 text-sm text-right">
+                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">T.C.</label>
+                        <input type="number" id="input-tc" value="20.00" onchange="recalculer()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
                     </div>
                 </div>
-                <input type="text" id="observaciones" class="w-full mt-3 border-b border-gray-300 focus:outline-none text-sm py-1 bg-transparent" placeholder="+ Observaciones (Condiciones de pago, entrega, etc.)">
+                <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones...">
             </div>
 
-            <div class="flex flex-col lg:flex-row gap-4 h-full">
-                <div class="w-full lg:w-4/12 bg-white p-4 rounded-lg shadow h-fit">
-                    <label class="text-xs font-bold text-gray-500 uppercase mb-2 block">Agregar Producto</label>
+            <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
+                <div class="w-full lg:w-1/3 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Catálogo</label>
                     <div class="relative">
-                        <input type="text" id="buscador" class="w-full border rounded p-2 pl-8 mb-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Buscar SKU o Nombre...">
-                        <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                        <input type="text" id="buscador" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 pl-8 mb-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Buscar SKU...">
+                        <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
                     </div>
                     
-                    <div id="lista-resultados" class="max-h-96 overflow-y-auto border-t hidden">
+                    <div id="lista-resultados" class="flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-700 hidden custom-scroll">
                         </div>
+                    <div id="empty-search" class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
+                        <i class="fas fa-barcode text-4xl"></i>
+                    </div>
                 </div>
 
-                <div class="w-full lg:w-8/12 bg-white rounded-lg shadow flex flex-col">
-                    <div class="p-3 bg-gray-50 border-b flex justify-between items-center">
-                        <span class="font-bold text-gray-700 text-sm">Detalle de Partidas</span>
-                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
+                <div class="w-full lg:w-2/3 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center flex-none">
+                        <span class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
+                        <span class="text-xs bg-blue-100 dark:bg-slate-600 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
                     </div>
                     
-                    <div class="flex-1 overflow-y-auto">
+                    <div class="flex-1 overflow-y-auto custom-scroll">
                         <table class="w-full text-left text-sm">
-                            <thead class="bg-white text-gray-500 text-xs uppercase sticky top-0 shadow-sm z-10">
+                            <thead class="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th class="p-3">Producto</th>
-                                    <th class="p-3 text-center w-20">Cant.</th>
-                                    <th class="p-3 text-right">Precio Unit.</th>
-                                    <th class="p-3 text-center w-16">Desc %</th>
-                                    <th class="p-3 text-right w-24">Importe</th>
-                                    <th class="p-3 w-10"></th>
+                                    <th class="p-3 bg-white dark:bg-slate-800">Producto</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Cant.</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Precio</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-14">Desc%</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
                                 </tr>
                             </thead>
-                            <tbody id="tabla-carrito" class="divide-y divide-gray-100">
-                                <tr><td colspan="6" class="p-10 text-center text-gray-400 italic">Agrega productos para comenzar</td></tr>
+                            <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                <tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="p-4 bg-gray-50 border-t">
-                        <div class="flex justify-end gap-8 items-end">
-                            <div class="text-right text-sm text-gray-600 space-y-1">
-                                <div class="flex justify-between w-48"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold text-gray-800">$0.00</span></div>
-                                <div class="flex justify-between w-48 text-red-500 text-xs hidden" id="row-descuento-total"><span>Ahorro:</span> <span id="lbl-ahorro">-$0.00</span></div>
-                                <div class="flex justify-between w-48"><span>IVA (16%):</span> <span id="lbl-iva" class="font-bold text-gray-800">$0.00</span></div>
-                                <div class="flex justify-between w-48 border-t border-gray-300 pt-1 mt-1 text-lg text-green-700 font-bold">
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
+                        <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+                            <div class="flex gap-2">
+                                <button onclick="guardar('cotizacion')" class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition flex items-center">
+                                    <i class="fas fa-save mr-2 text-yellow-500"></i> Guardar
+                                </button>
+                                <button onclick="guardar('pendiente')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center">
+                                    <i class="fas fa-check-circle mr-2"></i> Vender
+                                </button>
+                            </div>
+                            
+                            <div class="text-right text-xs text-slate-600 dark:text-slate-400 space-y-1 min-w-[200px]">
+                                <div class="flex justify-between"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold">$0.00</span></div>
+                                <div class="flex justify-between"><span>IVA (16%):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
+                                <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-1 mt-1 text-base text-blue-900 dark:text-cyan-400 font-bold">
                                     <span>Total:</span> <span id="lbl-total">$0.00</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="flex justify-end gap-3 mt-4">
-                            <button onclick="guardar('cotizacion')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-5 py-2 rounded-lg font-bold text-sm shadow-sm transition">
-                                <i class="fas fa-file-alt mr-2 text-yellow-500"></i> Guardar Cotización
-                            </button>
-                            <button onclick="guardar('pendiente')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md transition">
-                                <i class="fas fa-check-circle mr-2"></i> Confirmar Venta
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="view-historial" class="hidden">
-            <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div id="view-historial" class="hidden flex-1 overflow-hidden bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+            <div class="h-full overflow-y-auto custom-scroll">
                 <table class="min-w-full text-sm text-left">
-                    <thead class="bg-slate-800 text-white text-xs uppercase">
+                    <thead class="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase sticky top-0 shadow-sm">
                         <tr>
                             <th class="px-6 py-3">Folio</th>
                             <th class="px-6 py-3">Fecha</th>
@@ -132,7 +140,7 @@
                             <th class="px-6 py-3 text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-historial" class="divide-y divide-gray-100"></tbody>
+                    <tbody id="tabla-historial" class="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300"></tbody>
                 </table>
             </div>
         </div>
@@ -142,26 +150,21 @@
     <script src="/static/js/navbar.js"></script>
 
     <script>
+        // --- LÓGICA JAVASCRIPT IDÉNTICA A LA ANTERIOR (Solo ajustamos colores en el render) ---
         const token = localStorage.getItem('token');
-        // Estado Global
-        let state = { 
-            prods: [], 
-            cart: [], 
-            moneda: 'MXN', 
-            tc: 20.00 
-        };
+        let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00 };
 
-        // --- INICIO ---
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
-            
             const input = document.getElementById('buscador');
             input.addEventListener('input', (e) => filterProds(e.target.value));
             input.addEventListener('focus', () => { if(input.value) filterProds(input.value); });
-            
             document.addEventListener('click', (e) => {
-                if (!document.getElementById('lista-resultados').contains(e.target) && e.target !== input) {
-                    document.getElementById('lista-resultados').classList.add('hidden');
+                const list = document.getElementById('lista-resultados');
+                const empty = document.getElementById('empty-search');
+                if (!list.contains(e.target) && e.target !== input) {
+                    list.classList.add('hidden');
+                    if(input.value === '') empty.classList.remove('hidden');
                 }
             });
         });
@@ -169,11 +172,16 @@
         function cambiarTab(tab) {
             document.getElementById('view-nuevo').classList.add('hidden');
             document.getElementById('view-historial').classList.add('hidden');
-            document.getElementById('tab-btn-nuevo').className = "inline-block p-4 border-b-2 border-transparent hover:text-gray-600 rounded-t-lg transition";
-            document.getElementById('tab-btn-historial').className = "inline-block p-4 border-b-2 border-transparent hover:text-gray-600 rounded-t-lg transition";
+            
+            // Reset styles
+            const baseBtn = "inline-block p-3 border-b-2 border-transparent hover:text-slate-600 dark:hover:text-slate-300 rounded-t-lg transition-colors";
+            const activeBtn = "inline-block p-3 border-b-2 border-cyan-500 text-cyan-600 dark:text-cyan-400 rounded-t-lg active transition-colors font-bold";
+            
+            document.getElementById('tab-btn-nuevo').className = baseBtn;
+            document.getElementById('tab-btn-historial').className = baseBtn;
 
             document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${tab}`).className = "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active transition";
+            document.getElementById(`tab-btn-${tab}`).className = activeBtn;
             
             if(tab === 'historial') loadHistorial();
         }
@@ -184,19 +192,16 @@
                     fetch('/api/clientes/?limit=200', {headers: {'Authorization': `Bearer ${token}`}}),
                     fetch('/api/productos/?limit=2000', {headers: {'Authorization': `Bearer ${token}`}})
                 ]);
-                
                 if(cRes.ok) {
                     const clientes = await cRes.json();
                     const sel = document.getElementById('select-cliente');
-                    sel.innerHTML = '<option value="">-- Seleccionar Cliente --</option>';
+                    sel.innerHTML = '<option value="">-- Seleccionar --</option>';
                     clientes.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nombre_empresa}</option>`);
                 }
-                
                 if(pRes.ok) state.prods = await pRes.json();
-            } catch(e) { console.error("Error cargando datos", e); }
+            } catch(e) { console.error(e); }
         }
 
-        // --- MONEDA Y FORMATO ---
         function cambiarMoneda() {
             state.moneda = document.getElementById('select-moneda').value;
             const divTC = document.getElementById('div-tc');
@@ -210,67 +215,58 @@
             renderCart();
             filterProds(document.getElementById('buscador').value);
         }
-        
-        function recalculer() { 
-            state.tc = parseFloat(document.getElementById('input-tc').value) || 20; 
-            renderCart(); 
-        }
-        
+        function recalculer() { state.tc = parseFloat(document.getElementById('input-tc').value); renderCart(); }
         function fmtMoney(amount) {
-            let val = amount; 
-            let sym = '$';
+            let val = amount; let sym = '$';
             if(state.moneda === 'USD') { val = amount / state.tc; sym = 'US$'; }
             return sym + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
-        // --- BUSCADOR ---
         function filterProds(txt) {
             const list = document.getElementById('lista-resultados');
+            const empty = document.getElementById('empty-search');
             list.innerHTML = '';
-            const clean = txt.toLowerCase();
             
-            if(clean.length < 1) { list.classList.add('hidden'); return; }
+            const clean = txt.toLowerCase();
+            if(clean.length < 1) { 
+                list.classList.add('hidden'); 
+                empty.classList.remove('hidden');
+                return; 
+            }
 
             const matches = state.prods.filter(p => p.nombre.toLowerCase().includes(clean) || p.sku.toLowerCase().includes(clean));
+            
+            empty.classList.add('hidden');
             list.classList.remove('hidden');
 
-            if(matches.length === 0) { list.innerHTML = '<div class="p-4 text-center text-xs text-gray-400">Sin resultados</div>'; return; }
+            if(matches.length === 0) { list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Sin resultados</div>'; return; }
 
             matches.slice(0, 10).forEach(p => {
                 const el = document.createElement('div');
-                el.className = "p-3 border-b hover:bg-blue-50 cursor-pointer flex justify-between items-center transition";
+                el.className = "p-3 border-b border-slate-100 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-slate-700 cursor-pointer flex justify-between items-center transition group";
                 el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
-                
                 el.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs text-gray-700">${p.sku}</div>
-                        <div class="text-xs text-gray-500 truncate w-48">${p.nombre}</div>
+                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku}</div>
+                        <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
                     </div>
                     <div class="text-right">
-                        <div class="font-bold text-blue-600">${fmtMoney(p.precio_publico)}</div>
-                        <div class="text-[10px] text-gray-400">Stock: ${p.stock_actual}</div>
+                        <div class="font-bold text-cyan-600 dark:text-cyan-400">${fmtMoney(p.precio_publico)}</div>
+                        <div class="text-[10px] text-slate-400">Stock: ${p.stock_actual}</div>
                     </div>`;
                 list.appendChild(el);
             });
         }
 
-        // --- CARRITO CON DESCUENTOS ---
         function addCart(p) {
             if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
-            
             const ex = state.cart.find(x => x.id === p.id);
-            if(ex) { 
-                ex.qty++; 
-            } else { 
-                // Añadimos propiedad 'desc' inicializada en 0
-                state.cart.push({ id: p.id, sku: p.sku, nom: p.nombre, price: p.precio_publico, qty: 1, max: p.stock_actual, desc: 0 }); 
-            }
+            if(ex) ex.qty++; else state.cart.push({ id: p.id, sku: p.sku, nom: p.nombre, price: p.precio_publico, qty: 1, max: p.stock_actual, desc: 0 });
             
             const input = document.getElementById('buscador');
-            input.value = '';
+            input.value = ''; input.focus();
             document.getElementById('lista-resultados').classList.add('hidden');
-            input.focus();
-            
+            document.getElementById('empty-search').classList.remove('hidden');
             renderCart();
         }
 
@@ -278,171 +274,109 @@
             const tb = document.getElementById('tabla-carrito');
             tb.innerHTML = '';
             let subtotal = 0;
-            let totalAhorro = 0;
 
             if(state.cart.length === 0) {
-                tb.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-400 italic">Carrito vacío</td></tr>';
-                updTotal(0, 0); return;
+                tb.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+                updTotal(0); return;
             }
 
             state.cart.forEach((i, idx) => {
-                // Cálculo de Precio con Descuento
                 const precioBase = i.price;
-                const factorDesc = (1 - (i.desc / 100));
-                const precioFinal = precioBase * factorDesc;
+                const precioFinal = precioBase * (1 - (i.desc / 100));
                 const importe = i.qty * precioFinal;
-                
                 subtotal += importe;
-                
-                // Calcular ahorro para mostrar
-                const importeOriginal = i.qty * precioBase;
-                totalAhorro += (importeOriginal - importe);
 
-                // Visualización
-                const visBase = fmtMoney(precioBase);
-                const visFinal = fmtMoney(precioFinal);
-                const visImporte = fmtMoney(importe);
-                
-                // Si hay descuento, tachamos el original
                 const precioDisplay = i.desc > 0 
-                    ? `<span class="original-price">${visBase}</span> <span class="text-green-600 font-bold">${visFinal}</span>` 
-                    : `<span class="text-gray-600">${visBase}</span>`;
+                    ? `<div class="flex flex-col items-end"><span class="original-price">${fmtMoney(precioBase)}</span><span class="text-green-600 dark:text-green-400 font-bold">${fmtMoney(precioFinal)}</span></div>` 
+                    : `<span class="text-slate-600 dark:text-slate-300">${fmtMoney(precioBase)}</span>`;
 
                 tb.innerHTML += `
-                    <tr class="border-b hover:bg-gray-50 transition">
+                    <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                         <td class="p-3">
-                            <div class="font-bold text-gray-700 text-xs">${i.sku}</div>
-                            <div class="text-xs text-gray-500 truncate w-56" title="${i.nom}">${i.nom}</div>
+                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}</div>
+                            <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
                         </td>
                         <td class="p-3 text-center">
-                            <input type="number" min="1" max="${i.max}" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)" 
-                                class="w-12 border text-center text-sm rounded focus:ring-2 focus:ring-blue-500">
+                            <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)" 
+                                class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
                         </td>
-                        <td class="p-3 text-right text-sm">
-                            ${precioDisplay}
-                        </td>
+                        <td class="p-3 text-right text-xs">${precioDisplay}</td>
                         <td class="p-3 text-center">
                             <input type="number" min="0" max="100" value="${i.desc}" onchange="updItem(${idx}, 'desc', this.value)" 
-                                class="w-12 border text-center text-sm rounded focus:ring-2 focus:ring-red-500 text-red-600 font-bold bg-red-50">
+                                class="w-10 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center text-xs rounded text-red-600 font-bold outline-none">
                         </td>
-                        <td class="p-3 text-right text-sm font-bold text-gray-800">${visImporte}</td>
-                        <td class="p-3 text-center cursor-pointer text-red-400 hover:text-red-600 transition" onclick="delItem(${idx})">
-                            <i class="fas fa-times"></i>
-                        </td>
+                        <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
+                        <td class="p-3 text-center cursor-pointer text-slate-300 hover:text-red-500 transition" onclick="delItem(${idx})"><i class="fas fa-times"></i></td>
                     </tr>`;
             });
-            updTotal(subtotal, totalAhorro);
+            updTotal(subtotal);
             document.getElementById('items-count').innerText = state.cart.length + " Ítems";
         }
 
-        function updItem(idx, type, val) { 
-            let v = parseFloat(val) || 0;
-            if (type === 'qty') {
-                if(v < 1) v = 1;
-                state.cart[idx].qty = v;
-            } else if (type === 'desc') {
-                if(v < 0) v = 0;
-                if(v > 100) v = 100;
-                state.cart[idx].desc = v;
-            }
+        function updItem(idx, t, v) { 
+            let val = parseFloat(v)||0; 
+            if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val; 
+            if(t=='desc') state.cart[idx].desc = val < 0 ? 0 : (val > 100 ? 100 : val); 
             renderCart(); 
         }
-        
-        function delItem(idx) { 
-            state.cart.splice(idx, 1); 
-            renderCart(); 
-        }
-        
-        function updTotal(sub, ahorro) {
+        function delItem(i) { state.cart.splice(i, 1); renderCart(); }
+        function updTotal(sub) {
             const iva = sub * 0.16;
             document.getElementById('lbl-sub').innerText = fmtMoney(sub);
             document.getElementById('lbl-iva').innerText = fmtMoney(iva);
             document.getElementById('lbl-total').innerText = fmtMoney(sub + iva);
-            
-            // Mostrar ahorro si existe
-            const rowAhorro = document.getElementById('row-descuento-total');
-            if (ahorro > 0.01) {
-                rowAhorro.classList.remove('hidden');
-                document.getElementById('lbl-ahorro').innerText = `-${fmtMoney(ahorro)}`;
-            } else {
-                rowAhorro.classList.add('hidden');
-            }
         }
 
-        // --- GUARDAR ---
         async function guardar(tipo) {
             const cli = document.getElementById('select-cliente').value;
             if(!cli || state.cart.length === 0) return Swal.fire('Error', 'Faltan datos', 'warning');
-
+            
             let obs = document.getElementById('observaciones').value;
             if(state.moneda === 'USD') obs = `[Moneda: USD, TC: ${state.tc}] ` + obs;
 
             const payload = {
-                cliente_id: parseInt(cli),
-                detalles: state.cart.map(i => ({ 
-                    producto_id: i.id, 
-                    cantidad: i.qty,
-                    descuento: i.desc // ENVIAMOS EL DESCUENTO AL BACKEND
-                })),
-                observaciones: obs
+                cliente_id: parseInt(cli), detalles: state.cart.map(i => ({ producto_id: i.id, cantidad: i.qty, descuento: i.desc })), observaciones: obs
             };
 
-            Swal.fire({title: 'Procesando...', didOpen: () => Swal.showLoading()});
-
+            Swal.fire({title:'Guardando...', didOpen:()=>Swal.showLoading()});
             try {
-                const res = await fetch(`/api/ventas/?tipo_orden=${tipo}`, {
-                    method: 'POST',
-                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
+                const res = await fetch(`/api/ventas/?tipo_orden=${tipo}`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                 if(res.ok) {
                     const d = await res.json();
-                    Swal.fire({
-                        icon:'success', 
-                        title: tipo==='cotizacion'?'Cotización':'Venta', 
-                        text: `Folio: ${d.folio}`, 
-                        showDenyButton:true, confirmButtonText:'Nueva Orden', denyButtonText:'Ver PDF'
-                    }).then(r => {
+                    Swal.fire({icon:'success', title: tipo==='cotizacion'?'Cotización':'Venta', text:`Folio: ${d.folio}`, showDenyButton:true, confirmButtonText:'Nueva', denyButtonText:'PDF'}).then(r => {
                         if(r.isDenied) window.open(`/api/ventas/${d.id}/pdf`, '_blank');
-                        state.cart = [];
-                        renderCart();
-                        document.getElementById('observaciones').value = '';
+                        state.cart = []; renderCart(); document.getElementById('observaciones').value = '';
                     });
-                } else {
-                    const err = await res.json();
-                    Swal.fire('Error', err.detail || "Error al guardar", 'error');
-                }
+                } else { const err = await res.json(); Swal.fire('Error', err.detail, 'error'); }
             } catch(e) { console.error(e); }
         }
 
-        // --- HISTORIAL ---
         async function loadHistorial() {
-            try {
-                const res = await fetch('/api/ventas/historial', {headers: {'Authorization': `Bearer ${token}`}});
-                const data = await res.json();
-                const tb = document.getElementById('tabla-historial');
-                tb.innerHTML = '';
-                data.forEach(o => {
-                    const color = o.estatus === 'cotizacion' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-                    let btnConv = o.estatus === 'cotizacion' ? `<button onclick="convertir(${o.id})" class="text-blue-600 hover:underline text-xs font-bold mr-2">Vender</button>` : '';
-                    tb.innerHTML += `
-                        <tr class="bg-white border-b hover:bg-gray-50">
-                            <td class="px-6 py-4 font-bold text-gray-800">${o.folio}</td>
-                            <td class="px-6 py-4 text-gray-500">${new Date(o.fecha).toLocaleDateString()}</td>
-                            <td class="px-6 py-4">${o.cliente}</td>
-                            <td class="px-6 py-4 text-right font-mono font-bold">$${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-                            <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${color}">${o.estatus}</span></td>
-                            <td class="px-6 py-4 text-center">${btnConv}<a href="/api/ventas/${o.id}/pdf" target="_blank" class="text-red-500"><i class="fas fa-file-pdf text-lg"></i></a></td>
-                        </tr>`;
-                });
-            } catch(e) { console.error(e); }
+            const res = await fetch('/api/ventas/historial', {headers: {'Authorization': `Bearer ${token}`}});
+            const data = await res.json();
+            const tb = document.getElementById('tabla-historial');
+            tb.innerHTML = '';
+            data.forEach(o => {
+                const color = o.estatus === 'cotizacion' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                const btn = o.estatus === 'cotizacion' ? `<button onclick="convertir(${o.id})" class="text-cyan-600 hover:text-cyan-500 font-bold text-xs mr-3">VENDER</button>` : '';
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition">
+                        <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}</td>
+                        <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${new Date(o.fecha).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">${o.cliente}</td>
+                        <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">$${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                        <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${color}">${o.estatus}</span></td>
+                        <td class="px-6 py-4 text-center flex justify-center items-center">
+                            ${btn}
+                            <a href="/api/ventas/${o.id}/pdf" target="_blank" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-file-pdf text-lg"></i></a>
+                        </td>
+                    </tr>`;
+            });
         }
-
         async function convertir(id) {
-            if(!confirm('¿Convertir a Venta?')) return;
-            const res = await fetch(`/api/ventas/${id}/convertir`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
-            if(res.ok) { Swal.fire('Éxito', 'Venta confirmada', 'success'); loadHistorial(); }
+            if(!confirm('¿Aprobar venta?')) return;
+            await fetch(`/api/ventas/${id}/convertir`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
+            loadHistorial();
         }
     </script>
 </body>
