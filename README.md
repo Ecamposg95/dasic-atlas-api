@@ -1,138 +1,123 @@
-# 📄 Cotizador ERP
+# DASIC CRM Industrial (Atlas-based)
 
-**Sistema de Cotizaciones y Órdenes de Compra** diseñado para gestionar propuestas comerciales, controlar compromisos con proveedores y monitorear el estado de cuenta de clientes dentro de un flujo ERP ligero pero potente.
+Sistema **CRM industrial** multi-tenant y multi-branch, inspirado en patrones de Atlas ERP/POS, con UI **SSR (Jinja2)** y frontend ligero (**Tailwind CSS CDN + Alpine.js**). El cotizador vive como capacidad del CRM (cotizaciones ligadas a oportunidades y cuentas).
 
-El objetivo es centralizar los procesos comerciales clave: **cotizar, convertir en orden, registrar pagos y visualizar adeudos**, todo bajo una arquitectura modular y escalable.
+## Enfoque del Producto
 
----
+El nucleo del sistema es un **CRM muy potente**:
 
-## 🚀 Objetivo del Proyecto
-Crear una plataforma ERP enfocada en **cotizaciones, órdenes de compra y estados de cuenta**, permitiendo a empresas administrar de forma profesional todo su ciclo comercial y financiero básico.
+- Cuentas (clientes) + contactos + sitios/ubicaciones (plantas)
+- Multiples pipelines por organizacion
+- Oportunidades (deals) por pipeline/etapa con ownership y asignacion
+- Actividades (tareas/llamadas/visitas/notas) + **WhatsApp manual (Nivel A)**
+- Timeline/auditoria funcional (eventos de negocio)
+- Cotizaciones ligadas a oportunidades (fase siguiente)
 
----
+## Principios No Negociables
 
-## 📋 Características Principales
+- **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` y toda query filtra por `organization_id`.
+- **Multi-branch**: usuarios pueden ser globales (HQ) o branch-scoped; si son branch-scoped, su visibilidad se limita a su `branch_id` salvo roles de nivel gerente+.
+- **SSR, no SPA**: Jinja2 + Tailwind CDN + Alpine.js. No se introduce routing client-side.
+- **RBAC + visibilidad por asignacion**: endpoints aplican roles y filtros de ownership/asignacion.
+- **PostgreSQL directo**: sin fallback a SQLite.
+- **Alembic obligatorio**: migraciones para evolucion de esquema.
+- **Auth SSR con cookies HttpOnly**: JWT en cookie HttpOnly (evitar `localStorage`).
 
-### 🧾 Módulo de Cotizaciones
-- Generación de cotizaciones profesionales (PDF).
-- Cotizaciones multi-divisa (MXN / USD).
-- Ajustes de precios por partida.
-- Margen de utilidad automático.
-- Conversión de cotización → orden de compra con un clic.
+## Stack Tecnologico
 
-### 🛒 Órdenes de Compra
-- Control de compras a proveedores.
-- Productos "fantasma" (creación rápida desde la OC).
-- Actualización automática del inventario.
-- Registro de pagos a proveedores.
-- Historial completo de compras.
+- Backend: FastAPI
+- ORM: SQLAlchemy (2.x)
+- DB: PostgreSQL
+- Migraciones: Alembic
+- SSR: Jinja2
+- Frontend: Tailwind CSS (CDN) + Alpine.js
+- Lenguaje: Python puro
 
-### 💳 Estados de Cuenta (Clientes)
-- Registro de abonos.
-- Panel visual de adeudos.
-- Historial financiero por cliente.
-- Conversión automática de órdenes a cuentas por cobrar.
+## Documentacion (Source of Truth)
 
-### 🔐 Seguridad y Roles
-- Autenticación JWT.
-- Roles sugeridos:
-  - **Admin** — Control total del sistema.
-  - **Ventas** — Cotizaciones y cuentas por cobrar.
-  - **Compras** — Órdenes de compra y proveedores.
+Lee primero:
 
----
+- `context/00_CONTEXT_START_HERE.md`
+- `context/CRM_SPEC.md`
+- `context/RBAC.md`
+- `context/ARCHITECTURE.md`
+- `context/API_CONVENTIONS.md`
+- `context/ROADMAP.md`
 
-## 🛠️ Stack Tecnológico
+Referencia upstream:
 
-- **Backend:** FastAPI (Python 3.10+)
-- **ORM:** SQLAlchemy
-- **Base de datos:** SQLite (fácil de migrar a PostgreSQL/MySQL)
-- **Seguridad:** JWT, Passlib
-- **Frontend:** HTML + JS + Tailwind CSS
-- **Generación de PDFs:** fpdf2
+- `context/01_ATLAS_REFERENCE.md`
 
----
+## Requisitos
 
-## 📂 Estructura del Proyecto
+- Python 3.10+
+- PostgreSQL (recomendado 14+)
 
-```text
-cotizador-erp/
-├── app/
-│   ├── main.py
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── auth.py
-│   ├── services/
-│   │   ├── cotizaciones_service.py
-│   │   ├── ordenes_service.py
-│   │   └── clientes_service.py
-│   ├── routers/
-│   │   ├── cotizaciones.py
-│   │   ├── ordenes.py
-│   │   ├── clientes.py
-│   │   ├── proveedores.py
-│   │   └── auth.py
-│   ├── templates/
-│   │   ├── login.html
-│   │   ├── dashboard.html
-│   │   ├── cotizaciones.html
-│   │   ├── ordenes.html
-│   │   └── clientes.html
-│   ├── static/
-│       ├── js/
-│       └── css/
-└── requirements.txt
-```
+## Configuracion (.env)
 
----
+Crear `.env` (ejemplo):
 
-## ⚙️ Instalación
+- `DATABASE_URL=postgresql+psycopg://postgres:toor@localhost:5432/dasic_crm`
+- `SECRET_KEY=change-me`
+- `ACCESS_TOKEN_EXPIRE_MINUTES=720`
 
-```bash
-git clone https://github.com/tu-usuario/cotizador-erp.git
-cd cotizador-erp
-```
+Notas:
 
-### Crear entorno virtual
-```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-```
+- `SECRET_KEY` es obligatorio (no hardcode).
+- En SSR el JWT se emite en cookie HttpOnly.
 
-### Instalar dependencias
-```bash
-pip install -r requirements.txt
-```
+## Ejecutar (Desarrollo)
 
-### Ejecutar servidor
-```bash
-uvicorn app.main:app --reload
-```
+1. Crear venv e instalar dependencias
+   - `python -m venv venv`
+   - `source venv/bin/activate`
+   - `pip install -r requirements.txt`
 
-Documentación disponible en:
-- Swagger: http://127.0.0.1:8000/docs
-- Redoc: http://127.0.0.1:8000/redoc
+2. Migraciones (Alembic)
+   - `alembic upgrade head`
 
----
+3. Levantar servidor
+   - `uvicorn app.main:app --reload`
 
-## 📦 Dependencias (requirements.txt)
+4. Abrir
+   - UI: `http://127.0.0.1:8000/`
+   - Swagger: `http://127.0.0.1:8000/docs`
 
-```
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-python-jose[cryptography]
-passlib[bcrypt]
-python-multipart
-fpdf2
-jinja2
-```
+## Acceso Inicial (Prototipo Privado)
 
----
+En modo prototipo, el sistema crea un administrador inicial:
 
-Desarrollado para **Smart Site Company / DASIC**.
+- Email: `admin@dasic.com`
+- Password: `admin123`
+
+Uso recomendado: solo en ambientes de prueba/privados.
+
+## Multi-Tenancy (Headers)
+
+Convencion de headers para API:
+
+- `X-Organization-ID: <uuid>` (obligatorio)
+- `X-Branch-ID: <uuid>` (opcional)
+
+Reglas:
+
+- El `X-Organization-ID` se valida contra el `org_id` del JWT.
+- Si el usuario es branch-scoped, `X-Branch-ID` debe coincidir con su `branch_id` (o se rechaza).
+
+## RBAC (Roles)
+
+Tenant roles (cerrados):
+
+- `DUEÑO`
+- `ADMINISTRADOR`
+- `GERENTE_COMERCIAL`
+- `VENTAS`
+- `CRM`
+- `AUDITOR`
+- `LECTOR`
+
+La matriz detallada y reglas de visibilidad estan en `context/RBAC.md`.
+
+## Estado del Proyecto
+
+Este repo esta en transicion a la arquitectura objetivo. La especificacion y roadmap estan en `context/`.
