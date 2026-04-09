@@ -1,24 +1,25 @@
 import os
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
 def _database_url() -> str:
-    # Temporary default for current prototype.
-    # Target architecture will require PostgreSQL via DATABASE_URL.
-    return os.getenv("DATABASE_URL", "sqlite:///./cotizador_pro.db")
+    # Load .env for local development. In production, env vars should be provided by the runtime.
+    load_dotenv()
+
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL no está configurada. Crea un .env o exporta la variable antes de iniciar."
+        )
+    return url
 
 
 SQLALCHEMY_DATABASE_URL = _database_url()
 
-connect_args = {}
-if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
-    # Required for SQLite when using multiple threads.
-    connect_args = {"check_same_thread": False}
-
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

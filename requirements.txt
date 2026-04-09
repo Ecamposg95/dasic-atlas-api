@@ -7,3 +7,5 @@ passlib[bcrypt]
 python-multipart
 fpdf2
 jinja2
+psycopg[binary]
+python-dotenv
