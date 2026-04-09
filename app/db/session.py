@@ -14,6 +14,14 @@ def _database_url() -> str:
         raise RuntimeError(
             "DATABASE_URL no está configurada. Crea un .env o exporta la variable antes de iniciar."
         )
+
+    # Many platforms/older projects use these forms. SQLAlchemy expects an explicit driver.
+    # We standardize to psycopg (v3) since it's included in requirements.
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
+    if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
+
     return url
 
 
