@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
-from models import Usuario
-from schemas import UsuarioCreate
+
+from app.models import Usuario
+from app.schemas import UsuarioCreate
 from passlib.context import CryptContext
 from typing import Optional
 
-# Configuración de Hashing (Argon2)
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# Configuración de Hashing
+# Usamos bcrypt porque está declarado en requirements.txt (passlib[bcrypt]).
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
     

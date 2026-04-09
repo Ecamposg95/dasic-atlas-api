@@ -4,11 +4,10 @@ from sqlalchemy.orm import Session
 from typing import List, Union
 import csv
 import io
-import models
-import schemas
-import database
-from auth import get_current_user, allow_admin, allow_admin_asistente, allow_all_staff
-from models import RolUsuario
+from app import models
+from app import schemas
+from app.db import get_db
+from app.security import allow_admin, allow_admin_asistente, allow_all_staff
 
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/api/productos", tags=["Productos"])
 def listar_productos(
     skip: int = 0, 
     limit: int = 500, # Aumentamos el límite por defecto
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(allow_all_staff)
 ):
     """
@@ -28,7 +27,7 @@ def listar_productos(
     productos = db.query(models.Producto).offset(skip).limit(limit).all()
 
     # Lógica de "Camaleón": Decidimos qué schema usar según el rol
-    if current_user.rol in [RolUsuario.ADMIN, RolUsuario.ASISTENTE]:
+    if current_user.rol in [models.RolUsuario.ADMIN, models.RolUsuario.ASISTENTE]:
         return [schemas.ProductoResponseAdmin.model_validate(p) for p in productos]
     
     return [schemas.ProductoResponseVendedor.model_validate(p) for p in productos]
@@ -37,14 +36,14 @@ def listar_productos(
 @router.get("/{id}", response_model=Union[schemas.ProductoResponseAdmin, schemas.ProductoResponseVendedor])
 def obtener_producto(
     id: int, 
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(allow_all_staff)
 ):
     producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    if current_user.rol in [RolUsuario.ADMIN, RolUsuario.ASISTENTE]:
+    if current_user.rol in [models.RolUsuario.ADMIN, models.RolUsuario.ASISTENTE]:
         return schemas.ProductoResponseAdmin.model_validate(producto)
     return schemas.ProductoResponseVendedor.model_validate(producto)
 
@@ -52,7 +51,7 @@ def obtener_producto(
 @router.post("/", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
 def crear_producto(
     producto: schemas.ProductoCreate, 
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     # Verificar si el SKU ya existe
     db_producto = db.query(models.Producto).filter(models.Producto.sku == producto.sku).first()
@@ -70,7 +69,7 @@ def crear_producto(
 def actualizar_producto(
     id: int,
     producto_update: schemas.ProductoUpdate,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
@@ -87,7 +86,7 @@ def actualizar_producto(
 
 # --- 5. ELIMINAR PRODUCTO (SOLO ADMIN) ---
 @router.delete("/{id}", dependencies=[Depends(allow_admin)])
-def eliminar_producto(id: int, db: Session = Depends(database.get_db)):
+def eliminar_producto(id: int, db: Session = Depends(get_db)):
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
@@ -100,7 +99,7 @@ def eliminar_producto(id: int, db: Session = Depends(database.get_db)):
 @router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
 async def cargar_inventario_csv(
     file: UploadFile = File(...), 
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     """
     Importa productos desde CSV.
@@ -164,7 +163,7 @@ async def cargar_inventario_csv(
 
 # --- 7. EXPORTAR CSV (DESCARGAR) ---
 @router.get("/exportar/csv", dependencies=[Depends(allow_admin_asistente)])
-def exportar_productos_csv(db: Session = Depends(database.get_db)):
+def exportar_productos_csv(db: Session = Depends(get_db)):
     """Genera y descarga un archivo CSV con todo el inventario"""
     productos = db.query(models.Producto).all()
     

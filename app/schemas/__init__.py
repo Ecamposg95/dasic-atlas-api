@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
-from models import RolUsuario, EstatusOrden, TipoMovimiento
+from app.models import RolUsuario, EstatusOrden, TipoMovimiento
 
 # NOTA: Hemos cambiado EmailStr por str para evitar el error de documentación en Windows
 

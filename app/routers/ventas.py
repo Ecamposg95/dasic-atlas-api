@@ -7,11 +7,10 @@ from decimal import Decimal
 from datetime import datetime
 from jinja2 import Environment, BaseLoader
 
-import database
-import models
-import schemas
-from auth import get_current_user, allow_all_staff
-from models import EstatusOrden, TipoMovimiento
+from app import models
+from app import schemas
+from app.db import get_db
+from app.security import allow_all_staff, get_current_user
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
@@ -174,8 +173,8 @@ PDF_TEMPLATE_VENTA = """
 @router.post("/", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
 def crear_orden(
     orden_data: schemas.OrdenVentaCreate,
-    tipo_orden: EstatusOrden = EstatusOrden.COTIZACION, 
-    db: Session = Depends(database.get_db),
+    tipo_orden: models.EstatusOrden = models.EstatusOrden.COTIZACION,
+    db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
     cliente = db.query(models.Cliente).filter(models.Cliente.id == orden_data.cliente_id).first()
@@ -183,7 +182,7 @@ def crear_orden(
 
     try:
         count = db.query(models.OrdenVenta).count()
-        prefijo = "COT" if tipo_orden == EstatusOrden.COTIZACION else "VTA"
+        prefijo = "COT" if tipo_orden == models.EstatusOrden.COTIZACION else "VTA"
         folio = f"{prefijo}-{count + 1:04d}"
 
         nueva_orden = models.OrdenVenta(
@@ -204,7 +203,7 @@ def crear_orden(
             if not producto: raise HTTPException(404, f"Producto {item.producto_id} no existe")
             
             # Stock (Solo si es venta directa)
-            if tipo_orden != EstatusOrden.COTIZACION:
+            if tipo_orden != models.EstatusOrden.COTIZACION:
                 if producto.stock_actual < item.cantidad:
                     raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
                 producto.stock_actual -= item.cantidad
@@ -229,11 +228,11 @@ def crear_orden(
         nueva_orden.total = total_orden
         
         # Deuda (Solo si es venta directa)
-        if tipo_orden == EstatusOrden.PENDIENTE:
+        if tipo_orden == models.EstatusOrden.PENDIENTE:
             total_con_iva = total_orden * Decimal("1.16")
             deuda = models.TransaccionCliente(
                 cliente_id=cliente.id,
-                tipo=TipoMovimiento.CARGO,
+                tipo=models.TipoMovimiento.CARGO,
                 monto=total_con_iva,
                 descripcion=f"Venta {folio}",
                 referencia_id=nueva_orden.id
@@ -254,12 +253,12 @@ def crear_orden(
 def actualizar_orden(
     id: int,
     orden_update: schemas.OrdenVentaCreate,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
     if not orden: raise HTTPException(404, "Orden no encontrada")
     
-    if orden.estatus != EstatusOrden.COTIZACION:
+    if orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
 
     try:
@@ -304,9 +303,9 @@ def actualizar_orden(
 
 # --- 3. CONVERTIR COTIZACIÓN A VENTA (POST) ---
 @router.post("/{id}/convertir", dependencies=[Depends(allow_all_staff)])
-def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
+def convertir_cotizacion(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
-    if not orden or orden.estatus != EstatusOrden.COTIZACION:
+    if not orden or orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Orden no válida para conversión")
 
     try:
@@ -317,14 +316,14 @@ def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
             det.producto.stock_actual -= det.cantidad
         
         # Cambiar Estatus y Folio
-        orden.estatus = EstatusOrden.PENDIENTE
+        orden.estatus = models.EstatusOrden.PENDIENTE
         orden.folio = orden.folio.replace("COT", "VTA")
         
         # Generar Deuda
         total_con_iva = orden.total * Decimal("1.16")
         db.add(models.TransaccionCliente(
             cliente_id=orden.cliente_id,
-            tipo=TipoMovimiento.CARGO,
+            tipo=models.TipoMovimiento.CARGO,
             monto=total_con_iva,
             descripcion=f"Venta {orden.folio} (Desde Cotización)",
             referencia_id=orden.id
@@ -339,7 +338,7 @@ def convertir_cotizacion(id: int, db: Session = Depends(database.get_db)):
 
 # --- 4. LISTAR HISTORIAL ---
 @router.get("/historial")
-def listar_historial(limit: int = 50, db: Session = Depends(database.get_db)):
+def listar_historial(limit: int = 50, db: Session = Depends(get_db)):
     ordenes = db.query(models.OrdenVenta)\
         .order_by(desc(models.OrdenVenta.fecha_creacion))\
         .limit(limit).all()
@@ -355,7 +354,7 @@ def listar_historial(limit: int = 50, db: Session = Depends(database.get_db)):
 
 # --- 5. DETALLE JSON (PARA EDICIÓN) ---
 @router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
-def obtener_detalle_orden(id: int, db: Session = Depends(database.get_db)):
+def obtener_detalle_orden(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
     if not orden: raise HTTPException(404)
     
@@ -379,13 +378,15 @@ def obtener_detalle_orden(id: int, db: Session = Depends(database.get_db)):
 
 # --- 6. GENERAR PDF ---
 @router.get("/{id}/pdf", response_class=HTMLResponse)
-def generar_pdf(id: int, db: Session = Depends(database.get_db)):
+def generar_pdf(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
     if not orden: raise HTTPException(404)
 
     iva = orden.total * Decimal("0.16")
     gran_total = orden.total + iva
-    tipo_doc = "COTIZACIÓN" if orden.estatus == EstatusOrden.COTIZACION else "NOTA DE VENTA"
+    tipo_doc = (
+        "COTIZACIÓN" if orden.estatus == models.EstatusOrden.COTIZACION else "NOTA DE VENTA"
+    )
 
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(

@@ -6,11 +6,10 @@ from datetime import datetime
 from fastapi.responses import HTMLResponse
 from jinja2 import Environment, BaseLoader
 
-import database
-import models
-import schemas
-from auth import get_current_user, allow_all_staff, allow_admin_asistente
-from models import TipoMovimiento, RolUsuario
+from app import models
+from app import schemas
+from app.db import get_db
+from app.security import allow_admin_asistente, allow_all_staff, get_current_user
 
 router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 
@@ -19,7 +18,7 @@ router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 def listar_clientes(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     """
     Lista todos los clientes. El campo 'saldo_actual' permite ver rápidamente quién debe dinero.
@@ -31,7 +30,7 @@ def listar_clientes(
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def crear_cliente(
     cliente: schemas.ClienteCreate,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     """
     Permite registrar un nuevo cliente. Accesible para Vendedores.
@@ -50,7 +49,7 @@ def crear_cliente(
 @router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def obtener_cliente(
     cliente_id: int,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
     if not cliente:
@@ -61,7 +60,7 @@ def obtener_cliente(
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
     cliente_id: int,
-    db: Session = Depends(database.get_db)
+    db: Session = Depends(get_db)
 ):
     """
     Muestra el historial financiero:
@@ -87,7 +86,7 @@ def registrar_pago_cliente(
     monto: Decimal,
     descripcion: str = "Abono a cuenta",
     nota_id: int = None, # Opcional: Si el pago es específico para una nota
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
     """
@@ -105,7 +104,7 @@ def registrar_pago_cliente(
         # 1. Crear la transacción de ABONO
         nuevo_abono = models.TransaccionCliente(
             cliente_id=cliente.id,
-            tipo=TipoMovimiento.ABONO,
+            tipo=models.TipoMovimiento.ABONO,
             monto=monto,
             descripcion=f"PAGO RECIBIDO: {descripcion} (Reg. por {current_user.nombre})",
             referencia_id=nota_id # Puede ser null
@@ -212,7 +211,7 @@ PDF_TEMPLATE_EDO_CTA = """
 """
 
 @router.get("/{cliente_id}/pdf-estado-cuenta", response_class=HTMLResponse)
-def generar_pdf_estado_cuenta(cliente_id: int, db: Session = Depends(database.get_db)):
+def generar_pdf_estado_cuenta(cliente_id: int, db: Session = Depends(get_db)):
     cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
     if not cliente: raise HTTPException(404, "Cliente no encontrado")
     

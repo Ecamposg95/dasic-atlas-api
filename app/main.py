@@ -1,23 +1,17 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine, SessionLocal
-import models
-import services
-from schemas import UsuarioCreate, RolUsuario
+from app.db import SessionLocal, engine
+from app import models
+from app.services import UserService
+from app.schemas import UsuarioCreate
 
 # --- IMPORTACIÓN DE TODOS LOS MÓDULOS (ROUTERS) ---
-from routers import (
-    auth, 
-    productos, 
-    ventas, 
-    clientes, 
-    compras, 
-    usuarios, 
-    gastos
-)
+from app.routers import auth, clientes, compras, gastos, productos, usuarios, ventas
 
 # 1. Inicializar Base de Datos
 models.Base.metadata.create_all(bind=engine)
@@ -25,8 +19,9 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="DASIC ERP", version="2.0.0")
 
 # 2. Configuración de Archivos Estáticos y Plantillas
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # 3. Configuración CORS
 app.add_middleware(
@@ -108,10 +103,10 @@ def startup_db_check():
                 nombre="Administrador Principal",
                 email="admin@dasic.com",
                 password="admin123", 
-                rol=RolUsuario.ADMIN,
+                rol=models.RolUsuario.ADMIN,
                 activo=True
             )
-            services.UserService.create_user(db, admin)
+            UserService.create_user(db, admin)
             print(">> CREADO: admin@dasic.com / admin123")
             print("---------------------------------------")
         else:

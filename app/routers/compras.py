@@ -7,11 +7,10 @@ from decimal import Decimal
 from datetime import datetime
 from jinja2 import Environment, BaseLoader
 
-import database
-import models
-import schemas
-from auth import get_current_user, allow_admin_asistente
-from models import TipoMovimiento
+from app import models
+from app import schemas
+from app.db import get_db
+from app.security import allow_admin_asistente, get_current_user
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/compras", tags=["Proveedores y Gastos"])
@@ -170,11 +169,11 @@ class CompraInput(BaseModel):
 # --- ENDPOINTS ---
 
 @router.get("/proveedores", response_model=List[schemas.ProveedorResponse])
-def listar_proveedores(db: Session = Depends(database.get_db)):
+def listar_proveedores(db: Session = Depends(get_db)):
     return db.query(models.Proveedor).all()
 
 @router.post("/proveedores", response_model=schemas.ProveedorResponse)
-def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(database.get_db)):
+def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(get_db)):
     nuevo = models.Proveedor(**proveedor.model_dump())
     db.add(nuevo)
     db.commit()
@@ -183,7 +182,7 @@ def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(da
 
 # Listar Historial
 @router.get("/historial")
-def listar_historial_compras(limit: int = 50, db: Session = Depends(database.get_db)):
+def listar_historial_compras(limit: int = 50, db: Session = Depends(get_db)):
     ordenes = db.query(models.OrdenCompra)\
         .order_by(desc(models.OrdenCompra.fecha))\
         .limit(limit).all()
@@ -200,7 +199,7 @@ def listar_historial_compras(limit: int = 50, db: Session = Depends(database.get
     return resultado
 
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
-def registrar_compra(compra: CompraInput, db: Session = Depends(database.get_db)):
+def registrar_compra(compra: CompraInput, db: Session = Depends(get_db)):
     proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == compra.proveedor_id).first()
     if not proveedor: raise HTTPException(404, "Proveedor no encontrado")
 
@@ -225,7 +224,7 @@ def registrar_compra(compra: CompraInput, db: Session = Depends(database.get_db)
         
         # Deuda
         db.add(models.TransaccionProveedor(
-            proveedor_id=proveedor.id, tipo=TipoMovimiento.CARGO, monto=total,
+            proveedor_id=proveedor.id, tipo=models.TipoMovimiento.CARGO, monto=total,
             descripcion=f"Compra OC #{nueva_orden.id} - {compra.folio_factura}"
         ))
         proveedor.saldo_actual += total
@@ -236,19 +235,27 @@ def registrar_compra(compra: CompraInput, db: Session = Depends(database.get_db)
         raise e
 
 @router.post("/registrar-pago", dependencies=[Depends(allow_admin_asistente)])
-def pagar_proveedor(proveedor_id: int, monto: Decimal, ref: str = "Pago", db: Session = Depends(database.get_db)):
+def pagar_proveedor(
+    proveedor_id: int,
+    monto: Decimal,
+    ref: str = "Pago",
+    db: Session = Depends(get_db),
+):
     prov = db.query(models.Proveedor).filter(models.Proveedor.id == proveedor_id).first()
     if not prov: raise HTTPException(404, "Proveedor no encontrado")
     
     db.add(models.TransaccionProveedor(
-        proveedor_id=prov.id, tipo=TipoMovimiento.ABONO, monto=monto, descripcion=f"PAGO: {ref}"
+        proveedor_id=prov.id,
+        tipo=models.TipoMovimiento.ABONO,
+        monto=monto,
+        descripcion=f"PAGO: {ref}",
     ))
     prov.saldo_actual -= monto
     db.commit()
     return {"mensaje": "Pago registrado", "nuevo_saldo": prov.saldo_actual}
 
 @router.get("/{id}/imprimir", response_class=HTMLResponse)
-def imprimir_oc(id: int, db: Session = Depends(database.get_db)):
+def imprimir_oc(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
     if not orden: raise HTTPException(404)
     
