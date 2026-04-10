@@ -46,47 +46,47 @@ app.include_router(gastos.router)
 # Acceso
 @app.get("/", response_class=HTMLResponse)
 async def view_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 # Panel Principal
 @app.get("/dashboard", response_class=HTMLResponse)
 async def view_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "dashboard.html")
 
 # Operación Comercial
 @app.get("/ventas/cotizador", response_class=HTMLResponse)
 async def view_cotizador(request: Request):
-    return templates.TemplateResponse("cotizador.html", {"request": request})
+    return templates.TemplateResponse(request, "cotizador.html")
 
 @app.get("/seguimiento", response_class=HTMLResponse)
 async def view_seguimiento(request: Request):
-    return templates.TemplateResponse("seguimiento.html", {"request": request})
+    return templates.TemplateResponse(request, "seguimiento.html")
 
 # Gestión de Recursos
 @app.get("/inventario", response_class=HTMLResponse)
 async def view_inventario(request: Request):
-    return templates.TemplateResponse("inventario.html", {"request": request})
+    return templates.TemplateResponse(request, "inventario.html")
 
 @app.get("/clientes", response_class=HTMLResponse)
 async def view_clientes(request: Request):
-    return templates.TemplateResponse("clientes.html", {"request": request})
+    return templates.TemplateResponse(request, "clientes.html")
 
 @app.get("/compras", response_class=HTMLResponse)
 async def view_compras(request: Request):
-    return templates.TemplateResponse("compras.html", {"request": request})
+    return templates.TemplateResponse(request, "compras.html")
 
 # Administración y Finanzas
 @app.get("/gastos", response_class=HTMLResponse)
 async def view_gastos(request: Request):
-    return templates.TemplateResponse("gastos.html", {"request": request})
+    return templates.TemplateResponse(request, "gastos.html")
 
 @app.get("/reportes", response_class=HTMLResponse)
 async def view_reportes(request: Request):
-    return templates.TemplateResponse("reportes.html", {"request": request})
+    return templates.TemplateResponse(request, "reportes.html")
 
 @app.get("/usuarios", response_class=HTMLResponse)
 async def view_usuarios(request: Request):
-    return templates.TemplateResponse("usuarios.html", {"request": request})
+    return templates.TemplateResponse(request, "usuarios.html")
 
 
 # --- 6. EVENTO DE ARRANQUE (SEEDING) ---
