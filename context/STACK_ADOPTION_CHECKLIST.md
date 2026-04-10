@@ -15,7 +15,7 @@ Estados:
 - `DATABASE_URL` por entorno + `.env` — `ADOPTADO`
 - PostgreSQL como objetivo local/prod — `ADOPTADO`
 - Mixins `TenantMixin/AuditMixin/UUIDMixin` — `PENDIENTE`
-- `Organization` + `Branch` + `UserOrganization` — `PENDIENTE`
+- `Organization` + `Branch` + `UserOrganization` — `EN_PROGRESO`
 
 ## 2) Seguridad
 
@@ -40,7 +40,7 @@ Estados:
 
 ## 5) Quality Gates
 
-- Aislamiento tenant por `organization_id` en todas las queries — `PENDIENTE`
+- Aislamiento tenant por `organization_id` en todas las queries — `EN_PROGRESO`
 - Branch scope tests — `PENDIENTE`
 - RBAC + ownership tests — `PENDIENTE`
 - Alembic como flujo obligatorio de cambios de schema — `PENDIENTE`
