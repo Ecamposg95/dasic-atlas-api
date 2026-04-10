@@ -8,6 +8,7 @@ from jinja2 import Environment, BaseLoader
 
 from app import models
 from app import schemas
+from app.dependencies import get_current_active_organization
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff, get_current_user
 
@@ -18,28 +19,43 @@ router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 def listar_clientes(
     skip: int = 0,
     limit: int = 100,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
     """
     Lista todos los clientes. El campo 'saldo_actual' permite ver rápidamente quién debe dinero.
     """
-    clientes = db.query(models.Cliente).offset(skip).limit(limit).all()
+    clientes = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.organization_id == organization_id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return clientes
 
 # --- 2. CREAR CLIENTE ---
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def crear_cliente(
     cliente: schemas.ClienteCreate,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
     """
     Permite registrar un nuevo cliente. Accesible para Vendedores.
     """
     # Verificar si el email o nombre ya existe para evitar duplicados
-    if db.query(models.Cliente).filter(models.Cliente.email == cliente.email).first():
+    if (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.email == cliente.email,
+        )
+        .first()
+    ):
         raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
 
-    nuevo_cliente = models.Cliente(**cliente.model_dump())
+    nuevo_cliente = models.Cliente(**cliente.model_dump(), organization_id=organization_id)
     db.add(nuevo_cliente)
     db.commit()
     db.refresh(nuevo_cliente)
@@ -49,9 +65,17 @@ def crear_cliente(
 @router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def obtener_cliente(
     cliente_id: int,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
-    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.id == cliente_id,
+        )
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
@@ -60,6 +84,7 @@ def obtener_cliente(
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
     cliente_id: int,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
     """
@@ -67,13 +92,23 @@ def ver_estado_cuenta(
     - CARGO: Ventas (Deuda aumenta)
     - ABONO: Pagos (Deuda disminuye)
     """
-    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.id == cliente_id,
+        )
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
     # Traemos las transacciones ordenadas por fecha reciente
     movimientos = db.query(models.TransaccionCliente)\
-        .filter(models.TransaccionCliente.cliente_id == cliente_id)\
+        .filter(
+            models.TransaccionCliente.organization_id == organization_id,
+            models.TransaccionCliente.cliente_id == cliente_id,
+        )\
         .order_by(models.TransaccionCliente.fecha.desc())\
         .all()
         
@@ -86,6 +121,7 @@ def registrar_pago_cliente(
     monto: Decimal,
     descripcion: str = "Abono a cuenta",
     nota_id: int = None, # Opcional: Si el pago es específico para una nota
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
@@ -93,7 +129,14 @@ def registrar_pago_cliente(
     Registra un pago del cliente (ABONO).
     Esto reduce la deuda en 'saldo_actual' y crea un registro histórico.
     """
-    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    cliente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.id == cliente_id,
+        )
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
@@ -103,6 +146,7 @@ def registrar_pago_cliente(
     try:
         # 1. Crear la transacción de ABONO
         nuevo_abono = models.TransaccionCliente(
+            organization_id=organization_id,
             cliente_id=cliente.id,
             tipo=models.TipoMovimiento.ABONO,
             monto=monto,
@@ -211,13 +255,27 @@ PDF_TEMPLATE_EDO_CTA = """
 """
 
 @router.get("/{cliente_id}/pdf-estado-cuenta", response_class=HTMLResponse)
-def generar_pdf_estado_cuenta(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+def generar_pdf_estado_cuenta(
+    cliente_id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    cliente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.id == cliente_id,
+        )
+        .first()
+    )
     if not cliente: raise HTTPException(404, "Cliente no encontrado")
     
     # Traemos movimientos antiguos primero para calcular el saldo histórico correctamente
     movimientos = db.query(models.TransaccionCliente)\
-        .filter(models.TransaccionCliente.cliente_id == cliente_id)\
+        .filter(
+            models.TransaccionCliente.organization_id == organization_id,
+            models.TransaccionCliente.cliente_id == cliente_id,
+        )\
         .order_by(models.TransaccionCliente.fecha.asc())\
         .all()
 

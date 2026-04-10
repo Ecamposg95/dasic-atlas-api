@@ -9,6 +9,7 @@ from jinja2 import Environment, BaseLoader
 
 from app import models
 from app import schemas
+from app.dependencies import get_current_active_organization
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 
@@ -174,18 +175,32 @@ PDF_TEMPLATE_VENTA = """
 def crear_orden(
     orden_data: schemas.OrdenVentaCreate,
     tipo_orden: models.EstatusOrden = models.EstatusOrden.COTIZACION,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
-    cliente = db.query(models.Cliente).filter(models.Cliente.id == orden_data.cliente_id).first()
+    cliente = (
+        db.query(models.Cliente)
+        .filter(
+            models.Cliente.organization_id == organization_id,
+            models.Cliente.id == orden_data.cliente_id,
+        )
+        .first()
+    )
     if not cliente: raise HTTPException(404, "Cliente no encontrado")
 
     try:
-        count = db.query(models.OrdenVenta).count()
+        count = (
+            db.query(models.OrdenVenta)
+            .filter(models.OrdenVenta.organization_id == organization_id)
+            .count()
+        )
         prefijo = "COT" if tipo_orden == models.EstatusOrden.COTIZACION else "VTA"
-        folio = f"{prefijo}-{count + 1:04d}"
+        org_tag = organization_id.split("-")[0].upper()
+        folio = f"{prefijo}-{org_tag}-{count + 1:04d}"
 
         nueva_orden = models.OrdenVenta(
+            organization_id=organization_id,
             folio=folio,
             cliente_id=cliente.id,
             vendedor_id=current_user.id,
@@ -217,6 +232,7 @@ def crear_orden(
             total_orden += subtotal
             
             db.add(models.DetalleOrden(
+                organization_id=organization_id,
                 orden_id=nueva_orden.id,
                 producto_id=producto.id,
                 cantidad=item.cantidad,
@@ -231,6 +247,7 @@ def crear_orden(
         if tipo_orden == models.EstatusOrden.PENDIENTE:
             total_con_iva = total_orden * Decimal("1.16")
             deuda = models.TransaccionCliente(
+                organization_id=organization_id,
                 cliente_id=cliente.id,
                 tipo=models.TipoMovimiento.CARGO,
                 monto=total_con_iva,
@@ -253,9 +270,17 @@ def crear_orden(
 def actualizar_orden(
     id: int,
     orden_update: schemas.OrdenVentaCreate,
+    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
-    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
     if not orden: raise HTTPException(404, "Orden no encontrada")
     
     if orden.estatus != models.EstatusOrden.COTIZACION:
@@ -267,7 +292,10 @@ def actualizar_orden(
         orden.observaciones = orden_update.observaciones
         
         # Borrar detalles viejos
-        db.query(models.DetalleOrden).filter(models.DetalleOrden.orden_id == id).delete()
+        db.query(models.DetalleOrden).filter(
+            models.DetalleOrden.organization_id == organization_id,
+            models.DetalleOrden.orden_id == id,
+        ).delete()
         
         total_orden = Decimal(0)
         
@@ -284,6 +312,7 @@ def actualizar_orden(
             total_orden += subtotal
             
             db.add(models.DetalleOrden(
+                organization_id=organization_id,
                 orden_id=orden.id,
                 producto_id=producto.id,
                 cantidad=item.cantidad,
@@ -303,8 +332,19 @@ def actualizar_orden(
 
 # --- 3. CONVERTIR COTIZACIÓN A VENTA (POST) ---
 @router.post("/{id}/convertir", dependencies=[Depends(allow_all_staff)])
-def convertir_cotizacion(id: int, db: Session = Depends(get_db)):
-    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+def convertir_cotizacion(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
     if not orden or orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Orden no válida para conversión")
 
@@ -322,6 +362,7 @@ def convertir_cotizacion(id: int, db: Session = Depends(get_db)):
         # Generar Deuda
         total_con_iva = orden.total * Decimal("1.16")
         db.add(models.TransaccionCliente(
+            organization_id=organization_id,
             cliente_id=orden.cliente_id,
             tipo=models.TipoMovimiento.CARGO,
             monto=total_con_iva,
@@ -337,9 +378,14 @@ def convertir_cotizacion(id: int, db: Session = Depends(get_db)):
         raise e
 
 # --- 4. LISTAR HISTORIAL ---
-@router.get("/historial")
-def listar_historial(limit: int = 50, db: Session = Depends(get_db)):
+@router.get("/historial", dependencies=[Depends(allow_all_staff)])
+def listar_historial(
+    limit: int = 50,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
     ordenes = db.query(models.OrdenVenta)\
+        .filter(models.OrdenVenta.organization_id == organization_id)\
         .order_by(desc(models.OrdenVenta.fecha_creacion))\
         .limit(limit).all()
     
@@ -354,8 +400,19 @@ def listar_historial(limit: int = 50, db: Session = Depends(get_db)):
 
 # --- 5. DETALLE JSON (PARA EDICIÓN) ---
 @router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
-def obtener_detalle_orden(id: int, db: Session = Depends(get_db)):
-    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+def obtener_detalle_orden(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
     if not orden: raise HTTPException(404)
     
     detalles = []
@@ -377,9 +434,20 @@ def obtener_detalle_orden(id: int, db: Session = Depends(get_db)):
     }
 
 # --- 6. GENERAR PDF ---
-@router.get("/{id}/pdf", response_class=HTMLResponse)
-def generar_pdf(id: int, db: Session = Depends(get_db)):
-    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+@router.get("/{id}/pdf", response_class=HTMLResponse, dependencies=[Depends(allow_all_staff)])
+def generar_pdf(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
     if not orden: raise HTTPException(404)
 
     iva = orden.total * Decimal("0.16")
