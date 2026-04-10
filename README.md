@@ -57,7 +57,7 @@ Referencia upstream:
 
 Crear `.env` (ejemplo):
 
-- `DATABASE_URL=postgresql+psycopg://postgres:toor@localhost:5432/dasic_crm`
+- `DATABASE_URL=postgresql+psycopg://postgres:toor@localhost:5432/dasi_crm_local`
 - `SECRET_KEY=change-me`
 - `ACCESS_TOKEN_EXPIRE_MINUTES=720`
 
