@@ -4,6 +4,8 @@ Currently kept in a single module for compatibility.
 Later we can split by domain (users/catalog/sales/finance/etc).
 """
 
+import uuid
+
 from sqlalchemy import Boolean, Column, DateTime, DECIMAL, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -30,6 +32,37 @@ class EstatusOrden(str, enum.Enum):
 class TipoMovimiento(str, enum.Enum):
     CARGO = "cargo"
     ABONO = "abono"
+
+
+class BranchType(str, enum.Enum):
+    HQ = "HQ"
+    PLANT = "PLANT"
+    WAREHOUSE = "WAREHOUSE"
+    OFFICE = "OFFICE"
+
+
+# --- NUCLEUS (MULTI-TENANCY) ---
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(150), nullable=False, unique=True)
+    industry_type = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Branch(Base):
+    __tablename__ = "branches"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    branch_type = Column(Enum(BranchType), nullable=False, default=BranchType.HQ)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    organization = relationship("Organization")
 
 
 # --- USUARIOS ---

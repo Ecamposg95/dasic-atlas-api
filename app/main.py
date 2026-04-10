@@ -94,6 +94,21 @@ async def view_usuarios(request: Request):
 def startup_db_check():
     db = SessionLocal()
     try:
+        org = db.query(models.Organization).first()
+        if not org:
+            org = models.Organization(name="DASIC Industrial", industry_type="DASIC_INDUSTRIAL")
+            db.add(org)
+            db.commit()
+            db.refresh(org)
+            db.add(
+                models.Branch(
+                    organization_id=org.id,
+                    name="HQ",
+                    branch_type=models.BranchType.HQ,
+                )
+            )
+            db.commit()
+
         # Si no hay usuarios, crea el Super Admin
         if not db.query(models.Usuario).first():
             print("--- INICIALIZANDO SISTEMA DASIC ERP ---")

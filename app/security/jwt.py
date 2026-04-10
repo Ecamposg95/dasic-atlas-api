@@ -3,23 +3,25 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app import models
+from app.core import get_settings
 from app.db import get_db
 from app.services import UserService
 
 
-# --- CONFIGURACION (prototype defaults) ---
-SECRET_KEY = "ESTA_ES_UNA_CLAVE_SECRETA_SUPER_SEGURA_CAMBIALA"
+settings = get_settings()
+
+SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -30,7 +32,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
@@ -38,6 +41,16 @@ async def get_current_user(
         detail="Credenciales invalidas",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if not token:
+        cookie_token = request.cookies.get(settings.token_cookie_name, "")
+        if cookie_token.startswith("Bearer "):
+            token = cookie_token.replace("Bearer ", "", 1)
+        elif cookie_token:
+            token = cookie_token
+
+    if not token:
+        raise credentials_exception
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
