@@ -7,12 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <style>
-        /* Ajuste para inputs numéricos */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/compras.css') }}">
 </head>
 <body class="bg-gray-100 font-sans h-screen flex flex-col">
 
@@ -406,7 +401,7 @@
             const { value: formValues } = await Swal.fire({
                 title: 'Nuevo Producto (Sourcing)',
                 html:
-                    '<input id="sw-sku" class="swal2-input" placeholder="SKU (Mín. 2 letras)" style="text-transform:uppercase">' +
+                    '<input id="sw-sku" class="swal2-input sw-input-uppercase" placeholder="SKU (Mín. 2 letras)">' +
                     '<input id="sw-nom" class="swal2-input" placeholder="Nombre Producto">' +
                     '<input id="sw-cost" type="number" class="swal2-input" placeholder="Costo ($)">' +
                     '<input id="sw-pv" type="number" class="swal2-input" placeholder="Precio Venta ($)">',
