@@ -2,6 +2,9 @@
 
 Este documento define la arquitectura objetivo inspirada en Atlas, ajustada al preset **DASIC ERP Industrial** con CRM como nucleo.
 
+Baseline tecnico obligatorio: `context/atlas_erp_pos_stack.md`.
+Seguimiento de adopcion: `context/STACK_ADOPTION_CHECKLIST.md`.
+
 ## Capas (concentric / layered)
 
 ```

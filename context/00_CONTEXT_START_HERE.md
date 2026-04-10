@@ -2,6 +2,12 @@
 
 Este directorio contiene la documentacion viva del proyecto. La referencia de arquitectura viene de Atlas ERP/POS, pero el preset activo y el objetivo de producto es **DASIC ERP Industrial** enfocado en un **CRM muy potente** (pipeline, actividades, WhatsApp manual, cotizaciones ligadas a oportunidades).
 
+Documento canonico de desarrollo:
+
+- `atlas_erp_pos_stack.md`
+
+Este archivo define el baseline tecnico. El resto de documentos aterrizan ese baseline al contexto DASIC.
+
 ## Golden Rules
 
 1. **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` (UUID) y toda query filtra por `organization_id`.
@@ -15,7 +21,10 @@ Este directorio contiene la documentacion viva del proyecto. La referencia de ar
 ## Lectura Recomendada (orden)
 
 1. `01_ATLAS_REFERENCE.md` (referencia de arquitectura)
+1. `atlas_erp_pos_stack.md` (baseline canonico)
 1. `02_REPO_CURRENT_STATE.md` (estado actual del repo)
+1. `STACK_ADOPTION_CHECKLIST.md` (estado de adopcion y deltas)
+1. `adr/README.md` (registro formal de decisiones)
 1. `CRM_SPEC.md` (modelo, endpoints, flujos)
 1. `RBAC.md` (roles, permisos, reglas de visibilidad)
 1. `ARCHITECTURE.md` (capas, dependencias, convenciones)

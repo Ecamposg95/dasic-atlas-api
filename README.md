@@ -38,6 +38,9 @@ El nucleo del sistema es un **CRM muy potente**:
 Lee primero:
 
 - `context/00_CONTEXT_START_HERE.md`
+- `context/atlas_erp_pos_stack.md` (baseline canonico)
+- `context/STACK_ADOPTION_CHECKLIST.md`
+- `context/adr/README.md`
 - `context/CRM_SPEC.md`
 - `context/RBAC.md`
 - `context/ARCHITECTURE.md`
@@ -60,6 +63,8 @@ Crear `.env` (ejemplo):
 - `DATABASE_URL=postgresql+psycopg://postgres:toor@localhost:5432/dasi_crm_local`
 - `SECRET_KEY=change-me`
 - `ACCESS_TOKEN_EXPIRE_MINUTES=720`
+- `TOKEN_COOKIE_NAME=access_token`
+- `COOKIE_SECURE=false`
 
 Notas:
 

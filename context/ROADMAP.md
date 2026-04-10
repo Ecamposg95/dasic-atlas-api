@@ -2,10 +2,15 @@
 
 Este roadmap es el orden recomendado de trabajo para convertir el prototipo actual en un CRM industrial multi-tenant basado en patrones de Atlas.
 
+Baseline canonico: `context/atlas_erp_pos_stack.md`.
+Control de ejecucion: `context/STACK_ADOPTION_CHECKLIST.md`.
+
 ## Fase 0: Documentacion y alineacion
 
 1. Crear `context/` (este directorio)
 1. Reescribir `README.md` para reflejar: CRM-first, PostgreSQL, multi-tenant, cookies HttpOnly
+1. Declarar `atlas_erp_pos_stack.md` como baseline canonico
+1. Mantener actualizado `STACK_ADOPTION_CHECKLIST.md`
 
 ## Fase 1: Base tecnica estable
 
