@@ -63,3 +63,10 @@ Este roadmap es el orden recomendado de trabajo para convertir el prototipo actu
 1. Tests de aislamiento tenant
 1. Tests branch scope
 1. Tests RBAC/ownership
+
+## Fase 10: Moonshot (iterativo)
+
+1. Workflows (reglas simples → playbooks → engine)
+1. Reporting industrial (forecast, ciclo, conversion, performance)
+1. Cotizador industrial (quotes versionadas, aprobaciones, anexos)
+1. Integraciones (webhooks, import/export, WhatsApp oficial cuando aplique)

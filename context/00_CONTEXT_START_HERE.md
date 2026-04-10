@@ -21,3 +21,4 @@ Este directorio contiene la documentacion viva del proyecto. La referencia de ar
 1. `ARCHITECTURE.md` (capas, dependencias, convenciones)
 1. `ROADMAP.md` (fases de implementacion)
 1. `API_CONVENTIONS.md` (headers, paginacion, errores)
+1. `MOONSHOT_VISION.md` (vision: CRM que supera a Monday/Salesforce/HubSpot/Zoho)
