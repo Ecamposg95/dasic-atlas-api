@@ -7,6 +7,7 @@ from .jwt import (
     allow_admin_asistente,
     allow_all_staff,
     create_access_token,
+    get_token_payload,
     get_current_user,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "allow_admin_asistente",
     "allow_all_staff",
     "create_access_token",
+    "get_token_payload",
     "get_current_user",
 ]

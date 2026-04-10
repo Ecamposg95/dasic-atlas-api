@@ -14,6 +14,8 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
     rol: Optional[RolUsuario] = None
+    org_id: Optional[str] = None
+    branch_id: Optional[str] = None
 
 class UsuarioBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)

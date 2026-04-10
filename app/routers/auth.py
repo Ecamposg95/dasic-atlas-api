@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from app.core import get_settings
 from app.db import get_db
+from app import models
 from app import schemas
 from app.services import UserService
 from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
@@ -27,9 +28,29 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    membership = (
+        db.query(models.UserOrganization)
+        .filter(
+            models.UserOrganization.user_id == user.id,
+            models.UserOrganization.is_active.is_(True),
+        )
+        .order_by(models.UserOrganization.id.asc())
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario sin organización activa",
+        )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "rol": user.rol.value},
+        data={
+            "sub": user.email,
+            "rol": user.rol.value,
+            "org_id": membership.organization_id,
+            "branch_id": membership.branch_id,
+        },
         expires_delta=access_token_expires
     )
 

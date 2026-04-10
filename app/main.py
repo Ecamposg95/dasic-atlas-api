@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.db import SessionLocal, engine
 from app import models
 from app.services import UserService
@@ -94,20 +95,44 @@ async def view_usuarios(request: Request):
 def startup_db_check():
     db = SessionLocal()
     try:
+        # Transitional schema upgrades for legacy databases (without Alembic yet).
+        ddl_statements = [
+            "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36)",
+            "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36)",
+            "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36)",
+            "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36)",
+            "CREATE INDEX IF NOT EXISTS ix_clientes_organization_id ON clientes (organization_id)",
+            "CREATE INDEX IF NOT EXISTS ix_transacciones_clientes_organization_id ON transacciones_clientes (organization_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_organization_id ON ordenes_venta (organization_id)",
+            "CREATE INDEX IF NOT EXISTS ix_detalles_orden_organization_id ON detalles_orden (organization_id)",
+        ]
+        for statement in ddl_statements:
+            db.execute(text(statement))
+        db.commit()
+
         org = db.query(models.Organization).first()
         if not org:
             org = models.Organization(name="DASIC Industrial", industry_type="DASIC_INDUSTRIAL")
             db.add(org)
             db.commit()
             db.refresh(org)
-            db.add(
-                models.Branch(
-                    organization_id=org.id,
-                    name="HQ",
-                    branch_type=models.BranchType.HQ,
-                )
+        hq_branch = (
+            db.query(models.Branch)
+            .filter(
+                models.Branch.organization_id == org.id,
+                models.Branch.branch_type == models.BranchType.HQ,
             )
+            .first()
+        )
+        if not hq_branch:
+            hq_branch = models.Branch(
+                organization_id=org.id,
+                name="HQ",
+                branch_type=models.BranchType.HQ,
+            )
+            db.add(hq_branch)
             db.commit()
+            db.refresh(hq_branch)
 
         # Si no hay usuarios, crea el Super Admin
         if not db.query(models.Usuario).first():
@@ -126,5 +151,42 @@ def startup_db_check():
             print("---------------------------------------")
         else:
             print("--- SISTEMA DASIC ONLINE ---")
+
+        # Ensure every active user has at least one active membership.
+        users = db.query(models.Usuario).all()
+        for user in users:
+            membership = (
+                db.query(models.UserOrganization)
+                .filter(
+                    models.UserOrganization.user_id == user.id,
+                    models.UserOrganization.organization_id == org.id,
+                )
+                .first()
+            )
+            if not membership:
+                db.add(
+                    models.UserOrganization(
+                        user_id=user.id,
+                        organization_id=org.id,
+                        branch_id=hq_branch.id,
+                        is_active=True,
+                    )
+                )
+        db.commit()
+
+        # Backfill pilot tables for existing records.
+        db.query(models.Cliente).filter(models.Cliente.organization_id.is_(None)).update(
+            {models.Cliente.organization_id: org.id}, synchronize_session=False
+        )
+        db.query(models.TransaccionCliente).filter(
+            models.TransaccionCliente.organization_id.is_(None)
+        ).update({models.TransaccionCliente.organization_id: org.id}, synchronize_session=False)
+        db.query(models.OrdenVenta).filter(models.OrdenVenta.organization_id.is_(None)).update(
+            {models.OrdenVenta.organization_id: org.id}, synchronize_session=False
+        )
+        db.query(models.DetalleOrden).filter(models.DetalleOrden.organization_id.is_(None)).update(
+            {models.DetalleOrden.organization_id: org.id}, synchronize_session=False
+        )
+        db.commit()
     finally:
         db.close()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import List
+from typing import Any, List
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -24,6 +24,30 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
+def _extract_token_from_request(request: Request, token: str | None) -> str | None:
+    if token:
+        return token
+
+    cookie_token = request.cookies.get(settings.token_cookie_name, "")
+    if cookie_token.startswith("Bearer "):
+        return cookie_token.replace("Bearer ", "", 1)
+    if cookie_token:
+        return cookie_token
+    return None
+
+
+def _decode_token_or_raise(token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales invalidas",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    return payload
+
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
@@ -42,22 +66,13 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    if not token:
-        cookie_token = request.cookies.get(settings.token_cookie_name, "")
-        if cookie_token.startswith("Bearer "):
-            token = cookie_token.replace("Bearer ", "", 1)
-        elif cookie_token:
-            token = cookie_token
-
+    token = _extract_token_from_request(request, token)
     if not token:
         raise credentials_exception
 
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str | None = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
+    payload = _decode_token_or_raise(token)
+    email: str | None = payload.get("sub")
+    if email is None:
         raise credentials_exception
 
     user = UserService.get_user_by_email(db, email=email)
@@ -65,6 +80,16 @@ async def get_current_user(
         raise credentials_exception
 
     return user
+
+
+async def get_token_payload(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+) -> dict[str, Any]:
+    token = _extract_token_from_request(request, token)
+    if not token:
+        raise HTTPException(status_code=401, detail="Credenciales invalidas")
+    return _decode_token_or_raise(token)
 
 
 class RoleChecker:

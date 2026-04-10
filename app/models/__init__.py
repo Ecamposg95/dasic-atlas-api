@@ -51,6 +51,9 @@ class Organization(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    branches = relationship("Branch", back_populates="organization")
+    memberships = relationship("UserOrganization", back_populates="organization")
+
 
 class Branch(Base):
     __tablename__ = "branches"
@@ -62,7 +65,23 @@ class Branch(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    organization = relationship("Organization")
+    organization = relationship("Organization", back_populates="branches")
+    memberships = relationship("UserOrganization", back_populates="branch")
+
+
+class UserOrganization(Base):
+    __tablename__ = "user_organizations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    branch_id = Column(String(36), ForeignKey("branches.id"), nullable=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("Usuario", back_populates="memberships")
+    organization = relationship("Organization", back_populates="memberships")
+    branch = relationship("Branch", back_populates="memberships")
 
 
 # --- USUARIOS ---
@@ -77,6 +96,7 @@ class Usuario(Base):
     activo = Column(Boolean, default=True)
 
     ventas = relationship("OrdenVenta", back_populates="vendedor")
+    memberships = relationship("UserOrganization", back_populates="user")
 
 
 # --- PRODUCTOS E INVENTARIO ---
@@ -121,6 +141,7 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     nombre_empresa = Column(String(150), index=True)
     contacto_nombre = Column(String(100))
     rfc_tax_id = Column(String(50), nullable=True)
@@ -154,6 +175,7 @@ class TransaccionCliente(Base):
     __tablename__ = "transacciones_clientes"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
     tipo = Column(Enum(TipoMovimiento))
     monto = Column(DECIMAL(12, 2), nullable=False)
@@ -182,6 +204,7 @@ class OrdenVenta(Base):
     __tablename__ = "ordenes_venta"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     folio = Column(String(20), unique=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
     vendedor_id = Column(Integer, ForeignKey("usuarios.id"))
@@ -205,6 +228,7 @@ class DetalleOrden(Base):
     __tablename__ = "detalles_orden"
 
     id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     orden_id = Column(Integer, ForeignKey("ordenes_venta.id"))
     producto_id = Column(Integer, ForeignKey("productos.id"))
 
