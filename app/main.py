@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ---------------------------------------------------------------------------
-# Tablas (transitorio — Fase 6: migrar a Alembic)
+# Tablas: create_all se ejecuta en lifespan (core/lifespan.py) no aquí.
+# Aquí solo importamos engine para que el pool se configure.
 # ---------------------------------------------------------------------------
-models.Base.metadata.create_all(bind=engine)
 
 # ---------------------------------------------------------------------------
 # App
