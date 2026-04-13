@@ -1,0 +1,354 @@
+{
+  "project": {
+    "name": "DASIC Sales-Stock Platform",
+    "version": "0.1.0",
+    "created_at": "2026-04-13",
+    "owner": "Atlas_Tech x DASIC",
+    "purpose": "Base blueprint to start development of the commercial-operational platform aligned to DASIC 2025 sales and stock strategy."
+  },
+  "strategy_alignment": {
+    "pillars": [
+      {
+        "name": "Process",
+        "frameworks": [
+          "Lean Sales",
+          "Value Stream Mapping"
+        ],
+        "goals": [
+          "Reduce quote cycle time to under 10 minutes",
+          "Standardize seller-to-warehouse flow",
+          "Separate sales and warehouse responsibilities"
+        ]
+      },
+      {
+        "name": "Data",
+        "frameworks": [
+          "DDMRP",
+          "ABC-XYZ"
+        ],
+        "goals": [
+          "Single source of truth for stock",
+          "SKU prioritization by sales impact, rupture risk, dead stock and data quality",
+          "Weekly rotation and aging visibility"
+        ]
+      },
+      {
+        "name": "Technology",
+        "frameworks": [
+          "FastAPI",
+          "PostgreSQL",
+          "Dashboard + Internal App + Quoter"
+        ],
+        "goals": [
+          "Live stock for sales",
+          "Quote with reservation logic",
+          "Executive dashboard with real-time KPIs"
+        ]
+      }
+    ]
+  },
+  "product_scope": {
+    "modules": [
+      {
+        "id": "inventory_core",
+        "name": "Stock Module",
+        "priority": 1,
+        "objective": "Centralize catalog, warehouses, on-hand, reserved and available stock with movement traceability.",
+        "features_mvp": [
+          "Master product catalog",
+          "Warehouse/location model",
+          "Stock by SKU and warehouse",
+          "Kardex / inventory movements",
+          "Minimum and reorder points",
+          "Critical stock and dead stock flags"
+        ]
+      },
+      {
+        "id": "dashboard",
+        "name": "Dashboard Module",
+        "priority": 2,
+        "objective": "Provide visibility for management and operations.",
+        "features_mvp": [
+          "Inventory accuracy KPI",
+          "Critical SKUs",
+          "Dead stock aging",
+          "Quote cycle time",
+          "Stock conflict rate",
+          "Top brands and top immobilized SKUs"
+        ]
+      },
+      {
+        "id": "smart_quoter",
+        "name": "Quoter Module",
+        "priority": 3,
+        "objective": "Accelerate quoting with trusted availability and pricing logic.",
+        "features_mvp": [
+          "Product search by part number, SKU, brand and description",
+          "Availability snapshot at quote time",
+          "Price suggestion by list and margin rules",
+          "Temporary stock reservation (48h)",
+          "Quote versions and PDF export",
+          "Quote follow-up status pipeline"
+        ]
+      }
+    ]
+  },
+  "business_rules": {
+    "prioritization_model": {
+      "description": "SKU priority aligned to DASIC strategy.",
+      "weights": {
+        "commercial_impact": 35,
+        "stock_risk": 30,
+        "dead_stock_risk": 20,
+        "data_quality": 15
+      },
+      "levels": {
+        "A": "Immediate sales-critical attention",
+        "B": "Replenishment / operational control",
+        "C": "Monetization / liquidation",
+        "D": "Master data cleanup / monitoring"
+      }
+    },
+    "quote_rules": [
+      "Never promise unavailable stock",
+      "Available stock = on_hand - reserved",
+      "Quotes may reserve stock for 48 hours",
+      "Quotes store cost and price snapshots",
+      "Discount below minimum margin requires authorization"
+    ]
+  },
+  "data_model": {
+    "core_entities": [
+      {
+        "name": "brands",
+        "purpose": "Brand master"
+      },
+      {
+        "name": "categories",
+        "purpose": "Category master"
+      },
+      {
+        "name": "products",
+        "purpose": "Master catalog by part number"
+      },
+      {
+        "name": "product_variants",
+        "purpose": "Sellable/commercial presentation"
+      },
+      {
+        "name": "warehouses",
+        "purpose": "Warehouse and logical location master"
+      },
+      {
+        "name": "stock_items",
+        "purpose": "On hand / reserved / available stock"
+      },
+      {
+        "name": "inventory_movements",
+        "purpose": "Kardex and traceability"
+      },
+      {
+        "name": "price_lists",
+        "purpose": "Commercial price list master"
+      },
+      {
+        "name": "product_prices",
+        "purpose": "Price per variant and channel"
+      },
+      {
+        "name": "product_costs",
+        "purpose": "Cost history and current reference"
+      },
+      {
+        "name": "customers",
+        "purpose": "Customer master"
+      },
+      {
+        "name": "quotes",
+        "purpose": "Quote header"
+      },
+      {
+        "name": "quote_items",
+        "purpose": "Quote lines"
+      },
+      {
+        "name": "quote_versions",
+        "purpose": "Versioned snapshots"
+      },
+      {
+        "name": "users",
+        "purpose": "Platform users"
+      },
+      {
+        "name": "roles",
+        "purpose": "Permissions by role"
+      }
+    ]
+  },
+  "api": {
+    "stack": {
+      "backend": "FastAPI",
+      "database": "PostgreSQL",
+      "orm": "SQLAlchemy 2.x",
+      "migrations": "Alembic",
+      "auth": "JWT",
+      "import": "Pandas"
+    },
+    "routers": [
+      {
+        "name": "products",
+        "endpoints": [
+          "GET /products",
+          "GET /products/search",
+          "POST /products",
+          "PATCH /products/{id}"
+        ]
+      },
+      {
+        "name": "inventory",
+        "endpoints": [
+          "GET /inventory/stock",
+          "GET /inventory/critical",
+          "GET /inventory/dead-stock",
+          "POST /inventory/movements",
+          "GET /inventory/kardex/{variant_id}"
+        ]
+      },
+      {
+        "name": "pricing",
+        "endpoints": [
+          "GET /pricing/lists",
+          "POST /pricing/product-price",
+          "POST /pricing/calculate"
+        ]
+      },
+      {
+        "name": "quotes",
+        "endpoints": [
+          "POST /quotes",
+          "POST /quotes/{id}/items",
+          "POST /quotes/{id}/recalculate",
+          "POST /quotes/{id}/reserve-stock",
+          "GET /quotes/{id}/pdf"
+        ]
+      },
+      {
+        "name": "dashboard",
+        "endpoints": [
+          "GET /dashboard/inventory-summary",
+          "GET /dashboard/quote-summary",
+          "GET /dashboard/kpis"
+        ]
+      }
+    ]
+  },
+  "roles": [
+    {
+      "name": "Director",
+      "needs": [
+        "Executive KPIs",
+        "aging view",
+        "capital immobilized visibility"
+      ]
+    },
+    {
+      "name": "Sales",
+      "needs": [
+        "Fast quote",
+        "live stock",
+        "reservation",
+        "pipeline follow-up"
+      ]
+    },
+    {
+      "name": "Warehouse",
+      "needs": [
+        "Movement capture",
+        "adjustments",
+        "availability accuracy"
+      ]
+    },
+    {
+      "name": "Admin",
+      "needs": [
+        "Master data",
+        "pricing rules",
+        "user access",
+        "catalog governance"
+      ]
+    }
+  ],
+  "roadmap_90_days": [
+    {
+      "sprint": 1,
+      "days": "1-30",
+      "goal": "Stabilize the base",
+      "deliverables": [
+        "Master stock file cleanup",
+        "Initial data import to staging",
+        "Core schema and migrations",
+        "Product and inventory APIs",
+        "Operational quote protocol"
+      ]
+    },
+    {
+      "sprint": 2,
+      "days": "31-60",
+      "goal": "Digitalize visibility",
+      "deliverables": [
+        "Internal live-stock app",
+        "Dashboard v1",
+        "Reservation logic",
+        "Price lists and margin rules",
+        "Sales training on quote flow"
+      ]
+    },
+    {
+      "sprint": 3,
+      "days": "61-90",
+      "goal": "Optimize and scale",
+      "deliverables": [
+        "Quote pipeline",
+        "Dead-stock campaign logic",
+        "Reorder alerts",
+        "ERP/facturation integration base",
+        "Executive KPI review"
+      ]
+    }
+  ],
+  "kpis": [
+    {
+      "name": "Inventory accuracy",
+      "baseline": "~60%",
+      "target_6m": ">=95%"
+    },
+    {
+      "name": "Quote time",
+      "baseline": ">45 min",
+      "target_6m": "<10 min"
+    },
+    {
+      "name": "Stock conflict orders",
+      "baseline": "~30%",
+      "target_6m": "<3%"
+    },
+    {
+      "name": "Dead stock >90 days",
+      "baseline": "High",
+      "target_6m": "<10%"
+    },
+    {
+      "name": "Quote conversion",
+      "baseline": "N/D",
+      "target_6m": "+25%"
+    }
+  ],
+  "next_build_order": [
+    "1. Create PostgreSQL schema",
+    "2. Build import pipeline from current stock master",
+    "3. Expose inventory endpoints",
+    "4. Add pricing and margin engine",
+    "5. Build quoter with reservation logic",
+    "6. Build dashboard and KPI layer"
+  ]
+}
