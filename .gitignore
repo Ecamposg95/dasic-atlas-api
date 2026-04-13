@@ -1,12 +1,31 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-.env
-!.env.example
-.env.*
-!.env.example
-
+# Entorno virtual
 .venv/
 venv/
 
+# Variables de entorno locales
+.env
+.env.*
+!.env.example
+
+# Bases de datos locales
 *.db
+*.sqlite3
+
+# Archivos de build / dist
+dist/
+build/
+*.egg-info/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editores
+.vscode/
+.idea/

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app import models
+from app.core.context import set_tenant_context
 from app.db import get_db
 from app.security import get_current_user, get_token_payload
+
+logger = logging.getLogger(__name__)
 
 
 def get_current_active_organization(
@@ -17,7 +21,9 @@ def get_current_active_organization(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ) -> str:
-    """Resolves active organization from header or token claim.
+    """Resolves active organization from header or token claim, then sets
+    the tenant ContextVar so any service layer can read it without explicit
+    argument passing.
 
     MVP transition mode:
     - uses `X-Organization-ID` when provided.
@@ -46,7 +52,12 @@ def get_current_active_organization(
     if not membership:
         raise HTTPException(status_code=403, detail="Sin membresía activa para esta organización")
 
+    # Inyectar contexto de tenant en ContextVar para toda la request
+    set_tenant_context(org_uuid, membership.branch_id)
+
     request.state.organization_id = org_uuid
     request.state.current_user_id = current_user.id
     request.state.branch_id = membership.branch_id
+
+    logger.debug("Tenant ctx set: org=%s branch=%s user=%s", org_uuid, membership.branch_id, current_user.id)
     return org_uuid

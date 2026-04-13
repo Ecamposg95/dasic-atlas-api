@@ -1,6 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 sqlalchemy
+alembic
 pydantic
 python-jose[cryptography]
 passlib[bcrypt]
@@ -10,3 +11,4 @@ fpdf2
 jinja2
 psycopg[binary]
 python-dotenv
+starlette-csrf
