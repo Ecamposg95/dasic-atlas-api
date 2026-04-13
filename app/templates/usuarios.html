@@ -1,150 +1,134 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuarios - DASIC ERP</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/usuarios.css') }}">
-</head>
-<body class="bg-gray-100 font-sans">
+{% extends "base.html" %}
+{% block title %}Equipo{% endblock %}
+{% block page_title %}Gestión de Equipo{% endblock %}
 
-    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
-    <div id="sidebar-container"></div>
+{% block header_actions %}
+  <button class="dax-btn-primary"
+          onclick="document.getElementById('modal-usuario').classList.remove('hidden')">
+    <i class="fas fa-user-plus text-xs"></i>
+    Nuevo Usuario
+  </button>
+{% endblock %}
 
-    <main class="ml-64 mt-16 p-6">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-800">Equipo de Trabajo</h2>
-                <p class="text-sm text-gray-500">Gestiona accesos y roles del sistema</p>
-            </div>
-            <button onclick="abrirModal()" class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-lg shadow transition">
-                <i class="fas fa-user-shield mr-2"></i> Nuevo Usuario
-            </button>
-        </div>
+{% block content %}
+<div x-data="usuarios()" x-init="init()">
 
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <table class="min-w-full leading-normal">
-                <thead class="bg-slate-800 text-white">
-                    <tr>
-                        <th class="px-5 py-3 text-left text-xs font-bold uppercase">Nombre</th>
-                        <th class="px-5 py-3 text-left text-xs font-bold uppercase">Email (Acceso)</th>
-                        <th class="px-5 py-3 text-center text-xs font-bold uppercase">Rol</th>
-                        <th class="px-5 py-3 text-center text-xs font-bold uppercase">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-usuarios"></tbody>
-            </table>
-        </div>
-    </main>
+  <div class="dax-card overflow-hidden">
+    <table class="dax-table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Organización</th>
+          <th>Estatus</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="loading">
+          <template x-for="i in 5" :key="i">
+            <tr><td colspan="5">
+              <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
+            </td></tr>
+          </template>
+        </template>
+        <template x-if="!loading">
+          <template x-for="u in lista" :key="u.id">
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <div class="h-8 w-8 shrink-0 flex items-center justify-center rounded-full
+                              bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-xs font-bold">
+                    <span x-text="u.nombre ? u.nombre[0].toUpperCase() : 'U'"></span>
+                  </div>
+                  <div>
+                    <p class="text-xs font-medium text-slate-200" x-text="u.nombre"></p>
+                    <p class="text-[10px] text-slate-500" x-text="u.email"></p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="dax-badge-slate text-[10px] uppercase" x-text="u.rol"></span>
+              </td>
+              <td class="text-xs text-slate-400" x-text="u.organization_id ? u.organization_id.slice(0,8)+'...' : '—'"></td>
+              <td>
+                <span class="dax-badge-green" x-show="u.activo">Activo</span>
+                <span class="dax-badge-slate" x-show="!u.activo">Inactivo</span>
+              </td>
+              <td class="text-right">
+                <button class="dax-btn-ghost text-xs py-1 px-2">
+                  <i class="fas fa-pen-to-square"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </template>
+      </tbody>
+    </table>
+  </div>
 
-    <div id="modal-user" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
-            <button onclick="document.getElementById('modal-user').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Registrar Usuario</h3>
-            
-            <form id="form-user" class="space-y-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-600">Nombre Completo</label>
-                    <input type="text" id="u-nombre" required class="w-full border rounded p-2">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-600">Correo Electrónico</label>
-                    <input type="email" id="u-email" required class="w-full border rounded p-2">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-600">Contraseña</label>
-                    <input type="password" id="u-pass" required class="w-full border rounded p-2" placeholder="******">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-600">Rol</label>
-                    <select id="u-rol" class="w-full border rounded p-2 bg-white">
-                        <option value="vendedor">Vendedor (Solo Ventas/Clientes)</option>
-                        <option value="asistente">Asistente (Inventario/Compras)</option>
-                        <option value="admin">Administrador (Total)</option>
-                    </select>
-                </div>
-                <button type="submit" class="w-full bg-blue-900 text-white font-bold py-2 rounded hover:bg-blue-800">Crear Usuario</button>
-            </form>
-        </div>
+</div>
+
+<!-- Modal Nuevo Usuario -->
+<div id="modal-usuario"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="dax-card w-full max-w-md p-6 m-4">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-base font-bold text-slate-200">Nuevo Usuario</h2>
+      <button onclick="document.getElementById('modal-usuario').classList.add('hidden')"
+              class="dax-btn-ghost p-2 rounded-lg">
+        <i class="fas fa-xmark"></i>
+      </button>
     </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre Completo</label>
+        <input type="text" placeholder="Juan García" class="dax-input">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</label>
+        <input type="email" placeholder="juan@dasic.com" class="dax-input">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contraseña temporal</label>
+        <input type="password" placeholder="••••••••" class="dax-input">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Rol</label>
+        <select class="dax-input bg-slate-700/50">
+          <option value="VENTAS">Ventas</option>
+          <option value="ADMIN">Administrador</option>
+          <option value="BODEGA">Bodeguero</option>
+          <option value="DIRECTOR">Director</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex justify-end gap-3 mt-6">
+      <button onclick="document.getElementById('modal-usuario').classList.add('hidden')"
+              class="dax-btn-ghost">Cancelar</button>
+      <button class="dax-btn-primary">
+        <i class="fas fa-save text-xs"></i>
+        Crear Usuario
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
 
-    <script src="/static/js/navbar.js"></script>
-    <script>
-        const token = localStorage.getItem('token');
-
-        document.addEventListener('DOMContentLoaded', cargarUsuarios);
-
-        async function cargarUsuarios() {
-            try {
-                const res = await fetch('/api/usuarios/', { headers: { 'Authorization': `Bearer ${token}` } });
-                
-                if (res.status === 403) {
-                    document.querySelector('main').innerHTML = '<div class="text-center p-10 text-red-500 font-bold">⛔ Acceso restringido solo para Administradores</div>';
-                    return;
-                }
-
-                const usuarios = await res.json();
-                const tbody = document.getElementById('tabla-usuarios');
-                tbody.innerHTML = '';
-
-                usuarios.forEach(u => {
-                    let badge = '';
-                    if(u.rol === 'admin') badge = 'bg-red-100 text-red-800';
-                    else if(u.rol === 'asistente') badge = 'bg-blue-100 text-blue-800';
-                    else badge = 'bg-green-100 text-green-800';
-
-                    tbody.innerHTML += `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-5 py-4 font-bold text-gray-700">${u.nombre}</td>
-                            <td class="px-5 py-4 text-gray-600">${u.email}</td>
-                            <td class="px-5 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold uppercase ${badge}">${u.rol}</span></td>
-                            <td class="px-5 py-4 text-center">
-                                <button onclick="eliminar(${u.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`;
-                });
-            } catch(e) { console.error(e); }
-        }
-
-        document.getElementById('form-user').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                nombre: document.getElementById('u-nombre').value,
-                email: document.getElementById('u-email').value,
-                password: document.getElementById('u-pass').value,
-                rol: document.getElementById('u-rol').value,
-                activo: true
-            };
-
-            try {
-                const res = await fetch('/api/usuarios/', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if(res.ok) {
-                    Swal.fire('Creado', 'Usuario registrado exitosamente', 'success');
-                    document.getElementById('modal-user').classList.add('hidden');
-                    document.getElementById('form-user').reset();
-                    cargarUsuarios();
-                } else {
-                    const err = await res.json();
-                    Swal.fire('Error', err.detail, 'error');
-                }
-            } catch(e) { console.error(e); }
-        });
-
-        function abrirModal() { document.getElementById('modal-user').classList.remove('hidden'); }
-        
-        async function eliminar(id) {
-            if(!confirm('¿Eliminar usuario? Esta acción no se puede deshacer.')) return;
-            const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            if(res.ok) { cargarUsuarios(); } else { Swal.fire('Error', 'No puedes eliminarte a ti mismo o no tienes permisos', 'error'); }
-        }
-    </script>
-</body>
-</html>
+{% block extra_scripts %}
+<script>
+function usuarios() {
+  return {
+    loading: true,
+    lista: [],
+    async init() {
+      try {
+        const res = await fetch('/api/usuarios/', { credentials:'include' });
+        if (res.ok) this.lista = await res.json();
+      } catch(e) { console.warn(e); }
+      finally { this.loading = false; }
+    }
+  }
+}
+</script>
+{% endblock %}

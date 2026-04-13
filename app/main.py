@@ -1,41 +1,42 @@
 """
 DASIC ERP — Application entry point.
-
-Este archivo solo hace bootstrap: configura logging, monta la app,
-registra middleware y routers.
-La lógica de startup/seeding vive en core/lifespan.py + db/seeds.py.
+Bootstrap limpio: logging, lifespan, middlewares, routers y vistas SSR.
 """
 
+import logging
 import os
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from jose import JWTError, jwt
 from sqlalchemy import text
 
+from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.lifespan import lifespan
 from app.db import SessionLocal, engine
 from app import models
+from app.services import UserService
 
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 configure_logging()
-
-import logging
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 # ---------------------------------------------------------------------------
-# Inicializar tablas (no gestionadas aún por Alembic)
+# Tablas (transitorio — Fase 6: migrar a Alembic)
 # ---------------------------------------------------------------------------
 models.Base.metadata.create_all(bind=engine)
 
 # ---------------------------------------------------------------------------
-# App factory
+# App
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="DASIC ERP",
@@ -44,7 +45,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Static files & templates
+# Static & Templates
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -53,9 +54,8 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "")
-origins = [o for o in _raw_origins.split(",") if o] or ["*"]
-
+_raw = os.getenv("ALLOWED_ORIGINS", "")
+origins = [o for o in _raw.split(",") if o] or ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -65,7 +65,7 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Routers (API)
+# Routers API
 # ---------------------------------------------------------------------------
 from app.routers import auth, clientes, compras, gastos, productos, usuarios, ventas  # noqa: E402
 
@@ -78,46 +78,92 @@ app.include_router(usuarios.router)
 app.include_router(gastos.router)
 
 # ---------------------------------------------------------------------------
-# SSR Views (Jinja2)
+# Helper: obtener current_user opcional desde cookie (para SSR)
 # ---------------------------------------------------------------------------
-_SSR_ROUTES: list[tuple[str, str]] = [
-    ("/", "login.html"),
-    ("/dashboard", "dashboard.html"),
-    ("/ventas/cotizador", "cotizador.html"),
-    ("/seguimiento", "seguimiento.html"),
-    ("/inventario", "inventario.html"),
-    ("/clientes", "clientes.html"),
-    ("/compras", "compras.html"),
-    ("/gastos", "gastos.html"),
-    ("/reportes", "reportes.html"),
-    ("/usuarios", "usuarios.html"),
+def _get_user_from_cookie(request: Request) -> Optional[models.Usuario]:
+    """Decodifica el JWT de la cookie HttpOnly sin lanzar excepción."""
+    try:
+        raw = request.cookies.get(settings.token_cookie_name, "")
+        token = raw.replace("Bearer ", "", 1) if raw.startswith("Bearer ") else raw
+        if not token:
+            return None
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        email: str = payload.get("sub", "")
+        if not email:
+            return None
+        db = SessionLocal()
+        try:
+            return UserService.get_user_by_email(db, email)
+        finally:
+            db.close()
+    except (JWTError, Exception):
+        return None
+
+
+def _protected_view(template_name: str):
+    """
+    Fábrica de vistas SSR protegidas.
+    - Si no hay sesión válida → redirect /
+    - Si hay sesión → renderiza template con request + current_user
+    """
+    async def _view(request: Request) -> HTMLResponse:
+        user = _get_user_from_cookie(request)
+        if user is None:
+            return RedirectResponse("/", status_code=302)
+        return templates.TemplateResponse(
+            template_name,
+            {"request": request, "current_user": user},
+        )
+    _view.__name__ = f"view_{template_name.replace('.html','').replace('/','_')}"
+    return _view
+
+
+# ---------------------------------------------------------------------------
+# SSR Routes
+# ---------------------------------------------------------------------------
+
+# Login (pública)
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def view_login(request: Request) -> HTMLResponse:
+    # Si ya está autenticado → dashboard directamente
+    if _get_user_from_cookie(request):
+        return RedirectResponse("/dashboard", status_code=302)
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+# Rutas protegidas
+_SSR_ROUTES = [
+    ("/dashboard",          "dashboard.html"),
+    ("/ventas/cotizador",   "cotizador.html"),
+    ("/seguimiento",        "seguimiento.html"),
+    ("/inventario",         "inventario.html"),
+    ("/clientes",           "clientes.html"),
+    ("/compras",            "compras.html"),
+    ("/gastos",             "gastos.html"),
+    ("/reportes",           "reportes.html"),
+    ("/usuarios",           "usuarios.html"),
 ]
 
-for _path, _template in _SSR_ROUTES:
-    # Closure captura el template correcto
-    def _make_view(tmpl: str):
-        async def _view(request: Request) -> HTMLResponse:
-            return templates.TemplateResponse(request, tmpl)
-        _view.__name__ = f"view_{tmpl.replace('.html', '').replace('/', '_')}"
-        return _view
-
-    app.add_api_route(_path, _make_view(_template), response_class=HTMLResponse)
+for _path, _tmpl in _SSR_ROUTES:
+    app.add_api_route(
+        _path,
+        _protected_view(_tmpl),
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
 
 # ---------------------------------------------------------------------------
-# Health check  (Railway / monitoreo externo)
+# Health
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Ops"])
 async def health_check() -> JSONResponse:
-    """Endpoint de salud para Railway y monitoreo externo."""
     try:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
-        db_status = "ok"
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Health check DB falló: %s", exc)
-        db_status = "error"
-
-    status = "ok" if db_status == "ok" else "degraded"
-    code = 200 if status == "ok" else 503
-    return JSONResponse({"status": status, "db": db_status}, status_code=code)
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status_str = "ok" if db_ok else "degraded"
+    return JSONResponse({"status": status_str, "db": "ok" if db_ok else "error"},
+                        status_code=200 if db_ok else 503)

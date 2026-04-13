@@ -1,228 +1,258 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - DASIC ERP</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
-</head>
-<body class="bg-gray-100 font-sans">
+{% extends "base.html" %}
 
-    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
-    <div id="sidebar-container"></div>
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}
+  Resumen Ejecutivo
+  <span class="ml-2 text-xs font-normal text-slate-500"
+        x-data="{ d:'' }"
+        x-init="d=new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'})"
+        x-text="d"></span>
+{% endblock %}
 
-    <main class="ml-64 mt-16 p-6">
-        
-        <div class="mb-8">
-            <h2 class="text-3xl font-bold text-gray-800">Resumen Ejecutivo</h2>
-            <p class="text-gray-500">Estado actual de la empresa al <span id="fecha-hoy"></span></p>
-        </div>
+{% block header_actions %}
+  <button onclick="window.location.reload()"
+          class="dax-btn-ghost gap-2 text-xs">
+    <i class="fas fa-rotate text-cyan-400"></i>
+    Actualizar
+  </button>
+{% endblock %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-600 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase">Ventas (Mes)</p>
-                    <h3 class="text-2xl font-bold text-gray-800" id="kpi-ventas">$0.00</h3>
-                </div>
-                <div class="p-3 bg-blue-50 rounded-full text-blue-600">
-                    <i class="fas fa-chart-line text-xl"></i>
-                </div>
+{% block extra_head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="dashboard()" x-init="init()">
+
+  <!-- ── KPI Strip ────────────────────────────────────────── -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+    <!-- Ventas del Mes -->
+    <div class="kpi-card group">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ventas (Mes)</p>
+        <p class="text-2xl font-bold text-slate-100"
+           x-text="kpi.ventas_mes"></p>
+        <p class="text-xs text-slate-500 mt-1">órdenes confirmadas</p>
+      </div>
+      <div class="h-11 w-11 flex items-center justify-center rounded-xl
+                  bg-cyan-500/10 ring-1 ring-cyan-500/20 text-cyan-400
+                  group-hover:bg-cyan-500/20 transition-colors">
+        <i class="fas fa-chart-line text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Cotizaciones Activas -->
+    <div class="kpi-card group">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cotizaciones</p>
+        <p class="text-2xl font-bold text-slate-100"
+           x-text="kpi.cotizaciones"></p>
+        <p class="text-xs text-slate-500 mt-1">en seguimiento</p>
+      </div>
+      <div class="h-11 w-11 flex items-center justify-center rounded-xl
+                  bg-amber-500/10 ring-1 ring-amber-500/20 text-amber-400
+                  group-hover:bg-amber-500/20 transition-colors">
+        <i class="fas fa-file-invoice text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Clientes Activos -->
+    <div class="kpi-card group">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Clientes</p>
+        <p class="text-2xl font-bold text-slate-100"
+           x-text="kpi.clientes"></p>
+        <p class="text-xs text-slate-500 mt-1">cuentas activas</p>
+      </div>
+      <div class="h-11 w-11 flex items-center justify-center rounded-xl
+                  bg-violet-500/10 ring-1 ring-violet-500/20 text-violet-400
+                  group-hover:bg-violet-500/20 transition-colors">
+        <i class="fas fa-users text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Stock Crítico -->
+    <div class="kpi-card group">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Stock Crítico</p>
+        <p class="text-2xl font-bold"
+           :class="kpi.stock_critico > 0 ? 'text-red-400' : 'text-emerald-400'"
+           x-text="kpi.stock_critico"></p>
+        <p class="text-xs text-slate-500 mt-1">SKUs bajo mínimo</p>
+      </div>
+      <div class="h-11 w-11 flex items-center justify-center rounded-xl
+                  bg-red-500/10 ring-1 ring-red-500/20 text-red-400
+                  group-hover:bg-red-500/20 transition-colors">
+        <i class="fas fa-triangle-exclamation text-lg"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Grid principal ─────────────────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Gráfica de ventas -->
+    <div class="dax-card lg:col-span-2 p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-bold text-slate-200">Tendencia de Ventas</h2>
+        <span class="text-xs text-slate-500">Últimos 6 meses</span>
+      </div>
+      <div class="h-56">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Actividad Reciente -->
+    <div class="dax-card p-6 flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-slate-200">Actividad Reciente</h2>
+        <a href="/ventas/cotizador"
+           class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
+          Ver todas →
+        </a>
+      </div>
+
+      <!-- Skeleton loading -->
+      <div x-show="loading" class="space-y-3">
+        <template x-for="i in 5" :key="i">
+          <div class="flex items-center gap-3 animate-pulse">
+            <div class="h-8 w-8 rounded-lg bg-slate-700 shrink-0"></div>
+            <div class="flex-1 space-y-1.5">
+              <div class="h-2.5 bg-slate-700 rounded w-3/4"></div>
+              <div class="h-2 bg-slate-700/60 rounded w-1/2"></div>
             </div>
+            <div class="h-2.5 bg-slate-700 rounded w-14 shrink-0"></div>
+          </div>
+        </template>
+      </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase">Cotizaciones</p>
-                    <h3 class="text-2xl font-bold text-gray-800" id="kpi-cotizaciones">0</h3>
-                </div>
-                <div class="p-3 bg-yellow-50 rounded-full text-yellow-600">
-                    <i class="fas fa-file-invoice text-xl"></i>
-                </div>
+      <!-- Tabla -->
+      <div x-show="!loading" class="flex-1 overflow-y-auto space-y-1">
+        <template x-for="v in recientes" :key="v.folio">
+          <div class="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-700/40 transition-colors">
+            <div class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg"
+                 :class="v.estatus==='cotizacion' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'">
+              <i class="text-xs" :class="v.estatus==='cotizacion' ? 'fas fa-file-alt' : 'fas fa-check'"></i>
             </div>
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase">Clientes Activos</p>
-                    <h3 class="text-2xl font-bold text-gray-800" id="kpi-clientes">0</h3>
-                </div>
-                <div class="p-3 bg-purple-50 rounded-full text-purple-600">
-                    <i class="fas fa-users text-xl"></i>
-                </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-slate-200 truncate" x-text="v.folio"></p>
+              <p class="text-[10px] text-slate-500 truncate" x-text="v.cliente"></p>
             </div>
+            <p class="text-xs font-mono font-bold text-slate-300 shrink-0"
+               x-text="'$'+parseFloat(v.total).toLocaleString('en-US',{minimumFractionDigits:0})"></p>
+          </div>
+        </template>
+        <p x-show="recientes.length===0 && !loading"
+           class="text-xs text-slate-500 text-center py-8">Sin actividad reciente</p>
+      </div>
+    </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase">Stock Crítico</p>
-                    <h3 class="text-2xl font-bold text-red-600" id="kpi-stock">0</h3>
-                </div>
-                <div class="p-3 bg-red-50 rounded-full text-red-600">
-                    <i class="fas fa-exclamation-triangle text-xl"></i>
-                </div>
-            </div>
-        </div>
+  </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
-                <h3 class="font-bold text-gray-700 mb-4">Tendencia de Ventas (Últimos 6 meses)</h3>
-                <div class="h-64">
-                    <canvas id="salesChart"></canvas>
-                </div>
-            </div>
+</div>
+{% endblock %}
 
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <h3 class="font-bold text-gray-700 mb-4">Actividad Reciente</h3>
-                <div class="overflow-y-auto h-64">
-                    <table class="w-full text-sm text-left">
-                        <tbody id="tabla-recientes">
-                            <tr><td class="text-gray-400 text-center">Cargando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 text-center">
-                    <a href="/ventas/cotizador" class="text-blue-600 text-xs font-bold hover:underline">Ir a Ventas →</a>
-                </div>
-            </div>
-        </div>
+{% block extra_scripts %}
+<script>
+function dashboard() {
+  return {
+    loading: true,
+    kpi: { ventas_mes:'$0', cotizaciones:0, clientes:0, stock_critico:0 },
+    recientes: [],
+    chart: null,
 
-    </main>
+    async init() {
+      try {
+        const [resVentas, resProds] = await Promise.all([
+          fetch('/api/ventas/historial?limit=100', { credentials:'include' }),
+          fetch('/api/productos/?limit=1000',      { credentials:'include' })
+        ]);
 
-    <script src="/static/js/navbar.js"></script>
+        if (!resVentas.ok || !resProds.ok) throw new Error('Unauthorized');
 
-    <script>
-        const token = localStorage.getItem('token');
+        const ventas   = await resVentas.json();
+        const productos = await resProds.json();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Poner fecha
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('fecha-hoy').innerText = new Date().toLocaleDateString('es-ES', options);
-            
-            cargarDatosDashboard();
+        // KPIs
+        const hoy = new Date();
+        const mes = hoy.getMonth(), anio = hoy.getFullYear();
+        let totalMes = 0, cotizaciones = 0;
+        const ventasPorMes = Array(6).fill(0);
+        const labels = [];
+
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(anio, mes - i, 1);
+          labels.push(d.toLocaleString('es-MX', { month: 'short' }));
+        }
+
+        ventas.forEach(v => {
+          const fd = new Date(v.fecha);
+          const diff = (anio - fd.getFullYear()) * 12 + (mes - fd.getMonth());
+          if (v.estatus !== 'cotizacion') {
+            if (fd.getMonth() === mes && fd.getFullYear() === anio) totalMes += parseFloat(v.total);
+            if (diff >= 0 && diff < 6) ventasPorMes[5 - diff] += parseFloat(v.total);
+          } else {
+            cotizaciones++;
+          }
         });
 
-        async function cargarDatosDashboard() {
-            try {
-                // Hacemos peticiones en paralelo para velocidad
-                const [resVentas, resProds, resClientes] = await Promise.all([
-                    fetch('/api/ventas/historial?limit=100', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/productos/?limit=1000', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/clientes/?limit=1', { headers: { 'Authorization': `Bearer ${token}` } }) // Solo para ver si conecta, el conteo real lo sacamos de otra forma si la API no tiene endpoint de count
-                ]);
+        const stockCritico = productos.filter(p => p.stock_actual <= p.stock_minimo).length;
+        const clientesUnicos = new Set(ventas.map(v => v.cliente)).size;
 
-                const ventas = await resVentas.json();
-                const productos = await resProds.json();
-                
-                // 1. CALCULAR KPI STOCK
-                const stockBajo = productos.filter(p => p.stock_actual <= p.stock_minimo).length;
-                document.getElementById('kpi-stock').innerText = stockBajo;
+        this.kpi = {
+          ventas_mes: '$' + totalMes.toLocaleString('es-MX', { minimumFractionDigits: 0 }),
+          cotizaciones,
+          clientes: clientesUnicos,
+          stock_critico: stockCritico,
+        };
 
-                // 2. CALCULAR KPI CLIENTES (Simulado con el length del array si trajéramos todos, o un estimado)
-                // Nota: Para ser exactos, tu API de clientes debería devolver un campo "total". 
-                // Por ahora mostramos "Activos" como placeholder o contamos ventas únicas.
-                const clientesUnicos = new Set(ventas.map(v => v.cliente)).size;
-                document.getElementById('kpi-clientes').innerText = clientesUnicos;
+        this.recientes = ventas.slice(0, 8);
+        this.renderChart(labels, ventasPorMes);
+      } catch(e) {
+        console.warn('Dashboard:', e.message);
+      } finally {
+        this.loading = false;
+      }
+    },
 
-                // 3. KPI VENTAS MES
-                const hoy = new Date();
-                const mesActual = hoy.getMonth();
-                const anioActual = hoy.getFullYear();
-
-                let totalMes = 0;
-                let conteoCotizaciones = 0;
-                let ventasPorMes = Array(6).fill(0); // Últimos 6 meses
-                const etiquetasMeses = [];
-
-                // Generar etiquetas de últimos 6 meses
-                for (let i = 5; i >= 0; i--) {
-                    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-                    etiquetasMeses.push(d.toLocaleString('es-ES', { month: 'short' }));
-                }
-
-                ventas.forEach(v => {
-                    const fechaVenta = new Date(v.fecha);
-                    
-                    // Sumar si es de este mes y es venta (no cotización)
-                    if (v.estatus !== 'cotizacion' && fechaVenta.getMonth() === mesActual && fechaVenta.getFullYear() === anioActual) {
-                        totalMes += parseFloat(v.total);
-                    }
-
-                    if (v.estatus === 'cotizacion') conteoCotizaciones++;
-
-                    // Llenar gráfica (Simplificado)
-                    // Calcula diferencia de meses respecto a hoy para ubicar en el array [0-5]
-                    const diffMeses = (anioActual - fechaVenta.getFullYear()) * 12 + (mesActual - fechaVenta.getMonth());
-                    if (diffMeses >= 0 && diffMeses < 6 && v.estatus !== 'cotizacion') {
-                        ventasPorMes[5 - diffMeses] += parseFloat(v.total);
-                    }
-                });
-
-                document.getElementById('kpi-ventas').innerText = `$${totalMes.toLocaleString('en-US', {minimumFractionDigits:2})}`;
-                document.getElementById('kpi-cotizaciones').innerText = conteoCotizaciones;
-
-                // 4. TABLA RECIENTES
-                const tbody = document.getElementById('tabla-recientes');
-                tbody.innerHTML = '';
-                ventas.slice(0, 5).forEach(v => {
-                    const color = v.estatus === 'cotizacion' ? 'text-yellow-600 bg-yellow-50' : 'text-green-600 bg-green-50';
-                    const icon = v.estatus === 'cotizacion' ? 'fa-file-alt' : 'fa-check-circle';
-                    
-                    tbody.innerHTML += `
-                        <tr class="border-b border-gray-50 last:border-0">
-                            <td class="py-3">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 rounded-full ${color} flex items-center justify-center mr-3">
-                                        <i class="fas ${icon} text-xs"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-bold text-gray-800 text-xs">${v.folio}</p>
-                                        <p class="text-xs text-gray-500 truncate w-24">${v.cliente}</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-right font-mono text-xs font-bold text-gray-700">
-                                $${parseFloat(v.total).toLocaleString('en-US')}
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                // 5. RENDERIZAR GRÁFICA
-                renderChart(etiquetasMeses, ventasPorMes);
-
-            } catch (error) {
-                console.error(error);
+    renderChart(labels, data) {
+      const ctx = document.getElementById('salesChart').getContext('2d');
+      this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Ventas',
+            data,
+            borderColor: '#22d3ee',
+            backgroundColor: 'rgba(34,211,238,0.08)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 3,
+            pointBackgroundColor: '#22d3ee',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(148,163,184,0.08)' },
+              ticks: { color: '#64748b', font: { size: 11 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#64748b', font: { size: 11 } }
             }
+          }
         }
-
-        function renderChart(labels, data) {
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Ventas ($)',
-                        data: data,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+      });
+    }
+  }
+}
+</script>
+{% endblock %}

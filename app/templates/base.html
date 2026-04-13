@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DASIC ERP{% endblock %} — DASIC ERP</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Outfit', 'Inter', 'sans-serif'] },
+            colors: {
+              dasic: { navy:'#001e62', cyan:'#00d4e0' }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Tipografía moderna -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Alpine.js (deferred) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+      /* ── Tokens globales ─────────────────────────────────── */
+      :root {
+        --sidebar-w: 256px;   /* 16rem / w-64 */
+        --header-h:  64px;
+        --footer-h:  36px;
+      }
+
+      /* ── Scrollbar fina slate ────────────────────────────── */
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: #0f172a; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+      /* ── Componentes base ────────────────────────────────── */
+      .dax-card {
+        @apply bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg;
+      }
+      .dax-input {
+        @apply w-full bg-slate-700/50 border border-slate-600 text-slate-100
+               placeholder-slate-400 rounded-lg px-3 py-2 text-sm
+               focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40
+               transition duration-200;
+      }
+      .dax-btn-primary {
+        @apply inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400
+               text-slate-900 font-semibold text-sm px-4 py-2 rounded-lg
+               transition-all duration-200 shadow-md hover:shadow-cyan-500/30
+               active:scale-95;
+      }
+      .dax-btn-ghost {
+        @apply inline-flex items-center gap-2 text-slate-400 hover:text-slate-100
+               text-sm px-3 py-2 rounded-lg hover:bg-slate-700/60 transition-all duration-200;
+      }
+      .dax-badge-green {
+        @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-500/15 text-emerald-400;
+      }
+      .dax-badge-amber {
+        @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-500/15 text-amber-400;
+      }
+      .dax-badge-red {
+        @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-red-500/15 text-red-400;
+      }
+      .dax-badge-slate {
+        @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-600/50 text-slate-300;
+      }
+
+      /* ── KPI Card ────────────────────────────────────────── */
+      .kpi-card {
+        @apply dax-card p-5 flex items-center justify-between
+               hover:border-slate-600 transition-colors duration-200;
+      }
+
+      /* ── Tabla ───────────────────────────────────────────── */
+      .dax-table { @apply w-full text-sm text-left; }
+      .dax-table thead tr {
+        @apply border-b border-slate-700;
+      }
+      .dax-table thead th {
+        @apply px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider;
+      }
+      .dax-table tbody tr {
+        @apply border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors;
+      }
+      .dax-table tbody td {
+        @apply px-4 py-3 text-slate-300;
+      }
+
+      /* ── Animaciones ─────────────────────────────────────── */
+      @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      .fade-in { animation: fadeIn .3s ease both; }
+
+      /* ── Sidebar nav link ────────────────────────────────── */
+      .nav-link {
+        @apply flex items-center gap-3 px-4 py-2.5 text-sm font-medium
+               text-slate-400 rounded-lg mx-2
+               hover:bg-slate-700/50 hover:text-slate-100
+               border-l-2 border-transparent transition-all duration-200;
+      }
+      .nav-link.active {
+        @apply bg-slate-700/60 text-cyan-400 border-l-2 border-cyan-400;
+      }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="h-full bg-slate-900 text-slate-200 font-sans antialiased"
+      x-data="{ sidebarOpen: false }">
+
+  <!-- ══════════════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════════════ -->
+  <aside class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col"
+         style="background:#001e62">
+
+    <!-- Logo -->
+    <div class="flex h-16 shrink-0 items-center gap-3 px-6 border-b border-white/10 bg-black/20">
+      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/30">
+        <i class="fas fa-layer-group text-cyan-400 text-base"></i>
+      </div>
+      <div>
+        <p class="text-base font-bold tracking-wide text-white leading-none">DASIC</p>
+        <p class="text-[9px] text-cyan-300/80 uppercase tracking-[0.18em] font-semibold mt-0.5">Industrial ERP</p>
+      </div>
+    </div>
+
+    <!-- Navegación -->
+    <nav class="flex-1 overflow-y-auto py-4 space-y-0.5">
+
+      <p class="px-4 pt-2 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Principal</p>
+      <a href="/dashboard"
+         class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+        <i class="fas fa-chart-line w-4 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Comercial</p>
+      <a href="/ventas/cotizador"
+         class="nav-link {% if '/cotizador' in request.url.path %}active{% endif %}">
+        <i class="fas fa-cash-register w-4 text-center"></i>
+        <span>Cotizador</span>
+      </a>
+      <a href="/seguimiento"
+         class="nav-link {% if request.url.path == '/seguimiento' %}active{% endif %}">
+        <i class="fas fa-route w-4 text-center"></i>
+        <span>Seguimiento</span>
+      </a>
+      <a href="/clientes"
+         class="nav-link {% if request.url.path == '/clientes' %}active{% endif %}">
+        <i class="fas fa-users w-4 text-center"></i>
+        <span>Clientes</span>
+      </a>
+
+      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Inventario</p>
+      <a href="/inventario"
+         class="nav-link {% if request.url.path == '/inventario' %}active{% endif %}">
+        <i class="fas fa-boxes-stacked w-4 text-center"></i>
+        <span>Inventario</span>
+      </a>
+      <a href="/compras"
+         class="nav-link {% if request.url.path == '/compras' %}active{% endif %}">
+        <i class="fas fa-truck w-4 text-center"></i>
+        <span>Compras</span>
+      </a>
+
+      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Administración</p>
+      <a href="/gastos"
+         class="nav-link {% if request.url.path == '/gastos' %}active{% endif %}">
+        <i class="fas fa-file-invoice-dollar w-4 text-center"></i>
+        <span>Gastos</span>
+      </a>
+      <a href="/reportes"
+         class="nav-link {% if request.url.path == '/reportes' %}active{% endif %}">
+        <i class="fas fa-chart-pie w-4 text-center"></i>
+        <span>Reportes</span>
+      </a>
+      <a href="/usuarios"
+         class="nav-link {% if request.url.path == '/usuarios' %}active{% endif %}">
+        <i class="fas fa-user-shield w-4 text-center"></i>
+        <span>Equipo</span>
+      </a>
+    </nav>
+
+    <!-- User chip -->
+    <div class="shrink-0 border-t border-white/10 bg-black/20 p-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full
+                    bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold text-sm
+                    shadow-inner ring-2 ring-white/10">
+          {{ (current_user.nombre[0] | upper) if current_user else "U" }}
+        </div>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-white">
+            {{ current_user.nombre if current_user else "Usuario" }}
+          </p>
+          <span class="flex items-center gap-1.5 text-[10px] text-slate-400">
+            <span class="relative flex h-1.5 w-1.5">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            </span>
+            En línea
+          </span>
+        </div>
+        <form action="/api/auth/logout" method="post" class="ml-auto">
+          <button type="submit"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg
+                         text-slate-500 hover:text-red-400 hover:bg-red-500/10
+                         transition-all duration-200" title="Cerrar sesión">
+            <i class="fas fa-sign-out-alt text-sm"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════
+       LAYOUT PRINCIPAL (desplazado por sidebar)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="pl-64 flex flex-col min-h-screen">
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between
+                   border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md px-8">
+
+      <h1 class="text-lg font-bold text-slate-100 tracking-tight">
+        {% block page_title %}Panel{% endblock %}
+      </h1>
+
+      <div class="flex items-center gap-3">
+        {% block header_actions %}{% endblock %}
+
+        <!-- Notificaciones (placeholder) -->
+        <button class="dax-btn-ghost rounded-full w-9 h-9 justify-center p-0
+                       relative" title="Notificaciones">
+          <i class="fas fa-bell text-base"></i>
+          <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-cyan-400"></span>
+        </button>
+
+        <!-- Hora en vivo -->
+        <span class="hidden md:block text-xs font-mono text-slate-500"
+              x-data="{ t: '' }"
+              x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
+              x-text="t"></span>
+      </div>
+    </header>
+
+    <!-- CONTENIDO -->
+    <main class="flex-1 p-8 fade-in">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="shrink-0 border-t border-slate-700/50 px-8 py-2.5
+                   flex items-center justify-between text-[10px] text-slate-500">
+      <span>Powered by <strong class="text-slate-400">Smart Site Company SAS de CV</strong></span>
+      <span class="font-mono">DASIC ERP v2.0 — {{ request.url.path }}</span>
+    </footer>
+  </div>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
