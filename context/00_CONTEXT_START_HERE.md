@@ -1,33 +1,28 @@
 # Context Index (DASIC CRM Industrial)
 
-Este directorio contiene la documentacion viva del proyecto. La referencia de arquitectura viene de Atlas ERP/POS, pero el preset activo y el objetivo de producto es **DASIC ERP Industrial** enfocado en un **CRM muy potente** (pipeline, actividades, WhatsApp manual, cotizaciones ligadas a oportunidades).
+Este directorio contiene la documentación viva del proyecto. La referencia de arquitectura viene de Atlas ERP/POS, pero el preset activo, el esquema operativo del producto, e incentivo de negocio es **DASIC ERP Industrial**.
 
-Documento canonico de desarrollo:
-
-- `atlas_erp_pos_stack.md`
-
-Este archivo define el baseline tecnico. El resto de documentos aterrizan ese baseline al contexto DASIC.
+Documentos canónicos más importantes:
+- `atlas_erp_pos_stack.md` (Baseline de infraestructura técnica original).
+- `DASIC_Plataforma_Base.md` (Baseline del Roadmap a 90 días con enfoque a Stocks, Dashboard y Smart Quoter CRM).
+- `UI_PATTERNS.md` (La biblia obligatoria del diseño Jinja+Tailwind para consistencia Front-end).
 
 ## Golden Rules
 
-1. **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` (UUID) y toda query filtra por `organization_id`.
-1. **Multi-branch**: los usuarios pueden ser globales (HQ) o branch-scoped. Si es branch-scoped, la visibilidad se limita a su `branch_id` salvo roles de nivel gerente+.
-1. **SSR, no SPA**: UI server-side con Jinja2 + Tailwind CDN + Alpine.js. Nada de routing client-side.
-1. **RBAC + visibilidad por asignacion**: no basta con roles; para roles operativos (VENTAS/CRM) se aplica ownership/asignacion.
-1. **Auth SSR con cookies HttpOnly**: JWT en cookie HttpOnly (y opcional cookie de org/branch). Evitar `localStorage`.
-1. **PostgreSQL directo**: sin fallback a SQLite.
-1. **Alembic obligatorio**: toda evolucion del esquema va por migraciones.
+1. **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` (UUID) y toda query filtra por `organization_id`. Capa modelada por dominio en `models/nucleus.py`.
+2. **Alembic obligatorio**: toda evolución del esquema de DB local y de prod debe ejecutarse por `alembic revision` (SQLAlchemy 2.0).
+3. **Diseño por Dominio (Domain-Driven)**: Componentes en la base se ramifican bajo dominios semánticos (users, catalog, quotes, admin). No crear archivos "todólogos".
+4. **Auth mediante Core Central**: `core/lifespan.py`, SSR sin endpoints desacoplados en el Front, y Auth con cookies HttpOnly.
+5. **UI con Alpine.js/Tailwind:** Ninguna importación de librería SPA ajena al UI Stack autorizado.
 
-## Lectura Recomendada (orden)
+## Lectura Recomendada a Agentes de AI o Nuevos Contribuyentes (Orden)
 
-1. `01_ATLAS_REFERENCE.md` (referencia de arquitectura)
-1. `atlas_erp_pos_stack.md` (baseline canonico)
-1. `02_REPO_CURRENT_STATE.md` (estado actual del repo)
-1. `STACK_ADOPTION_CHECKLIST.md` (estado de adopcion y deltas)
-1. `adr/README.md` (registro formal de decisiones)
-1. `CRM_SPEC.md` (modelo, endpoints, flujos)
-1. `RBAC.md` (roles, permisos, reglas de visibilidad)
-1. `ARCHITECTURE.md` (capas, dependencias, convenciones)
-1. `ROADMAP.md` (fases de implementacion)
-1. `API_CONVENTIONS.md` (headers, paginacion, errores)
-1. `MOONSHOT_VISION.md` (vision: CRM que supera a Monday/Salesforce/HubSpot/Zoho)
+Si acabas de integrarte al proyecto, asimila el código con este orden imperativo:
+
+1. `00_CONTEXT_START_HERE.md` (Este documento).
+2. `DASIC_Plataforma_Base.md` (Blueprint comercial, KPIs y visión del cotizador-stock rápido).
+3. `02_REPO_CURRENT_STATE.md` (Fotografía exacta y lista de tareas donde el proyecto está "pausado" el día de hoy).
+4. `STACK_ADOPTION_CHECKLIST.md` (Estado granular del refactor y validación).
+5. `CRM_SPEC.md` / `RBAC.md` (Especificaciones del CRM MVP por construir y matriz de permisos de Branch y global).
+6. `UI_PATTERNS.md` (Reglas visuales y componentes).
+7. `ROADMAP.md` (Hoja de ruta iterativa integral).

@@ -1,84 +1,180 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - DASIC ERP</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/login.css') }}">
-</head>
-<body class="bg-gray-100 h-screen flex justify-center items-center">
+    <title>Iniciar Sesión — DASIC ERP</title>
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-96">
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-blue-900">DASIC ERP</h1>
-            <p class="text-gray-500 text-sm">Sistema de Gestión Integral</p>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Outfit','sans-serif'] },
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+      @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        33%  { transform: translateY(-12px) rotate(1deg); }
+        66%  { transform: translateY(-6px)  rotate(-1deg); }
+      }
+      .animate-float { animation: float 6s ease-in-out infinite; }
+
+      @keyframes fadeUp {
+        from { opacity:0; transform:translateY(20px); }
+        to   { opacity:1; transform:translateY(0); }
+      }
+      .fade-up { animation: fadeUp .5s ease both; }
+    </style>
+</head>
+
+<body class="h-full bg-slate-900 font-sans antialiased flex items-center justify-center
+             relative overflow-hidden">
+
+  <!-- Fondo decorativo (glow) -->
+  <div class="pointer-events-none absolute inset-0 overflow-hidden">
+    <div class="absolute -top-40 -left-40 h-80 w-80 rounded-full
+                bg-cyan-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -right-40 h-80 w-80 rounded-full
+                bg-blue-700/10 blur-3xl"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                h-[500px] w-[500px] rounded-full bg-indigo-900/20 blur-3xl"></div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="relative z-10 w-full max-w-md px-4 fade-up"
+       x-data="{
+         loading: false,
+         error: '',
+         email: '',
+         password: '',
+         showPass: false,
+         async submit() {
+           this.loading = true;
+           this.error = '';
+           const fd = new FormData();
+           fd.append('username', this.email);
+           fd.append('password', this.password);
+           try {
+             const res = await fetch('/api/auth/login', {
+               method: 'POST',
+               headers: {'Content-Type':'application/x-www-form-urlencoded'},
+               body: new URLSearchParams({username:this.email, password:this.password})
+             });
+             if (res.ok) {
+               window.location.href = '/dashboard';
+             } else {
+               const d = await res.json().catch(()=>({}));
+               this.error = d.detail || 'Credenciales incorrectas';
+             }
+           } catch(e) {
+             this.error = 'Error de conexión. Intenta de nuevo.';
+           } finally {
+             this.loading = false;
+           }
+         }
+       }">
+
+    <!-- Card -->
+    <div class="rounded-2xl border border-slate-700/50 bg-slate-800/80 backdrop-blur-xl
+                shadow-2xl shadow-black/40 p-8">
+
+      <!-- Marca -->
+      <div class="mb-8 text-center">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center
+                    rounded-2xl bg-gradient-to-br from-cyan-400/20 to-blue-600/30
+                    ring-1 ring-cyan-400/30 animate-float">
+          <i class="fas fa-layer-group text-2xl text-cyan-400"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">DASIC ERP</h1>
+        <p class="mt-1 text-sm text-slate-400">Sistema de Gestión Industrial</p>
+      </div>
+
+      <!-- Error banner -->
+      <div x-show="error" x-cloak x-transition
+           class="mb-4 flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20
+                  px-4 py-3 text-sm text-red-400">
+        <i class="fas fa-exclamation-circle shrink-0"></i>
+        <span x-text="error"></span>
+      </div>
+
+      <!-- Form -->
+      <form @submit.prevent="submit" class="space-y-4">
+
+        <!-- Email -->
+        <div>
+          <label class="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Correo Electrónico
+          </label>
+          <div class="relative">
+            <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2
+                      text-slate-500 text-sm pointer-events-none"></i>
+            <input type="email"
+                   x-model="email"
+                   required
+                   autocomplete="email"
+                   placeholder="admin@dasic.com"
+                   class="w-full bg-slate-700/50 border border-slate-600 text-slate-100
+                          placeholder-slate-500 rounded-lg pl-9 pr-3 py-2.5 text-sm
+                          focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40
+                          transition duration-200">
+          </div>
         </div>
 
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico</label>
-                <input type="email" id="email" required 
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    placeholder="admin@dasic.com">
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>
-                <input type="password" id="password" required 
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    placeholder="••••••">
-            </div>
-            
-            <div id="errorMessage" class="hidden text-red-500 text-xs text-center"></div>
-
-            <button type="submit" 
-                class="w-full bg-blue-900 text-white font-bold py-2 px-4 rounded hover:bg-blue-800 transition duration-300">
-                Ingresar
+        <!-- Password -->
+        <div>
+          <label class="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Contraseña
+          </label>
+          <div class="relative">
+            <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2
+                      text-slate-500 text-sm pointer-events-none"></i>
+            <input :type="showPass ? 'text' : 'password'"
+                   x-model="password"
+                   required
+                   autocomplete="current-password"
+                   placeholder="••••••••"
+                   class="w-full bg-slate-700/50 border border-slate-600 text-slate-100
+                          placeholder-slate-500 rounded-lg pl-9 pr-10 py-2.5 text-sm
+                          focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40
+                          transition duration-200">
+            <button type="button"
+                    @click="showPass = !showPass"
+                    class="absolute right-3 top-1/2 -translate-y-1/2
+                           text-slate-500 hover:text-slate-300 text-sm transition-colors">
+              <i :class="showPass ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
-        </form>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit"
+                :disabled="loading"
+                class="mt-2 w-full flex items-center justify-center gap-2
+                       bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-700
+                       text-slate-900 font-semibold text-sm py-2.5 rounded-lg
+                       transition-all duration-200 shadow-lg hover:shadow-cyan-500/30
+                       active:scale-[0.98]">
+          <i x-show="loading" class="fas fa-circle-notch animate-spin"></i>
+          <span x-text="loading ? 'Verificando...' : 'Ingresar al sistema'"></span>
+          <i x-show="!loading" class="fas fa-arrow-right text-xs"></i>
+        </button>
+      </form>
     </div>
 
-   <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); 
+    <!-- Pie de página -->
+    <p class="mt-6 text-center text-[10px] text-slate-600">
+      Powered by Smart Site Company SAS de CV &nbsp;·&nbsp; DASIC ERP v2.0
+    </p>
+  </div>
 
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('errorMessage');
-
-            const formData = new URLSearchParams();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // 1. Guardar el Token
-                    localStorage.setItem('token', data.access_token);
-                    
-                    // 2. Mostrar mensaje (Opcional, puedes quitarlo si quieres entrar directo)
-                    // alert("¡Login Exitoso! Redirigiendo...");
-
-                    // 3. REDIRIGIR AL DASHBOARD (¡ESTA ES LA CLAVE!)
-                    window.location.href = "/dashboard"; 
-
-                } else {
-                    errorMsg.innerText = "Credenciales incorrectas.";
-                    errorMsg.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                errorMsg.innerText = "Error de conexión.";
-                errorMsg.classList.remove('hidden');
-            }
-        });
-    </script>
 </body>
 </html>

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Gastos{% endblock %}
+{% block page_title %}Control de Gastos{% endblock %}
+
+{% block header_actions %}
+  <button class="dax-btn-primary">
+    <i class="fas fa-plus text-xs"></i>
+    Registrar Gasto
+  </button>
+{% endblock %}
+
+{% block content %}
+<div class="dax-card p-10 text-center">
+  <div class="mx-auto h-14 w-14 flex items-center justify-center rounded-2xl
+              bg-amber-500/10 text-amber-400 text-2xl mb-4">
+    <i class="fas fa-file-invoice-dollar"></i>
+  </div>
+  <h2 class="text-base font-bold text-slate-200 mb-2">Módulo de Gastos</h2>
+  <p class="text-sm text-slate-400 max-w-sm mx-auto">
+    Este módulo está programado para <strong class="text-slate-300">Sprint 2</strong> del roadmap.
+    Incluirá categorización de gastos, conciliación y exportación a PDF.
+  </p>
+  <div class="mt-6">
+    <span class="dax-badge-amber text-xs py-1 px-3">Próximamente</span>
+  </div>
+</div>
+{% endblock %}
