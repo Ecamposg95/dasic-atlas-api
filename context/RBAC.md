@@ -8,6 +8,21 @@ Roles cerrados y reglas de visibilidad para un CRM industrial multi-tenant.
 - `SUPPORT`: soporte limitado y auditado
 - `NONE`
 
+## Fase 1 segura (alineacion de vocabulario)
+
+Mientras conviven rutas legacy y el modelo tenant nuevo, el rol `usuarios.rol` se
+normaliza a este vocabulario canonico en UI/API:
+
+- `ADMINISTRADOR` (mapea legacy `ADMIN`)
+- `GERENTE_COMERCIAL` (mapea legacy `ASISTENTE`)
+- `VENTAS` (mapea legacy `VENDEDOR`)
+
+Alcance de esta fase:
+
+- No introduce enforcement tenant-aware fuera de gestion de usuarios.
+- Mantiene compatibilidad de lectura/escritura con los roles legacy existentes.
+- Gestion de usuarios sigue restringida al equivalente de `ADMINISTRADOR`.
+
 ## Tenant roles (por organizacion)
 
 1. `DUEÑO`

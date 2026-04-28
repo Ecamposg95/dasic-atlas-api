@@ -13,6 +13,7 @@ class Producto(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     sku = Column(String(50), unique=True, index=True, nullable=False)
+    sku_comercial = Column(String(80), index=True, nullable=True)
     nombre = Column(String(150), index=True, nullable=False)
     descripcion = Column(Text, nullable=True)
     imagen_url = Column(String(255), nullable=True)
@@ -20,6 +21,7 @@ class Producto(Base):
     stock_actual = Column(Integer, default=0)
     stock_minimo = Column(Integer, default=5)
 
+    moneda_compra = Column(String(3), nullable=False, default="MXN")
     costo_compra = Column(DECIMAL(10, 2), default=0.00)
     precio_publico = Column(DECIMAL(10, 2), default=0.00)
     precio_mayorista = Column(DECIMAL(10, 2), default=0.00)

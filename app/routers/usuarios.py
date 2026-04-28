@@ -5,18 +5,19 @@ from typing import List
 from app import models
 from app import schemas
 from app.db import get_db
-from app.security import allow_admin, get_current_user
+from app.security import get_current_user
+from app.security.jwt import allow_user_admin
 from app.services import UserService
 
 router = APIRouter(prefix="/api/usuarios", tags=["Administración de Usuarios"])
 
-# Solo el ADMIN puede ver y crear usuarios
-@router.get("/", response_model=List[schemas.UsuarioResponse], dependencies=[Depends(allow_admin)])
+# Fase 1 RBAC: mantener gestión de usuarios sólo para el rol admin-equivalente.
+@router.get("/", response_model=List[schemas.UsuarioResponse], dependencies=[Depends(allow_user_admin)])
 def listar_usuarios(db: Session = Depends(get_db)):
     # Ocultamos al super admin del listado general para evitar accidentes, o lo mostramos
     return db.query(models.Usuario).all()
 
-@router.post("/", response_model=schemas.UsuarioResponse, dependencies=[Depends(allow_admin)])
+@router.post("/", response_model=schemas.UsuarioResponse, dependencies=[Depends(allow_user_admin)])
 def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     # Validar correo único
     if UserService.get_user_by_email(db, usuario.email):
@@ -24,7 +25,7 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     
     return UserService.create_user(db, usuario)
 
-@router.delete("/{user_id}", dependencies=[Depends(allow_admin)])
+@router.delete("/{user_id}", dependencies=[Depends(allow_user_admin)])
 def eliminar_usuario(
     user_id: int,
     db: Session = Depends(get_db),

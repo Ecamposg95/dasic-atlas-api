@@ -94,16 +94,24 @@ async def get_token_payload(
 
 class RoleChecker:
     def __init__(self, allowed_roles: List[models.RolUsuario]):
-        self.allowed_roles = allowed_roles
+        self.allowed_roles = [models.RolUsuario.from_input(role) for role in allowed_roles]
 
     def __call__(self, user: models.Usuario = Depends(get_current_user)):
-        if user.rol not in self.allowed_roles:
+        current_role = models.RolUsuario.from_input(user.rol)
+        if current_role not in self.allowed_roles:
             raise HTTPException(status_code=403, detail="No tienes permisos")
         return user
 
 
-allow_admin = RoleChecker([models.RolUsuario.ADMIN])
-allow_admin_asistente = RoleChecker([models.RolUsuario.ADMIN, models.RolUsuario.ASISTENTE])
+allow_user_admin = RoleChecker([models.RolUsuario.ADMINISTRADOR])
+allow_admin = allow_user_admin
+allow_admin_asistente = RoleChecker(
+    [models.RolUsuario.ADMINISTRADOR, models.RolUsuario.GERENTE_COMERCIAL]
+)
 allow_all_staff = RoleChecker(
-    [models.RolUsuario.ADMIN, models.RolUsuario.ASISTENTE, models.RolUsuario.VENDEDOR]
+    [
+        models.RolUsuario.ADMINISTRADOR,
+        models.RolUsuario.GERENTE_COMERCIAL,
+        models.RolUsuario.VENTAS,
+    ]
 )

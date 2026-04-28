@@ -16,7 +16,7 @@ class Usuario(Base):
     nombre = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     password_hash = Column(String(200), nullable=False)
-    rol = Column(Enum(RolUsuario), default=RolUsuario.VENDEDOR)
+    rol = Column(Enum(RolUsuario), default=RolUsuario.VENTAS)
     activo = Column(Boolean, default=True)
 
     ventas = relationship("OrdenVenta", back_populates="vendedor")

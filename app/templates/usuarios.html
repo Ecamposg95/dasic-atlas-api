@@ -48,7 +48,7 @@
                 </div>
               </td>
               <td>
-                <span class="dax-badge-slate text-[10px] uppercase" x-text="u.rol"></span>
+                <span class="dax-badge-slate text-[10px] uppercase" x-text="roleLabel(u.rol)"></span>
               </td>
               <td class="text-xs text-slate-400" x-text="u.organization_id ? u.organization_id.slice(0,8)+'...' : '—'"></td>
               <td>
@@ -96,10 +96,9 @@
       <div>
         <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Rol</label>
         <select class="dax-input bg-slate-700/50">
-          <option value="VENTAS">Ventas</option>
-          <option value="ADMIN">Administrador</option>
-          <option value="BODEGA">Bodeguero</option>
-          <option value="DIRECTOR">Director</option>
+          <template x-for="role in roleOptions" :key="role.value">
+            <option :value="role.value" x-text="role.label"></option>
+          </template>
         </select>
       </div>
     </div>
@@ -118,9 +117,27 @@
 {% block extra_scripts %}
 <script>
 function usuarios() {
+  const ROLE_OPTIONS = [
+    { value: 'administrador', label: 'Administrador' },
+    { value: 'gerente_comercial', label: 'Gerente comercial' },
+    { value: 'ventas', label: 'Ventas' },
+  ];
+  const ROLE_LABELS = {
+    administrador: 'Administrador',
+    gerente_comercial: 'Gerente comercial',
+    ventas: 'Ventas',
+    admin: 'Administrador',
+    asistente: 'Gerente comercial',
+    vendedor: 'Ventas',
+  };
+
   return {
     loading: true,
     lista: [],
+    roleOptions: ROLE_OPTIONS,
+    roleLabel(role) {
+      return ROLE_LABELS[role] || role || 'Sin rol';
+    },
     async init() {
       try {
         const res = await fetch('/api/usuarios/', { credentials:'include' });

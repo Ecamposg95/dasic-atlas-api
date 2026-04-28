@@ -3,7 +3,7 @@ Auth & User schemas.
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_serializer, field_validator
 
 from app.models.enums import RolUsuario
 
@@ -19,6 +19,13 @@ class TokenData(BaseModel):
     org_id: Optional[str] = None
     branch_id: Optional[str] = None
 
+    @field_validator("rol", mode="before")
+    @classmethod
+    def normalize_role(cls, value: RolUsuario | str | None) -> RolUsuario | None:
+        if value is None:
+            return None
+        return RolUsuario.from_input(value)
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -28,8 +35,17 @@ class LoginRequest(BaseModel):
 class UsuarioBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
     email: str  # EmailStr omitido para evitar error en Windows
-    rol: RolUsuario = RolUsuario.VENDEDOR
+    rol: RolUsuario = RolUsuario.VENTAS
     activo: bool = True
+
+    @field_validator("rol", mode="before")
+    @classmethod
+    def normalize_role(cls, value: RolUsuario | str) -> RolUsuario:
+        return RolUsuario.from_input(value)
+
+    @field_serializer("rol")
+    def serialize_role(self, rol: RolUsuario) -> str:
+        return rol.api_value
 
 
 class UsuarioCreate(UsuarioBase):

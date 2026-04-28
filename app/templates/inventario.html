@@ -3,14 +3,32 @@
 {% block page_title %}Inventario{% endblock %}
 
 {% block header_actions %}
-  <a href="#" class="dax-btn-primary">
+  <button type="button" class="dax-btn-primary" onclick="document.getElementById('inventario-import-file')?.click()">
     <i class="fas fa-arrow-up-from-bracket text-xs"></i>
     Importar Excel
-  </a>
+  </button>
 {% endblock %}
 
 {% block content %}
 <div x-data="inventario()" x-init="init()">
+  <input
+    id="inventario-import-file"
+    x-ref="importFile"
+    type="file"
+    class="hidden"
+    accept=".csv,.xlsx,.xls"
+    @change="subirArchivo($event)"
+  >
+
+  <div x-show="importMsg.text" x-cloak class="mb-4">
+    <div class="rounded-xl border px-4 py-3 text-sm"
+         :class="importMsg.type === 'error'
+           ? 'border-red-500/30 bg-red-500/10 text-red-200'
+           : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'">
+      <p x-text="importMsg.text"></p>
+      <p x-show="importMsg.hint" class="mt-1 text-xs text-slate-300" x-text="importMsg.hint"></p>
+    </div>
+  </div>
 
   <!-- KPI strip inventario -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -97,7 +115,7 @@
             <tr>
               <td>
                 <p class="font-medium text-slate-200 text-xs" x-text="p.nombre"></p>
-                <p class="text-[10px] text-slate-500 font-mono" x-text="p.sku||p.numero_parte||'—'"></p>
+                <p class="text-[10px] text-slate-500 font-mono" x-text="displaySku(p)"></p>
               </td>
               <td class="text-xs text-slate-400" x-text="p.marca||'—'"></td>
               <td class="text-right font-mono font-bold text-xs"
@@ -105,7 +123,7 @@
                   x-text="p.stock_actual"></td>
               <td class="text-right font-mono text-xs text-slate-500" x-text="p.stock_minimo"></td>
               <td class="text-right font-mono text-xs text-slate-300"
-                  x-text="'$'+parseFloat(p.precio_lista||0).toLocaleString('en-US',{minimumFractionDigits:2})"></td>
+                  x-text="displayPrice(p)"></td>
               <td>
                 <span class="dax-badge-red" x-show="p.stock_actual<=0">Sin Stock</span>
                 <span class="dax-badge-amber" x-show="p.stock_actual>0 && p.stock_actual<=p.stock_minimo">Crítico</span>
@@ -134,6 +152,7 @@ function inventario() {
     todos: [], filtrados: [],
     q: '', filtroEstatus: '',
     kpi: { total:0, criticos:0, sin_stock:0, ok:0 },
+    importMsg: { text:'', type:'success', hint:'' },
 
     async init() {
       try {
@@ -151,10 +170,69 @@ function inventario() {
       this.kpi.ok = this.todos.filter(p=>p.stock_actual>p.stock_minimo).length;
     },
 
+    getPrecioLista(p) {
+      if (p.precio_publico !== undefined && p.precio_publico !== null && p.precio_publico !== '') return Number(p.precio_publico);
+      if (p.precio_lista !== undefined && p.precio_lista !== null && p.precio_lista !== '') return Number(p.precio_lista);
+      return null;
+    },
+
+    displayPrice(p) {
+      const precio = this.getPrecioLista(p);
+      if (precio === null || Number.isNaN(precio)) return 'Sin precio';
+      return '$' + precio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+
+    displaySku(p) {
+      return p.sku_comercial || p.sku || p.numero_parte || '—';
+    },
+
+    async subirArchivo(event) {
+      const [file] = event.target.files || [];
+      if (!file) return;
+
+      this.importMsg = { text:'', type:'success', hint:'' };
+
+      const body = new FormData();
+      body.append('file', file);
+
+      try {
+        const res = await fetch('/api/productos/upload-csv', {
+          method: 'POST',
+          body,
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const detail = data.detail || {};
+          this.importMsg = {
+            text: detail.mensaje || data.detail || 'No se pudo importar el archivo.',
+            type: 'error',
+            hint: Array.isArray(detail.columnas_compatibles) ? `Plantilla base: ${detail.columnas_compatibles.join(', ')}` : 'Usa CSV UTF-8 como formato de carga temporal.'
+          };
+          return;
+        }
+
+        const resumen = `Importación lista: ${data.creados} creados, ${data.actualizados} actualizados.`;
+        const hint = data.errores?.length ? `Se registraron ${data.errores.length} errores. Revisa el backend para el detalle.` : 'Puedes reutilizar el CSV exportado como plantilla para Excel.';
+        this.importMsg = { text: resumen, type: 'success', hint };
+        await this.init();
+      } catch (error) {
+        console.warn(error);
+        this.importMsg = {
+          text: 'No se pudo subir el archivo.',
+          type: 'error',
+          hint: 'Verifica la sesión y vuelve a intentar.'
+        };
+      } finally {
+        event.target.value = '';
+      }
+    },
+
     filtrar() {
       const q = this.q.toLowerCase();
       this.filtrados = this.todos.filter(p => {
-        const matchQ = !q || (p.nombre||'').toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q) || (p.marca||'').toLowerCase().includes(q);
+        const skuBusqueda = this.displaySku(p).toLowerCase();
+        const matchQ = !q || (p.nombre||'').toLowerCase().includes(q) || skuBusqueda.includes(q) || (p.marca||'').toLowerCase().includes(q);
         const matchE = !this.filtroEstatus
           || (this.filtroEstatus==='sin_stock' && p.stock_actual<=0)
           || (this.filtroEstatus==='critico' && p.stock_actual>0 && p.stock_actual<=p.stock_minimo)
