@@ -13,7 +13,6 @@ class QuoteEvent(Base):
     __tablename__ = "quote_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(String(36), nullable=True, index=True)
     orden_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=False, index=True)
     canal = Column(String(20), nullable=False)  # EMAIL | WHATSAPP | IA | NOTE
     direccion = Column(String(20), nullable=True)  # OUTBOUND | INBOUND | INTERNAL

@@ -74,10 +74,3 @@ class EstatusOrden(str, enum.Enum):
 class TipoMovimiento(str, enum.Enum):
     CARGO = "cargo"
     ABONO = "abono"
-
-
-class BranchType(str, enum.Enum):
-    HQ = "HQ"
-    PLANT = "PLANT"
-    WAREHOUSE = "WAREHOUSE"
-    OFFICE = "OFFICE"

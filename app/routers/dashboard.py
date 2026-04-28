@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.db import get_db
-from app.dependencies import get_current_active_organization
 from app.security import allow_all_staff
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
@@ -20,7 +19,6 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 @router.get("/kpis", dependencies=[Depends(allow_all_staff)])
 def kpis(
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     ahora = datetime.utcnow()
@@ -29,7 +27,6 @@ def kpis(
 
     # Cotizaciones
     cotizaciones_q = db.query(models.OrdenVenta).filter(
-        models.OrdenVenta.organization_id == organization_id,
         models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
     )
     cotiz_total = cotizaciones_q.count()
@@ -47,7 +44,6 @@ def kpis(
     ventas_mes_total = (
         db.query(func.coalesce(func.sum(models.OrdenVenta.total), 0))
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
             models.OrdenVenta.fecha_creacion >= inicio_mes,
         )
@@ -57,14 +53,13 @@ def kpis(
     ventas_mes_count = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
             models.OrdenVenta.fecha_creacion >= inicio_mes,
         )
         .count()
     )
 
-    # OC (no scoping por organization_id porque OrdenCompra no tiene tenant aún)
+    # OC
     oc_total = db.query(models.OrdenCompra).count()
     oc_borrador = (
         db.query(models.OrdenCompra)
@@ -85,7 +80,6 @@ def kpis(
     # Clientes
     clientes_total = (
         db.query(models.Cliente)
-        .filter(models.Cliente.organization_id == organization_id)
         .count()
     )
 
@@ -97,7 +91,6 @@ def kpis(
         suma = (
             db.query(func.coalesce(func.sum(models.OrdenVenta.total), 0))
             .filter(
-                models.OrdenVenta.organization_id == organization_id,
                 models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
                 models.OrdenVenta.fecha_creacion >= ref,
                 models.OrdenVenta.fecha_creacion < siguiente,

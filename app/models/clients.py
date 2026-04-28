@@ -2,7 +2,7 @@
 Clients models: Cliente, Proveedor.
 """
 
-from sqlalchemy import Column, DECIMAL, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DECIMAL, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -12,7 +12,6 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     nombre_empresa = Column(String(150), index=True)
     contacto_nombre = Column(String(100))
     rfc_tax_id = Column(String(50), nullable=True)
