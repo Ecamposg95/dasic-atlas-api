@@ -44,6 +44,25 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS tipo_cambio DECIMAL(12,6) NOT NULL DEFAULT 1.0",
     "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS cotizacion_id INTEGER",
     "CREATE INDEX IF NOT EXISTS ix_ordenes_compra_cotizacion_id ON ordenes_compra (cotizacion_id)",
+    # Bitácora de eventos por cotización (correo, whatsapp, IA)
+    """
+    CREATE TABLE IF NOT EXISTS quote_events (
+        id SERIAL PRIMARY KEY,
+        organization_id VARCHAR(36),
+        orden_id INTEGER NOT NULL REFERENCES ordenes_venta(id),
+        canal VARCHAR(20) NOT NULL,
+        direccion VARCHAR(20),
+        estatus VARCHAR(20),
+        asunto VARCHAR(255),
+        cuerpo TEXT,
+        destinatario VARCHAR(255),
+        metadata_json TEXT,
+        creado_por_id INTEGER REFERENCES usuarios(id),
+        creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_quote_events_orden_id ON quote_events (orden_id)",
+    "CREATE INDEX IF NOT EXISTS ix_quote_events_organization_id ON quote_events (organization_id)",
 ]
 
 

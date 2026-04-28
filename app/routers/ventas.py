@@ -2,16 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from typing import List
+from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
 from jinja2 import Environment, BaseLoader
+from pydantic import BaseModel, EmailStr, Field
 
 from app import models
 from app import schemas
 from app.dependencies import get_current_active_organization
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
+from app.services.email_service import (
+    EmailDeliveryError,
+    send_quote_email,
+    smtp_configured,
+)
+from app.services.ai_service import sugerir_proximo_paso
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
@@ -759,3 +766,232 @@ def generar_pdf(
         etiqueta_moneda=etiqueta_moneda,
         vigencia_dias=vigencia_dias,
     )
+
+
+# ---------------------------------------------------------------------------
+# Bloque 5: Tracking, correo, WhatsApp, IA
+# ---------------------------------------------------------------------------
+
+class _SendEmailIn(BaseModel):
+    to: EmailStr
+    cc: Optional[List[EmailStr]] = None
+    subject: Optional[str] = Field(default=None, max_length=200)
+    mensaje: Optional[str] = Field(default=None, max_length=4000)
+    incluir_pdf_link: bool = True
+
+
+class _WhatsappLogIn(BaseModel):
+    direccion: str = Field(default="OUTBOUND", pattern="^(OUTBOUND|INBOUND)$")
+    destinatario: Optional[str] = Field(default=None, max_length=80)
+    mensaje: str = Field(..., min_length=1, max_length=4000)
+
+
+def _quote_summary(orden: "models.OrdenVenta") -> dict:
+    ahora = datetime.utcnow().date()
+    edad = max((ahora - orden.fecha_creacion.date()).days, 0) if orden.fecha_creacion else 0
+    dias_restantes = (
+        (orden.fecha_vencimiento.date() - ahora).days if orden.fecha_vencimiento else None
+    )
+    detalles_resumen = "; ".join(
+        f"{(d.producto.sku_comercial if d.producto else (d.sku_libre or 'FANTASMA'))} x{d.cantidad}"
+        for d in (orden.detalles or [])[:8]
+    )
+    return {
+        "folio": orden.folio,
+        "cliente": orden.cliente.nombre_empresa if orden.cliente else "",
+        "total": float(orden.total or 0),
+        "moneda": orden.moneda,
+        "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
+        "edad_dias": edad,
+        "dias_restantes": dias_restantes,
+        "detalles_resumen": detalles_resumen,
+    }
+
+
+@router.post("/{id}/enviar-correo", dependencies=[Depends(allow_all_staff)])
+def enviar_correo(
+    id: int,
+    payload: _SendEmailIn,
+    organization_id: str = Depends(get_current_active_organization),
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+
+    asunto = (payload.subject or f"Cotización {orden.folio} - DASIC").strip()
+    cuerpo = (payload.mensaje or "").strip()
+    if not cuerpo:
+        cuerpo = (
+            f"Hola,\n\nAdjuntamos cotización {orden.folio} por un total de "
+            f"{orden.moneda} {orden.total}.\n"
+            "Cualquier duda quedamos atentos.\n\n— Equipo DASIC"
+        )
+
+    estatus = "DRY_RUN"
+    error_detail: Optional[str] = None
+    try:
+        if smtp_configured():
+            estatus = send_quote_email(
+                to=str(payload.to),
+                subject=asunto,
+                body=cuerpo,
+                cc=[str(c) for c in (payload.cc or [])] or None,
+            )
+        else:
+            estatus = "DRY_RUN"
+    except EmailDeliveryError as exc:
+        estatus = "FAILED"
+        error_detail = str(exc)
+
+    evento = models.QuoteEvent(
+        organization_id=organization_id,
+        orden_id=orden.id,
+        canal="EMAIL",
+        direccion="OUTBOUND",
+        estatus=estatus,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        destinatario=str(payload.to),
+        creado_por_id=current_user.id,
+    )
+    db.add(evento)
+    db.commit()
+    db.refresh(evento)
+
+    if estatus == "FAILED":
+        raise HTTPException(502, detail=f"SMTP falló: {error_detail}")
+
+    return {
+        "evento_id": evento.id,
+        "estatus": estatus,
+        "smtp_configurado": smtp_configured(),
+    }
+
+
+@router.post("/{id}/whatsapp-log", dependencies=[Depends(allow_all_staff)])
+def whatsapp_log(
+    id: int,
+    payload: _WhatsappLogIn,
+    organization_id: str = Depends(get_current_active_organization),
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+
+    evento = models.QuoteEvent(
+        organization_id=organization_id,
+        orden_id=orden.id,
+        canal="WHATSAPP",
+        direccion=payload.direccion,
+        estatus="LOGGED",
+        cuerpo=payload.mensaje,
+        destinatario=payload.destinatario,
+        creado_por_id=current_user.id,
+    )
+    db.add(evento)
+    db.commit()
+    db.refresh(evento)
+    return {"evento_id": evento.id, "estatus": "LOGGED"}
+
+
+@router.post("/{id}/ia-resumen", dependencies=[Depends(allow_all_staff)])
+def ia_resumen(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+
+    summary = _quote_summary(orden)
+    resultado = sugerir_proximo_paso(summary)
+
+    evento = models.QuoteEvent(
+        organization_id=organization_id,
+        orden_id=orden.id,
+        canal="IA",
+        direccion="INTERNAL",
+        estatus=resultado.get("modo", "HEURISTICO"),
+        asunto=f"IA - próximo paso {orden.folio}",
+        cuerpo=resultado.get("resumen", ""),
+        creado_por_id=current_user.id,
+    )
+    db.add(evento)
+    db.commit()
+    db.refresh(evento)
+    return {
+        "evento_id": evento.id,
+        "modo": resultado.get("modo"),
+        "model": resultado.get("model"),
+        "resumen": resultado.get("resumen"),
+    }
+
+
+@router.get("/{id}/eventos", dependencies=[Depends(allow_all_staff)])
+def listar_eventos(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+
+    eventos = (
+        db.query(models.QuoteEvent)
+        .filter(
+            models.QuoteEvent.organization_id == organization_id,
+            models.QuoteEvent.orden_id == orden.id,
+        )
+        .order_by(desc(models.QuoteEvent.creado_en))
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "id": ev.id,
+            "canal": ev.canal,
+            "direccion": ev.direccion,
+            "estatus": ev.estatus,
+            "asunto": ev.asunto,
+            "cuerpo": ev.cuerpo,
+            "destinatario": ev.destinatario,
+            "creado_en": ev.creado_en,
+            "creado_por": ev.creado_por.nombre if ev.creado_por else None,
+        }
+        for ev in eventos
+    ]

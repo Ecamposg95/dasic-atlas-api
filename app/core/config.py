@@ -26,6 +26,14 @@ class Settings:
     access_token_expire_minutes: int
     token_cookie_name: str
     cookie_secure: bool
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_password: str
+    smtp_from: str
+    smtp_use_tls: bool
+    anthropic_api_key: str
+    anthropic_model: str
 
 
 @lru_cache(maxsize=1)
@@ -44,10 +52,20 @@ def get_settings() -> Settings:
     token_cookie_name = os.getenv("TOKEN_COOKIE_NAME", "access_token").strip() or "access_token"
     cookie_secure = _as_bool(os.getenv("COOKIE_SECURE", "false"), default=False)
 
+    smtp_user = os.getenv("SMTP_USER", "").strip()
+
     return Settings(
         database_url=normalize_database_url(database_url),
         secret_key=secret_key,
         access_token_expire_minutes=access_token_expire_minutes,
         token_cookie_name=token_cookie_name,
         cookie_secure=cookie_secure,
+        smtp_host=os.getenv("SMTP_HOST", "").strip(),
+        smtp_port=int(os.getenv("SMTP_PORT", "587") or 587),
+        smtp_user=smtp_user,
+        smtp_password=os.getenv("SMTP_PASSWORD", ""),
+        smtp_from=os.getenv("SMTP_FROM", "").strip() or smtp_user,
+        smtp_use_tls=_as_bool(os.getenv("SMTP_USE_TLS", "true"), default=True),
+        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", "").strip(),
+        anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6").strip() or "claude-sonnet-4-6",
     )

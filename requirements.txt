@@ -14,3 +14,5 @@ python-dotenv
 starlette-csrf
 openpyxl
 qrcode[pil]
+anthropic
+email-validator
