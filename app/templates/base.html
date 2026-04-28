@@ -104,13 +104,29 @@
 
       /* ── Sidebar nav link ────────────────────────────────── */
       .nav-link {
-        @apply flex items-center gap-3 px-4 py-2.5 text-sm font-medium
-               text-slate-400 rounded-lg mx-2
-               hover:bg-slate-700/50 hover:text-slate-100
-               border-l-2 border-transparent transition-all duration-200;
+        @apply flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium
+               text-slate-300/80 rounded-xl
+               hover:bg-white/6 hover:text-slate-50
+               border border-transparent transition-all duration-200;
       }
       .nav-link.active {
-        @apply bg-slate-700/60 text-cyan-400 border-l-2 border-cyan-400;
+        @apply bg-white/10 text-cyan-300 border-cyan-400/30 shadow-sm;
+      }
+      .nav-icon {
+        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+               bg-black/15 text-slate-300/80 transition-colors duration-200;
+      }
+      .nav-link:hover .nav-icon {
+        @apply bg-white/10 text-slate-100;
+      }
+      .nav-link.active .nav-icon {
+        @apply bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-300/20;
+      }
+      .sidebar-section {
+        @apply mx-3 rounded-2xl border border-white/6 bg-black/10 px-2 py-2;
+      }
+      .sidebar-section-title {
+        @apply px-2 pb-2 pt-1 text-[9px] font-bold uppercase tracking-[0.24em] text-white/35;
       }
     </style>
 
@@ -138,64 +154,73 @@
     </div>
 
     <!-- Navegación -->
-    <nav class="flex-1 overflow-y-auto py-4 space-y-0.5">
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-3">
 
-      <p class="px-4 pt-2 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Principal</p>
-      <a href="/dashboard"
-         class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
-        <i class="fas fa-chart-line w-4 text-center"></i>
-        <span>Dashboard</span>
-      </a>
+      <section class="sidebar-section">
+        <p class="sidebar-section-title">Principal</p>
+        <a href="/dashboard"
+           class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-chart-line text-sm"></i></span>
+          <span>Dashboard</span>
+        </a>
+      </section>
 
-      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Comercial</p>
-      <a href="/ventas/cotizador"
-         class="nav-link {% if '/cotizador' in request.url.path %}active{% endif %}">
-        <i class="fas fa-cash-register w-4 text-center"></i>
-        <span>Cotizador</span>
-      </a>
-      <a href="/seguimiento"
-         class="nav-link {% if request.url.path == '/seguimiento' %}active{% endif %}">
-        <i class="fas fa-route w-4 text-center"></i>
-        <span>Seguimiento</span>
-      </a>
-      <a href="/clientes"
-         class="nav-link {% if request.url.path == '/clientes' %}active{% endif %}">
-        <i class="fas fa-users w-4 text-center"></i>
-        <span>Clientes</span>
-      </a>
+      <section class="sidebar-section">
+        <p class="sidebar-section-title">Comercial</p>
+        <a href="/ventas/cotizador"
+           class="nav-link {% if '/cotizador' in request.url.path %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-cash-register text-sm"></i></span>
+          <span>Cotizador</span>
+        </a>
+        <a href="/seguimiento"
+           class="nav-link {% if request.url.path == '/seguimiento' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-route text-sm"></i></span>
+          <span>Seguimiento</span>
+        </a>
+        <a href="/clientes"
+           class="nav-link {% if request.url.path == '/clientes' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-users text-sm"></i></span>
+          <span>Clientes</span>
+        </a>
+      </section>
 
-      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Inventario</p>
-      <a href="/inventario"
-         class="nav-link {% if request.url.path == '/inventario' %}active{% endif %}">
-        <i class="fas fa-boxes-stacked w-4 text-center"></i>
-        <span>Inventario</span>
-      </a>
-      <a href="/compras"
-         class="nav-link {% if request.url.path == '/compras' %}active{% endif %}">
-        <i class="fas fa-truck w-4 text-center"></i>
-        <span>Compras</span>
-      </a>
+      <section class="sidebar-section">
+        <p class="sidebar-section-title">Operación</p>
+        <a href="/inventario"
+           class="nav-link {% if request.url.path == '/inventario' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-boxes-stacked text-sm"></i></span>
+          <span>Inventario</span>
+        </a>
+        <a href="/compras"
+           class="nav-link {% if request.url.path == '/compras' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-truck text-sm"></i></span>
+          <span>Compras</span>
+        </a>
+      </section>
 
-      <p class="px-4 pt-4 pb-1.5 text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Administración</p>
-      <a href="/gastos"
-         class="nav-link {% if request.url.path == '/gastos' %}active{% endif %}">
-        <i class="fas fa-file-invoice-dollar w-4 text-center"></i>
-        <span>Gastos</span>
-      </a>
-      <a href="/reportes"
-         class="nav-link {% if request.url.path == '/reportes' %}active{% endif %}">
-        <i class="fas fa-chart-pie w-4 text-center"></i>
-        <span>Reportes</span>
-      </a>
-      <a href="/usuarios"
-         class="nav-link {% if request.url.path == '/usuarios' %}active{% endif %}">
-        <i class="fas fa-user-shield w-4 text-center"></i>
-        <span>Equipo</span>
-      </a>
+      <section class="sidebar-section">
+        <p class="sidebar-section-title">Administración</p>
+        <a href="/gastos"
+           class="nav-link {% if request.url.path == '/gastos' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-file-invoice-dollar text-sm"></i></span>
+          <span>Gastos</span>
+        </a>
+        <a href="/reportes"
+           class="nav-link {% if request.url.path == '/reportes' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-chart-pie text-sm"></i></span>
+          <span>Reportes</span>
+        </a>
+        <a href="/usuarios"
+           class="nav-link {% if request.url.path == '/usuarios' %}active{% endif %}">
+          <span class="nav-icon"><i class="fas fa-user-shield text-sm"></i></span>
+          <span>Equipo</span>
+        </a>
+      </section>
     </nav>
 
     <!-- User chip -->
-    <div class="shrink-0 border-t border-white/10 bg-black/20 p-4">
+    <div class="shrink-0 border-t border-white/10 bg-black/20 px-4 py-3">
+      <div class="rounded-2xl border border-white/8 bg-white/5 p-3">
       <div class="flex items-center gap-3">
         <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full
                     bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold text-sm
@@ -222,6 +247,7 @@
             <i class="fas fa-sign-out-alt text-sm"></i>
           </button>
         </form>
+      </div>
       </div>
     </div>
   </aside>
