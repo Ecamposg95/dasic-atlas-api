@@ -22,6 +22,8 @@ class OrdenVenta(Base):
     fecha_vencimiento = Column(DateTime, nullable=True)
 
     estatus = Column(Enum(EstatusOrden), default=EstatusOrden.COTIZACION)
+    moneda = Column(String(3), nullable=False, default="MXN")
+    tipo_cambio = Column(DECIMAL(12, 6), nullable=False, default=1.0)
     total = Column(DECIMAL(12, 2), default=0.00)
     observaciones = Column(Text, nullable=True)
 
@@ -44,6 +46,7 @@ class DetalleOrden(Base):
 
     cantidad = Column(Integer, nullable=False)
     precio_unitario = Column(DECIMAL(10, 2), nullable=False)
+    utilidad_aplicada = Column(DECIMAL(10, 2), default=0.00)
     descuento_aplicado = Column(DECIMAL(10, 2), default=0.00)
     subtotal = Column(DECIMAL(12, 2), nullable=False)
 

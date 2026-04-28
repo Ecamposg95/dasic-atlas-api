@@ -16,13 +16,16 @@ from app.schemas.catalog import ProductoInfo
 class DetalleOrdenCreate(BaseModel):
     producto_id: int
     cantidad: int = Field(..., gt=0)
-    descuento: float = 0
+    utilidad: Decimal = Field(default=Decimal("0"), ge=0, lt=100)
+    descuento: Decimal = Field(default=Decimal("0"), ge=0, le=100)
 
 
 class DetalleOrdenResponse(BaseModel):
     producto: ProductoInfo
     cantidad: int
     precio_unitario: Decimal
+    utilidad_aplicada: Decimal
+    descuento_aplicado: Decimal
     subtotal: Decimal
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,13 +34,18 @@ class OrdenVentaCreate(BaseModel):
     cliente_id: int
     detalles: List[DetalleOrdenCreate]
     observaciones: Optional[str] = None
+    moneda: str = Field(default="MXN", min_length=3, max_length=3)
+    tipo_cambio: Optional[Decimal] = Field(default=None, gt=0)
 
 
 class OrdenVentaResponse(BaseModel):
     id: int
     folio: str
     fecha_creacion: datetime
+    fecha_vencimiento: Optional[datetime] = None
     estatus: EstatusOrden
+    moneda: str
+    tipo_cambio: Decimal
     total: Decimal
     vendedor_id: int
     cliente: ClienteResponse

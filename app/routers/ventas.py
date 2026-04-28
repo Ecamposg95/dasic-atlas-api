@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from jinja2 import Environment, BaseLoader
 
 from app import models
@@ -14,6 +14,43 @@ from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
+
+DEFAULT_QUOTE_VALIDITY_DAYS = 15
+
+
+def _normalize_currency(moneda: str | None) -> str:
+    moneda_normalizada = (moneda or "MXN").upper()
+    if moneda_normalizada not in {"MXN", "USD"}:
+        raise HTTPException(400, "Moneda inválida. Usa MXN o USD.")
+    return moneda_normalizada
+
+
+def _resolve_exchange_rate(moneda: str, tipo_cambio: Decimal | None) -> Decimal:
+    if moneda == "MXN":
+        return Decimal("1.0")
+    if tipo_cambio is None or tipo_cambio <= 0:
+        raise HTTPException(400, "Tipo de cambio inválido para cotizaciones en USD")
+    return Decimal(tipo_cambio)
+
+
+def _convert_cost_to_quote_currency(
+    costo_compra: Decimal,
+    moneda_compra: str,
+    moneda_cotizacion: str,
+    tipo_cambio: Decimal,
+) -> Decimal:
+    moneda_origen = _normalize_currency(moneda_compra)
+    if moneda_origen == moneda_cotizacion:
+        return Decimal(costo_compra)
+    if moneda_origen == "USD" and moneda_cotizacion == "MXN":
+        return Decimal(costo_compra) * tipo_cambio
+    if moneda_origen == "MXN" and moneda_cotizacion == "USD":
+        return Decimal(costo_compra) / tipo_cambio
+    raise HTTPException(400, "No se pudo convertir la moneda del producto")
+
+
+def _currency_symbol(moneda: str) -> str:
+    return "US$" if moneda == "USD" else "$"
 
 # --- PLANTILLA PDF PROFESIONAL (DISEÑO FINAL) ---
 PDF_TEMPLATE_VENTA = """
@@ -50,7 +87,7 @@ PDF_TEMPLATE_VENTA = """
         tr:nth-child(even) { background: #f8fafc; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        .desc-text { color: #dc2626; font-size: 10px; display: block; }
+        .meta-text { color: #0f766e; font-size: 10px; display: block; }
 
         /* TOTALES */
         .totals-container { display: flex; justify-content: flex-end; margin-bottom: 30px; }
@@ -116,16 +153,16 @@ PDF_TEMPLATE_VENTA = """
             <tbody>
                 {% for item in orden.detalles %}
                 <tr>
-                    <td style="font-weight: bold; color: #475569;">{{ item.producto.sku }}</td>
+                    <td style="font-weight: bold; color: #475569;">{{ item.producto.sku_comercial or item.producto.sku }}</td>
                     <td>
                         {{ item.producto.nombre }}
-                        {% if item.descuento_aplicado > 0 %}
-                            <span class="desc-text">(Desc. {{ item.descuento_aplicado|int }}%)</span>
+                        {% if item.utilidad_aplicada > 0 %}
+                            <span class="meta-text">Utilidad {{ item.utilidad_aplicada|int }}%</span>
                         {% endif %}
                     </td>
                     <td class="text-center">{{ item.cantidad }}</td>
-                    <td class="text-right">${{ "{:,.2f}".format(item.precio_unitario) }}</td>
-                    <td class="text-right font-bold text-slate-700">${{ "{:,.2f}".format(item.subtotal) }}</td>
+                    <td class="text-right">{{ simbolo_moneda }}{{ "{:,.2f}".format(item.precio_unitario) }}</td>
+                    <td class="text-right font-bold text-slate-700">{{ simbolo_moneda }}{{ "{:,.2f}".format(item.subtotal) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -135,15 +172,15 @@ PDF_TEMPLATE_VENTA = """
             <div class="totals-box">
                 <div class="total-row">
                     <span>Subtotal:</span>
-                    <span>${{ "{:,.2f}".format(orden.total) }}</span>
+                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(orden.total) }}</span>
                 </div>
                 <div class="total-row">
                     <span>IVA (16%):</span>
-                    <span>${{ "{:,.2f}".format(iva) }}</span>
+                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(iva) }}</span>
                 </div>
                 <div class="total-row grand-total">
                     <span>TOTAL:</span>
-                    <span>${{ "{:,.2f}".format(gran_total) }}</span>
+                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(gran_total) }}</span>
                 </div>
             </div>
         </div>
@@ -151,8 +188,11 @@ PDF_TEMPLATE_VENTA = """
         <div class="terms-box">
             <div class="terms-title">Términos y Condiciones Comerciales</div>
             <ul>
-                <li>Precios sujetos a cambio sin previo aviso. Cotización en Moneda Nacional.</li>
-                <li>Vigencia de la cotización: <strong>15 días naturales</strong>.</li>
+                <li>Precios sujetos a cambio sin previo aviso. Cotización en {{ etiqueta_moneda }}.</li>
+                {% if orden.moneda == "USD" %}
+                <li>Tipo de cambio aplicado: <strong>{{ "{:,.4f}".format(orden.tipo_cambio) }} MXN por USD</strong>.</li>
+                {% endif %}
+                <li>Vigencia de la cotización: <strong>{{ vigencia_dias }} días naturales</strong>.</li>
                 <li>Tiempo de entrega sujeto a disponibilidad de stock.</li>
                 <li>{{ orden.observaciones or "Sin observaciones adicionales." }}</li>
             </ul>
@@ -189,6 +229,9 @@ def crear_orden(
     )
     if not cliente: raise HTTPException(404, "Cliente no encontrado")
 
+    moneda_cotizacion = _normalize_currency(orden_data.moneda)
+    tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
+
     try:
         count = (
             db.query(models.OrdenVenta)
@@ -206,7 +249,10 @@ def crear_orden(
             vendedor_id=current_user.id,
             estatus=tipo_orden,
             observaciones=orden_data.observaciones,
-            total=0
+            moneda=moneda_cotizacion,
+            tipo_cambio=tipo_cambio,
+            fecha_vencimiento=datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS),
+            total=0,
         )
         db.add(nueva_orden)
         db.flush()
@@ -223,25 +269,30 @@ def crear_orden(
                     raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
                 producto.stock_actual -= item.cantidad
 
-            # Cálculo de Precio con Descuento
-            precio_base = producto.precio_publico
-            descuento_dec = Decimal(item.descuento) / 100
-            precio_final = precio_base * (1 - descuento_dec)
-            
+            costo_base = _convert_cost_to_quote_currency(
+                Decimal(producto.costo_compra or 0),
+                producto.moneda_compra,
+                moneda_cotizacion,
+                tipo_cambio,
+            )
+            utilidad_pct = Decimal(item.utilidad or 0)
+            precio_final = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+
             subtotal = precio_final * item.cantidad
             total_orden += subtotal
-            
+
             db.add(models.DetalleOrden(
                 organization_id=organization_id,
                 orden_id=nueva_orden.id,
                 producto_id=producto.id,
                 cantidad=item.cantidad,
-                precio_unitario=precio_final,
-                descuento_aplicado=item.descuento,
+                precio_unitario=precio_final.quantize(Decimal("0.01")),
+                utilidad_aplicada=utilidad_pct,
+                descuento_aplicado=Decimal(item.descuento or 0),
                 subtotal=subtotal
             ))
 
-        nueva_orden.total = total_orden
+        nueva_orden.total = total_orden.quantize(Decimal("0.01"))
         
         # Deuda (Solo si es venta directa)
         if tipo_orden == models.EstatusOrden.PENDIENTE:
@@ -286,10 +337,16 @@ def actualizar_orden(
     if orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
 
+    moneda_cotizacion = _normalize_currency(orden_update.moneda)
+    tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_update.tipo_cambio)
+
     try:
         # Actualizar cabecera
         orden.cliente_id = orden_update.cliente_id
         orden.observaciones = orden_update.observaciones
+        orden.moneda = moneda_cotizacion
+        orden.tipo_cambio = tipo_cambio
+        orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS)
         
         # Borrar detalles viejos
         db.query(models.DetalleOrden).filter(
@@ -304,24 +361,30 @@ def actualizar_orden(
             producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
             if not producto: raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
 
-            precio_base = producto.precio_publico
-            descuento_dec = Decimal(item.descuento) / 100
-            precio_final = precio_base * (1 - descuento_dec)
-            
+            costo_base = _convert_cost_to_quote_currency(
+                Decimal(producto.costo_compra or 0),
+                producto.moneda_compra,
+                moneda_cotizacion,
+                tipo_cambio,
+            )
+            utilidad_pct = Decimal(item.utilidad or 0)
+            precio_final = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+
             subtotal = precio_final * item.cantidad
             total_orden += subtotal
-            
+
             db.add(models.DetalleOrden(
                 organization_id=organization_id,
                 orden_id=orden.id,
                 producto_id=producto.id,
                 cantidad=item.cantidad,
-                precio_unitario=precio_final,
-                descuento_aplicado=item.descuento,
+                precio_unitario=precio_final.quantize(Decimal("0.01")),
+                utilidad_aplicada=utilidad_pct,
+                descuento_aplicado=Decimal(item.descuento or 0),
                 subtotal=subtotal
             ))
-            
-        orden.total = total_orden
+
+        orden.total = total_orden.quantize(Decimal("0.01"))
         db.commit()
         db.refresh(orden)
         return orden
@@ -388,14 +451,22 @@ def listar_historial(
         .filter(models.OrdenVenta.organization_id == organization_id)\
         .order_by(desc(models.OrdenVenta.fecha_creacion))\
         .limit(limit).all()
-    
+
+    ahora = datetime.utcnow().date()
+
     return [{
         "id": o.id,
         "folio": o.folio,
         "fecha": o.fecha_creacion,
+        "fecha_vencimiento": o.fecha_vencimiento,
         "cliente": o.cliente.nombre_empresa,
         "total": o.total,
-        "estatus": o.estatus
+        "moneda": o.moneda,
+        "tipo_cambio": o.tipo_cambio,
+        "estatus": o.estatus,
+        "edad_dias": max((ahora - o.fecha_creacion.date()).days, 0) if o.fecha_creacion else 0,
+        "dias_restantes": (o.fecha_vencimiento.date() - ahora).days if o.fecha_vencimiento else None,
+        "esta_vencida": bool(o.fecha_vencimiento and o.fecha_vencimiento.date() < ahora),
     } for o in ordenes]
 
 # --- 5. DETALLE JSON (PARA EDICIÓN) ---
@@ -418,9 +489,14 @@ def obtener_detalle_orden(
     detalles = []
     for d in orden.detalles:
         detalles.append({
-            "producto": {"id": d.producto.id, "sku": d.producto.sku, "nombre": d.producto.nombre},
+            "producto": {
+                "id": d.producto.id,
+                "sku": d.producto.sku_comercial or d.producto.sku,
+                "nombre": d.producto.nombre,
+            },
             "cantidad": d.cantidad,
             "precio_unitario": d.precio_unitario,
+            "utilidad_aplicada": d.utilidad_aplicada,
             "descuento_aplicado": d.descuento_aplicado,
             "subtotal": d.subtotal
         })
@@ -430,6 +506,8 @@ def obtener_detalle_orden(
         "folio": orden.folio,
         "cliente_id": orden.cliente_id,
         "observaciones": orden.observaciones,
+        "moneda": orden.moneda,
+        "tipo_cambio": orden.tipo_cambio,
         "detalles": detalles
     }
 
@@ -455,8 +533,21 @@ def generar_pdf(
     tipo_doc = (
         "COTIZACIÓN" if orden.estatus == models.EstatusOrden.COTIZACION else "NOTA DE VENTA"
     )
+    simbolo_moneda = _currency_symbol(orden.moneda)
+    etiqueta_moneda = "Dólares Americanos" if orden.moneda == "USD" else "Moneda Nacional"
+    vigencia_dias = (
+        max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
+        if orden.fecha_vencimiento and orden.fecha_creacion
+        else DEFAULT_QUOTE_VALIDITY_DAYS
+    )
 
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(
-        orden=orden, iva=iva, gran_total=gran_total, tipo_doc=tipo_doc
+        orden=orden,
+        iva=iva,
+        gran_total=gran_total,
+        tipo_doc=tipo_doc,
+        simbolo_moneda=simbolo_moneda,
+        etiqueta_moneda=etiqueta_moneda,
+        vigencia_dias=vigencia_dias,
     )

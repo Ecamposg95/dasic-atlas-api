@@ -84,14 +84,15 @@
                                 <tr>
                                     <th class="p-3 bg-white dark:bg-slate-800">Producto</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Cant.</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Precio</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-14">Desc%</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
-                                <tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
+                                <tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -210,9 +211,21 @@
         }
         function recalculer() { state.tc = parseFloat(document.getElementById('input-tc').value); renderCart(); }
         function fmtMoney(amount) {
-            let val = amount; let sym = '$';
-            if(state.moneda === 'USD') { val = amount / state.tc; sym = 'US$'; }
-            return sym + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            return moneyForQuote(amount);
+        }
+
+        function moneyForQuote(amount) {
+            const sym = state.moneda === 'USD' ? 'US$' : '$';
+            return sym + Number(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function quoteCost(producto) {
+            const cost = parseFloat(producto.costo_compra ?? producto.precio_publico ?? 0);
+            const sourceCurrency = (producto.moneda_compra || 'MXN').toUpperCase();
+            if(sourceCurrency === state.moneda) return cost;
+            if(sourceCurrency === 'USD' && state.moneda === 'MXN') return cost * state.tc;
+            if(sourceCurrency === 'MXN' && state.moneda === 'USD') return cost / state.tc;
+            return cost;
         }
 
         function filterProds(txt) {
@@ -227,7 +240,11 @@
                 return; 
             }
 
-            const matches = state.prods.filter(p => p.nombre.toLowerCase().includes(clean) || p.sku.toLowerCase().includes(clean));
+            const matches = state.prods.filter(p =>
+                p.nombre.toLowerCase().includes(clean) ||
+                p.sku.toLowerCase().includes(clean) ||
+                ((p.sku_comercial || '').toLowerCase().includes(clean))
+            );
             
             empty.classList.add('hidden');
             list.classList.remove('hidden');
@@ -240,12 +257,12 @@
                 el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
                 el.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku}</div>
+                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku_comercial || p.sku}</div>
                         <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
                     </div>
                     <div class="text-right">
-                        <div class="font-bold text-cyan-600 dark:text-cyan-400">${fmtMoney(p.precio_publico)}</div>
-                        <div class="text-[10px] text-slate-400">Stock: ${p.stock_actual}</div>
+                        <div class="font-bold text-cyan-600 dark:text-cyan-400">${moneyForQuote(quoteCost(p))}</div>
+                        <div class="text-[10px] text-slate-400">${(p.moneda_compra || 'MXN').toUpperCase()} compra | Stock: ${p.stock_actual}</div>
                     </div>`;
                 list.appendChild(el);
             });
@@ -254,8 +271,21 @@
         function addCart(p) {
             if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
             const ex = state.cart.find(x => x.id === p.id);
-            if(ex) ex.qty++; else state.cart.push({ id: p.id, sku: p.sku, nom: p.nombre, price: p.precio_publico, qty: 1, max: p.stock_actual, desc: 0 });
-            
+            if(ex) {
+                ex.qty++;
+            } else {
+                state.cart.push({
+                    id: p.id,
+                    sku: p.sku_comercial || p.sku,
+                    nom: p.nombre,
+                    cost: parseFloat(p.costo_compra || 0),
+                    productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
+                    qty: 1,
+                    max: p.stock_actual,
+                    utilidad: 30
+                });
+            }
+
             const input = document.getElementById('buscador');
             input.value = ''; input.focus();
             document.getElementById('lista-resultados').classList.add('hidden');
@@ -269,19 +299,17 @@
             let subtotal = 0;
 
             if(state.cart.length === 0) {
-                tb.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+                tb.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
                 updTotal(0); return;
             }
 
             state.cart.forEach((i, idx) => {
-                const precioBase = i.price;
-                const precioFinal = precioBase * (1 - (i.desc / 100));
+                let costo = i.cost;
+                if(i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
+                if(i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
+                const precioFinal = costo * (1 + (i.utilidad / 100));
                 const importe = i.qty * precioFinal;
                 subtotal += importe;
-
-                const precioDisplay = i.desc > 0 
-                    ? `<div class="flex flex-col items-end"><span class="original-price">${fmtMoney(precioBase)}</span><span class="text-green-600 dark:text-green-400 font-bold">${fmtMoney(precioFinal)}</span></div>` 
-                    : `<span class="text-slate-600 dark:text-slate-300">${fmtMoney(precioBase)}</span>`;
 
                 tb.innerHTML += `
                     <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
@@ -290,14 +318,15 @@
                             <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
                         </td>
                         <td class="p-3 text-center">
-                            <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)" 
+                            <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)"
                                 class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
                         </td>
-                        <td class="p-3 text-right text-xs">${precioDisplay}</td>
+                        <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
                         <td class="p-3 text-center">
-                            <input type="number" min="0" max="100" value="${i.desc}" onchange="updItem(${idx}, 'desc', this.value)" 
-                                class="w-10 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center text-xs rounded text-red-600 font-bold outline-none">
+                            <input type="number" min="0" max="99" value="${i.utilidad}" onchange="updItem(${idx}, 'utilidad', this.value)"
+                                class="w-12 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-center text-xs rounded text-emerald-700 dark:text-emerald-300 font-bold outline-none">
                         </td>
+                        <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
                         <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
                         <td class="p-3 text-center cursor-pointer text-slate-300 hover:text-red-500 transition" onclick="delItem(${idx})"><i class="fas fa-times"></i></td>
                     </tr>`;
@@ -306,11 +335,11 @@
             document.getElementById('items-count').innerText = state.cart.length + " Ítems";
         }
 
-        function updItem(idx, t, v) { 
-            let val = parseFloat(v)||0; 
-            if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val; 
-            if(t=='desc') state.cart[idx].desc = val < 0 ? 0 : (val > 100 ? 100 : val); 
-            renderCart(); 
+        function updItem(idx, t, v) {
+            let val = parseFloat(v)||0;
+            if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
+            if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
+            renderCart();
         }
         function delItem(i) { state.cart.splice(i, 1); renderCart(); }
         function updTotal(sub) {
@@ -324,11 +353,17 @@
             const cli = document.getElementById('select-cliente').value;
             if(!cli || state.cart.length === 0) return Swal.fire('Error', 'Faltan datos', 'warning');
             
-            let obs = document.getElementById('observaciones').value;
-            if(state.moneda === 'USD') obs = `[Moneda: USD, TC: ${state.tc}] ` + obs;
-
             const payload = {
-                cliente_id: parseInt(cli), detalles: state.cart.map(i => ({ producto_id: i.id, cantidad: i.qty, descuento: i.desc })), observaciones: obs
+                cliente_id: parseInt(cli),
+                moneda: state.moneda,
+                tipo_cambio: state.moneda === 'USD' ? state.tc : 1,
+                detalles: state.cart.map(i => ({
+                    producto_id: i.id,
+                    cantidad: i.qty,
+                    utilidad: i.utilidad,
+                    descuento: 0
+                })),
+                observaciones: document.getElementById('observaciones').value
             };
 
             Swal.fire({title:'Guardando...', didOpen:()=>Swal.showLoading()});
@@ -357,7 +392,7 @@
                         <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}</td>
                         <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${new Date(o.fecha).toLocaleDateString()}</td>
                         <td class="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">${o.cliente}</td>
-                        <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">$${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                        <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">${o.moneda === 'USD' ? 'US$' : '$'}${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
                         <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${color}">${o.estatus}</span></td>
                         <td class="px-6 py-4 text-center flex justify-center items-center">
                             ${btn}
