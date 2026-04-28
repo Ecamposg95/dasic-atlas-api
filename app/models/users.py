@@ -23,4 +23,3 @@ class Usuario(Base):
     activo = Column(Boolean, default=True)
 
     ventas = relationship("OrdenVenta", back_populates="vendedor")
-    memberships = relationship("UserOrganization", back_populates="user")

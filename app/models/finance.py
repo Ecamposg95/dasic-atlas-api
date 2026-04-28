@@ -14,7 +14,6 @@ class TransaccionCliente(Base):
     __tablename__ = "transacciones_clientes"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
     tipo = Column(Enum(TipoMovimiento))
     monto = Column(DECIMAL(12, 2), nullable=False)

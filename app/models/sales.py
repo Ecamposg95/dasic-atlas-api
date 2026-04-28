@@ -14,7 +14,6 @@ class OrdenVenta(Base):
     __tablename__ = "ordenes_venta"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     folio = Column(String(40), unique=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
     vendedor_id = Column(Integer, ForeignKey("usuarios.id"))
@@ -49,7 +48,6 @@ class DetalleOrden(Base):
     __tablename__ = "detalles_orden"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     orden_id = Column(Integer, ForeignKey("ordenes_venta.id"))
     producto_id = Column(Integer, ForeignKey("productos.id"), nullable=True)
 
