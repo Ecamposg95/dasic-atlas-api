@@ -82,12 +82,26 @@
                 <span class="dax-badge-slate"  x-show="v.estatus!=='cotizacion'&&v.estatus!=='venta'" x-text="v.estatus"></span>
               </td>
               <td class="text-right">
-                <button class="dax-btn-ghost text-xs py-1 px-2" @click="verDetalle(v)">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button x-show="v.estatus==='cotizacion'" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
-                  <i class="fas fa-file-invoice"></i>
-                </button>
+                <div class="flex justify-end items-center gap-1">
+                  <a :href="`/api/ventas/${v.id}/pdf`" target="_blank" title="PDF" class="dax-btn-ghost text-xs py-1 px-2">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+                  <button title="Enviar correo" class="dax-btn-ghost text-xs py-1 px-2" @click="abrirCorreo(v)">
+                    <i class="fas fa-envelope"></i>
+                  </button>
+                  <button title="Registrar WhatsApp" class="dax-btn-ghost text-xs py-1 px-2" @click="abrirWhatsapp(v)">
+                    <i class="fab fa-whatsapp text-emerald-400"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Sugerir próximo paso (IA)" class="dax-btn-ghost text-xs py-1 px-2" @click="iaResumen(v)">
+                    <i class="fas fa-robot text-violet-400"></i>
+                  </button>
+                  <button title="Eventos" class="dax-btn-ghost text-xs py-1 px-2" @click="verEventos(v)">
+                    <i class="fas fa-clock-rotate-left"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
+                    <i class="fas fa-file-invoice"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </template>
@@ -178,7 +192,71 @@ function seguimiento() {
       }
     },
 
-    verDetalle(v) { alert('Detalle: ' + v.folio); }
+    verDetalle(v) { alert('Detalle: ' + v.folio); },
+
+    async abrirCorreo(v) {
+      const to = prompt(`Enviar cotización ${v.folio} a (correo):`);
+      if (!to) return;
+      const mensaje = prompt('Mensaje (opcional):', `Hola, adjuntamos cotización ${v.folio}.`) || '';
+      try {
+        const res = await fetch(`/api/ventas/${v.id}/enviar-correo`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ to, mensaje })
+        });
+        const data = await res.json();
+        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
+        if (data.estatus === 'DRY_RUN') {
+          alert('SMTP no configurado en el servidor. El evento quedó registrado en la bitácora (DRY_RUN).');
+        } else {
+          alert(`Correo ${data.estatus}. Evento #${data.evento_id} registrado.`);
+        }
+      } catch(e) { console.warn(e); }
+    },
+
+    async abrirWhatsapp(v) {
+      const direccion = confirm('OK = Saliente, Cancel = Entrante') ? 'OUTBOUND' : 'INBOUND';
+      const destinatario = prompt('Número o contacto (opcional):') || '';
+      const mensaje = prompt('Resumen del WhatsApp:');
+      if (!mensaje) return;
+      try {
+        const res = await fetch(`/api/ventas/${v.id}/whatsapp-log`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ direccion, destinatario, mensaje })
+        });
+        const data = await res.json();
+        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
+        alert(`WhatsApp registrado. Evento #${data.evento_id}`);
+      } catch(e) { console.warn(e); }
+    },
+
+    async iaResumen(v) {
+      try {
+        const res = await fetch(`/api/ventas/${v.id}/ia-resumen`, { method:'POST', credentials:'include' });
+        const data = await res.json();
+        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
+        alert(`[${data.modo}] Próximo paso para ${v.folio}\n\n${data.resumen}`);
+      } catch(e) { console.warn(e); }
+    },
+
+    async verEventos(v) {
+      try {
+        const res = await fetch(`/api/ventas/${v.id}/eventos`, { credentials:'include' });
+        const data = await res.json();
+        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
+        if (!data.length) return alert('Sin eventos registrados.');
+        const lines = data.slice(0, 20).map(e => {
+          const when = new Date(e.creado_en).toLocaleString('es-MX');
+          const head = `[${e.canal}/${e.estatus || '-'}] ${when} ${e.creado_por ? '· '+e.creado_por : ''}`;
+          const body = e.cuerpo ? '\n   ' + (e.cuerpo.length > 140 ? e.cuerpo.slice(0,140)+'…' : e.cuerpo) : '';
+          return head + body;
+        }).join('\n\n');
+        alert(`Eventos ${v.folio}:\n\n${lines}`);
+      } catch(e) { console.warn(e); }
+    }
   }
 }
 </script>

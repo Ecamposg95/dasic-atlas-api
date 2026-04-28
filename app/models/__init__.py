@@ -53,6 +53,9 @@ from app.models.sales import OrdenVenta, DetalleOrden  # noqa: F401
 # Purchases
 from app.models.purchases import OrdenCompra, DetalleCompra  # noqa: F401
 
+# Quote events (correo, whatsapp, IA, notas)
+from app.models.quote_events import QuoteEvent  # noqa: F401
+
 __all__ = [
     "Base",
     # enums
@@ -71,4 +74,6 @@ __all__ = [
     "OrdenVenta", "DetalleOrden",
     # purchases
     "OrdenCompra", "DetalleCompra",
+    # events
+    "QuoteEvent",
 ]
