@@ -1,10 +1,12 @@
 from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 import csv
 import io
+import secrets
+from datetime import datetime
 from app import models
 from app import schemas
 from app.db import get_db
@@ -45,6 +47,52 @@ def _normalize_sku(value: str) -> str:
     return value.strip().upper()
 
 
+def _generate_internal_sku(db: Session) -> str:
+    """SKU interno autogenerado: DAS-YYMM-XXXX (XXXX random hex)."""
+    for _ in range(10):
+        candidate = f"DAS-{datetime.utcnow().strftime('%y%m')}-{secrets.token_hex(2).upper()}"
+        if not db.query(models.Producto).filter(models.Producto.sku == candidate).first():
+            return candidate
+    raise HTTPException(500, "No se pudo generar SKU único, reintentar")
+
+
+def _read_xlsx_rows(content: bytes) -> List[dict]:
+    """Lee un .xlsx y devuelve una lista de dicts (header → valor) por fila."""
+    try:
+        from openpyxl import load_workbook  # type: ignore
+    except ImportError as exc:  # pragma: no cover
+        raise HTTPException(
+            400,
+            detail={
+                "mensaje": "Falta dependencia openpyxl en el server. Instala 'openpyxl' o usa CSV.",
+                "usa_csv_mientras_tanto": True,
+                "columnas_compatibles": IMPORT_TEMPLATE_COLUMNS,
+            },
+        ) from exc
+
+    wb = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+    ws = wb.active
+    rows = ws.iter_rows(values_only=True)
+    try:
+        header = next(rows)
+    except StopIteration:
+        return []
+    headers = [str(h).strip().lower() if h is not None else "" for h in header]
+    out: List[dict] = []
+    for raw in rows:
+        if raw is None:
+            continue
+        if all(v is None or str(v).strip() == "" for v in raw):
+            continue
+        row = {}
+        for idx, value in enumerate(raw):
+            if idx >= len(headers):
+                break
+            row[headers[idx]] = value
+        out.append(row)
+    return out
+
+
 def _normalize_optional_text(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
@@ -57,8 +105,8 @@ def _normalize_currency(value: Optional[str]) -> str:
     return normalized or DEFAULT_PURCHASE_CURRENCY
 
 
-def _resolve_public_price(raw_price: Optional[Decimal], costo_compra: Decimal) -> Decimal:
-    return costo_compra if raw_price is None else raw_price
+def _resolve_public_price(raw_price: Optional[Decimal], costo_compra: Decimal) -> Optional[Decimal]:
+    return raw_price
 
 
 def _read_decimal(row: dict, field_name: str) -> Optional[Decimal]:
@@ -148,10 +196,11 @@ def obtener_producto(
 # --- 3. CREAR PRODUCTO (SOLO ADMIN/ASISTENTE) ---
 @router.post("/", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
 def crear_producto(
-    producto: schemas.ProductoCreate, 
+    producto: schemas.ProductoCreate,
     db: Session = Depends(get_db)
 ):
-    sku = _normalize_sku(producto.sku)
+    raw_sku = (producto.sku or "").strip()
+    sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db)
 
     # Verificar si el SKU ya existe
     db_producto = db.query(models.Producto).filter(models.Producto.sku == sku).first()
@@ -162,7 +211,8 @@ def crear_producto(
     payload["sku"] = sku
     payload["sku_comercial"] = _normalize_optional_text(producto.sku_comercial)
     payload["moneda_compra"] = _normalize_currency(producto.moneda_compra)
-    payload["precio_publico"] = _resolve_public_price(producto.precio_publico, producto.costo_compra)
+    if payload.get("precio_publico") is None:
+        payload.pop("precio_publico", None)
 
     nuevo_producto = models.Producto(**payload)
     db.add(nuevo_producto)
@@ -187,11 +237,6 @@ def actualizar_producto(
         update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
     if "moneda_compra" in update_data:
         update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
-    if "precio_publico" in update_data and update_data["precio_publico"] is None:
-        costo_base = update_data.get("costo_compra", db_producto.costo_compra)
-        update_data["precio_publico"] = _resolve_public_price(None, costo_base)
-    elif "costo_compra" in update_data and "precio_publico" not in update_data and db_producto.precio_publico == db_producto.costo_compra:
-        update_data["precio_publico"] = update_data["costo_compra"]
     for key, value in update_data.items():
         setattr(db_producto, key, value)
 
@@ -210,54 +255,61 @@ def eliminar_producto(id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"mensaje": "Producto eliminado correctamente"}
 
-# --- 6. CARGA MASIVA CSV (IMPORTAR) ---
+# --- 6. CARGA MASIVA CSV / XLSX (IMPORTAR) ---
 @router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
 async def cargar_inventario_csv(
-    file: UploadFile = File(...), 
+    file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     """
-    Importa productos desde CSV.
-    Columnas base: sku, nombre, costo, stock.
+    Importa productos desde CSV o Excel (.xlsx).
+    Columnas base: sku (opcional, se autogenera), nombre, costo, stock.
     Columnas opcionales: sku_comercial, moneda_compra, precio_publico, precio_mayorista, precio_distribuidor, descripcion, stock_minimo.
     """
     filename = (file.filename or "").lower()
-    if filename.endswith((".xlsx", ".xls")):
+    content = await file.read()
+
+    if filename.endswith(".xls"):
         raise HTTPException(
             status_code=400,
             detail={
-                "mensaje": "La importación directa de Excel aún no está habilitada.",
-                "usa_csv_mientras_tanto": True,
+                "mensaje": "Formato .xls no soportado. Convierte a .xlsx o CSV.",
                 "columnas_compatibles": IMPORT_TEMPLATE_COLUMNS,
             },
         )
-    if not filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser CSV")
 
-    # Leer el archivo en memoria
-    content = await file.read()
-    decoded_content = content.decode('utf-8-sig') # utf-8-sig maneja BOM de Excel
-    csv_reader = csv.DictReader(io.StringIO(decoded_content))
+    if filename.endswith(".xlsx"):
+        rows_iter = _read_xlsx_rows(content)
+    elif filename.endswith(".csv") or not filename:
+        decoded_content = content.decode('utf-8-sig')
+        rows_iter = list(csv.DictReader(io.StringIO(decoded_content)))
+    else:
+        raise HTTPException(status_code=400, detail="El archivo debe ser CSV o XLSX")
 
     registros_nuevos = 0
     registros_actualizados = 0
     errores = []
 
-    for row in csv_reader:
+    for row in rows_iter:
         try:
             row = _normalize_csv_row(row)
 
             sku = _read_text(row, "sku")
+            nombre_check = _read_text(row, "nombre")
+            if not sku and not nombre_check:
+                continue  # Fila vacía
             if not sku:
-                continue # Saltar filas vacías
-            sku = _normalize_sku(sku)
+                # Autogenerar SKU interno si no viene en el archivo
+                sku = _generate_internal_sku(db)
+            else:
+                sku = _normalize_sku(sku)
 
             sku_comercial = _read_text(row, "sku_comercial")
             nombre = _read_text(row, "nombre", "Sin Nombre") or "Sin Nombre"
             descripcion = _read_text(row, "descripcion", "") or ""
             moneda_compra = _normalize_currency(_read_text(row, "moneda_compra", DEFAULT_PURCHASE_CURRENCY))
             costo_compra = _read_decimal(row, "costo_compra") or Decimal("0")
-            precio_publico = _resolve_public_price(_read_decimal(row, "precio_publico"), costo_compra)
+            precio_publico = _read_decimal(row, "precio_publico")
             precio_mayorista = _read_decimal(row, "precio_mayorista") or Decimal("0")
             precio_distribuidor = _read_decimal(row, "precio_distribuidor") or Decimal("0")
             stock_actual = _read_int(row, "stock_actual", 0)
@@ -275,18 +327,18 @@ async def cargar_inventario_csv(
                 producto_existente.stock_minimo = stock_minimo
                 producto_existente.moneda_compra = moneda_compra
                 producto_existente.costo_compra = costo_compra
-                producto_existente.precio_publico = precio_publico
+                if precio_publico is not None:
+                    producto_existente.precio_publico = precio_publico
                 producto_existente.precio_mayorista = precio_mayorista
                 producto_existente.precio_distribuidor = precio_distribuidor
                 registros_actualizados += 1
             else:
                 # Crear nuevo
-                nuevo_prod = models.Producto(
+                kwargs = dict(
                     sku=sku,
                     sku_comercial=sku_comercial,
                     nombre=nombre,
                     descripcion=descripcion,
-                    precio_publico=precio_publico,
                     precio_mayorista=precio_mayorista,
                     precio_distribuidor=precio_distribuidor,
                     costo_compra=costo_compra,
@@ -294,6 +346,9 @@ async def cargar_inventario_csv(
                     stock_actual=stock_actual,
                     stock_minimo=stock_minimo,
                 )
+                if precio_publico is not None:
+                    kwargs["precio_publico"] = precio_publico
+                nuevo_prod = models.Producto(**kwargs)
                 db.add(nuevo_prod)
                 registros_nuevos += 1
 
@@ -307,6 +362,30 @@ async def cargar_inventario_csv(
         "actualizados": registros_actualizados,
         "errores": errores
     }
+
+# --- 6.5 QR DEL PRODUCTO (PNG) ---
+@router.get("/{id}/qr", dependencies=[Depends(allow_all_staff)])
+def producto_qr(id: int, db: Session = Depends(get_db)):
+    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not producto:
+        raise HTTPException(404, "Producto no encontrado")
+    try:
+        import qrcode  # type: ignore
+    except ImportError:
+        raise HTTPException(
+            500,
+            "Falta dependencia 'qrcode' en el server. Instala 'qrcode[pil]'.",
+        )
+    payload = (producto.sku_comercial or producto.sku or str(producto.id)).strip()
+    img = qrcode.make(payload)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Response(
+        content=buf.getvalue(),
+        media_type="image/png",
+        headers={"Content-Disposition": f"inline; filename=qr_{payload}.png"},
+    )
+
 
 # --- 7. EXPORTAR CSV (DESCARGAR) ---
 @router.get("/exportar/csv", dependencies=[Depends(allow_admin_asistente)])

@@ -28,6 +28,22 @@ _BACKFILL_DDL = [
     "CREATE INDEX IF NOT EXISTS ix_transacciones_clientes_organization_id ON transacciones_clientes (organization_id)",
     "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_organization_id ON ordenes_venta (organization_id)",
     "CREATE INDEX IF NOT EXISTS ix_detalles_orden_organization_id ON detalles_orden (organization_id)",
+    # Quote versioning + folio extendido + ad-hoc + OC link (idempotente)
+    "ALTER TABLE IF EXISTS ordenes_venta ALTER COLUMN folio TYPE VARCHAR(40)",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS cotizacion_origen_id INTEGER",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1",
+    "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_cotizacion_origen_id ON ordenes_venta (cotizacion_origen_id)",
+    "ALTER TABLE IF EXISTS detalles_orden ALTER COLUMN producto_id DROP NOT NULL",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS sku_libre VARCHAR(80)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS descripcion_libre VARCHAR(255)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS moneda_origen_linea VARCHAR(3)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS costo_base_linea DECIMAL(12,2)",
+    "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS folio VARCHAR(40)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ix_ordenes_compra_folio ON ordenes_compra (folio)",
+    "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS moneda VARCHAR(3) NOT NULL DEFAULT 'MXN'",
+    "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS tipo_cambio DECIMAL(12,6) NOT NULL DEFAULT 1.0",
+    "ALTER TABLE IF EXISTS ordenes_compra ADD COLUMN IF NOT EXISTS cotizacion_id INTEGER",
+    "CREATE INDEX IF NOT EXISTS ix_ordenes_compra_cotizacion_id ON ordenes_compra (cotizacion_id)",
 ]
 
 

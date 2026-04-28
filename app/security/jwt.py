@@ -103,15 +103,22 @@ class RoleChecker:
         return user
 
 
-allow_user_admin = RoleChecker([models.RolUsuario.ADMINISTRADOR])
+allow_superadmin = RoleChecker([models.RolUsuario.SUPERADMIN])
+allow_user_admin = RoleChecker([models.RolUsuario.SUPERADMIN, models.RolUsuario.ADMINISTRADOR])
 allow_admin = allow_user_admin
 allow_admin_asistente = RoleChecker(
-    [models.RolUsuario.ADMINISTRADOR, models.RolUsuario.GERENTE_COMERCIAL]
+    [
+        models.RolUsuario.SUPERADMIN,
+        models.RolUsuario.ADMINISTRADOR,
+        models.RolUsuario.GERENTE_COMERCIAL,
+    ]
 )
 allow_all_staff = RoleChecker(
     [
+        models.RolUsuario.SUPERADMIN,
         models.RolUsuario.ADMINISTRADOR,
         models.RolUsuario.GERENTE_COMERCIAL,
         models.RolUsuario.VENTAS,
+        models.RolUsuario.OPERATIVO,
     ]
 )

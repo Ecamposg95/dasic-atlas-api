@@ -67,7 +67,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers API
 # ---------------------------------------------------------------------------
-from app.routers import auth, clientes, compras, gastos, productos, usuarios, ventas  # noqa: E402
+from app.routers import auth, clientes, compras, dashboard, gastos, productos, usuarios, ventas  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(productos.router)
@@ -76,6 +76,7 @@ app.include_router(clientes.router)
 app.include_router(compras.router)
 app.include_router(usuarios.router)
 app.include_router(gastos.router)
+app.include_router(dashboard.router)
 
 # ---------------------------------------------------------------------------
 # Helper: obtener current_user opcional desde cookie (para SSR)

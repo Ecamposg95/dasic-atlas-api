@@ -15,7 +15,7 @@ class OrdenVenta(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
-    folio = Column(String(20), unique=True, index=True)
+    folio = Column(String(40), unique=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
     vendedor_id = Column(Integer, ForeignKey("usuarios.id"))
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
@@ -27,12 +27,21 @@ class OrdenVenta(Base):
     total = Column(DECIMAL(12, 2), default=0.00)
     observaciones = Column(Text, nullable=True)
 
+    # Versionado de cotizaciones
+    cotizacion_origen_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1)
+
     cliente = relationship("Cliente", back_populates="ordenes")
     vendedor = relationship("Usuario", back_populates="ventas")
     detalles = relationship(
         "DetalleOrden",
         back_populates="orden",
         cascade="all, delete-orphan",
+    )
+    versiones = relationship(
+        "OrdenVenta",
+        backref="cotizacion_origen",
+        remote_side="OrdenVenta.id",
     )
 
 
@@ -42,7 +51,13 @@ class DetalleOrden(Base):
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     orden_id = Column(Integer, ForeignKey("ordenes_venta.id"))
-    producto_id = Column(Integer, ForeignKey("productos.id"))
+    producto_id = Column(Integer, ForeignKey("productos.id"), nullable=True)
+
+    # Productos fantasma: si producto_id es null, usar estos campos
+    sku_libre = Column(String(80), nullable=True)
+    descripcion_libre = Column(String(255), nullable=True)
+    moneda_origen_linea = Column(String(3), nullable=True)
+    costo_base_linea = Column(DECIMAL(12, 2), nullable=True)
 
     cantidad = Column(Integer, nullable=False)
     precio_unitario = Column(DECIMAL(10, 2), nullable=False)

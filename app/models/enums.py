@@ -7,9 +7,11 @@ import enum
 
 
 class RolUsuario(str, enum.Enum):
-    ADMINISTRADOR = "admin"
+    SUPERADMIN = "superadmin"          # plataforma cross-tenant
+    ADMINISTRADOR = "admin"            # admin del tenant
     GERENTE_COMERCIAL = "asistente"
     VENTAS = "vendedor"
+    OPERATIVO = "operativo"            # rol genérico operativo (almacén/soporte)
 
     # Alias legacy para compatibilidad durante la transición RBAC.
     ADMIN = ADMINISTRADOR
@@ -23,6 +25,9 @@ class RolUsuario(str, enum.Enum):
 
         normalized = str(value).strip().lower()
         lookup = {
+            "superadmin": cls.SUPERADMIN,
+            "super_admin": cls.SUPERADMIN,
+            "super-admin": cls.SUPERADMIN,
             "admin": cls.ADMINISTRADOR,
             "administrador": cls.ADMINISTRADOR,
             "asistente": cls.GERENTE_COMERCIAL,
@@ -30,6 +35,10 @@ class RolUsuario(str, enum.Enum):
             "gerente comercial": cls.GERENTE_COMERCIAL,
             "vendedor": cls.VENTAS,
             "ventas": cls.VENTAS,
+            "operativo": cls.OPERATIVO,
+            "operations": cls.OPERATIVO,
+            "almacen": cls.OPERATIVO,
+            "soporte": cls.OPERATIVO,
         }
         try:
             return lookup[normalized]
@@ -39,10 +48,20 @@ class RolUsuario(str, enum.Enum):
     @property
     def api_value(self) -> str:
         return {
+            RolUsuario.SUPERADMIN: "superadmin",
             RolUsuario.ADMINISTRADOR: "administrador",
             RolUsuario.GERENTE_COMERCIAL: "gerente_comercial",
             RolUsuario.VENTAS: "ventas",
+            RolUsuario.OPERATIVO: "operativo",
         }[self]
+
+    @property
+    def is_admin_tier(self) -> bool:
+        return self in {RolUsuario.SUPERADMIN, RolUsuario.ADMINISTRADOR}
+
+    @property
+    def is_operativo(self) -> bool:
+        return self in {RolUsuario.GERENTE_COMERCIAL, RolUsuario.VENTAS, RolUsuario.OPERATIVO}
 
 
 class EstatusOrden(str, enum.Enum):

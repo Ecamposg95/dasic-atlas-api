@@ -12,3 +12,5 @@ jinja2
 psycopg[binary]
 python-dotenv
 starlette-csrf
+openpyxl
+qrcode[pil]

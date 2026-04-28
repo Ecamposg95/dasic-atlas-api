@@ -98,7 +98,7 @@
           <th>Marca</th>
           <th class="text-right">Stock</th>
           <th class="text-right">Mínimo</th>
-          <th class="text-right">Precio Lista</th>
+          <th class="text-right">Costo</th>
           <th>Estatus</th>
         </tr>
       </thead>
@@ -123,7 +123,7 @@
                   x-text="p.stock_actual"></td>
               <td class="text-right font-mono text-xs text-slate-500" x-text="p.stock_minimo"></td>
               <td class="text-right font-mono text-xs text-slate-300"
-                  x-text="displayPrice(p)"></td>
+                  x-text="displayCosto(p)"></td>
               <td>
                 <span class="dax-badge-red" x-show="p.stock_actual<=0">Sin Stock</span>
                 <span class="dax-badge-amber" x-show="p.stock_actual>0 && p.stock_actual<=p.stock_minimo">Crítico</span>
@@ -170,20 +170,37 @@ function inventario() {
       this.kpi.ok = this.todos.filter(p=>p.stock_actual>p.stock_minimo).length;
     },
 
-    getPrecioLista(p) {
-      if (p.precio_publico !== undefined && p.precio_publico !== null && p.precio_publico !== '') return Number(p.precio_publico);
-      if (p.precio_lista !== undefined && p.precio_lista !== null && p.precio_lista !== '') return Number(p.precio_lista);
+    getCosto(p) {
+      if (p.costo_compra !== undefined && p.costo_compra !== null && p.costo_compra !== '') return Number(p.costo_compra);
       return null;
+    },
+
+    getPrecioLista(p) {
+      if (p.precio_publico !== undefined && p.precio_publico !== null && p.precio_publico !== '' && Number(p.precio_publico) > 0) return Number(p.precio_publico);
+      if (p.precio_lista !== undefined && p.precio_lista !== null && p.precio_lista !== '' && Number(p.precio_lista) > 0) return Number(p.precio_lista);
+      return null;
+    },
+
+    displayCosto(p) {
+      const costo = this.getCosto(p);
+      if (costo === null || Number.isNaN(costo)) return '—';
+      const moneda = (p.moneda_compra || 'MXN').toUpperCase();
+      const sym = moneda === 'USD' ? 'US$' : '$';
+      return sym + costo.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
 
     displayPrice(p) {
       const precio = this.getPrecioLista(p);
-      if (precio === null || Number.isNaN(precio)) return 'Sin precio';
+      if (precio === null || Number.isNaN(precio)) return '—';
       return '$' + precio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
 
     displaySku(p) {
-      return p.sku_comercial || p.sku || p.numero_parte || '—';
+      return p.sku_comercial || '—';
+    },
+
+    displaySkuInterno(p) {
+      return p.sku || p.numero_parte || '';
     },
 
     async subirArchivo(event) {
@@ -231,8 +248,9 @@ function inventario() {
     filtrar() {
       const q = this.q.toLowerCase();
       this.filtrados = this.todos.filter(p => {
-        const skuBusqueda = this.displaySku(p).toLowerCase();
-        const matchQ = !q || (p.nombre||'').toLowerCase().includes(q) || skuBusqueda.includes(q) || (p.marca||'').toLowerCase().includes(q);
+        const skuComercial = (p.sku_comercial || '').toLowerCase();
+        const skuInterno = (p.sku || p.numero_parte || '').toLowerCase();
+        const matchQ = !q || (p.nombre||'').toLowerCase().includes(q) || skuComercial.includes(q) || skuInterno.includes(q) || (p.marca||'').toLowerCase().includes(q);
         const matchE = !this.filtroEstatus
           || (this.filtroEstatus==='sin_stock' && p.stock_actual<=0)
           || (this.filtroEstatus==='critico' && p.stock_actual>0 && p.stock_actual<=p.stock_minimo)

@@ -89,6 +89,38 @@
     </div>
   </div>
 
+  <!-- KPI strip secundario operativo -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+    <div class="dax-card p-4 flex items-center justify-between">
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cotiz. Vencidas</p>
+        <p class="text-xl font-black text-rose-400" x-text="kpiOps.vencidas"></p>
+      </div>
+      <i class="fas fa-hourglass-end text-rose-400/50"></i>
+    </div>
+    <div class="dax-card p-4 flex items-center justify-between">
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Por vencer 3d</p>
+        <p class="text-xl font-black text-amber-400" x-text="kpiOps.por_vencer"></p>
+      </div>
+      <i class="fas fa-bell text-amber-400/50"></i>
+    </div>
+    <div class="dax-card p-4 flex items-center justify-between">
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OC Borrador</p>
+        <p class="text-xl font-black text-cyan-300" x-text="kpiOps.oc_borrador"></p>
+      </div>
+      <i class="fas fa-truck-loading text-cyan-300/50"></i>
+    </div>
+    <div class="dax-card p-4 flex items-center justify-between">
+      <div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OC Recibidas</p>
+        <p class="text-xl font-black text-emerald-400" x-text="kpiOps.oc_recibidas"></p>
+      </div>
+      <i class="fas fa-box-open text-emerald-400/50"></i>
+    </div>
+  </div>
+
   <!-- ── Grid principal ─────────────────────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -159,56 +191,40 @@ function dashboard() {
   return {
     loading: true,
     kpi: { ventas_mes:'$0', cotizaciones:0, clientes:0, stock_critico:0 },
+    kpiOps: { vencidas:0, por_vencer:0, oc_borrador:0, oc_recibidas:0 },
     recientes: [],
     chart: null,
 
     async init() {
       try {
-        const [resVentas, resProds] = await Promise.all([
-          fetch('/api/ventas/historial?limit=100', { credentials:'include' }),
-          fetch('/api/productos/?limit=1000',      { credentials:'include' })
+        const [resKpi, resVentas] = await Promise.all([
+          fetch('/api/dashboard/kpis', { credentials:'include' }),
+          fetch('/api/ventas/historial?limit=20', { credentials:'include' })
         ]);
 
-        if (!resVentas.ok || !resProds.ok) throw new Error('Unauthorized');
+        if (!resKpi.ok) throw new Error('Dashboard endpoint failed');
 
-        const ventas   = await resVentas.json();
-        const productos = await resProds.json();
-
-        // KPIs
-        const hoy = new Date();
-        const mes = hoy.getMonth(), anio = hoy.getFullYear();
-        let totalMes = 0, cotizaciones = 0;
-        const ventasPorMes = Array(6).fill(0);
-        const labels = [];
-
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date(anio, mes - i, 1);
-          labels.push(d.toLocaleString('es-MX', { month: 'short' }));
-        }
-
-        ventas.forEach(v => {
-          const fd = new Date(v.fecha);
-          const diff = (anio - fd.getFullYear()) * 12 + (mes - fd.getMonth());
-          if (v.estatus !== 'cotizacion') {
-            if (fd.getMonth() === mes && fd.getFullYear() === anio) totalMes += parseFloat(v.total);
-            if (diff >= 0 && diff < 6) ventasPorMes[5 - diff] += parseFloat(v.total);
-          } else {
-            cotizaciones++;
-          }
-        });
-
-        const stockCritico = productos.filter(p => p.stock_actual <= p.stock_minimo).length;
-        const clientesUnicos = new Set(ventas.map(v => v.cliente)).size;
+        const k = await resKpi.json();
+        const ventas = resVentas.ok ? await resVentas.json() : [];
 
         this.kpi = {
-          ventas_mes: '$' + totalMes.toLocaleString('es-MX', { minimumFractionDigits: 0 }),
-          cotizaciones,
-          clientes: clientesUnicos,
-          stock_critico: stockCritico,
+          ventas_mes: '$' + Number(k.ventas?.mes_total || 0).toLocaleString('es-MX', { minimumFractionDigits: 0 }),
+          cotizaciones: k.cotizaciones?.activas || 0,
+          clientes: k.clientes?.total || 0,
+          stock_critico: k.inventario?.stock_critico || 0,
+        };
+        this.kpiOps = {
+          vencidas: k.cotizaciones?.vencidas || 0,
+          por_vencer: k.cotizaciones?.por_vencer_3d || 0,
+          oc_borrador: k.ordenes_compra?.borrador || 0,
+          oc_recibidas: k.ordenes_compra?.recibidas || 0,
         };
 
         this.recientes = ventas.slice(0, 8);
-        this.renderChart(labels, ventasPorMes);
+
+        const labels = (k.tendencia_ventas_6m || []).map(t => t.mes);
+        const data = (k.tendencia_ventas_6m || []).map(t => t.total);
+        this.renderChart(labels, data);
       } catch(e) {
         console.warn('Dashboard:', e.message);
       } finally {

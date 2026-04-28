@@ -76,8 +76,9 @@ PDF_TEMPLATE_COMPRA = """
                 <td width="40%" style="vertical-align: top;">
                     <div class="invoice-title">ORDEN DE COMPRA</div>
                     <div class="invoice-details">
-                        <strong>Folio Interno:</strong> #OC-{{ "%04d" | format(orden.id) }}<br>
+                        <strong>Folio:</strong> {{ orden.folio or ("OC-%04d" | format(orden.id)) }}<br>
                         <strong>Fecha Emisión:</strong> {{ orden.fecha.strftime('%d/%m/%Y') }}<br>
+                        <strong>Moneda:</strong> {{ orden.moneda or "MXN" }}<br>
                         <strong>Estado:</strong> {{ orden.estatus | upper }}
                     </div>
                 </td>
@@ -159,12 +160,35 @@ PDF_TEMPLATE_COMPRA = """
 class DetalleCompraInput(BaseModel):
     producto_id: int
     cantidad: int
-    costo_unitario: Decimal 
+    costo_unitario: Decimal
 
 class CompraInput(BaseModel):
     proveedor_id: int
     detalles: List[DetalleCompraInput]
     folio_factura: str = "PENDIENTE"
+
+
+class OCDesdeCotizacionInput(BaseModel):
+    proveedor_id: int
+    afecta_stock: bool = False  # default: solo persiste OC, no toca stock
+
+
+def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None") -> str:
+    ahora = datetime.utcnow()
+    yyyymm = ahora.strftime("%Y%m")
+    iniciales = "OC"
+    if vendedor and vendedor.nombre:
+        parts = [p for p in vendedor.nombre.split() if p]
+        if parts:
+            iniciales = (parts[0][0] + (parts[1][0] if len(parts) > 1 else parts[0][1] if len(parts[0]) > 1 else "X")).upper()
+    inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    consecutivo = (
+        db.query(models.OrdenCompra)
+        .filter(models.OrdenCompra.fecha >= inicio_mes)
+        .count()
+        + 1
+    )
+    return f"OC-{yyyymm}-{iniciales}-{consecutivo:04d}"
 
 # --- ENDPOINTS ---
 
@@ -191,10 +215,13 @@ def listar_historial_compras(limit: int = 50, db: Session = Depends(get_db)):
     for o in ordenes:
         resultado.append({
             "id": o.id,
+            "folio": o.folio,
             "fecha": o.fecha,
             "proveedor": o.proveedor.nombre_empresa,
             "total": o.total,
-            "estatus": o.estatus
+            "moneda": o.moneda or "MXN",
+            "estatus": o.estatus,
+            "cotizacion_id": o.cotizacion_id,
         })
     return resultado
 
@@ -249,6 +276,97 @@ def borrador_orden_compra_desde_cotizacion(
         "detalles": detalles,
         "nota": "Borrador de orden de compra. No genera stock ni cuentas por pagar.",
     }
+
+@router.post("/cotizacion/{quote_id}/orden", dependencies=[Depends(allow_admin_asistente)])
+def crear_oc_desde_cotizacion(
+    quote_id: int,
+    payload: OCDesdeCotizacionInput,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Persiste una OC vinculada a una cotización. Por defecto NO afecta stock
+    ni cuentas por pagar (estatus=borrador). Si afecta_stock=True, suma stock
+    y registra el cargo al proveedor."""
+    quote = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == quote_id).first()
+    if not quote:
+        raise HTTPException(404, "Cotización no encontrada")
+    if quote.estatus != models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Sólo cotizaciones generan OC")
+
+    proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == payload.proveedor_id).first()
+    if not proveedor:
+        raise HTTPException(404, "Proveedor no encontrado")
+
+    folio = _generar_folio_oc(db, current_user)
+    estatus = "recibido" if payload.afecta_stock else "borrador"
+
+    try:
+        oc = models.OrdenCompra(
+            proveedor_id=proveedor.id,
+            fecha=datetime.utcnow(),
+            total=Decimal("0"),
+            estatus=estatus,
+            folio=folio,
+            moneda=quote.moneda,
+            tipo_cambio=quote.tipo_cambio,
+            cotizacion_id=quote.id,
+        )
+        db.add(oc)
+        db.flush()
+
+        total = Decimal("0")
+        for item in quote.detalles:
+            if not item.producto_id:
+                # Productos fantasma no se pueden ordenar al proveedor automáticamente
+                continue
+            producto = item.producto
+            costo_unitario = Decimal(producto.costo_compra or item.costo_base_linea or 0)
+            origen = (item.moneda_origen_linea or producto.moneda_compra or "MXN").upper()
+            if origen != quote.moneda:
+                if quote.moneda == "USD":
+                    costo_unitario = costo_unitario / Decimal(quote.tipo_cambio or 1)
+                else:
+                    costo_unitario = costo_unitario * Decimal(quote.tipo_cambio or 1)
+            costo_unitario = costo_unitario.quantize(Decimal("0.01"))
+            importe = (costo_unitario * item.cantidad).quantize(Decimal("0.01"))
+            total += importe
+
+            db.add(models.DetalleCompra(
+                orden_compra_id=oc.id,
+                producto_id=producto.id,
+                cantidad=item.cantidad,
+                costo_unitario=costo_unitario,
+            ))
+            if payload.afecta_stock:
+                producto.stock_actual += item.cantidad
+                producto.costo_compra = costo_unitario
+
+        oc.total = total
+
+        if payload.afecta_stock and total > 0:
+            db.add(models.TransaccionProveedor(
+                proveedor_id=proveedor.id,
+                tipo=models.TipoMovimiento.CARGO,
+                monto=total,
+                descripcion=f"OC {folio} (desde cotización {quote.folio})",
+            ))
+            proveedor.saldo_actual += total
+
+        db.commit()
+        db.refresh(oc)
+        return {
+            "id": oc.id,
+            "folio": oc.folio,
+            "estatus": oc.estatus,
+            "moneda": oc.moneda,
+            "total": oc.total,
+            "cotizacion_id": oc.cotizacion_id,
+            "afecta_stock": payload.afecta_stock,
+        }
+    except Exception as e:
+        db.rollback()
+        raise e
+
 
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
 def registrar_compra(compra: CompraInput, db: Session = Depends(get_db)):

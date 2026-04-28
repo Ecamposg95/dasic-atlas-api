@@ -70,6 +70,61 @@
                     <div id="empty-search" class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
                         <i class="fas fa-barcode text-4xl"></i>
                     </div>
+
+                    <button type="button" onclick="abrirModalFantasma()"
+                        class="mt-2 w-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-lg py-2 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-ghost"></i> Agregar producto fantasma
+                    </button>
+                </div>
+
+                <!-- Modal producto fantasma -->
+                <div id="modal-fantasma" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-amber-300 dark:border-amber-700 overflow-hidden">
+                        <div class="px-6 py-4 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-base font-black text-amber-700 dark:text-amber-300 uppercase">Producto Fantasma</h3>
+                                <p class="text-xs text-amber-600 dark:text-amber-400">Cotizar sin afectar inventario</p>
+                            </div>
+                            <button onclick="cerrarModalFantasma()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="p-5 space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
+                                <input id="fantasma-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
+                                <input id="fantasma-desc" type="text" placeholder="Ej. Válvula especial bajo pedido" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
+                                    <input id="fantasma-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
+                                    <select id="fantasma-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                                        <option value="MXN">MXN</option>
+                                        <option value="USD">USD</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
+                                    <input id="fantasma-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
+                                <input id="fantasma-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
+                            </div>
+                        </div>
+                        <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                            <button onclick="cerrarModalFantasma()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+                            <button onclick="agregarFantasma()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
+                                <i class="fas fa-plus mr-1"></i> Agregar
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="w-full lg:w-2/3 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
@@ -84,6 +139,7 @@
                                 <tr>
                                     <th class="p-3 bg-white dark:bg-slate-800">Producto</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Cant.</th>
+                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-20">Mon. Origen</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
                                     <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
@@ -92,7 +148,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
-                                <tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
+                                <tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -257,7 +313,7 @@
                 el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
                 el.innerHTML = `
                     <div>
-                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku_comercial || p.sku}</div>
+                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku_comercial || '—'}</div>
                         <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
                     </div>
                     <div class="text-right">
@@ -268,6 +324,43 @@
             });
         }
 
+        function abrirModalFantasma() {
+            document.getElementById('modal-fantasma').classList.remove('hidden');
+            document.getElementById('modal-fantasma').classList.add('flex');
+            document.getElementById('fantasma-desc').focus();
+        }
+        function cerrarModalFantasma() {
+            const m = document.getElementById('modal-fantasma');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+        function agregarFantasma() {
+            const desc = document.getElementById('fantasma-desc').value.trim();
+            const cost = parseFloat(document.getElementById('fantasma-cost').value);
+            const qty = parseInt(document.getElementById('fantasma-qty').value) || 1;
+            if (!desc || !cost || cost <= 0) {
+                Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción y costo', showConfirmButton:false, timer:1500});
+                return;
+            }
+            state.cart.push({
+                id: null,
+                ghost: true,
+                sku: document.getElementById('fantasma-sku').value.trim() || '— FANTASMA',
+                nom: desc,
+                cost: cost,
+                productCurrency: document.getElementById('fantasma-mon').value,
+                qty: qty,
+                max: 9999,
+                utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
+            });
+            cerrarModalFantasma();
+            // reset
+            ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('fantasma-cost').value = '0';
+            document.getElementById('fantasma-qty').value = '1';
+            document.getElementById('fantasma-util').value = '30';
+            renderCart();
+        }
+
         function addCart(p) {
             if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
             const ex = state.cart.find(x => x.id === p.id);
@@ -276,7 +369,7 @@
             } else {
                 state.cart.push({
                     id: p.id,
-                    sku: p.sku_comercial || p.sku,
+                    sku: p.sku_comercial || '—',
                     nom: p.nombre,
                     cost: parseFloat(p.costo_compra || 0),
                     productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
@@ -299,7 +392,7 @@
             let subtotal = 0;
 
             if(state.cart.length === 0) {
-                tb.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+                tb.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
                 updTotal(0); return;
             }
 
@@ -311,15 +404,27 @@
                 const importe = i.qty * precioFinal;
                 subtotal += importe;
 
+                const monedaBadge = i.productCurrency === 'USD'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                    : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
+
+                const ghostBadge = i.ghost ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
                 tb.innerHTML += `
                     <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                         <td class="p-3">
-                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}</div>
+                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${ghostBadge}</div>
                             <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
                         </td>
                         <td class="p-3 text-center">
                             <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)"
                                 class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
+                        </td>
+                        <td class="p-3 text-center">
+                            <select onchange="updItem(${idx}, 'productCurrency', this.value)"
+                                class="text-[11px] font-bold rounded px-1 py-0.5 border ${monedaBadge} outline-none cursor-pointer">
+                                <option value="MXN" ${i.productCurrency==='MXN'?'selected':''}>MXN</option>
+                                <option value="USD" ${i.productCurrency==='USD'?'selected':''}>USD</option>
+                            </select>
                         </td>
                         <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
                         <td class="p-3 text-center">
@@ -336,6 +441,11 @@
         }
 
         function updItem(idx, t, v) {
+            if(t=='productCurrency') {
+                state.cart[idx].productCurrency = (v === 'USD') ? 'USD' : 'MXN';
+                renderCart();
+                return;
+            }
             let val = parseFloat(v)||0;
             if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
             if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
@@ -358,10 +468,14 @@
                 moneda: state.moneda,
                 tipo_cambio: state.moneda === 'USD' ? state.tc : 1,
                 detalles: state.cart.map(i => ({
-                    producto_id: i.id,
+                    producto_id: i.id || null,
                     cantidad: i.qty,
                     utilidad: i.utilidad,
-                    descuento: 0
+                    descuento: 0,
+                    moneda_origen: i.productCurrency,
+                    sku_libre: i.ghost ? (i.sku === '— FANTASMA' ? null : i.sku) : null,
+                    descripcion_libre: i.ghost ? i.nom : null,
+                    costo_unitario: i.ghost ? i.cost : null
                 })),
                 observaciones: document.getElementById('observaciones').value
             };
@@ -386,16 +500,21 @@
             tb.innerHTML = '';
             data.forEach(o => {
                 const color = o.estatus === 'cotizacion' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-                const btn = o.estatus === 'cotizacion' ? `<button onclick="convertir(${o.id})" class="text-cyan-600 hover:text-cyan-500 font-bold text-xs mr-3">VENDER</button>` : '';
+                const verBtn = o.estatus === 'cotizacion'
+                    ? `<button onclick="convertir(${o.id})" class="text-cyan-600 hover:text-cyan-500 font-bold text-xs mr-2">VENDER</button>
+                       <button onclick="recotizar(${o.id})" class="text-amber-600 hover:text-amber-500 font-bold text-xs mr-2" title="Crear nueva versión"><i class="fas fa-code-branch"></i></button>
+                       <button onclick="generarOC(${o.id})" class="text-violet-600 hover:text-violet-500 font-bold text-xs mr-2" title="Generar OC borrador"><i class="fas fa-truck"></i></button>`
+                    : '';
+                const versionTag = o.version > 1 ? `<span class="text-[9px] font-bold text-amber-600 ml-1">v${o.version}</span>` : '';
                 tb.innerHTML += `
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition">
-                        <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}</td>
+                        <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}${versionTag}</td>
                         <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${new Date(o.fecha).toLocaleDateString()}</td>
                         <td class="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">${o.cliente}</td>
                         <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">${o.moneda === 'USD' ? 'US$' : '$'}${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
                         <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${color}">${o.estatus}</span></td>
                         <td class="px-6 py-4 text-center flex justify-center items-center">
-                            ${btn}
+                            ${verBtn}
                             <a href="/api/ventas/${o.id}/pdf" target="_blank" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-file-pdf text-lg"></i></a>
                         </td>
                     </tr>`;
@@ -405,6 +524,47 @@
             if(!confirm('¿Aprobar venta?')) return;
             await fetch(`/api/ventas/${id}/convertir`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
             loadHistorial();
+        }
+        async function recotizar(id) {
+            const r = await Swal.fire({title:'Crear nueva versión?', text:'Se duplica la cotización con un nuevo folio y queda lista para editar.', showCancelButton:true, confirmButtonText:'Recotizar'});
+            if (!r.isConfirmed) return;
+            const res = await fetch(`/api/ventas/${id}/recotizar`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
+            if (res.ok) {
+                const nueva = await res.json();
+                Swal.fire({icon:'success', title:'Versión creada', text:`Folio: ${nueva.folio}`});
+                loadHistorial();
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.detail || 'No se pudo recotizar', 'error');
+            }
+        }
+        async function generarOC(quoteId) {
+            const r = await Swal.fire({
+                title:'Generar OC',
+                input:'select',
+                inputOptions:{borrador:'Borrador (no persiste)', persistir:'OC real (persiste, sin afectar stock)'},
+                inputValue:'borrador',
+                showCancelButton:true
+            });
+            if (!r.isConfirmed) return;
+            if (r.value === 'borrador') {
+                window.open(`/api/compras/cotizacion/${quoteId}/borrador`, '_blank');
+                return;
+            }
+            const proveedor = await Swal.fire({title:'Proveedor ID', input:'number', inputLabel:'ID del proveedor para vincular la OC'});
+            if (!proveedor.value) return;
+            const res = await fetch(`/api/compras/cotizacion/${quoteId}/orden`, {
+                method:'POST',
+                headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+                body: JSON.stringify({proveedor_id: parseInt(proveedor.value)})
+            });
+            if (res.ok) {
+                const oc = await res.json();
+                Swal.fire({icon:'success', title:'OC creada', text:`Folio: ${oc.folio || ('OC#'+oc.id)}`});
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.detail || 'No se pudo crear OC', 'error');
+            }
         }
     </script>
 </body>

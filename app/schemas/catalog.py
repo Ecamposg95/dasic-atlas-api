@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class ProductoBase(BaseModel):
-    sku: str = Field(..., min_length=2, max_length=50)
+    sku: Optional[str] = Field(None, max_length=50)
     sku_comercial: Optional[str] = Field(None, min_length=2, max_length=80)
     nombre: str = Field(..., min_length=2, max_length=150)
     descripcion: Optional[str] = None

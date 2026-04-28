@@ -16,7 +16,11 @@ class OrdenCompra(Base):
     proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
     fecha = Column(DateTime(timezone=True), server_default=func.now())
     total = Column(DECIMAL(12, 2))
-    estatus = Column(String(20), default="recibido")
+    estatus = Column(String(20), default="borrador")
+    folio = Column(String(40), unique=True, nullable=True, index=True)
+    moneda = Column(String(3), nullable=False, default="MXN")
+    tipo_cambio = Column(DECIMAL(12, 6), nullable=False, default=1.0)
+    cotizacion_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
 
     proveedor = relationship("Proveedor", back_populates="compras")
     detalles = relationship(
@@ -24,6 +28,7 @@ class OrdenCompra(Base):
         back_populates="orden",
         cascade="all, delete-orphan",
     )
+    cotizacion = relationship("OrdenVenta", foreign_keys=[cotizacion_id])
 
 
 class DetalleCompra(Base):

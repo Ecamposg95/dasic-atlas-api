@@ -18,6 +18,42 @@ router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 DEFAULT_QUOTE_VALIDITY_DAYS = 15
 
 
+def _user_initials(usuario: "models.Usuario") -> str:
+    nombre = (usuario.nombre or usuario.email or "USR").strip()
+    parts = [p for p in nombre.split() if p]
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[1][0]).upper()
+    if parts:
+        return parts[0][:2].upper()
+    return "USR"
+
+
+def _generar_folio(
+    db: Session,
+    organization_id: str,
+    tipo_orden: "models.EstatusOrden",
+    vendedor: "models.Usuario",
+) -> str:
+    """COT-YYYYMM-USR-NNNN (NNNN = consecutivo del usuario en el mes)."""
+    ahora = datetime.utcnow()
+    yyyymm = ahora.strftime("%Y%m")
+    iniciales = _user_initials(vendedor)
+    prefijo = "COT" if tipo_orden == models.EstatusOrden.COTIZACION else "VTA"
+    inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    consecutivo = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.vendedor_id == vendedor.id,
+            models.OrdenVenta.fecha_creacion >= inicio_mes,
+        )
+        .count()
+        + 1
+    )
+    return f"{prefijo}-{yyyymm}-{iniciales}-{consecutivo:04d}"
+
+
 def _normalize_currency(moneda: str | None) -> str:
     moneda_normalizada = (moneda or "MXN").upper()
     if moneda_normalizada not in {"MXN", "USD"}:
@@ -153,10 +189,10 @@ PDF_TEMPLATE_VENTA = """
             <tbody>
                 {% for item in orden.detalles %}
                 <tr>
-                    <td style="font-weight: bold; color: #475569;">{{ item.producto.sku_comercial or item.producto.sku }}</td>
+                    <td style="font-weight: bold; color: #475569;">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or "—" }}</td>
                     <td>
-                        {{ item.producto.nombre }}
-                        {% if item.utilidad_aplicada > 0 %}
+                        {{ item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial") }}
+                        {% if item.utilidad_aplicada and item.utilidad_aplicada > 0 %}
                             <span class="meta-text">Utilidad {{ item.utilidad_aplicada|int }}%</span>
                         {% endif %}
                     </td>
@@ -188,9 +224,9 @@ PDF_TEMPLATE_VENTA = """
         <div class="terms-box">
             <div class="terms-title">Términos y Condiciones Comerciales</div>
             <ul>
-                <li>Precios sujetos a cambio sin previo aviso. Cotización en {{ etiqueta_moneda }}.</li>
+                <li>Precios expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>. Sujetos a cambio sin previo aviso.</li>
                 {% if orden.moneda == "USD" %}
-                <li>Tipo de cambio aplicado: <strong>{{ "{:,.4f}".format(orden.tipo_cambio) }} MXN por USD</strong>.</li>
+                <li>Tipo de cambio referencia: <strong>{{ "{:,.4f}".format(orden.tipo_cambio) }} MXN por USD</strong>. Pago en USD o en MXN al T.C. del día de pago.</li>
                 {% endif %}
                 <li>Vigencia de la cotización: <strong>{{ vigencia_dias }} días naturales</strong>.</li>
                 <li>Tiempo de entrega sujeto a disponibilidad de stock.</li>
@@ -198,7 +234,11 @@ PDF_TEMPLATE_VENTA = """
             </ul>
 
             <div class="bank-info">
-                <strong>DATOS BANCARIOS:</strong> BBVA Bancomer | DASIC S.A. DE C.V. | Cuenta: 0123 4567 89
+                {% if orden.moneda == "USD" %}
+                <strong>DATOS BANCARIOS (USD):</strong> Solicite datos de cuenta en dólares al ejecutivo de cuenta.
+                {% else %}
+                <strong>DATOS BANCARIOS (MXN):</strong> BBVA Bancomer | DASIC S.A. DE C.V. | Cuenta: 0123 4567 89
+                {% endif %}
             </div>
         </div>
 
@@ -233,14 +273,7 @@ def crear_orden(
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
 
     try:
-        count = (
-            db.query(models.OrdenVenta)
-            .filter(models.OrdenVenta.organization_id == organization_id)
-            .count()
-        )
-        prefijo = "COT" if tipo_orden == models.EstatusOrden.COTIZACION else "VTA"
-        org_tag = organization_id.split("-")[0].upper()
-        folio = f"{prefijo}-{org_tag}-{count + 1:04d}"
+        folio = _generar_folio(db, organization_id, tipo_orden, current_user)
 
         nueva_orden = models.OrdenVenta(
             organization_id=organization_id,
@@ -258,20 +291,47 @@ def crear_orden(
         db.flush()
 
         total_orden = Decimal(0)
-        
+
         for item in orden_data.detalles:
-            producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
-            if not producto: raise HTTPException(404, f"Producto {item.producto_id} no existe")
-            
-            # Stock (Solo si es venta directa)
-            if tipo_orden != models.EstatusOrden.COTIZACION:
-                if producto.stock_actual < item.cantidad:
-                    raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
-                producto.stock_actual -= item.cantidad
+            producto = None
+            costo_origen = Decimal(item.costo_unitario or 0)
+            moneda_origen_linea = (item.moneda_origen or "MXN").upper()
+            sku_libre = (item.sku_libre or "").strip() or None
+            descripcion_libre = (item.descripcion_libre or "").strip() or None
+
+            if item.producto_id:
+                producto = (
+                    db.query(models.Producto)
+                    .filter(models.Producto.id == item.producto_id)
+                    .first()
+                )
+                if not producto:
+                    raise HTTPException(404, f"Producto {item.producto_id} no existe")
+
+                if tipo_orden != models.EstatusOrden.COTIZACION:
+                    if producto.stock_actual < item.cantidad:
+                        raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
+                    producto.stock_actual -= item.cantidad
+
+                moneda_origen_linea = (
+                    item.moneda_origen or producto.moneda_compra or "MXN"
+                ).upper()
+                costo_origen = Decimal(producto.costo_compra or 0)
+            else:
+                if not descripcion_libre:
+                    raise HTTPException(
+                        400,
+                        "Producto fantasma requiere descripción y costo unitario.",
+                    )
+                if costo_origen <= 0:
+                    raise HTTPException(
+                        400,
+                        "Producto fantasma requiere costo unitario > 0.",
+                    )
 
             costo_base = _convert_cost_to_quote_currency(
-                Decimal(producto.costo_compra or 0),
-                producto.moneda_compra,
+                costo_origen,
+                moneda_origen_linea,
                 moneda_cotizacion,
                 tipo_cambio,
             )
@@ -284,7 +344,11 @@ def crear_orden(
             db.add(models.DetalleOrden(
                 organization_id=organization_id,
                 orden_id=nueva_orden.id,
-                producto_id=producto.id,
+                producto_id=producto.id if producto else None,
+                sku_libre=sku_libre,
+                descripcion_libre=descripcion_libre,
+                moneda_origen_linea=moneda_origen_linea,
+                costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 cantidad=item.cantidad,
                 precio_unitario=precio_final.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
@@ -355,15 +419,36 @@ def actualizar_orden(
         ).delete()
         
         total_orden = Decimal(0)
-        
+
         # Insertar nuevos
         for item in orden_update.detalles:
-            producto = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
-            if not producto: raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
+            producto = None
+            costo_origen = Decimal(item.costo_unitario or 0)
+            moneda_origen_linea = (item.moneda_origen or "MXN").upper()
+            sku_libre = (item.sku_libre or "").strip() or None
+            descripcion_libre = (item.descripcion_libre or "").strip() or None
+
+            if item.producto_id:
+                producto = (
+                    db.query(models.Producto)
+                    .filter(models.Producto.id == item.producto_id)
+                    .first()
+                )
+                if not producto:
+                    raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
+                moneda_origen_linea = (
+                    item.moneda_origen or producto.moneda_compra or "MXN"
+                ).upper()
+                costo_origen = Decimal(producto.costo_compra or 0)
+            else:
+                if not descripcion_libre:
+                    raise HTTPException(400, "Producto fantasma requiere descripción.")
+                if costo_origen <= 0:
+                    raise HTTPException(400, "Producto fantasma requiere costo unitario > 0.")
 
             costo_base = _convert_cost_to_quote_currency(
-                Decimal(producto.costo_compra or 0),
-                producto.moneda_compra,
+                costo_origen,
+                moneda_origen_linea,
                 moneda_cotizacion,
                 tipo_cambio,
             )
@@ -376,7 +461,11 @@ def actualizar_orden(
             db.add(models.DetalleOrden(
                 organization_id=organization_id,
                 orden_id=orden.id,
-                producto_id=producto.id,
+                producto_id=producto.id if producto else None,
+                sku_libre=sku_libre,
+                descripcion_libre=descripcion_libre,
+                moneda_origen_linea=moneda_origen_linea,
+                costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 cantidad=item.cantidad,
                 precio_unitario=precio_final.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
@@ -392,6 +481,122 @@ def actualizar_orden(
     except Exception as e:
         db.rollback()
         raise e
+
+# --- 2.5 RECOTIZAR (CREAR NUEVA VERSIÓN) ---
+@router.post("/{id}/recotizar", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
+def recotizar(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Crea una nueva versión de la cotización clonando partidas. La original
+    queda archivada (no se modifica) y se devuelve la nueva versión."""
+    origen = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not origen:
+        raise HTTPException(404, "Cotización origen no encontrada")
+    if origen.estatus not in (models.EstatusOrden.COTIZACION, models.EstatusOrden.CANCELADA):
+        raise HTTPException(400, "Sólo cotizaciones se pueden recotizar")
+
+    raiz_id = origen.cotizacion_origen_id or origen.id
+    siguiente_version = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
+        )
+        .count()
+        + 1
+    )
+
+    folio_nuevo = _generar_folio(db, organization_id, models.EstatusOrden.COTIZACION, current_user)
+    folio_versionado = f"{folio_nuevo}-V{siguiente_version}"
+
+    nueva = models.OrdenVenta(
+        organization_id=organization_id,
+        folio=folio_versionado,
+        cliente_id=origen.cliente_id,
+        vendedor_id=current_user.id,
+        estatus=models.EstatusOrden.COTIZACION,
+        observaciones=origen.observaciones,
+        moneda=origen.moneda,
+        tipo_cambio=origen.tipo_cambio,
+        total=origen.total,
+        fecha_vencimiento=datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS),
+        cotizacion_origen_id=raiz_id,
+        version=siguiente_version,
+    )
+    db.add(nueva)
+    db.flush()
+
+    for det in origen.detalles:
+        db.add(models.DetalleOrden(
+            organization_id=organization_id,
+            orden_id=nueva.id,
+            producto_id=det.producto_id,
+            sku_libre=det.sku_libre,
+            descripcion_libre=det.descripcion_libre,
+            moneda_origen_linea=det.moneda_origen_linea,
+            costo_base_linea=det.costo_base_linea,
+            cantidad=det.cantidad,
+            precio_unitario=det.precio_unitario,
+            utilidad_aplicada=det.utilidad_aplicada,
+            descuento_aplicado=det.descuento_aplicado,
+            subtotal=det.subtotal,
+        ))
+
+    db.commit()
+    db.refresh(nueva)
+    return nueva
+
+
+@router.get("/{id}/versiones", dependencies=[Depends(allow_all_staff)])
+def listar_versiones(
+    id: int,
+    organization_id: str = Depends(get_current_active_organization),
+    db: Session = Depends(get_db),
+):
+    base = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            models.OrdenVenta.id == id,
+        )
+        .first()
+    )
+    if not base:
+        raise HTTPException(404, "Cotización no encontrada")
+    raiz_id = base.cotizacion_origen_id or base.id
+
+    versiones = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.organization_id == organization_id,
+            ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
+        )
+        .order_by(models.OrdenVenta.version.asc())
+        .all()
+    )
+    return [
+        {
+            "id": v.id,
+            "folio": v.folio,
+            "version": v.version,
+            "estatus": v.estatus,
+            "total": v.total,
+            "moneda": v.moneda,
+            "fecha": v.fecha_creacion,
+        }
+        for v in versiones
+    ]
+
 
 # --- 3. CONVERTIR COTIZACIÓN A VENTA (POST) ---
 @router.post("/{id}/convertir", dependencies=[Depends(allow_all_staff)])
@@ -464,6 +669,8 @@ def listar_historial(
         "moneda": o.moneda,
         "tipo_cambio": o.tipo_cambio,
         "estatus": o.estatus,
+        "version": o.version or 1,
+        "cotizacion_origen_id": o.cotizacion_origen_id,
         "edad_dias": max((ahora - o.fecha_creacion.date()).days, 0) if o.fecha_creacion else 0,
         "dias_restantes": (o.fecha_vencimiento.date() - ahora).days if o.fecha_vencimiento else None,
         "esta_vencida": bool(o.fecha_vencimiento and o.fecha_vencimiento.date() < ahora),
@@ -491,7 +698,8 @@ def obtener_detalle_orden(
         detalles.append({
             "producto": {
                 "id": d.producto.id,
-                "sku": d.producto.sku_comercial or d.producto.sku,
+                "sku": d.producto.sku_comercial or "—",
+                "sku_interno": d.producto.sku,
                 "nombre": d.producto.nombre,
             },
             "cantidad": d.cantidad,
