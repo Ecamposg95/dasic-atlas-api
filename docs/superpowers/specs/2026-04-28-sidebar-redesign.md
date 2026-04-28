@@ -77,13 +77,18 @@ Estructura idéntica a `dashboard.html`, `clientes.html`, etc.:
 6. Mover CSS específico (`<link rel="stylesheet" href="...cotizador.css">`) a `{% block extra_head %}`.
 7. Mover el contenido del `<main>` actual al `{% block content %}`.
 8. Mover scripts del cotizador a `{% block extra_scripts %}`.
-9. **Stripear `dark:` modifiers del cotizador.** El template hoy usa pares `text-slate-800 dark:text-slate-200`, `bg-slate-100 dark:bg-slate-950`, etc. La app entera es dark-only (sin `dark:` modifiers, sin `darkMode: 'class'` en `base.html`). Reemplazar cada par con la variante dark sola:
-   - `text-slate-800 dark:text-slate-200` → `text-slate-200`
-   - `bg-slate-100 dark:bg-slate-950` → `bg-slate-950` (o el color contextual del fondo de `base.html`)
-   - `border-slate-300 dark:border-slate-700` → `border-slate-700`
-   - etc.
+9. **Activar `darkMode: 'class'` en `base.html`.** El cotizador depende de `dark:` modifiers (incluyendo strings dinámicos en su JS — riesgoso de stripear). Más simple agregar el config al `<script>` de Tailwind en `base.html` y poner `class="dark"` en el `<html>`. Una vez activo, los `dark:` del cotizador funcionan automáticamente y el resto de templates (que no usan `dark:`) no se ven afectados.
 
-   Esto evita tener que portar `darkMode: 'class'` y mantiene consistencia con el resto de la app.
+   Cambio en `base.html`:
+   ```html
+   <html lang="es" class="h-full dark">
+   ```
+   ```js
+   tailwind.config = {
+     darkMode: 'class',  // ← agregar
+     theme: { ... }
+   }
+   ```
 
 ### Cleanup adicional
 
