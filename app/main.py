@@ -111,6 +111,7 @@ def _protected_view(template_name: str):
         if user is None:
             return RedirectResponse("/", status_code=302)
         return templates.TemplateResponse(
+            request,
             template_name,
             context={"request": request, "current_user": user},
         )
@@ -128,7 +129,7 @@ async def view_login(request: Request) -> HTMLResponse:
     # Si ya está autenticado → dashboard directamente
     if _get_user_from_cookie(request):
         return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse("login.html", context={"request": request})
+    return templates.TemplateResponse(request, "login.html", context={"request": request})
 
 
 # Rutas protegidas
