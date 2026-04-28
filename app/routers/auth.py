@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from app.core import get_settings
 from app.db import get_db
-from app import models
 from app import schemas
 from app.services import UserService
 from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
@@ -13,34 +12,19 @@ from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 settings = get_settings()
 
+
 @router.post("/login", response_model=schemas.Token)
 def login_for_access_token(
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(), 
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     user = UserService.get_user_by_email(db, form_data.username)
-    
     if not user or not UserService.verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrecto",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    membership = (
-        db.query(models.UserOrganization)
-        .filter(
-            models.UserOrganization.user_id == user.id,
-            models.UserOrganization.is_active.is_(True),
-        )
-        .order_by(models.UserOrganization.id.asc())
-        .first()
-    )
-    if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Usuario sin organización activa",
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -48,10 +32,8 @@ def login_for_access_token(
         data={
             "sub": user.email,
             "rol": user.rol.value,
-            "org_id": membership.organization_id,
-            "branch_id": membership.branch_id,
         },
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
 
     response.set_cookie(
@@ -62,7 +44,7 @@ def login_for_access_token(
         samesite="lax",
         secure=settings.cookie_secure,
     )
-    
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 
