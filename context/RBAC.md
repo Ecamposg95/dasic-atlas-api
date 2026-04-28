@@ -22,6 +22,22 @@ Alcance de esta fase:
 - No introduce enforcement tenant-aware fuera de gestion de usuarios.
 - Mantiene compatibilidad de lectura/escritura con los roles legacy existentes.
 - Gestion de usuarios sigue restringida al equivalente de `ADMINISTRADOR`.
+- En despliegue se aplico hotfix adicional para aceptar filas legacy persistidas en DB (`ADMIN`, `ASISTENTE`, `VENDEDOR`) sin romper startup del ORM.
+
+## Estado actual de implementacion
+
+### Ya resuelto
+
+- Normalizacion de rol en schemas y guards
+- UI/API de gestion de usuarios alineada a vocabulario canonico
+- Compatibilidad de lectura con enums legacy en `usuarios.rol`
+
+### Aun pendiente
+
+- Separar formalmente `platform role` y `tenant role`
+- Hacer enforcement de permisos desde `UserOrganization`
+- Aplicar branch scope real
+- Auditar todos los routers legacy para dejar de depender de checks planos sobre `user.rol`
 
 ## Tenant roles (por organizacion)
 

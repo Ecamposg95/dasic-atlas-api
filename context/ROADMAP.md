@@ -5,6 +5,26 @@ Este roadmap es el orden recomendado de trabajo para convertir el prototipo actu
 Baseline canonico: `context/atlas_erp_pos_stack.md`.
 Control de ejecucion: `context/STACK_ADOPTION_CHECKLIST.md`.
 
+## Estado de ejecucion al 2026-04-28
+
+### Cerrado
+
+1. RBAC fase 1 segura
+1. Catalogo / inventario fase 1
+1. Cotizador fase 2
+1. Seguimiento read-only con antiguedad
+1. Borrador de OC desde cotizacion
+1. Hotfixes de despliegue Railway
+
+### Pendiente inmediato
+
+1. Folios por año/mes/usuario
+1. Recotizaciones / versionado
+1. Orden de compra real desde cotizacion
+1. Correo + tracking de cotizaciones
+1. Dashboard comercial operativo
+1. RBAC tenant real con `UserOrganization`
+
 ## Fase 0: Documentacion y alineacion
 
 1. Crear `context/` (este directorio)
@@ -42,6 +62,11 @@ Control de ejecucion: `context/STACK_ADOPTION_CHECKLIST.md`.
 1. Implementar filtros de visibilidad por ownership/asignacion
 1. Branch scope para entidades que tengan `branch_id`
 
+**Estado actual:**
+- Parcialmente implementado
+- Se cerro una fase segura de compatibilidad para `usuarios.rol`
+- Falta el enforcement tenant-aware real
+
 ## Fase 6: CRM Engine MVP
 
 1. Accounts, Contacts, Locations
@@ -63,6 +88,15 @@ Control de ejecucion: `context/STACK_ADOPTION_CHECKLIST.md`.
 1. PDF
 1. Timeline: quote created/sent
 
+**Estado actual:**
+- Ya existe cotizador funcional SSR
+- Ya soporta `utilidad`, `moneda`, `tipo_cambio` y PDF corregido
+- Falta:
+  - folios robustos
+  - recotizaciones
+  - envio/seguimiento
+  - integracion con Deals/Timeline
+
 ## Fase 9: QA minima
 
 1. Tests de aislamiento tenant
@@ -75,3 +109,11 @@ Control de ejecucion: `context/STACK_ADOPTION_CHECKLIST.md`.
 1. Reporting industrial (forecast, ciclo, conversion, performance)
 1. Cotizador industrial (quotes versionadas, aprobaciones, anexos)
 1. Integraciones (webhooks, import/export, WhatsApp oficial cuando aplique)
+
+## Orden Recomendado para la Proxima Sesion
+
+1. Folios + recotizaciones
+1. OC real desde cotizacion
+1. Tracking por correo
+1. Dashboard de KPIs
+1. RBAC tenant real
