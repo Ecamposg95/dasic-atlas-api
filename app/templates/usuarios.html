@@ -19,7 +19,6 @@
         <tr>
           <th>Usuario</th>
           <th>Rol</th>
-          <th>Organización</th>
           <th>Estatus</th>
           <th class="text-right">Acciones</th>
         </tr>
@@ -27,7 +26,7 @@
       <tbody>
         <template x-if="loading">
           <template x-for="i in 5" :key="i">
-            <tr><td colspan="5">
+            <tr><td colspan="4">
               <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
@@ -50,7 +49,6 @@
               <td>
                 <span class="dax-badge-slate text-[10px] uppercase" x-text="roleLabel(u.rol)"></span>
               </td>
-              <td class="text-xs text-slate-400" x-text="u.organization_id ? u.organization_id.slice(0,8)+'...' : '—'"></td>
               <td>
                 <span class="dax-badge-green" x-show="u.activo">Activo</span>
                 <span class="dax-badge-slate" x-show="!u.activo">Inactivo</span>
