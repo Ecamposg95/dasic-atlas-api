@@ -10,7 +10,6 @@ from pydantic import BaseModel, EmailStr, Field
 
 from app import models
 from app import schemas
-from app.dependencies import get_current_active_organization
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.services.email_service import (
@@ -37,7 +36,6 @@ def _user_initials(usuario: "models.Usuario") -> str:
 
 def _generar_folio(
     db: Session,
-    organization_id: str,
     tipo_orden: "models.EstatusOrden",
     vendedor: "models.Usuario",
 ) -> str:
@@ -51,7 +49,6 @@ def _generar_folio(
     consecutivo = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.vendedor_id == vendedor.id,
             models.OrdenVenta.fecha_creacion >= inicio_mes,
         )
@@ -262,14 +259,12 @@ PDF_TEMPLATE_VENTA = """
 def crear_orden(
     orden_data: schemas.OrdenVentaCreate,
     tipo_orden: models.EstatusOrden = models.EstatusOrden.COTIZACION,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
     cliente = (
         db.query(models.Cliente)
         .filter(
-            models.Cliente.organization_id == organization_id,
             models.Cliente.id == orden_data.cliente_id,
         )
         .first()
@@ -280,10 +275,9 @@ def crear_orden(
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
 
     try:
-        folio = _generar_folio(db, organization_id, tipo_orden, current_user)
+        folio = _generar_folio(db, tipo_orden, current_user)
 
         nueva_orden = models.OrdenVenta(
-            organization_id=organization_id,
             folio=folio,
             cliente_id=cliente.id,
             vendedor_id=current_user.id,
@@ -349,7 +343,6 @@ def crear_orden(
             total_orden += subtotal
 
             db.add(models.DetalleOrden(
-                organization_id=organization_id,
                 orden_id=nueva_orden.id,
                 producto_id=producto.id if producto else None,
                 sku_libre=sku_libre,
@@ -364,12 +357,11 @@ def crear_orden(
             ))
 
         nueva_orden.total = total_orden.quantize(Decimal("0.01"))
-        
+
         # Deuda (Solo si es venta directa)
         if tipo_orden == models.EstatusOrden.PENDIENTE:
             total_con_iva = total_orden * Decimal("1.16")
             deuda = models.TransaccionCliente(
-                organization_id=organization_id,
                 cliente_id=cliente.id,
                 tipo=models.TipoMovimiento.CARGO,
                 monto=total_con_iva,
@@ -392,13 +384,11 @@ def crear_orden(
 def actualizar_orden(
     id: int,
     orden_update: schemas.OrdenVentaCreate,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db)
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -421,7 +411,6 @@ def actualizar_orden(
         
         # Borrar detalles viejos
         db.query(models.DetalleOrden).filter(
-            models.DetalleOrden.organization_id == organization_id,
             models.DetalleOrden.orden_id == id,
         ).delete()
         
@@ -466,7 +455,6 @@ def actualizar_orden(
             total_orden += subtotal
 
             db.add(models.DetalleOrden(
-                organization_id=organization_id,
                 orden_id=orden.id,
                 producto_id=producto.id if producto else None,
                 sku_libre=sku_libre,
@@ -493,7 +481,6 @@ def actualizar_orden(
 @router.post("/{id}/recotizar", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
 def recotizar(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -502,7 +489,6 @@ def recotizar(
     origen = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -516,18 +502,16 @@ def recotizar(
     siguiente_version = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
         )
         .count()
         + 1
     )
 
-    folio_nuevo = _generar_folio(db, organization_id, models.EstatusOrden.COTIZACION, current_user)
+    folio_nuevo = _generar_folio(db, models.EstatusOrden.COTIZACION, current_user)
     folio_versionado = f"{folio_nuevo}-V{siguiente_version}"
 
     nueva = models.OrdenVenta(
-        organization_id=organization_id,
         folio=folio_versionado,
         cliente_id=origen.cliente_id,
         vendedor_id=current_user.id,
@@ -545,7 +529,6 @@ def recotizar(
 
     for det in origen.detalles:
         db.add(models.DetalleOrden(
-            organization_id=organization_id,
             orden_id=nueva.id,
             producto_id=det.producto_id,
             sku_libre=det.sku_libre,
@@ -567,13 +550,11 @@ def recotizar(
 @router.get("/{id}/versiones", dependencies=[Depends(allow_all_staff)])
 def listar_versiones(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     base = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -585,7 +566,6 @@ def listar_versiones(
     versiones = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
         )
         .order_by(models.OrdenVenta.version.asc())
@@ -609,13 +589,11 @@ def listar_versiones(
 @router.post("/{id}/convertir", dependencies=[Depends(allow_all_staff)])
 def convertir_cotizacion(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -637,7 +615,6 @@ def convertir_cotizacion(
         # Generar Deuda
         total_con_iva = orden.total * Decimal("1.16")
         db.add(models.TransaccionCliente(
-            organization_id=organization_id,
             cliente_id=orden.cliente_id,
             tipo=models.TipoMovimiento.CARGO,
             monto=total_con_iva,
@@ -656,11 +633,9 @@ def convertir_cotizacion(
 @router.get("/historial", dependencies=[Depends(allow_all_staff)])
 def listar_historial(
     limit: int = 50,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     ordenes = db.query(models.OrdenVenta)\
-        .filter(models.OrdenVenta.organization_id == organization_id)\
         .order_by(desc(models.OrdenVenta.fecha_creacion))\
         .limit(limit).all()
 
@@ -687,19 +662,17 @@ def listar_historial(
 @router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
 def obtener_detalle_orden(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
     )
     if not orden: raise HTTPException(404)
-    
+
     detalles = []
     for d in orden.detalles:
         detalles.append({
@@ -730,13 +703,11 @@ def obtener_detalle_orden(
 @router.get("/{id}/pdf", response_class=HTMLResponse, dependencies=[Depends(allow_all_staff)])
 def generar_pdf(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -812,14 +783,12 @@ def _quote_summary(orden: "models.OrdenVenta") -> dict:
 def enviar_correo(
     id: int,
     payload: _SendEmailIn,
-    organization_id: str = Depends(get_current_active_organization),
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -853,7 +822,6 @@ def enviar_correo(
         error_detail = str(exc)
 
     evento = models.QuoteEvent(
-        organization_id=organization_id,
         orden_id=orden.id,
         canal="EMAIL",
         direccion="OUTBOUND",
@@ -881,14 +849,12 @@ def enviar_correo(
 def whatsapp_log(
     id: int,
     payload: _WhatsappLogIn,
-    organization_id: str = Depends(get_current_active_organization),
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -897,7 +863,6 @@ def whatsapp_log(
         raise HTTPException(404, "Cotización no encontrada")
 
     evento = models.QuoteEvent(
-        organization_id=organization_id,
         orden_id=orden.id,
         canal="WHATSAPP",
         direccion=payload.direccion,
@@ -915,14 +880,12 @@ def whatsapp_log(
 @router.post("/{id}/ia-resumen", dependencies=[Depends(allow_all_staff)])
 def ia_resumen(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -934,7 +897,6 @@ def ia_resumen(
     resultado = sugerir_proximo_paso(summary)
 
     evento = models.QuoteEvent(
-        organization_id=organization_id,
         orden_id=orden.id,
         canal="IA",
         direccion="INTERNAL",
@@ -957,13 +919,11 @@ def ia_resumen(
 @router.get("/{id}/eventos", dependencies=[Depends(allow_all_staff)])
 def listar_eventos(
     id: int,
-    organization_id: str = Depends(get_current_active_organization),
     db: Session = Depends(get_db),
 ):
     orden = (
         db.query(models.OrdenVenta)
         .filter(
-            models.OrdenVenta.organization_id == organization_id,
             models.OrdenVenta.id == id,
         )
         .first()
@@ -974,7 +934,6 @@ def listar_eventos(
     eventos = (
         db.query(models.QuoteEvent)
         .filter(
-            models.QuoteEvent.organization_id == organization_id,
             models.QuoteEvent.orden_id == orden.id,
         )
         .order_by(desc(models.QuoteEvent.creado_en))
