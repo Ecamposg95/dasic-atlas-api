@@ -1,571 +1,556 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador - DASIC ERP</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/cotizador.css') }}">
-    <script>
-        tailwind.config = { darkMode: 'class' }; // IMPORTANTE PARA MODO OSCURO
-    </script>
-</head>
-<body class="font-sans h-screen overflow-hidden text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-950 transition-colors">
+{% extends "base.html" %}
 
-    <script>if (!localStorage.getItem('token')) { window.location.href = "/"; }</script>
-    <div id="sidebar-container"></div>
+{% block title %}Cotizador{% endblock %}
+{% block page_title %}Cotizador{% endblock %}
 
-    <main class="flex-1 flex flex-col p-4 overflow-hidden h-full">
-        
-        <div class="mb-4 border-b border-slate-300 dark:border-slate-700 flex-none">
-            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
-                <li class="mr-2">
-                    <button onclick="cambiarTab('nuevo')" id="tab-btn-nuevo" class="inline-block p-3 border-b-2 border-blue-600 text-blue-600 rounded-t-lg active dark:text-blue-400 dark:border-blue-400 transition-colors">
-                        <i class="fas fa-cash-register mr-2"></i> Cotizador
-                    </button>
-                </li>
-                <li class="mr-2">
-                    <button onclick="cambiarTab('historial')" id="tab-btn-historial" class="inline-block p-3 border-b-2 border-transparent hover:text-slate-600 hover:border-slate-300 rounded-t-lg dark:hover:text-slate-300 transition-colors">
-                        <i class="fas fa-history mr-2"></i> Historial
-                    </button>
-                </li>
-            </ul>
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/cotizador.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col gap-4 overflow-hidden h-full">
+
+  <div class="mb-4 border-b border-slate-300 dark:border-slate-700 flex-none">
+    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+      <li class="mr-2">
+        <button onclick="cambiarTab('nuevo')" id="tab-btn-nuevo" class="inline-block p-3 border-b-2 border-blue-600 text-blue-600 rounded-t-lg active dark:text-blue-400 dark:border-blue-400 transition-colors">
+          <i class="fas fa-cash-register mr-2"></i> Cotizador
+        </button>
+      </li>
+      <li class="mr-2">
+        <button onclick="cambiarTab('historial')" id="tab-btn-historial" class="inline-block p-3 border-b-2 border-transparent hover:text-slate-600 hover:border-slate-300 rounded-t-lg dark:hover:text-slate-300 transition-colors">
+          <i class="fas fa-history mr-2"></i> Historial
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div id="view-nuevo" class="flex-1 flex flex-col gap-4 overflow-hidden">
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-l-4 border-cyan-500 flex-none">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div class="md:col-span-2">
+          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Cliente</label>
+          <select id="select-cliente" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none"></select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Moneda</label>
+          <select id="select-moneda" onchange="cambiarMoneda()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+            <option value="MXN" selected>🇲🇽 MXN</option>
+            <option value="USD">🇺🇸 USD</option>
+          </select>
+        </div>
+        <div id="div-tc" class="opacity-50 pointer-events-none">
+          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">T.C.</label>
+          <input type="number" id="input-tc" value="20.00" onchange="recalculer()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+        </div>
+      </div>
+      <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones...">
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
+      <div class="w-full lg:w-1/3 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col">
+        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Catálogo</label>
+        <div class="relative">
+          <input type="text" id="buscador" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 pl-8 mb-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Buscar SKU...">
+          <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
         </div>
 
-        <div id="view-nuevo" class="flex-1 flex flex-col gap-4 overflow-hidden">
-            
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-l-4 border-cyan-500 flex-none">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div class="md:col-span-2">
-                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Cliente</label>
-                        <select id="select-cliente" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none"></select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Moneda</label>
-                        <select id="select-moneda" onchange="cambiarMoneda()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
-                            <option value="MXN" selected>🇲🇽 MXN</option>
-                            <option value="USD">🇺🇸 USD</option>
-                        </select>
-                    </div>
-                    <div id="div-tc" class="opacity-50 pointer-events-none">
-                        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">T.C.</label>
-                        <input type="number" id="input-tc" value="20.00" onchange="recalculer()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-                    </div>
-                </div>
-                <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones...">
-            </div>
-
-            <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
-                <div class="w-full lg:w-1/3 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col">
-                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Catálogo</label>
-                    <div class="relative">
-                        <input type="text" id="buscador" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 pl-8 mb-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Buscar SKU...">
-                        <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
-                    </div>
-                    
-                    <div id="lista-resultados" class="flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-700 hidden custom-scroll">
-                        </div>
-                    <div id="empty-search" class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
-                        <i class="fas fa-barcode text-4xl"></i>
-                    </div>
-
-                    <button type="button" onclick="abrirModalFantasma()"
-                        class="mt-2 w-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-lg py-2 transition flex items-center justify-center gap-2">
-                        <i class="fas fa-ghost"></i> Agregar producto fantasma
-                    </button>
-                </div>
-
-                <!-- Modal producto fantasma -->
-                <div id="modal-fantasma" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-amber-300 dark:border-amber-700 overflow-hidden">
-                        <div class="px-6 py-4 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex justify-between items-center">
-                            <div>
-                                <h3 class="text-base font-black text-amber-700 dark:text-amber-300 uppercase">Producto Fantasma</h3>
-                                <p class="text-xs text-amber-600 dark:text-amber-400">Cotizar sin afectar inventario</p>
-                            </div>
-                            <button onclick="cerrarModalFantasma()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="p-5 space-y-3">
-                            <div>
-                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
-                                <input id="fantasma-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
-                                <input id="fantasma-desc" type="text" placeholder="Ej. Válvula especial bajo pedido" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
-                            </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
-                                    <input id="fantasma-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
-                                    <select id="fantasma-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
-                                        <option value="MXN">MXN</option>
-                                        <option value="USD">USD</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
-                                    <input id="fantasma-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
-                                <input id="fantasma-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
-                            </div>
-                        </div>
-                        <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-                            <button onclick="cerrarModalFantasma()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-                            <button onclick="agregarFantasma()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
-                                <i class="fas fa-plus mr-1"></i> Agregar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full lg:w-2/3 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
-                    <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center flex-none">
-                        <span class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
-                        <span class="text-xs bg-blue-100 dark:bg-slate-600 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto custom-scroll">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase sticky top-0 z-10 shadow-sm">
-                                <tr>
-                                    <th class="p-3 bg-white dark:bg-slate-800">Producto</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Cant.</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-20">Mon. Origen</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
-                                    <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
-                                <tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
-                        <div class="flex flex-col md:flex-row justify-between items-end gap-4">
-                            <div class="flex gap-2">
-                                <button onclick="guardar('cotizacion')" class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition flex items-center">
-                                    <i class="fas fa-save mr-2 text-yellow-500"></i> Guardar
-                                </button>
-                                <button onclick="guardar('pendiente')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center">
-                                    <i class="fas fa-check-circle mr-2"></i> Vender
-                                </button>
-                            </div>
-                            
-                            <div class="text-right text-xs text-slate-600 dark:text-slate-400 space-y-1 min-w-[200px]">
-                                <div class="flex justify-between"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold">$0.00</span></div>
-                                <div class="flex justify-between"><span>IVA (16%):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
-                                <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-1 mt-1 text-base text-blue-900 dark:text-cyan-400 font-bold">
-                                    <span>Total:</span> <span id="lbl-total">$0.00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div id="lista-resultados" class="flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-700 hidden custom-scroll"></div>
+        <div id="empty-search" class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
+          <i class="fas fa-barcode text-4xl"></i>
         </div>
 
-        <div id="view-historial" class="hidden flex-1 overflow-hidden bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-            <div class="h-full overflow-y-auto custom-scroll">
-                <table class="min-w-full text-sm text-left">
-                    <thead class="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase sticky top-0 shadow-sm">
-                        <tr>
-                            <th class="px-6 py-3">Folio</th>
-                            <th class="px-6 py-3">Fecha</th>
-                            <th class="px-6 py-3">Cliente</th>
-                            <th class="px-6 py-3 text-right">Total</th>
-                            <th class="px-6 py-3 text-center">Estatus</th>
-                            <th class="px-6 py-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-historial" class="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300"></tbody>
-                </table>
+        <button type="button" onclick="abrirModalFantasma()"
+            class="mt-2 w-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-lg py-2 transition flex items-center justify-center gap-2">
+          <i class="fas fa-ghost"></i> Agregar producto fantasma
+        </button>
+      </div>
+
+      <div id="modal-fantasma" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-amber-300 dark:border-amber-700 overflow-hidden">
+          <div class="px-6 py-4 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-black text-amber-700 dark:text-amber-300 uppercase">Producto Fantasma</h3>
+              <p class="text-xs text-amber-600 dark:text-amber-400">Cotizar sin afectar inventario</p>
             </div>
+            <button onclick="cerrarModalFantasma()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="p-5 space-y-3">
+            <div>
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
+              <input id="fantasma-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
+              <input id="fantasma-desc" type="text" placeholder="Ej. Válvula especial bajo pedido" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
+                <input id="fantasma-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+              </div>
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
+                <select id="fantasma-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
+                <input id="fantasma-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
+              <input id="fantasma-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
+            </div>
+          </div>
+          <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+            <button onclick="cerrarModalFantasma()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+            <button onclick="agregarFantasma()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
+              <i class="fas fa-plus mr-1"></i> Agregar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full lg:w-2/3 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
+        <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center flex-none">
+          <span class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
+          <span class="text-xs bg-blue-100 dark:bg-slate-600 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
         </div>
 
-    </main>
+        <div class="flex-1 overflow-y-auto custom-scroll">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase sticky top-0 z-10 shadow-sm">
+              <tr>
+                <th class="p-3 bg-white dark:bg-slate-800">Producto</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Cant.</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-center w-20">Mon. Origen</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
+                <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-    <script src="/static/js/navbar.js"></script>
+        <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
+          <div class="flex flex-col md:flex-row justify-between items-end gap-4">
+            <div class="flex gap-2">
+              <button onclick="guardar('cotizacion')" class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition flex items-center">
+                <i class="fas fa-save mr-2 text-yellow-500"></i> Guardar
+              </button>
+              <button onclick="guardar('pendiente')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center">
+                <i class="fas fa-check-circle mr-2"></i> Vender
+              </button>
+            </div>
 
-    <script>
-        // --- LÓGICA JAVASCRIPT IDÉNTICA A LA ANTERIOR (Solo ajustamos colores en el render) ---
-        const token = localStorage.getItem('token');
-        let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00 };
+            <div class="text-right text-xs text-slate-600 dark:text-slate-400 space-y-1 min-w-[200px]">
+              <div class="flex justify-between"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold">$0.00</span></div>
+              <div class="flex justify-between"><span>IVA (16%):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
+              <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-1 mt-1 text-base text-blue-900 dark:text-cyan-400 font-bold">
+                <span>Total:</span> <span id="lbl-total">$0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            const input = document.getElementById('buscador');
-            input.addEventListener('input', (e) => filterProds(e.target.value));
-            input.addEventListener('focus', () => { if(input.value) filterProds(input.value); });
-            document.addEventListener('click', (e) => {
-                const list = document.getElementById('lista-resultados');
-                const empty = document.getElementById('empty-search');
-                if (!list.contains(e.target) && e.target !== input) {
-                    list.classList.add('hidden');
-                    if(input.value === '') empty.classList.remove('hidden');
-                }
-            });
-        });
+  <div id="view-historial" class="hidden flex-1 overflow-hidden bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+    <div class="h-full overflow-y-auto custom-scroll">
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase sticky top-0 shadow-sm">
+          <tr>
+            <th class="px-6 py-3">Folio</th>
+            <th class="px-6 py-3">Fecha</th>
+            <th class="px-6 py-3">Cliente</th>
+            <th class="px-6 py-3 text-right">Total</th>
+            <th class="px-6 py-3 text-center">Estatus</th>
+            <th class="px-6 py-3 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-historial" class="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300"></tbody>
+      </table>
+    </div>
+  </div>
 
-        function cambiarTab(tab) {
-            document.getElementById('view-nuevo').classList.add('hidden');
-            document.getElementById('view-historial').classList.add('hidden');
-            
-            // Reset styles
-            const baseBtn = "inline-block p-3 border-b-2 border-transparent hover:text-slate-600 dark:hover:text-slate-300 rounded-t-lg transition-colors";
-            const activeBtn = "inline-block p-3 border-b-2 border-cyan-500 text-cyan-600 dark:text-cyan-400 rounded-t-lg active transition-colors font-bold";
-            
-            document.getElementById('tab-btn-nuevo').className = baseBtn;
-            document.getElementById('tab-btn-historial').className = baseBtn;
+</div>
+{% endblock %}
 
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${tab}`).className = activeBtn;
-            
-            if(tab === 'historial') loadHistorial();
-        }
+{% block extra_scripts %}
+<script>
+  let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00 };
 
-        async function loadData() {
-            try {
-                const [cRes, pRes] = await Promise.all([
-                    fetch('/api/clientes/?limit=200', {headers: {'Authorization': `Bearer ${token}`}}),
-                    fetch('/api/productos/?limit=2000', {headers: {'Authorization': `Bearer ${token}`}})
-                ]);
-                if(cRes.ok) {
-                    const clientes = await cRes.json();
-                    const sel = document.getElementById('select-cliente');
-                    sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-                    clientes.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nombre_empresa}</option>`);
-                }
-                if(pRes.ok) state.prods = await pRes.json();
-            } catch(e) { console.error(e); }
-        }
+  document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      const input = document.getElementById('buscador');
+      input.addEventListener('input', (e) => filterProds(e.target.value));
+      input.addEventListener('focus', () => { if(input.value) filterProds(input.value); });
+      document.addEventListener('click', (e) => {
+          const list = document.getElementById('lista-resultados');
+          const empty = document.getElementById('empty-search');
+          if (!list.contains(e.target) && e.target !== input) {
+              list.classList.add('hidden');
+              if(input.value === '') empty.classList.remove('hidden');
+          }
+      });
+  });
 
-        function cambiarMoneda() {
-            state.moneda = document.getElementById('select-moneda').value;
-            const divTC = document.getElementById('div-tc');
-            if(state.moneda === 'USD') {
-                divTC.classList.remove('opacity-50', 'pointer-events-none');
-                state.tc = parseFloat(document.getElementById('input-tc').value) || 20;
-            } else {
-                divTC.classList.add('opacity-50', 'pointer-events-none');
-                state.tc = 1;
-            }
-            renderCart();
-            filterProds(document.getElementById('buscador').value);
-        }
-        function recalculer() { state.tc = parseFloat(document.getElementById('input-tc').value); renderCart(); }
-        function fmtMoney(amount) {
-            return moneyForQuote(amount);
-        }
+  function cambiarTab(tab) {
+      document.getElementById('view-nuevo').classList.add('hidden');
+      document.getElementById('view-historial').classList.add('hidden');
 
-        function moneyForQuote(amount) {
-            const sym = state.moneda === 'USD' ? 'US$' : '$';
-            return sym + Number(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        }
+      const baseBtn = "inline-block p-3 border-b-2 border-transparent hover:text-slate-600 dark:hover:text-slate-300 rounded-t-lg transition-colors";
+      const activeBtn = "inline-block p-3 border-b-2 border-cyan-500 text-cyan-600 dark:text-cyan-400 rounded-t-lg active transition-colors font-bold";
 
-        function quoteCost(producto) {
-            const cost = parseFloat(producto.costo_compra ?? producto.precio_publico ?? 0);
-            const sourceCurrency = (producto.moneda_compra || 'MXN').toUpperCase();
-            if(sourceCurrency === state.moneda) return cost;
-            if(sourceCurrency === 'USD' && state.moneda === 'MXN') return cost * state.tc;
-            if(sourceCurrency === 'MXN' && state.moneda === 'USD') return cost / state.tc;
-            return cost;
-        }
+      document.getElementById('tab-btn-nuevo').className = baseBtn;
+      document.getElementById('tab-btn-historial').className = baseBtn;
 
-        function filterProds(txt) {
-            const list = document.getElementById('lista-resultados');
-            const empty = document.getElementById('empty-search');
-            list.innerHTML = '';
-            
-            const clean = txt.toLowerCase();
-            if(clean.length < 1) { 
-                list.classList.add('hidden'); 
-                empty.classList.remove('hidden');
-                return; 
-            }
+      document.getElementById(`view-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-btn-${tab}`).className = activeBtn;
 
-            const matches = state.prods.filter(p =>
-                p.nombre.toLowerCase().includes(clean) ||
-                p.sku.toLowerCase().includes(clean) ||
-                ((p.sku_comercial || '').toLowerCase().includes(clean))
-            );
-            
-            empty.classList.add('hidden');
-            list.classList.remove('hidden');
+      if(tab === 'historial') loadHistorial();
+  }
 
-            if(matches.length === 0) { list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Sin resultados</div>'; return; }
+  async function loadData() {
+      try {
+          const [cRes, pRes] = await Promise.all([
+              fetch('/api/clientes/?limit=200'),
+              fetch('/api/productos/?limit=2000')
+          ]);
+          if(cRes.ok) {
+              const clientes = await cRes.json();
+              const sel = document.getElementById('select-cliente');
+              sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+              clientes.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nombre_empresa}</option>`);
+          }
+          if(pRes.ok) state.prods = await pRes.json();
+      } catch(e) { console.error(e); }
+  }
 
-            matches.slice(0, 10).forEach(p => {
-                const el = document.createElement('div');
-                el.className = "p-3 border-b border-slate-100 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-slate-700 cursor-pointer flex justify-between items-center transition group";
-                el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
-                el.innerHTML = `
-                    <div>
-                        <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku_comercial || '—'}</div>
-                        <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold text-cyan-600 dark:text-cyan-400">${moneyForQuote(quoteCost(p))}</div>
-                        <div class="text-[10px] text-slate-400">${(p.moneda_compra || 'MXN').toUpperCase()} compra | Stock: ${p.stock_actual}</div>
-                    </div>`;
-                list.appendChild(el);
-            });
-        }
+  function cambiarMoneda() {
+      state.moneda = document.getElementById('select-moneda').value;
+      const divTC = document.getElementById('div-tc');
+      if(state.moneda === 'USD') {
+          divTC.classList.remove('opacity-50', 'pointer-events-none');
+          state.tc = parseFloat(document.getElementById('input-tc').value) || 20;
+      } else {
+          divTC.classList.add('opacity-50', 'pointer-events-none');
+          state.tc = 1;
+      }
+      renderCart();
+      filterProds(document.getElementById('buscador').value);
+  }
+  function recalculer() { state.tc = parseFloat(document.getElementById('input-tc').value); renderCart(); }
+  function fmtMoney(amount) {
+      return moneyForQuote(amount);
+  }
 
-        function abrirModalFantasma() {
-            document.getElementById('modal-fantasma').classList.remove('hidden');
-            document.getElementById('modal-fantasma').classList.add('flex');
-            document.getElementById('fantasma-desc').focus();
-        }
-        function cerrarModalFantasma() {
-            const m = document.getElementById('modal-fantasma');
-            m.classList.add('hidden'); m.classList.remove('flex');
-        }
-        function agregarFantasma() {
-            const desc = document.getElementById('fantasma-desc').value.trim();
-            const cost = parseFloat(document.getElementById('fantasma-cost').value);
-            const qty = parseInt(document.getElementById('fantasma-qty').value) || 1;
-            if (!desc || !cost || cost <= 0) {
-                Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción y costo', showConfirmButton:false, timer:1500});
-                return;
-            }
-            state.cart.push({
-                id: null,
-                ghost: true,
-                sku: document.getElementById('fantasma-sku').value.trim() || '— FANTASMA',
-                nom: desc,
-                cost: cost,
-                productCurrency: document.getElementById('fantasma-mon').value,
-                qty: qty,
-                max: 9999,
-                utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
-            });
-            cerrarModalFantasma();
-            // reset
-            ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('fantasma-cost').value = '0';
-            document.getElementById('fantasma-qty').value = '1';
-            document.getElementById('fantasma-util').value = '30';
-            renderCart();
-        }
+  function moneyForQuote(amount) {
+      const sym = state.moneda === 'USD' ? 'US$' : '$';
+      return sym + Number(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
 
-        function addCart(p) {
-            if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
-            const ex = state.cart.find(x => x.id === p.id);
-            if(ex) {
-                ex.qty++;
-            } else {
-                state.cart.push({
-                    id: p.id,
-                    sku: p.sku_comercial || '—',
-                    nom: p.nombre,
-                    cost: parseFloat(p.costo_compra || 0),
-                    productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
-                    qty: 1,
-                    max: p.stock_actual,
-                    utilidad: 30
-                });
-            }
+  function quoteCost(producto) {
+      const cost = parseFloat(producto.costo_compra ?? producto.precio_publico ?? 0);
+      const sourceCurrency = (producto.moneda_compra || 'MXN').toUpperCase();
+      if(sourceCurrency === state.moneda) return cost;
+      if(sourceCurrency === 'USD' && state.moneda === 'MXN') return cost * state.tc;
+      if(sourceCurrency === 'MXN' && state.moneda === 'USD') return cost / state.tc;
+      return cost;
+  }
 
-            const input = document.getElementById('buscador');
-            input.value = ''; input.focus();
-            document.getElementById('lista-resultados').classList.add('hidden');
-            document.getElementById('empty-search').classList.remove('hidden');
-            renderCart();
-        }
+  function filterProds(txt) {
+      const list = document.getElementById('lista-resultados');
+      const empty = document.getElementById('empty-search');
+      list.innerHTML = '';
 
-        function renderCart() {
-            const tb = document.getElementById('tabla-carrito');
-            tb.innerHTML = '';
-            let subtotal = 0;
+      const clean = txt.toLowerCase();
+      if(clean.length < 1) {
+          list.classList.add('hidden');
+          empty.classList.remove('hidden');
+          return;
+      }
 
-            if(state.cart.length === 0) {
-                tb.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
-                updTotal(0); return;
-            }
+      const matches = state.prods.filter(p =>
+          p.nombre.toLowerCase().includes(clean) ||
+          p.sku.toLowerCase().includes(clean) ||
+          ((p.sku_comercial || '').toLowerCase().includes(clean))
+      );
 
-            state.cart.forEach((i, idx) => {
-                let costo = i.cost;
-                if(i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
-                if(i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
-                const precioFinal = costo * (1 + (i.utilidad / 100));
-                const importe = i.qty * precioFinal;
-                subtotal += importe;
+      empty.classList.add('hidden');
+      list.classList.remove('hidden');
 
-                const monedaBadge = i.productCurrency === 'USD'
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                    : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
+      if(matches.length === 0) { list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Sin resultados</div>'; return; }
 
-                const ghostBadge = i.ghost ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
-                tb.innerHTML += `
-                    <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                        <td class="p-3">
-                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${ghostBadge}</div>
-                            <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
-                        </td>
-                        <td class="p-3 text-center">
-                            <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)"
-                                class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
-                        </td>
-                        <td class="p-3 text-center">
-                            <select onchange="updItem(${idx}, 'productCurrency', this.value)"
-                                class="text-[11px] font-bold rounded px-1 py-0.5 border ${monedaBadge} outline-none cursor-pointer">
-                                <option value="MXN" ${i.productCurrency==='MXN'?'selected':''}>MXN</option>
-                                <option value="USD" ${i.productCurrency==='USD'?'selected':''}>USD</option>
-                            </select>
-                        </td>
-                        <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
-                        <td class="p-3 text-center">
-                            <input type="number" min="0" max="99" value="${i.utilidad}" onchange="updItem(${idx}, 'utilidad', this.value)"
-                                class="w-12 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-center text-xs rounded text-emerald-700 dark:text-emerald-300 font-bold outline-none">
-                        </td>
-                        <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
-                        <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
-                        <td class="p-3 text-center cursor-pointer text-slate-300 hover:text-red-500 transition" onclick="delItem(${idx})"><i class="fas fa-times"></i></td>
-                    </tr>`;
-            });
-            updTotal(subtotal);
-            document.getElementById('items-count').innerText = state.cart.length + " Ítems";
-        }
+      matches.slice(0, 10).forEach(p => {
+          const el = document.createElement('div');
+          el.className = "p-3 border-b border-slate-100 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-slate-700 cursor-pointer flex justify-between items-center transition group";
+          el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
+          el.innerHTML = `
+              <div>
+                  <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${p.sku_comercial || '—'}</div>
+                  <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
+              </div>
+              <div class="text-right">
+                  <div class="font-bold text-cyan-600 dark:text-cyan-400">${moneyForQuote(quoteCost(p))}</div>
+                  <div class="text-[10px] text-slate-400">${(p.moneda_compra || 'MXN').toUpperCase()} compra | Stock: ${p.stock_actual}</div>
+              </div>`;
+          list.appendChild(el);
+      });
+  }
 
-        function updItem(idx, t, v) {
-            if(t=='productCurrency') {
-                state.cart[idx].productCurrency = (v === 'USD') ? 'USD' : 'MXN';
-                renderCart();
-                return;
-            }
-            let val = parseFloat(v)||0;
-            if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
-            if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
-            renderCart();
-        }
-        function delItem(i) { state.cart.splice(i, 1); renderCart(); }
-        function updTotal(sub) {
-            const iva = sub * 0.16;
-            document.getElementById('lbl-sub').innerText = fmtMoney(sub);
-            document.getElementById('lbl-iva').innerText = fmtMoney(iva);
-            document.getElementById('lbl-total').innerText = fmtMoney(sub + iva);
-        }
+  function abrirModalFantasma() {
+      document.getElementById('modal-fantasma').classList.remove('hidden');
+      document.getElementById('modal-fantasma').classList.add('flex');
+      document.getElementById('fantasma-desc').focus();
+  }
+  function cerrarModalFantasma() {
+      const m = document.getElementById('modal-fantasma');
+      m.classList.add('hidden'); m.classList.remove('flex');
+  }
+  function agregarFantasma() {
+      const desc = document.getElementById('fantasma-desc').value.trim();
+      const cost = parseFloat(document.getElementById('fantasma-cost').value);
+      const qty = parseInt(document.getElementById('fantasma-qty').value) || 1;
+      if (!desc || !cost || cost <= 0) {
+          Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción y costo', showConfirmButton:false, timer:1500});
+          return;
+      }
+      state.cart.push({
+          id: null,
+          ghost: true,
+          sku: document.getElementById('fantasma-sku').value.trim() || '— FANTASMA',
+          nom: desc,
+          cost: cost,
+          productCurrency: document.getElementById('fantasma-mon').value,
+          qty: qty,
+          max: 9999,
+          utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
+      });
+      cerrarModalFantasma();
+      ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fantasma-cost').value = '0';
+      document.getElementById('fantasma-qty').value = '1';
+      document.getElementById('fantasma-util').value = '30';
+      renderCart();
+  }
 
-        async function guardar(tipo) {
-            const cli = document.getElementById('select-cliente').value;
-            if(!cli || state.cart.length === 0) return Swal.fire('Error', 'Faltan datos', 'warning');
-            
-            const payload = {
-                cliente_id: parseInt(cli),
-                moneda: state.moneda,
-                tipo_cambio: state.moneda === 'USD' ? state.tc : 1,
-                detalles: state.cart.map(i => ({
-                    producto_id: i.id || null,
-                    cantidad: i.qty,
-                    utilidad: i.utilidad,
-                    descuento: 0,
-                    moneda_origen: i.productCurrency,
-                    sku_libre: i.ghost ? (i.sku === '— FANTASMA' ? null : i.sku) : null,
-                    descripcion_libre: i.ghost ? i.nom : null,
-                    costo_unitario: i.ghost ? i.cost : null
-                })),
-                observaciones: document.getElementById('observaciones').value
-            };
+  function addCart(p) {
+      if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
+      const ex = state.cart.find(x => x.id === p.id);
+      if(ex) {
+          ex.qty++;
+      } else {
+          state.cart.push({
+              id: p.id,
+              sku: p.sku_comercial || '—',
+              nom: p.nombre,
+              cost: parseFloat(p.costo_compra || 0),
+              productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
+              qty: 1,
+              max: p.stock_actual,
+              utilidad: 30
+          });
+      }
 
-            Swal.fire({title:'Guardando...', didOpen:()=>Swal.showLoading()});
-            try {
-                const res = await fetch(`/api/ventas/?tipo_orden=${tipo}`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                if(res.ok) {
-                    const d = await res.json();
-                    Swal.fire({icon:'success', title: tipo==='cotizacion'?'Cotización':'Venta', text:`Folio: ${d.folio}`, showDenyButton:true, confirmButtonText:'Nueva', denyButtonText:'PDF'}).then(r => {
-                        if(r.isDenied) window.open(`/api/ventas/${d.id}/pdf`, '_blank');
-                        state.cart = []; renderCart(); document.getElementById('observaciones').value = '';
-                    });
-                } else { const err = await res.json(); Swal.fire('Error', err.detail, 'error'); }
-            } catch(e) { console.error(e); }
-        }
+      const input = document.getElementById('buscador');
+      input.value = ''; input.focus();
+      document.getElementById('lista-resultados').classList.add('hidden');
+      document.getElementById('empty-search').classList.remove('hidden');
+      renderCart();
+  }
 
-        async function loadHistorial() {
-            const res = await fetch('/api/ventas/historial', {headers: {'Authorization': `Bearer ${token}`}});
-            const data = await res.json();
-            const tb = document.getElementById('tabla-historial');
-            tb.innerHTML = '';
-            data.forEach(o => {
-                const color = o.estatus === 'cotizacion' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
-                const verBtn = o.estatus === 'cotizacion'
-                    ? `<button onclick="convertir(${o.id})" class="text-cyan-600 hover:text-cyan-500 font-bold text-xs mr-2">VENDER</button>
-                       <button onclick="recotizar(${o.id})" class="text-amber-600 hover:text-amber-500 font-bold text-xs mr-2" title="Crear nueva versión"><i class="fas fa-code-branch"></i></button>
-                       <button onclick="generarOC(${o.id})" class="text-violet-600 hover:text-violet-500 font-bold text-xs mr-2" title="Generar OC borrador"><i class="fas fa-truck"></i></button>`
-                    : '';
-                const versionTag = o.version > 1 ? `<span class="text-[9px] font-bold text-amber-600 ml-1">v${o.version}</span>` : '';
-                tb.innerHTML += `
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition">
-                        <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}${versionTag}</td>
-                        <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${new Date(o.fecha).toLocaleDateString()}</td>
-                        <td class="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">${o.cliente}</td>
-                        <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">${o.moneda === 'USD' ? 'US$' : '$'}${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-                        <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${color}">${o.estatus}</span></td>
-                        <td class="px-6 py-4 text-center flex justify-center items-center">
-                            ${verBtn}
-                            <a href="/api/ventas/${o.id}/pdf" target="_blank" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-file-pdf text-lg"></i></a>
-                        </td>
-                    </tr>`;
-            });
-        }
-        async function convertir(id) {
-            if(!confirm('¿Aprobar venta?')) return;
-            await fetch(`/api/ventas/${id}/convertir`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
-            loadHistorial();
-        }
-        async function recotizar(id) {
-            const r = await Swal.fire({title:'Crear nueva versión?', text:'Se duplica la cotización con un nuevo folio y queda lista para editar.', showCancelButton:true, confirmButtonText:'Recotizar'});
-            if (!r.isConfirmed) return;
-            const res = await fetch(`/api/ventas/${id}/recotizar`, { method: 'POST', headers: {'Authorization': `Bearer ${token}`} });
-            if (res.ok) {
-                const nueva = await res.json();
-                Swal.fire({icon:'success', title:'Versión creada', text:`Folio: ${nueva.folio}`});
-                loadHistorial();
-            } else {
-                const err = await res.json();
-                Swal.fire('Error', err.detail || 'No se pudo recotizar', 'error');
-            }
-        }
-        async function generarOC(quoteId) {
-            const r = await Swal.fire({
-                title:'Generar OC',
-                input:'select',
-                inputOptions:{borrador:'Borrador (no persiste)', persistir:'OC real (persiste, sin afectar stock)'},
-                inputValue:'borrador',
-                showCancelButton:true
-            });
-            if (!r.isConfirmed) return;
-            if (r.value === 'borrador') {
-                window.open(`/api/compras/cotizacion/${quoteId}/borrador`, '_blank');
-                return;
-            }
-            const proveedor = await Swal.fire({title:'Proveedor ID', input:'number', inputLabel:'ID del proveedor para vincular la OC'});
-            if (!proveedor.value) return;
-            const res = await fetch(`/api/compras/cotizacion/${quoteId}/orden`, {
-                method:'POST',
-                headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
-                body: JSON.stringify({proveedor_id: parseInt(proveedor.value)})
-            });
-            if (res.ok) {
-                const oc = await res.json();
-                Swal.fire({icon:'success', title:'OC creada', text:`Folio: ${oc.folio || ('OC#'+oc.id)}`});
-            } else {
-                const err = await res.json();
-                Swal.fire('Error', err.detail || 'No se pudo crear OC', 'error');
-            }
-        }
-    </script>
-</body>
-</html>
+  function renderCart() {
+      const tb = document.getElementById('tabla-carrito');
+      tb.innerHTML = '';
+      let subtotal = 0;
+
+      if(state.cart.length === 0) {
+          tb.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+          updTotal(0); return;
+      }
+
+      state.cart.forEach((i, idx) => {
+          let costo = i.cost;
+          if(i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
+          if(i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
+          const precioFinal = costo * (1 + (i.utilidad / 100));
+          const importe = i.qty * precioFinal;
+          subtotal += importe;
+
+          const monedaBadge = i.productCurrency === 'USD'
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+              : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
+
+          const ghostBadge = i.ghost ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
+          tb.innerHTML += `
+              <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                  <td class="p-3">
+                      <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${ghostBadge}</div>
+                      <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
+                  </td>
+                  <td class="p-3 text-center">
+                      <input type="number" min="1" value="${i.qty}" onchange="updItem(${idx}, 'qty', this.value)"
+                          class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
+                  </td>
+                  <td class="p-3 text-center">
+                      <select onchange="updItem(${idx}, 'productCurrency', this.value)"
+                          class="text-[11px] font-bold rounded px-1 py-0.5 border ${monedaBadge} outline-none cursor-pointer">
+                          <option value="MXN" ${i.productCurrency==='MXN'?'selected':''}>MXN</option>
+                          <option value="USD" ${i.productCurrency==='USD'?'selected':''}>USD</option>
+                      </select>
+                  </td>
+                  <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
+                  <td class="p-3 text-center">
+                      <input type="number" min="0" max="99" value="${i.utilidad}" onchange="updItem(${idx}, 'utilidad', this.value)"
+                          class="w-12 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-center text-xs rounded text-emerald-700 dark:text-emerald-300 font-bold outline-none">
+                  </td>
+                  <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
+                  <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
+                  <td class="p-3 text-center cursor-pointer text-slate-300 hover:text-red-500 transition" onclick="delItem(${idx})"><i class="fas fa-times"></i></td>
+              </tr>`;
+      });
+      updTotal(subtotal);
+      document.getElementById('items-count').innerText = state.cart.length + " Ítems";
+  }
+
+  function updItem(idx, t, v) {
+      if(t=='productCurrency') {
+          state.cart[idx].productCurrency = (v === 'USD') ? 'USD' : 'MXN';
+          renderCart();
+          return;
+      }
+      let val = parseFloat(v)||0;
+      if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
+      if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
+      renderCart();
+  }
+  function delItem(i) { state.cart.splice(i, 1); renderCart(); }
+  function updTotal(sub) {
+      const iva = sub * 0.16;
+      document.getElementById('lbl-sub').innerText = fmtMoney(sub);
+      document.getElementById('lbl-iva').innerText = fmtMoney(iva);
+      document.getElementById('lbl-total').innerText = fmtMoney(sub + iva);
+  }
+
+  async function guardar(tipo) {
+      const cli = document.getElementById('select-cliente').value;
+      if(!cli || state.cart.length === 0) return Swal.fire('Error', 'Faltan datos', 'warning');
+
+      const payload = {
+          cliente_id: parseInt(cli),
+          moneda: state.moneda,
+          tipo_cambio: state.moneda === 'USD' ? state.tc : 1,
+          detalles: state.cart.map(i => ({
+              producto_id: i.id || null,
+              cantidad: i.qty,
+              utilidad: i.utilidad,
+              descuento: 0,
+              moneda_origen: i.productCurrency,
+              sku_libre: i.ghost ? (i.sku === '— FANTASMA' ? null : i.sku) : null,
+              descripcion_libre: i.ghost ? i.nom : null,
+              costo_unitario: i.ghost ? i.cost : null
+          })),
+          observaciones: document.getElementById('observaciones').value
+      };
+
+      Swal.fire({title:'Guardando...', didOpen:()=>Swal.showLoading()});
+      try {
+          const res = await fetch(`/api/ventas/?tipo_orden=${tipo}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+          if(res.ok) {
+              const d = await res.json();
+              Swal.fire({icon:'success', title: tipo==='cotizacion'?'Cotización':'Venta', text:`Folio: ${d.folio}`, showDenyButton:true, confirmButtonText:'Nueva', denyButtonText:'PDF'}).then(r => {
+                  if(r.isDenied) window.open(`/api/ventas/${d.id}/pdf`, '_blank');
+                  state.cart = []; renderCart(); document.getElementById('observaciones').value = '';
+              });
+          } else { const err = await res.json(); Swal.fire('Error', err.detail, 'error'); }
+      } catch(e) { console.error(e); }
+  }
+
+  async function loadHistorial() {
+      const res = await fetch('/api/ventas/historial');
+      const data = await res.json();
+      const tb = document.getElementById('tabla-historial');
+      tb.innerHTML = '';
+      data.forEach(o => {
+          const color = o.estatus === 'cotizacion' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+          const verBtn = o.estatus === 'cotizacion'
+              ? `<button onclick="convertir(${o.id})" class="text-cyan-600 hover:text-cyan-500 font-bold text-xs mr-2">VENDER</button>
+                 <button onclick="recotizar(${o.id})" class="text-amber-600 hover:text-amber-500 font-bold text-xs mr-2" title="Crear nueva versión"><i class="fas fa-code-branch"></i></button>
+                 <button onclick="generarOC(${o.id})" class="text-violet-600 hover:text-violet-500 font-bold text-xs mr-2" title="Generar OC borrador"><i class="fas fa-truck"></i></button>`
+              : '';
+          const versionTag = o.version > 1 ? `<span class="text-[9px] font-bold text-amber-600 ml-1">v${o.version}</span>` : '';
+          tb.innerHTML += `
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition">
+                  <td class="px-6 py-4 font-bold text-blue-900 dark:text-blue-300">${o.folio}${versionTag}</td>
+                  <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${new Date(o.fecha).toLocaleDateString()}</td>
+                  <td class="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">${o.cliente}</td>
+                  <td class="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-white">${o.moneda === 'USD' ? 'US$' : '$'}${parseFloat(o.total).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                  <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${color}">${o.estatus}</span></td>
+                  <td class="px-6 py-4 text-center flex justify-center items-center">
+                      ${verBtn}
+                      <a href="/api/ventas/${o.id}/pdf" target="_blank" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-file-pdf text-lg"></i></a>
+                  </td>
+              </tr>`;
+      });
+  }
+  async function convertir(id) {
+      if(!confirm('¿Aprobar venta?')) return;
+      await fetch(`/api/ventas/${id}/convertir`, { method: 'POST' });
+      loadHistorial();
+  }
+  async function recotizar(id) {
+      const r = await Swal.fire({title:'Crear nueva versión?', text:'Se duplica la cotización con un nuevo folio y queda lista para editar.', showCancelButton:true, confirmButtonText:'Recotizar'});
+      if (!r.isConfirmed) return;
+      const res = await fetch(`/api/ventas/${id}/recotizar`, { method: 'POST' });
+      if (res.ok) {
+          const nueva = await res.json();
+          Swal.fire({icon:'success', title:'Versión creada', text:`Folio: ${nueva.folio}`});
+          loadHistorial();
+      } else {
+          const err = await res.json();
+          Swal.fire('Error', err.detail || 'No se pudo recotizar', 'error');
+      }
+  }
+  async function generarOC(quoteId) {
+      const r = await Swal.fire({
+          title:'Generar OC',
+          input:'select',
+          inputOptions:{borrador:'Borrador (no persiste)', persistir:'OC real (persiste, sin afectar stock)'},
+          inputValue:'borrador',
+          showCancelButton:true
+      });
+      if (!r.isConfirmed) return;
+      if (r.value === 'borrador') {
+          window.open(`/api/compras/cotizacion/${quoteId}/borrador`, '_blank');
+          return;
+      }
+      const proveedor = await Swal.fire({title:'Proveedor ID', input:'number', inputLabel:'ID del proveedor para vincular la OC'});
+      if (!proveedor.value) return;
+      const res = await fetch(`/api/compras/cotizacion/${quoteId}/orden`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({proveedor_id: parseInt(proveedor.value)})
+      });
+      if (res.ok) {
+          const oc = await res.json();
+          Swal.fire({icon:'success', title:'OC creada', text:`Folio: ${oc.folio || ('OC#'+oc.id)}`});
+      } else {
+          const err = await res.json();
+          Swal.fire('Error', err.detail || 'No se pudo crear OC', 'error');
+      }
+  }
+</script>
+{% endblock %}
