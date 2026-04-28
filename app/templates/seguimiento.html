@@ -28,6 +28,14 @@
       <option value="cotizacion">Cotizaciones</option>
       <option value="venta">Ventas</option>
     </select>
+    <select x-model="filtroVigencia" @change="filtrar()"
+            class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
+                   rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
+      <option value="">Toda vigencia</option>
+      <option value="vencidas">Vencidas</option>
+      <option value="por_vencer">Por vencer</option>
+      <option value="vigentes">Vigentes</option>
+    </select>
   </div>
 
   <!-- Tabla de órdenes -->
@@ -38,6 +46,7 @@
           <th>Folio</th>
           <th>Cliente</th>
           <th>Fecha</th>
+          <th>Seguimiento</th>
           <th class="text-right">Total</th>
           <th>Estatus</th>
           <th class="text-right">Acciones</th>
@@ -46,7 +55,7 @@
       <tbody>
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
-            <tr><td colspan="6">
+            <tr><td colspan="7">
               <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
@@ -57,8 +66,16 @@
               <td class="font-mono text-xs text-cyan-400 font-bold" x-text="v.folio"></td>
               <td class="text-xs text-slate-300" x-text="v.cliente"></td>
               <td class="text-xs text-slate-500" x-text="new Date(v.fecha).toLocaleDateString('es-MX')"></td>
+              <td>
+                <div class="flex flex-col gap-1">
+                  <span class="text-[10px] text-slate-400" x-text="seguimientoLabel(v)"></span>
+                  <span class="text-[10px] font-semibold"
+                        :class="seguimientoClass(v)"
+                        x-text="seguimientoBadge(v)"></span>
+                </div>
+              </td>
               <td class="text-right font-mono text-xs font-bold text-slate-200"
-                  x-text="'$'+parseFloat(v.total).toLocaleString('en-US',{minimumFractionDigits:2})"></td>
+                  x-text="moneyLabel(v)"></td>
               <td>
                 <span class="dax-badge-amber" x-show="v.estatus==='cotizacion'">Cotización</span>
                 <span class="dax-badge-green"  x-show="v.estatus==='venta'">Venta</span>
@@ -68,11 +85,14 @@
                 <button class="dax-btn-ghost text-xs py-1 px-2" @click="verDetalle(v)">
                   <i class="fas fa-eye"></i>
                 </button>
+                <button x-show="v.estatus==='cotizacion'" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
+                  <i class="fas fa-file-invoice"></i>
+                </button>
               </td>
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="6" class="text-center text-slate-500 py-12 text-sm">
+            <td colspan="7" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-route text-2xl mb-2 block opacity-30"></i>
               Sin registros encontrados
             </td>
@@ -90,7 +110,7 @@ function seguimiento() {
   return {
     loading: true,
     todos: [], filtrados: [],
-    q: '', filtroEstatus: '',
+    q: '', filtroEstatus: '', filtroVigencia: '',
 
     async init() {
       try {
@@ -105,8 +125,57 @@ function seguimiento() {
       this.filtrados = this.todos.filter(v => {
         const matchQ = !q || (v.folio||'').toLowerCase().includes(q) || (v.cliente||'').toLowerCase().includes(q);
         const matchE = !this.filtroEstatus || v.estatus === this.filtroEstatus;
-        return matchQ && matchE;
+        const diasRestantes = Number(v.dias_restantes);
+        const matchV = !this.filtroVigencia
+          || (this.filtroVigencia==='vencidas' && v.esta_vencida)
+          || (this.filtroVigencia==='por_vencer' && v.estatus === 'cotizacion' && !v.esta_vencida && diasRestantes >= 0 && diasRestantes <= 3)
+          || (this.filtroVigencia==='vigentes' && v.estatus === 'cotizacion' && !v.esta_vencida && diasRestantes > 3);
+        return matchQ && matchE && matchV;
       });
+    },
+
+    moneyLabel(v) {
+      const symbol = v.moneda === 'USD' ? 'US$' : '$';
+      return symbol + parseFloat(v.total).toLocaleString('en-US',{minimumFractionDigits:2});
+    },
+
+    seguimientoLabel(v) {
+      if (v.estatus !== 'cotizacion') return 'Venta cerrada';
+      if (v.esta_vencida) return `Venció hace ${Math.abs(Number(v.dias_restantes))} día(s)`;
+      return `Edad ${Number(v.edad_dias || 0)} día(s)`;
+    },
+
+    seguimientoBadge(v) {
+      if (v.estatus !== 'cotizacion') return 'Sin seguimiento pendiente';
+      const diasRestantes = Number(v.dias_restantes);
+      if (v.esta_vencida) return 'Vencida';
+      if (diasRestantes <= 3) return `Vence en ${diasRestantes} día(s)`;
+      return `Vigente (${diasRestantes} día(s))`;
+    },
+
+    seguimientoClass(v) {
+      if (v.estatus !== 'cotizacion') return 'text-slate-500';
+      const diasRestantes = Number(v.dias_restantes);
+      if (v.esta_vencida) return 'text-red-400';
+      if (diasRestantes <= 3) return 'text-amber-400';
+      return 'text-emerald-400';
+    },
+
+    async verBorradorCompra(v) {
+      try {
+        const res = await fetch(`/api/compras/cotizacion/${v.id}/borrador`, { credentials:'include' });
+        if (!res.ok) {
+          const err = await res.json();
+          return alert(err.detail || 'No se pudo generar el borrador');
+        }
+        const data = await res.json();
+        const lineas = data.detalles.map(item =>
+          `${item.sku} | ${item.nombre} | ${item.cantidad} x ${item.moneda}${parseFloat(item.costo_unitario).toFixed(2)}`
+        ).join('\n');
+        alert(`Borrador OC desde ${data.cotizacion.folio}\n\n${lineas}\n\nTotal estimado: ${data.moneda}${parseFloat(data.total_estimado).toFixed(2)}`);
+      } catch(e) {
+        console.warn(e);
+      }
     },
 
     verDetalle(v) { alert('Detalle: ' + v.folio); }

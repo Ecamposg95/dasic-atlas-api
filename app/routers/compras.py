@@ -198,6 +198,58 @@ def listar_historial_compras(limit: int = 50, db: Session = Depends(get_db)):
         })
     return resultado
 
+
+@router.get("/cotizacion/{quote_id}/borrador", dependencies=[Depends(allow_admin_asistente)])
+def borrador_orden_compra_desde_cotizacion(
+    quote_id: int,
+    db: Session = Depends(get_db),
+):
+    quote = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == quote_id).first()
+    if not quote:
+        raise HTTPException(404, "Cotización no encontrada")
+    if quote.estatus != models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Solo se puede generar borrador desde cotizaciones")
+
+    detalles = []
+    total_estimado = Decimal("0")
+    symbol = "US$" if quote.moneda == "USD" else "$"
+
+    for item in quote.detalles:
+        producto = item.producto
+        costo_unitario = Decimal(producto.costo_compra or 0)
+        if (producto.moneda_compra or "MXN").upper() != quote.moneda:
+            if quote.moneda == "USD":
+                costo_unitario = costo_unitario / Decimal(quote.tipo_cambio or 1)
+            else:
+                costo_unitario = costo_unitario * Decimal(quote.tipo_cambio or 1)
+
+        importe = (costo_unitario * item.cantidad).quantize(Decimal("0.01"))
+        total_estimado += importe
+        detalles.append(
+            {
+                "producto_id": producto.id,
+                "sku": producto.sku_comercial or producto.sku,
+                "nombre": producto.nombre,
+                "cantidad": item.cantidad,
+                "costo_unitario": costo_unitario.quantize(Decimal("0.01")),
+                "importe": importe,
+                "moneda": symbol,
+            }
+        )
+
+    return {
+        "cotizacion": {
+            "id": quote.id,
+            "folio": quote.folio,
+            "cliente": quote.cliente.nombre_empresa,
+            "observaciones": quote.observaciones,
+        },
+        "moneda": symbol,
+        "total_estimado": total_estimado.quantize(Decimal("0.01")),
+        "detalles": detalles,
+        "nota": "Borrador de orden de compra. No genera stock ni cuentas por pagar.",
+    }
+
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
 def registrar_compra(compra: CompraInput, db: Session = Depends(get_db)):
     proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == compra.proveedor_id).first()
