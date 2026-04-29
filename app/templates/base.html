@@ -28,8 +28,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Alpine.js + collapse plugin (deferred; plugin must load BEFORE core) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine.js (deferred) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
@@ -93,21 +92,6 @@
         font-feature-settings: "tnum", "ss01";
       }
 
-      .sidebar-group { @apply mt-3; }
-      .sidebar-group:first-of-type { @apply mt-1; }
-      .sidebar-group:not(:first-of-type) {
-        border-top: 1px solid var(--sidebar-rule);
-        padding-top: 12px;
-      }
-
-      .sidebar-group-header {
-        @apply w-full flex items-center justify-between rounded-md px-2.5 py-2
-               text-[10px] font-bold uppercase tracking-[0.28em] text-white/45
-               hover:text-white/75 hover:bg-white/5 transition-colors;
-      }
-      .sidebar-group-chevron { @apply text-[9px] transition-transform duration-200 text-white/30; }
-      .sidebar-group-items { @apply mt-1 mb-1 space-y-1; }
-
       .sidebar-item {
         @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5
                text-[13.5px] font-medium text-slate-300 transition-all duration-150 hover:text-white;
@@ -160,12 +144,9 @@
         searchOpen: false,
         sidebarMobile: false,
         mode: (function(){ const s = localStorage.getItem('dasic_sidebar_mode'); return s === 'collapsed' ? 'expanded' : (s || 'expanded'); })(),
-        groups: JSON.parse(localStorage.getItem('dasic_sidebar_groups') || 'null'),
         setMode(m) { this.mode = m; localStorage.setItem('dasic_sidebar_mode', m); document.body.dataset.sidebar = m; },
         hide() { this.setMode('hidden'); },
-        show() { this.setMode('expanded'); },
-        isGroupOpen(key) { if (this.groups && key in this.groups) return this.groups[key]; return true; },
-        toggleGroup(key) { const next = Object.assign({}, this.groups || {}); next[key] = !this.isGroupOpen(key); this.groups = next; localStorage.setItem('dasic_sidebar_groups', JSON.stringify(next)); }
+        show() { this.setMode('expanded'); }
       }"
       x-init="document.body.dataset.sidebar = mode"
       :data-sidebar="mode"
@@ -226,99 +207,43 @@
     </div>
 
     <!-- Nav -->
-    <nav class="flex-1 min-h-0 overflow-y-auto px-3 mt-2">
-
-      <!-- RESUMEN -->
-      <div class="sidebar-group">
-        <button class="sidebar-group-header" @click="toggleGroup('resumen')">
-          <span>Resumen</span>
-          <i class="fas fa-chevron-down sidebar-group-chevron"
-             :class="isGroupOpen('resumen') ? 'rotate-0' : '-rotate-90'"></i>
-        </button>
-        <div x-show="isGroupOpen('resumen')" x-collapse class="sidebar-group-items">
-          <a href="/dashboard" class="sidebar-item {% if _path == '/dashboard' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-chart-line text-[12px]"></i></span>
-            <span>Dashboard</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- CRM -->
-      <div class="sidebar-group">
-        <button class="sidebar-group-header" @click="toggleGroup('crm')">
-          <span>CRM</span>
-          <i class="fas fa-chevron-down sidebar-group-chevron"
-             :class="isGroupOpen('crm') ? 'rotate-0' : '-rotate-90'"></i>
-        </button>
-        <div x-show="isGroupOpen('crm')" x-collapse class="sidebar-group-items">
-          <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-users text-[12px]"></i></span>
-            <span>Clientes</span>
-          </a>
-          <a href="/ventas/cotizador" class="sidebar-item {% if '/cotizador' in _path %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-cash-register text-[12px]"></i></span>
-            <span>Cotizador</span>
-          </a>
-          <a href="/seguimiento" class="sidebar-item {% if _path == '/seguimiento' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-route text-[12px]"></i></span>
-            <span>Seguimiento</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- OPERACIÓN -->
-      <div class="sidebar-group">
-        <button class="sidebar-group-header" @click="toggleGroup('operacion')">
-          <span>Operación</span>
-          <i class="fas fa-chevron-down sidebar-group-chevron"
-             :class="isGroupOpen('operacion') ? 'rotate-0' : '-rotate-90'"></i>
-        </button>
-        <div x-show="isGroupOpen('operacion')" x-collapse class="sidebar-group-items">
-          <a href="/inventario" class="sidebar-item {% if _path == '/inventario' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-boxes-stacked text-[12px]"></i></span>
-            <span>Inventario</span>
-          </a>
-          <a href="/compras" class="sidebar-item {% if _path == '/compras' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-truck text-[12px]"></i></span>
-            <span>Compras</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- REPORTES -->
-      <div class="sidebar-group">
-        <button class="sidebar-group-header" @click="toggleGroup('reportes')">
-          <span>Reportes</span>
-          <i class="fas fa-chevron-down sidebar-group-chevron"
-             :class="isGroupOpen('reportes') ? 'rotate-0' : '-rotate-90'"></i>
-        </button>
-        <div x-show="isGroupOpen('reportes')" x-collapse class="sidebar-group-items">
-          <a href="/reportes" class="sidebar-item {% if _path == '/reportes' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-chart-pie text-[12px]"></i></span>
-            <span>Reportes</span>
-          </a>
-          <a href="/gastos" class="sidebar-item {% if _path == '/gastos' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-file-invoice-dollar text-[12px]"></i></span>
-            <span>Gastos</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- SISTEMA -->
-      <div class="sidebar-group">
-        <button class="sidebar-group-header" @click="toggleGroup('sistema')">
-          <span>Sistema</span>
-          <i class="fas fa-chevron-down sidebar-group-chevron"
-             :class="isGroupOpen('sistema') ? 'rotate-0' : '-rotate-90'"></i>
-        </button>
-        <div x-show="isGroupOpen('sistema')" x-collapse class="sidebar-group-items">
-          <a href="/usuarios" class="sidebar-item {% if _path == '/usuarios' %}is-active{% endif %}">
-            <span class="sidebar-item-icon"><i class="fas fa-user-shield text-[12px]"></i></span>
-            <span>Usuarios</span>
-          </a>
-        </div>
-      </div>
-
+    <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1">
+      <a href="/dashboard" class="sidebar-item {% if _path == '/dashboard' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-chart-line text-[12px]"></i></span>
+        <span>Dashboard</span>
+      </a>
+      <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-users text-[12px]"></i></span>
+        <span>Clientes</span>
+      </a>
+      <a href="/ventas/cotizador" class="sidebar-item {% if '/cotizador' in _path %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-cash-register text-[12px]"></i></span>
+        <span>Cotizador</span>
+      </a>
+      <a href="/seguimiento" class="sidebar-item {% if _path == '/seguimiento' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-route text-[12px]"></i></span>
+        <span>Seguimiento</span>
+      </a>
+      <a href="/inventario" class="sidebar-item {% if _path == '/inventario' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-boxes-stacked text-[12px]"></i></span>
+        <span>Inventario</span>
+      </a>
+      <a href="/compras" class="sidebar-item {% if _path == '/compras' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-truck text-[12px]"></i></span>
+        <span>Compras</span>
+      </a>
+      <a href="/reportes" class="sidebar-item {% if _path == '/reportes' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-chart-pie text-[12px]"></i></span>
+        <span>Reportes</span>
+      </a>
+      <a href="/gastos" class="sidebar-item {% if _path == '/gastos' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-file-invoice-dollar text-[12px]"></i></span>
+        <span>Gastos</span>
+      </a>
+      <a href="/usuarios" class="sidebar-item {% if _path == '/usuarios' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-user-shield text-[12px]"></i></span>
+        <span>Usuarios</span>
+      </a>
     </nav>
 
     <!-- Footer usuario -->
