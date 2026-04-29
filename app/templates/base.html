@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}DASIC ERP{% endblock %} — DASIC ERP</title>
 
-    <!-- Tailwind CSS (compiled) -->
-    <link rel="stylesheet" href="/static/css/app.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Outfit', 'Inter', 'sans-serif'] },
+            colors: {
+              dasic: { navy:'#001e62', cyan:'#00d4e0' }
+            }
+          }
+        }
+      }
+    </script>
 
     <!-- Tipografía moderna -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +30,124 @@
 
     <!-- Alpine.js (deferred) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style type="text/tailwindcss">
+      :root {
+        --sidebar-width: 268px;
+        --sidebar-bg: #0a1429;
+        --sidebar-bg-bottom: #050a1a;
+        --sidebar-text: #cbd5e1;
+        --sidebar-text-dim: #64748b;
+        --sidebar-rule: rgba(255,255,255,0.06);
+        --sidebar-rule-strong: rgba(255,255,255,0.10);
+        --sidebar-active-bg: rgba(0, 212, 224, 0.08);
+        --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+        --sidebar-accent-glow: #00d4e0;
+        --sidebar-accent-deep: #2563eb;
+        --header-h:  64px;
+        --footer-h:  36px;
+      }
+
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+
+      .dax-card { @apply bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg; }
+      .dax-input {
+        @apply w-full bg-slate-700/50 border border-slate-600 text-slate-100
+               placeholder-slate-400 rounded-lg px-3 py-2 text-sm
+               focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40
+               transition duration-200;
+      }
+      .dax-btn-primary {
+        @apply inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400
+               text-slate-900 font-semibold text-sm px-4 py-2 rounded-lg
+               transition-all duration-200 shadow-md hover:shadow-cyan-500/30 active:scale-95;
+      }
+      .dax-btn-ghost {
+        @apply inline-flex items-center gap-2 text-slate-400 hover:text-slate-100
+               text-sm px-3 py-2 rounded-lg hover:bg-slate-700/60 transition-all duration-200;
+      }
+      .dax-badge-green { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-500/15 text-emerald-400; }
+      .dax-badge-amber { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-500/15 text-amber-400; }
+      .dax-badge-red   { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-red-500/15 text-red-400; }
+      .dax-badge-slate { @apply text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-600/50 text-slate-300; }
+
+      .kpi-card { @apply dax-card p-5 flex items-center justify-between hover:border-slate-600 transition-colors duration-200; }
+
+      .dax-table { @apply w-full text-sm text-left; }
+      .dax-table thead tr { @apply border-b border-slate-700; }
+      .dax-table thead th { @apply px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider; }
+      .dax-table tbody tr { @apply border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors; }
+      .dax-table tbody td { @apply px-4 py-3 text-slate-300; }
+
+      @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      .fade-in { animation: fadeIn .3s ease both; }
+
+      /* ── SIDEBAR ─────────────────────────────────────────── */
+      .sidebar-shell {
+        background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-bottom) 100%);
+        transition: transform 0.25s ease;
+        font-feature-settings: "tnum", "ss01";
+      }
+
+      .sidebar-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border-radius: 0.5rem;
+        padding: 0.625rem 0.75rem;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: rgb(203 213 225);
+        transition: all .15s ease;
+      }
+      .sidebar-item:hover { color: #ffffff; }
+      .sidebar-item:hover { background: var(--sidebar-hover-bg); }
+      .sidebar-item.is-active {
+        background: var(--sidebar-active-bg);
+        color: #ffffff;
+        font-weight: 600;
+      }
+      .sidebar-item.is-active::before {
+        content: ""; position: absolute; left: -6px; top: 6px; bottom: 6px;
+        width: 4px; border-radius: 9999px;
+        background: linear-gradient(180deg, var(--sidebar-accent-glow), #22d3ee);
+        box-shadow: 0 0 12px rgba(0, 212, 224, 0.4);
+      }
+      .sidebar-item-icon {
+        display: flex;
+        height: 2rem;
+        width: 2rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.375rem;
+        color: rgb(148 163 184);
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.04);
+        transition: color .15s ease, background .15s ease;
+      }
+      .sidebar-item:hover .sidebar-item-icon {
+        color: #ffffff;
+        background: rgba(255,255,255,0.06);
+      }
+      .sidebar-item.is-active .sidebar-item-icon {
+        color: var(--sidebar-accent-glow);
+        background: rgba(0, 212, 224, 0.10);
+        border-color: rgba(0, 212, 224, 0.30);
+        box-shadow: inset 0 0 0 1px rgba(0, 212, 224, 0.25);
+      }
+
+      /* Layout principal */
+      .main-shell { margin-left: 0; transition: margin-left 0.22s ease; }
+      @media (min-width: 1024px) {
+        body[data-sidebar="expanded"] .main-shell { margin-left: var(--sidebar-width); }
+        body[data-sidebar="hidden"]   .main-shell { margin-left: 0; }
+      }
+    </style>
 
     {% block extra_head %}{% endblock %}
 </head>
