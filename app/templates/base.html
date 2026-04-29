@@ -410,24 +410,26 @@
       <div class="md:hidden flex-1"></div>
 
       <!-- Search icono (mobile) -->
-      <button @click="searchOpen = true"
+      <button type="button" @click="searchOpen = true"
               class="md:hidden h-9 w-9 flex items-center justify-center rounded-md
                      text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
-              title="Buscar (⌘K)">
+              title="Buscar (⌘K)" aria-label="Buscar">
         <i class="fas fa-magnifying-glass text-base"></i>
       </button>
 
       <!-- Inbox -->
-      <button class="relative h-9 w-9 flex items-center justify-center rounded-md
+      <button type="button"
+              class="relative h-9 w-9 flex items-center justify-center rounded-md
                      text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
-              title="Inbox">
+              title="Inbox" aria-label="Inbox">
         <i class="fas fa-inbox text-base"></i>
       </button>
 
       <!-- Notifications -->
-      <button class="relative h-9 w-9 flex items-center justify-center rounded-md
+      <button type="button"
+              class="relative h-9 w-9 flex items-center justify-center rounded-md
                      text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
-              title="Notifications">
+              title="Notifications" aria-label="Notifications">
         <i class="fas fa-bell text-base"></i>
       </button>
 
