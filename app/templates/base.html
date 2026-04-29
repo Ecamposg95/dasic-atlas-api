@@ -201,14 +201,20 @@
          style="width: var(--sidebar-width)">
 
     <!-- Header marca -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-4 border-b border-white/10">
+    <div class="flex h-16 shrink-0 items-center justify-between px-4 border-b" style="border-color: var(--sidebar-rule)">
       <div class="flex items-center gap-3">
-        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/30">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/10 ring-1 ring-cyan-400/30">
           <i class="fas fa-layer-group text-cyan-400 text-base"></i>
         </div>
         <div>
-          <p class="text-[15px] font-bold tracking-wide text-white leading-none">DASIC</p>
-          <p class="text-[9px] text-cyan-300/80 uppercase tracking-[0.18em] font-semibold mt-1">Industrial ERP</p>
+          <div class="flex items-center gap-2">
+            <p class="text-[14px] font-bold tracking-[0.06em] text-white leading-none">DASIC</p>
+            <span class="relative flex h-1.5 w-1.5" title="Operational">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            </span>
+          </div>
+          <p class="text-[8.5px] text-cyan-300/70 uppercase tracking-[0.28em] font-bold mt-1">Industrial · OPS</p>
         </div>
       </div>
       <button @click="sidebarMobile = false"
@@ -217,25 +223,6 @@
               title="Cerrar">
         <i class="fas fa-xmark text-sm"></i>
       </button>
-    </div>
-
-    <!-- Quick Search + badges -->
-    <div class="px-3 pt-3 space-y-1 shrink-0">
-      <div class="quick-row" @click="searchOpen = true">
-        <span class="quick-icon"><i class="fas fa-magnifying-glass text-[12px]"></i></span>
-        <span>Quick search</span>
-        <span class="ml-auto text-[10px] font-mono text-slate-400/70 px-1.5 py-0.5 rounded bg-white/5">⌘K</span>
-      </div>
-      <div class="quick-row">
-        <span class="quick-icon"><i class="fas fa-inbox text-[12px]"></i></span>
-        <span>Inbox</span>
-        <span class="quick-badge">0</span>
-      </div>
-      <div class="quick-row">
-        <span class="quick-icon"><i class="fas fa-bell text-[12px]"></i></span>
-        <span>Notifications</span>
-        <span class="quick-badge">0</span>
-      </div>
     </div>
 
     <!-- Nav -->
@@ -335,39 +322,43 @@
     </nav>
 
     <!-- Footer usuario -->
-    <div class="shrink-0 border-t border-white/10 px-3 py-3">
-      <div class="rounded-xl border border-white/8 bg-white/5 p-2.5 flex items-center gap-2.5">
-        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                    bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold text-xs
-                    ring-2 ring-white/10">
+    <div class="shrink-0 border-t px-3 py-3" style="border-color: var(--sidebar-rule)">
+      <div class="rounded-lg p-3 flex items-start gap-3"
+           style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05)">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md
+                    bg-gradient-to-br from-cyan-500 to-blue-600 text-white
+                    font-bold text-[13px] tracking-tight">
           {{ (current_user.nombre[0] | upper) if current_user else "U" }}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[12.5px] font-semibold text-white leading-tight">
+          <p class="truncate text-[11.5px] font-bold uppercase tracking-[0.08em] text-white leading-tight">
             {{ current_user.nombre if current_user else "Usuario" }}
           </p>
-          <span class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-            <span class="relative flex h-1.5 w-1.5">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            </span>
-            En línea
-          </span>
+          <p class="text-[9px] uppercase tracking-[0.18em] text-slate-500 mt-0.5 truncate">
+            {% if current_user and current_user.rol %}{{ current_user.rol.value }}{% else %}—{% endif %}
+          </p>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-[9px] uppercase tracking-[0.2em] text-emerald-400 font-bold">Online</span>
+            <span class="text-[9px] text-slate-600 ml-auto font-mono">v2.0</span>
+          </div>
         </div>
-        <button @click="hide()"
-                class="hidden lg:flex h-7 w-7 items-center justify-center rounded-md
-                       text-slate-400 hover:text-slate-100 hover:bg-white/5 transition"
-                title="Ocultar sidebar (Ctrl+\)">
-          <i class="fas fa-eye-slash text-xs"></i>
-        </button>
-        <form action="/api/auth/logout" method="post" class="shrink-0">
-          <button type="submit"
-                  class="flex h-7 w-7 items-center justify-center rounded-md
-                         text-slate-400 hover:text-red-400 hover:bg-red-500/10
-                         transition-all duration-200" title="Cerrar sesión">
-            <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+        <div class="flex flex-col gap-1 shrink-0">
+          <button @click="hide()"
+                  class="hidden lg:flex h-6 w-6 items-center justify-center rounded
+                         text-slate-500 hover:text-slate-200 hover:bg-white/5 transition"
+                  title="Ocultar sidebar (Ctrl+\)">
+            <i class="fas fa-eye-slash text-[10px]"></i>
           </button>
-        </form>
+          <form action="/api/auth/logout" method="post">
+            <button type="submit"
+                    class="flex h-6 w-6 items-center justify-center rounded
+                           text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
+                    title="Cerrar sesión">
+              <i class="fas fa-arrow-right-from-bracket text-[10px]"></i>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
 
