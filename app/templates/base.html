@@ -34,22 +34,25 @@
 
     <style>
       :root {
-        --sidebar-width: 256px;
-        --sidebar-bg: #0d1b3e;
-        --sidebar-bg-bottom: #050d22;
-        --sidebar-text: #ffffff;
-        --sidebar-active-bg: rgba(255,255,255,0.10);
-        --sidebar-hover-bg: rgba(255,255,255,0.06);
-        --sidebar-accent: #2563eb;
+        --sidebar-width: 268px;
+        --sidebar-bg: #0a1429;
+        --sidebar-bg-bottom: #050a1a;
+        --sidebar-text: #cbd5e1;
+        --sidebar-text-dim: #64748b;
+        --sidebar-rule: rgba(255,255,255,0.06);
+        --sidebar-rule-strong: rgba(255,255,255,0.10);
+        --sidebar-active-bg: rgba(0, 212, 224, 0.08);
+        --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
         --sidebar-accent-glow: #00d4e0;
+        --sidebar-accent-deep: #2563eb;
         --header-h:  64px;
         --footer-h:  36px;
       }
 
-      ::-webkit-scrollbar { width: 5px; height: 5px; }
-      ::-webkit-scrollbar-track { background: #0f172a; }
-      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
-      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 
       .dax-card { @apply bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg; }
       .dax-input {
@@ -87,51 +90,55 @@
       .sidebar-shell {
         background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-bottom) 100%);
         transition: transform 0.25s ease;
+        font-feature-settings: "tnum", "ss01";
       }
 
-      .sidebar-group { @apply mt-1; }
-      .sidebar-group-header {
-        @apply w-full flex items-center justify-between rounded-md px-2.5 py-1.5
-               text-[9px] font-bold uppercase tracking-[0.24em] text-white/50
-               hover:text-white/80 hover:bg-white/5 transition-colors;
+      .sidebar-group { @apply mt-3; }
+      .sidebar-group:first-of-type { @apply mt-1; }
+      .sidebar-group:not(:first-of-type) {
+        border-top: 1px solid var(--sidebar-rule);
+        padding-top: 12px;
       }
-      .sidebar-group-chevron { @apply text-[9px] transition-transform duration-200; }
-      .sidebar-group-items { @apply mt-0.5 mb-2 space-y-0.5; }
+
+      .sidebar-group-header {
+        @apply w-full flex items-center justify-between rounded-md px-2.5 py-2
+               text-[10px] font-bold uppercase tracking-[0.28em] text-white/45
+               hover:text-white/75 hover:bg-white/5 transition-colors;
+      }
+      .sidebar-group-chevron { @apply text-[9px] transition-transform duration-200 text-white/30; }
+      .sidebar-group-items { @apply mt-1 mb-1 space-y-1; }
 
       .sidebar-item {
-        @apply relative flex items-center gap-3 rounded-lg px-3 py-2
-               text-[13px] font-medium text-slate-300/80 transition-all duration-150 hover:text-white;
+        @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5
+               text-[13.5px] font-medium text-slate-300 transition-all duration-150 hover:text-white;
       }
       .sidebar-item:hover { background: var(--sidebar-hover-bg); }
-      .sidebar-item.is-active { background: var(--sidebar-active-bg); color: #fff; font-weight: 600; }
+      .sidebar-item.is-active {
+        background: var(--sidebar-active-bg);
+        color: #ffffff;
+        font-weight: 600;
+      }
       .sidebar-item.is-active::before {
-        content: ""; position: absolute; left: -6px; top: 8px; bottom: 8px;
-        width: 3px; border-radius: 9999px;
+        content: ""; position: absolute; left: -6px; top: 6px; bottom: 6px;
+        width: 4px; border-radius: 9999px;
         background: linear-gradient(180deg, var(--sidebar-accent-glow), #22d3ee);
+        box-shadow: 0 0 12px rgba(0, 212, 224, 0.4);
       }
       .sidebar-item-icon {
-        @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-300/70 transition-colors duration-150;
-        background: rgba(0,0,0,0.18);
+        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+               text-slate-400 transition-colors duration-150;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.04);
       }
-      .sidebar-item:hover .sidebar-item-icon { color: #fff; background: rgba(255,255,255,0.08); }
+      .sidebar-item:hover .sidebar-item-icon {
+        color: #ffffff;
+        background: rgba(255,255,255,0.06);
+      }
       .sidebar-item.is-active .sidebar-item-icon {
         color: var(--sidebar-accent-glow);
-        background: rgba(0, 212, 224, 0.12);
+        background: rgba(0, 212, 224, 0.10);
+        border-color: rgba(0, 212, 224, 0.30);
         box-shadow: inset 0 0 0 1px rgba(0, 212, 224, 0.25);
-      }
-
-      .quick-row {
-        @apply flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer
-               text-[12.5px] text-slate-300/80 transition-colors duration-150
-               hover:bg-white/6 hover:text-white;
-      }
-      .quick-icon {
-        @apply flex h-7 w-7 items-center justify-center rounded-md text-slate-300/70;
-        background: rgba(0,0,0,0.18);
-      }
-      .quick-badge {
-        @apply ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full
-               bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-400/20 min-w-[22px] text-center;
       }
 
       /* Layout principal */
@@ -194,14 +201,20 @@
          style="width: var(--sidebar-width)">
 
     <!-- Header marca -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-4 border-b border-white/10">
+    <div class="flex h-16 shrink-0 items-center justify-between px-4 border-b" style="border-color: var(--sidebar-rule)">
       <div class="flex items-center gap-3">
-        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 ring-1 ring-cyan-400/30">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/10 ring-1 ring-cyan-400/30">
           <i class="fas fa-layer-group text-cyan-400 text-base"></i>
         </div>
         <div>
-          <p class="text-[15px] font-bold tracking-wide text-white leading-none">DASIC</p>
-          <p class="text-[9px] text-cyan-300/80 uppercase tracking-[0.18em] font-semibold mt-1">Industrial ERP</p>
+          <div class="flex items-center gap-2">
+            <p class="text-[14px] font-bold tracking-[0.06em] text-white leading-none">DASIC</p>
+            <span class="relative flex h-1.5 w-1.5" title="Operational">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            </span>
+          </div>
+          <p class="text-[8.5px] text-cyan-300/70 uppercase tracking-[0.28em] font-bold mt-1">Industrial · OPS</p>
         </div>
       </div>
       <button @click="sidebarMobile = false"
@@ -210,25 +223,6 @@
               title="Cerrar">
         <i class="fas fa-xmark text-sm"></i>
       </button>
-    </div>
-
-    <!-- Quick Search + badges -->
-    <div class="px-3 pt-3 space-y-1 shrink-0">
-      <div class="quick-row" @click="searchOpen = true">
-        <span class="quick-icon"><i class="fas fa-magnifying-glass text-[12px]"></i></span>
-        <span>Quick search</span>
-        <span class="ml-auto text-[10px] font-mono text-slate-400/70 px-1.5 py-0.5 rounded bg-white/5">⌘K</span>
-      </div>
-      <div class="quick-row">
-        <span class="quick-icon"><i class="fas fa-inbox text-[12px]"></i></span>
-        <span>Inbox</span>
-        <span class="quick-badge">0</span>
-      </div>
-      <div class="quick-row">
-        <span class="quick-icon"><i class="fas fa-bell text-[12px]"></i></span>
-        <span>Notifications</span>
-        <span class="quick-badge">0</span>
-      </div>
     </div>
 
     <!-- Nav -->
@@ -328,39 +322,43 @@
     </nav>
 
     <!-- Footer usuario -->
-    <div class="shrink-0 border-t border-white/10 px-3 py-3">
-      <div class="rounded-xl border border-white/8 bg-white/5 p-2.5 flex items-center gap-2.5">
-        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                    bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold text-xs
-                    ring-2 ring-white/10">
+    <div class="shrink-0 border-t px-3 py-3" style="border-color: var(--sidebar-rule)">
+      <div class="rounded-lg p-3 flex items-start gap-3"
+           style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05)">
+        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md
+                    bg-gradient-to-br from-cyan-500 to-blue-600 text-white
+                    font-bold text-[13px] tracking-tight">
           {{ (current_user.nombre[0] | upper) if current_user else "U" }}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-[12.5px] font-semibold text-white leading-tight">
+          <p class="truncate text-[11.5px] font-bold uppercase tracking-[0.08em] text-white leading-tight">
             {{ current_user.nombre if current_user else "Usuario" }}
           </p>
-          <span class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-            <span class="relative flex h-1.5 w-1.5">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            </span>
-            En línea
-          </span>
+          <p class="text-[9px] uppercase tracking-[0.18em] text-slate-500 mt-0.5 truncate">
+            {% if current_user and current_user.rol %}{{ current_user.rol.value }}{% else %}—{% endif %}
+          </p>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            <span class="text-[9px] uppercase tracking-[0.2em] text-emerald-400 font-bold">Online</span>
+            <span class="text-[9px] text-slate-600 ml-auto font-mono">v2.0</span>
+          </div>
         </div>
-        <button @click="hide()"
-                class="hidden lg:flex h-7 w-7 items-center justify-center rounded-md
-                       text-slate-400 hover:text-slate-100 hover:bg-white/5 transition"
-                title="Ocultar sidebar (Ctrl+\)">
-          <i class="fas fa-eye-slash text-xs"></i>
-        </button>
-        <form action="/api/auth/logout" method="post" class="shrink-0">
-          <button type="submit"
-                  class="flex h-7 w-7 items-center justify-center rounded-md
-                         text-slate-400 hover:text-red-400 hover:bg-red-500/10
-                         transition-all duration-200" title="Cerrar sesión">
-            <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+        <div class="flex flex-col gap-1 shrink-0">
+          <button @click="hide()"
+                  class="hidden lg:flex h-6 w-6 items-center justify-center rounded
+                         text-slate-500 hover:text-slate-200 hover:bg-white/5 transition"
+                  title="Ocultar sidebar (Ctrl+\)">
+            <i class="fas fa-eye-slash text-[10px]"></i>
           </button>
-        </form>
+          <form action="/api/auth/logout" method="post">
+            <button type="submit"
+                    class="flex h-6 w-6 items-center justify-center rounded
+                           text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
+                    title="Cerrar sesión">
+              <i class="fas fa-arrow-right-from-bracket text-[10px]"></i>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -372,8 +370,9 @@
   <div class="main-shell flex flex-col min-h-screen">
 
     <!-- HEADER -->
-    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between
-                   border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md px-4 sm:px-8 gap-3">
+    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center
+                   border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md
+                   px-4 sm:px-6 gap-3">
 
       <button @click="sidebarMobile = !sidebarMobile"
               class="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg
@@ -392,18 +391,54 @@
         <i class="fas fa-bars-staggered text-base"></i>
       </button>
 
-      <h1 class="text-lg font-bold text-slate-100 tracking-tight truncate flex-1">
+      <h1 class="text-[13px] font-semibold uppercase tracking-[0.18em] text-slate-300 truncate shrink-0">
         {% block page_title %}Panel{% endblock %}
       </h1>
 
-      <div class="flex items-center gap-3">
-        {% block header_actions %}{% endblock %}
+      <!-- Search bar inline (desktop) -->
+      <button @click="searchOpen = true"
+              class="hidden md:flex flex-1 max-w-2xl items-center gap-2 h-9 px-3
+                     bg-slate-800/60 border border-slate-700/60
+                     hover:border-slate-600 hover:bg-slate-800/80
+                     rounded-md text-left transition-colors">
+        <i class="fas fa-magnifying-glass text-[12px] text-slate-500"></i>
+        <span class="text-[12px] text-slate-400 flex-1">Buscar cotización, cliente, producto…</span>
+        <span class="text-[10px] font-mono text-slate-500 px-1.5 py-0.5 rounded bg-slate-700/50 border border-slate-600/40">⌘K</span>
+      </button>
 
-        <span class="hidden md:block text-xs font-mono text-slate-500"
-              x-data="{ t: '' }"
-              x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
-              x-text="t"></span>
-      </div>
+      <!-- Spacer para móvil cuando search es icono -->
+      <div class="md:hidden flex-1"></div>
+
+      <!-- Search icono (mobile) -->
+      <button type="button" @click="searchOpen = true"
+              class="md:hidden h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Buscar (⌘K)" aria-label="Buscar">
+        <i class="fas fa-magnifying-glass text-base"></i>
+      </button>
+
+      <!-- Inbox -->
+      <button type="button"
+              class="relative h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Inbox" aria-label="Inbox">
+        <i class="fas fa-inbox text-base"></i>
+      </button>
+
+      <!-- Notifications -->
+      <button type="button"
+              class="relative h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Notifications" aria-label="Notifications">
+        <i class="fas fa-bell text-base"></i>
+      </button>
+
+      {% block header_actions %}{% endblock %}
+
+      <span class="hidden md:block text-[11px] font-mono text-slate-500 tracking-wider shrink-0"
+            x-data="{ t: '' }"
+            x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
+            x-text="t"></span>
     </header>
 
     <main class="flex-1 p-4 sm:p-6 lg:p-8 fade-in">
