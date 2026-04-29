@@ -34,22 +34,25 @@
 
     <style>
       :root {
-        --sidebar-width: 256px;
-        --sidebar-bg: #0d1b3e;
-        --sidebar-bg-bottom: #050d22;
-        --sidebar-text: #ffffff;
-        --sidebar-active-bg: rgba(255,255,255,0.10);
-        --sidebar-hover-bg: rgba(255,255,255,0.06);
-        --sidebar-accent: #2563eb;
+        --sidebar-width: 268px;
+        --sidebar-bg: #0a1429;
+        --sidebar-bg-bottom: #050a1a;
+        --sidebar-text: #cbd5e1;
+        --sidebar-text-dim: #64748b;
+        --sidebar-rule: rgba(255,255,255,0.06);
+        --sidebar-rule-strong: rgba(255,255,255,0.10);
+        --sidebar-active-bg: rgba(0, 212, 224, 0.08);
+        --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
         --sidebar-accent-glow: #00d4e0;
+        --sidebar-accent-deep: #2563eb;
         --header-h:  64px;
         --footer-h:  36px;
       }
 
-      ::-webkit-scrollbar { width: 5px; height: 5px; }
-      ::-webkit-scrollbar-track { background: #0f172a; }
-      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
-      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 
       .dax-card { @apply bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg; }
       .dax-input {
@@ -87,51 +90,55 @@
       .sidebar-shell {
         background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-bottom) 100%);
         transition: transform 0.25s ease;
+        font-feature-settings: "tnum", "ss01";
       }
 
-      .sidebar-group { @apply mt-1; }
-      .sidebar-group-header {
-        @apply w-full flex items-center justify-between rounded-md px-2.5 py-1.5
-               text-[9px] font-bold uppercase tracking-[0.24em] text-white/50
-               hover:text-white/80 hover:bg-white/5 transition-colors;
+      .sidebar-group { @apply mt-3; }
+      .sidebar-group:first-of-type { @apply mt-1; }
+      .sidebar-group:not(:first-of-type) {
+        border-top: 1px solid var(--sidebar-rule);
+        padding-top: 12px;
       }
-      .sidebar-group-chevron { @apply text-[9px] transition-transform duration-200; }
-      .sidebar-group-items { @apply mt-0.5 mb-2 space-y-0.5; }
+
+      .sidebar-group-header {
+        @apply w-full flex items-center justify-between rounded-md px-2.5 py-2
+               text-[10px] font-bold uppercase tracking-[0.28em] text-white/45
+               hover:text-white/75 hover:bg-white/5 transition-colors;
+      }
+      .sidebar-group-chevron { @apply text-[9px] transition-transform duration-200 text-white/30; }
+      .sidebar-group-items { @apply mt-1 mb-1 space-y-1; }
 
       .sidebar-item {
-        @apply relative flex items-center gap-3 rounded-lg px-3 py-2
-               text-[13px] font-medium text-slate-300/80 transition-all duration-150 hover:text-white;
+        @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5
+               text-[13.5px] font-medium text-slate-300 transition-all duration-150 hover:text-white;
       }
       .sidebar-item:hover { background: var(--sidebar-hover-bg); }
-      .sidebar-item.is-active { background: var(--sidebar-active-bg); color: #fff; font-weight: 600; }
+      .sidebar-item.is-active {
+        background: var(--sidebar-active-bg);
+        color: #ffffff;
+        font-weight: 600;
+      }
       .sidebar-item.is-active::before {
-        content: ""; position: absolute; left: -6px; top: 8px; bottom: 8px;
-        width: 3px; border-radius: 9999px;
+        content: ""; position: absolute; left: -6px; top: 6px; bottom: 6px;
+        width: 4px; border-radius: 9999px;
         background: linear-gradient(180deg, var(--sidebar-accent-glow), #22d3ee);
+        box-shadow: 0 0 12px rgba(0, 212, 224, 0.4);
       }
       .sidebar-item-icon {
-        @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-300/70 transition-colors duration-150;
-        background: rgba(0,0,0,0.18);
+        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md
+               text-slate-400 transition-colors duration-150;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.04);
       }
-      .sidebar-item:hover .sidebar-item-icon { color: #fff; background: rgba(255,255,255,0.08); }
+      .sidebar-item:hover .sidebar-item-icon {
+        color: #ffffff;
+        background: rgba(255,255,255,0.06);
+      }
       .sidebar-item.is-active .sidebar-item-icon {
         color: var(--sidebar-accent-glow);
-        background: rgba(0, 212, 224, 0.12);
+        background: rgba(0, 212, 224, 0.10);
+        border-color: rgba(0, 212, 224, 0.30);
         box-shadow: inset 0 0 0 1px rgba(0, 212, 224, 0.25);
-      }
-
-      .quick-row {
-        @apply flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer
-               text-[12.5px] text-slate-300/80 transition-colors duration-150
-               hover:bg-white/6 hover:text-white;
-      }
-      .quick-icon {
-        @apply flex h-7 w-7 items-center justify-center rounded-md text-slate-300/70;
-        background: rgba(0,0,0,0.18);
-      }
-      .quick-badge {
-        @apply ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full
-               bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-400/20 min-w-[22px] text-center;
       }
 
       /* Layout principal */
