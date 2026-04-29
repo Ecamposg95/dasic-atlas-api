@@ -31,7 +31,7 @@
     <!-- Alpine.js (deferred) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <style>
+    <style type="text/tailwindcss">
       :root {
         --sidebar-width: 268px;
         --sidebar-bg: #0a1429;
@@ -93,9 +93,18 @@
       }
 
       .sidebar-item {
-        @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5
-               text-[13.5px] font-medium text-slate-300 transition-all duration-150 hover:text-white;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border-radius: 0.5rem;
+        padding: 0.625rem 0.75rem;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: rgb(203 213 225);
+        transition: all .15s ease;
       }
+      .sidebar-item:hover { color: #ffffff; }
       .sidebar-item:hover { background: var(--sidebar-hover-bg); }
       .sidebar-item.is-active {
         background: var(--sidebar-active-bg);
@@ -109,10 +118,17 @@
         box-shadow: 0 0 12px rgba(0, 212, 224, 0.4);
       }
       .sidebar-item-icon {
-        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-md
-               text-slate-400 transition-colors duration-150;
+        display: flex;
+        height: 2rem;
+        width: 2rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.375rem;
+        color: rgb(148 163 184);
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.04);
+        transition: color .15s ease, background .15s ease;
       }
       .sidebar-item:hover .sidebar-item-icon {
         color: #ffffff;
