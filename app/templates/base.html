@@ -370,8 +370,9 @@
   <div class="main-shell flex flex-col min-h-screen">
 
     <!-- HEADER -->
-    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between
-                   border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md px-4 sm:px-8 gap-3">
+    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center
+                   border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md
+                   px-4 sm:px-6 gap-3">
 
       <button @click="sidebarMobile = !sidebarMobile"
               class="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg
@@ -390,18 +391,52 @@
         <i class="fas fa-bars-staggered text-base"></i>
       </button>
 
-      <h1 class="text-lg font-bold text-slate-100 tracking-tight truncate flex-1">
+      <h1 class="text-[13px] font-semibold uppercase tracking-[0.18em] text-slate-300 truncate shrink-0">
         {% block page_title %}Panel{% endblock %}
       </h1>
 
-      <div class="flex items-center gap-3">
-        {% block header_actions %}{% endblock %}
+      <!-- Search bar inline (desktop) -->
+      <button @click="searchOpen = true"
+              class="hidden md:flex flex-1 max-w-2xl items-center gap-2 h-9 px-3
+                     bg-slate-800/60 border border-slate-700/60
+                     hover:border-slate-600 hover:bg-slate-800/80
+                     rounded-md text-left transition-colors">
+        <i class="fas fa-magnifying-glass text-[12px] text-slate-500"></i>
+        <span class="text-[12px] text-slate-400 flex-1">Buscar cotización, cliente, producto…</span>
+        <span class="text-[10px] font-mono text-slate-500 px-1.5 py-0.5 rounded bg-slate-700/50 border border-slate-600/40">⌘K</span>
+      </button>
 
-        <span class="hidden md:block text-xs font-mono text-slate-500"
-              x-data="{ t: '' }"
-              x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
-              x-text="t"></span>
-      </div>
+      <!-- Spacer para móvil cuando search es icono -->
+      <div class="md:hidden flex-1"></div>
+
+      <!-- Search icono (mobile) -->
+      <button @click="searchOpen = true"
+              class="md:hidden h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Buscar (⌘K)">
+        <i class="fas fa-magnifying-glass text-base"></i>
+      </button>
+
+      <!-- Inbox -->
+      <button class="relative h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Inbox">
+        <i class="fas fa-inbox text-base"></i>
+      </button>
+
+      <!-- Notifications -->
+      <button class="relative h-9 w-9 flex items-center justify-center rounded-md
+                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
+              title="Notifications">
+        <i class="fas fa-bell text-base"></i>
+      </button>
+
+      {% block header_actions %}{% endblock %}
+
+      <span class="hidden md:block text-[11px] font-mono text-slate-500 tracking-wider shrink-0"
+            x-data="{ t: '' }"
+            x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
+            x-text="t"></span>
     </header>
 
     <main class="flex-1 p-4 sm:p-6 lg:p-8 fade-in">
