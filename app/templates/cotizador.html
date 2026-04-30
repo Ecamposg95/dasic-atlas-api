@@ -740,8 +740,16 @@
   async function recargarTC() {
       try {
           const r = await fetch('/api/fx/refresh', { method:'POST', credentials:'include' });
-          if (r.ok) await cargarTC();
-      } catch (e) { console.warn('FX refresh:', e); }
+          if (r.ok) {
+              await cargarTC();
+              return;
+          }
+          // 403 / 502 / etc. — fallback silencioso al GET (sin re-fetch externo)
+          await cargarTC();
+      } catch (e) {
+          console.warn('FX refresh:', e);
+          await cargarTC();
+      }
   }
 
   function cerrarSugerirOC() {
