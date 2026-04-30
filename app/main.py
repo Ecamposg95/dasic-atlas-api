@@ -13,6 +13,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from jose import JWTError, jwt
 from sqlalchemy import text
 
@@ -50,6 +52,12 @@ app = FastAPI(
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+# ---------------------------------------------------------------------------
+# Proxy headers (Railway/Render/etc) — para que url_for genere https://
+# detrás del load balancer. Tomado de uvicorn (incluido por defecto).
+# ---------------------------------------------------------------------------
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # ---------------------------------------------------------------------------
 # CORS
