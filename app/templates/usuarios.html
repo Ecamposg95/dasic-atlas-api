@@ -54,9 +54,14 @@
                 <span class="dax-badge-slate" x-show="!u.activo">Inactivo</span>
               </td>
               <td class="text-right">
-                <button class="dax-btn-ghost text-xs py-1 px-2">
-                  <i class="fas fa-pen-to-square"></i>
-                </button>
+                <div class="inline-flex items-center gap-1">
+                  <button @click="abrirEdicion(u)" class="dax-btn-ghost text-xs py-1 px-2" title="Editar usuario">
+                    <i class="fas fa-pen-to-square"></i>
+                  </button>
+                  <button @click="abrirPassword(u)" class="dax-btn-ghost text-xs py-1 px-2 hover:text-amber-300" title="Cambiar contraseña">
+                    <i class="fas fa-key"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </template>
@@ -150,6 +155,96 @@
     </form>
   </div>
 </div>
+
+<!-- Modal Editar Usuario (datos básicos) -->
+<div id="modal-edit-usuario"
+     x-data="editUsuario()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @usuario-edit-open.window="abrir($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-md p-6" @click.outside="close()">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-base font-bold text-slate-200">Editar usuario</h2>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+    <form @submit.prevent="guardar()" class="space-y-4">
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase">Nombre</label>
+        <input type="text" x-model="form.nombre" class="dax-input" maxlength="100">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase">Email</label>
+        <input type="email" x-model="form.email" class="dax-input">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase">Rol</label>
+        <select x-model="form.rol" class="dax-input">
+          <option value="administrador">Administrador</option>
+          <option value="gerente_comercial">Gerente Comercial</option>
+          <option value="ventas">Ventas</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <input type="checkbox" x-model="form.activo" class="accent-cyan-500">
+        Activo
+      </label>
+      <div x-show="error" x-cloak class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2" x-text="error"></div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+        <button type="submit" class="dax-btn-primary" :disabled="saving">
+          <i class="fas fa-save text-xs mr-1"></i>
+          <span x-text="saving ? 'Guardando…' : 'Guardar'"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Cambiar Contraseña -->
+<div id="modal-password-usuario"
+     x-data="passwordUsuario()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @usuario-password-open.window="abrir($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-sm p-6" @click.outside="close()">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-slate-200">Cambiar contraseña</h2>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+    <p class="text-xs text-slate-500 mb-4" x-text="user ? user.nombre + ' · ' + user.email : ''"></p>
+    <form @submit.prevent="aplicar()" class="space-y-4">
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase">Nueva contraseña *</label>
+        <input :type="show ? 'text' : 'password'" x-model="form.password" autocomplete="new-password" minlength="6" required class="dax-input" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div>
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase">Confirmar *</label>
+        <input :type="show ? 'text' : 'password'" x-model="form.confirm" minlength="6" required class="dax-input">
+      </div>
+      <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <input type="checkbox" x-model="show" class="accent-cyan-500">
+        Mostrar
+      </label>
+      <div x-show="error" x-cloak class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2" x-text="error"></div>
+      <div x-show="ok" x-cloak class="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2">Contraseña actualizada.</div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+        <button type="submit" class="dax-btn-primary" :disabled="saving">
+          <i class="fas fa-key text-xs mr-1"></i>
+          <span x-text="saving ? 'Aplicando…' : 'Aplicar'"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -198,7 +293,13 @@ function usuarios() {
         if (res.ok) this.lista = await res.json();
       } catch(e) { console.warn(e); }
       finally { this.loading = false; }
-    }
+    },
+    abrirEdicion(u) {
+      window.dispatchEvent(new CustomEvent('usuario-edit-open', { detail: u }));
+    },
+    abrirPassword(u) {
+      window.dispatchEvent(new CustomEvent('usuario-password-open', { detail: u }));
+    },
   }
 }
 
@@ -276,6 +377,125 @@ function modalUsuario() {
         window.dispatchEvent(new CustomEvent('usuario-created'));
       } catch(e) {
         this.error = 'Error de red. Intenta de nuevo.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  }
+}
+
+function editUsuario() {
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: { id: null, nombre: '', email: '', rol: 'ventas', activo: true },
+    abrir(u) {
+      this.form = {
+        id: u.id,
+        nombre: u.nombre || '',
+        email: u.email || '',
+        rol: u.rol || 'ventas',
+        activo: !!u.activo,
+      };
+      this.error = '';
+      this.open = true;
+    },
+    close() { if (!this.saving) { this.open = false; this.error = ''; } },
+    async guardar() {
+      if (this.saving || !this.form.id) return;
+      this.error = '';
+      if (!this.form.nombre || this.form.nombre.trim().length < 2) {
+        this.error = 'Nombre con mínimo 2 caracteres.';
+        return;
+      }
+      this.saving = true;
+      try {
+        const res = await fetch(`/api/usuarios/${this.form.id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: this.form.nombre.trim(),
+            email: this.form.email.trim(),
+            rol: this.form.rol,
+            activo: !!this.form.activo,
+          }),
+        });
+        if (!res.ok) {
+          let msg = 'No se pudo actualizar.';
+          try {
+            const d = await res.json();
+            if (typeof d.detail === 'string') msg = d.detail;
+            else if (Array.isArray(d.detail)) msg = d.detail.map(x => x.msg || JSON.stringify(x)).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.open = false;
+        window.dispatchEvent(new CustomEvent('usuario-created'));
+      } catch(e) {
+        this.error = 'Error de red.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  }
+}
+
+function passwordUsuario() {
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    ok: false,
+    show: false,
+    user: null,
+    form: { password: '', confirm: '' },
+    abrir(u) {
+      this.user = u;
+      this.form = { password: '', confirm: '' };
+      this.error = '';
+      this.ok = false;
+      this.show = false;
+      this.open = true;
+    },
+    close() { if (!this.saving) { this.open = false; this.error = ''; this.ok = false; } },
+    async aplicar() {
+      if (this.saving || !this.user) return;
+      this.error = '';
+      this.ok = false;
+      if (!this.form.password || this.form.password.length < 6) {
+        this.error = 'Contraseña mínima de 6 caracteres.';
+        return;
+      }
+      if (this.form.password !== this.form.confirm) {
+        this.error = 'Las contraseñas no coinciden.';
+        return;
+      }
+      this.saving = true;
+      try {
+        const res = await fetch(`/api/usuarios/${this.user.id}/password`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: this.form.password }),
+        });
+        if (!res.ok) {
+          let msg = 'No se pudo actualizar la contraseña.';
+          try {
+            const d = await res.json();
+            if (typeof d.detail === 'string') msg = d.detail;
+            else if (Array.isArray(d.detail)) msg = d.detail.map(x => x.msg || JSON.stringify(x)).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.ok = true;
+        this.form = { password: '', confirm: '' };
+        setTimeout(() => { if (this.ok) this.close(); }, 1200);
+      } catch(e) {
+        this.error = 'Error de red.';
       } finally {
         this.saving = false;
       }
