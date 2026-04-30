@@ -18,6 +18,25 @@ from app.services.email_service import (
     smtp_configured,
 )
 from app.services.ai_service import sugerir_proximo_paso
+from app.services.stock_service import (
+    consumir_reservas_a_salida,
+    liberar_reservas_cotizacion,
+    reservar_para_cotizacion,
+    reservas_activas,
+)
+
+
+def _resolve_tipo_linea(item, producto: "models.Producto | None") -> str:
+    """Determina tipo_linea efectivo. Producto del catálogo marcado es_servicio
+    fuerza 'servicio'. Si no hay producto y hay descripcion_libre, default fantasma."""
+    raw = (getattr(item, "tipo_linea", None) or "").lower().strip() or "producto_catalogo"
+    if producto and producto.es_servicio:
+        return "servicio"
+    if raw == "servicio":
+        return "servicio"
+    if not producto and getattr(item, "descripcion_libre", None):
+        return "producto_fantasma" if raw not in ("servicio",) else "servicio"
+    return "producto_catalogo"
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
@@ -356,6 +375,7 @@ def crear_orden(
             subtotal = precio_final * item.cantidad
             total_orden += subtotal
 
+            tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
                 orden_id=nueva_orden.id,
                 producto_id=producto.id if producto else None,
@@ -367,8 +387,24 @@ def crear_orden(
                 precio_unitario=precio_final.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
                 descuento_aplicado=Decimal(item.descuento or 0),
-                subtotal=subtotal
+                subtotal=subtotal,
+                tipo_linea=tipo_linea,
+                proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
             ))
+
+            # Reserva inventario sólo si es producto del catálogo y la orden es cotización
+            if (
+                tipo_orden == models.EstatusOrden.COTIZACION
+                and producto is not None
+                and tipo_linea == "producto_catalogo"
+            ):
+                reservar_para_cotizacion(
+                    db,
+                    producto=producto,
+                    cantidad=item.cantidad,
+                    cotizacion_id=nueva_orden.id,
+                    usuario=current_user,
+                )
 
         nueva_orden.total = total_orden.quantize(Decimal("0.01"))
 
@@ -398,7 +434,8 @@ def crear_orden(
 def actualizar_orden(
     id: int,
     orden_update: schemas.OrdenVentaCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     orden = (
         db.query(models.OrdenVenta)
@@ -422,12 +459,20 @@ def actualizar_orden(
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
         orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS)
-        
+
+        # Liberar reservas previas antes de borrar y reinsertar detalles
+        liberar_reservas_cotizacion(
+            db,
+            cotizacion_id=orden.id,
+            motivo="re-edición de cotización",
+            usuario=current_user,
+        )
+
         # Borrar detalles viejos
         db.query(models.DetalleOrden).filter(
             models.DetalleOrden.orden_id == id,
         ).delete()
-        
+
         total_orden = Decimal(0)
 
         # Insertar nuevos
@@ -468,6 +513,7 @@ def actualizar_orden(
             subtotal = precio_final * item.cantidad
             total_orden += subtotal
 
+            tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
                 orden_id=orden.id,
                 producto_id=producto.id if producto else None,
@@ -479,8 +525,23 @@ def actualizar_orden(
                 precio_unitario=precio_final.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
                 descuento_aplicado=Decimal(item.descuento or 0),
-                subtotal=subtotal
+                subtotal=subtotal,
+                tipo_linea=tipo_linea,
+                proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
             ))
+
+            if (
+                producto is not None
+                and tipo_linea == "producto_catalogo"
+                and orden.estatus == models.EstatusOrden.COTIZACION
+            ):
+                reservar_para_cotizacion(
+                    db,
+                    producto=producto,
+                    cantidad=item.cantidad,
+                    cotizacion_id=orden.id,
+                    usuario=current_user,
+                )
 
         orden.total = total_orden.quantize(Decimal("0.01"))
         db.commit()
@@ -605,6 +666,7 @@ def listar_versiones(
 def convertir_cotizacion(
     id: int,
     db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     orden = (
         db.query(models.OrdenVenta)
@@ -617,13 +679,26 @@ def convertir_cotizacion(
         raise HTTPException(400, "Orden no válida para conversión")
 
     try:
-        # Descontar Stock — los productos fantasma (sin producto_id) no afectan inventario.
+        # Verificar disponible considerando reservas de OTRAS cotizaciones.
+        # Para cada línea de catálogo: stock_actual - reservas_de_otras_cotizaciones >= cantidad.
         for det in orden.detalles:
             if det.producto is None:
                 continue
-            if det.producto.stock_actual < det.cantidad:
-                raise HTTPException(400, f"Stock insuficiente para {det.producto.sku}")
-            det.producto.stock_actual -= det.cantidad
+            if det.tipo_linea == "servicio" or det.producto.es_servicio:
+                continue
+            propia = det.cantidad
+            reservado_total = reservas_activas(db, det.producto.id)
+            otras = max(reservado_total - propia, 0)
+            libre = (det.producto.stock_actual or 0) - otras
+            if libre < det.cantidad:
+                raise HTTPException(
+                    400,
+                    f"Stock insuficiente para {det.producto.sku} "
+                    f"(libre={libre}, requerido={det.cantidad})",
+                )
+
+        # Convertir reservas en salidas reales (descuenta stock_actual)
+        consumir_reservas_a_salida(db, cotizacion_id=orden.id, usuario=current_user)
 
         # Cambiar Estatus y Folio (formato real: C-YYMMNNN -> V-YYMMNNN; legacy: COT- -> VTA-)
         orden.estatus = models.EstatusOrden.PENDIENTE
@@ -985,3 +1060,31 @@ def listar_eventos(
         }
         for ev in eventos
     ]
+
+
+# --- 7. CANCELAR COTIZACIÓN (libera reservas) ---
+@router.post("/{id}/cancelar", dependencies=[Depends(allow_all_staff)])
+def cancelar_cotizacion(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    orden = (
+        db.query(models.OrdenVenta)
+        .filter(models.OrdenVenta.id == id)
+        .first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+    if orden.estatus != models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Sólo se cancelan cotizaciones abiertas")
+
+    liberadas = liberar_reservas_cotizacion(
+        db,
+        cotizacion_id=orden.id,
+        motivo="cancelación manual",
+        usuario=current_user,
+    )
+    orden.estatus = models.EstatusOrden.CANCELADA
+    db.commit()
+    return {"ok": True, "folio": orden.folio, "productos_liberados": liberadas}
