@@ -110,7 +110,9 @@
           <th>Producto / SKU</th>
           <th>Marca</th>
           <th class="text-center">Unidad</th>
-          <th class="text-right">Stock</th>
+          <th class="text-right">Físico</th>
+          <th class="text-right">Reservado</th>
+          <th class="text-right">Disponible</th>
           <th class="text-right">Mínimo</th>
           <th class="text-right">Costo</th>
           <th>Estatus</th>
@@ -120,14 +122,14 @@
       <tbody>
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
-            <tr><td colspan="8">
+            <tr><td colspan="10">
               <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
         </template>
         <template x-if="!loading">
           <template x-for="p in filtrados" :key="p.id">
-            <tr>
+            <tr class="cursor-pointer hover:bg-slate-700/30" @click="abrirSidePanel(p)">
               <td>
                 <p class="font-medium text-slate-200 text-xs" x-text="p.nombre"></p>
                 <p class="text-[10px] text-slate-500 font-mono" x-text="displaySku(p)"></p>
@@ -135,8 +137,12 @@
               <td class="text-xs text-slate-400" x-text="p.marca||'—'"></td>
               <td class="text-xs text-slate-400 text-center" x-text="p.unidad||'PZA'"></td>
               <td class="text-right font-mono font-bold text-xs"
-                  :class="p.stock_actual<=0 ? 'text-red-400' : p.stock_actual<=p.stock_minimo ? 'text-amber-400' : 'text-emerald-400'"
+                  :class="p.stock_actual<=0 ? 'text-red-400' : p.stock_actual<=p.stock_minimo ? 'text-amber-400' : 'text-slate-200'"
                   x-text="p.stock_actual"></td>
+              <td class="text-right font-mono text-xs text-amber-400" x-text="(disp[p.id]?.reservado || 0)"></td>
+              <td class="text-right font-mono font-bold text-xs"
+                  :class="(disp[p.id]?.disponible ?? p.stock_actual) <= 0 ? 'text-rose-400' : 'text-cyan-300'"
+                  x-text="(disp[p.id]?.disponible ?? p.stock_actual)"></td>
               <td class="text-right font-mono text-xs text-slate-500" x-text="p.stock_minimo"></td>
               <td class="text-right font-mono text-xs text-slate-300"
                   x-text="displayCosto(p)"></td>
@@ -145,7 +151,7 @@
                 <span class="dax-badge-amber" x-show="p.stock_actual>0 && p.stock_actual<=p.stock_minimo">Crítico</span>
                 <span class="dax-badge-green" x-show="p.stock_actual>p.stock_minimo">OK</span>
               </td>
-              <td class="text-right">
+              <td class="text-right" @click.stop>
                 <div class="inline-flex items-center gap-1">
                   <button @click="ajustarStock(p, -1)" :disabled="p.stock_actual<=0"
                           class="dax-btn-ghost py-1 px-2 disabled:opacity-30" title="−1 stock">
@@ -165,7 +171,7 @@
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="8" class="text-center text-slate-500 py-12 text-sm">
+            <td colspan="10" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-boxes-stacked text-2xl mb-2 block opacity-30"></i>
               Sin productos encontrados
             </td>
@@ -173,6 +179,113 @@
         </template>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Side-panel: Ficha + timeline movimientos                     -->
+<!-- ============================================================ -->
+<div id="side-panel-prod"
+     x-data
+     x-show="$store.invSide.open"
+     x-cloak
+     @keydown.escape.window="$store.invSide.open = false"
+     class="fixed inset-y-0 right-0 w-full max-w-md bg-slate-900 border-l border-slate-700 shadow-2xl z-40 overflow-y-auto custom-scroll">
+  <div class="p-5 space-y-4" x-data="sidePanel()" x-init="init()" @inv-side-open.window="onOpen($event.detail)">
+    <div class="flex justify-between items-start">
+      <div>
+        <h3 class="text-sm font-bold text-slate-200" x-text="prod?.nombre || '—'"></h3>
+        <p class="text-[10px] text-slate-500 font-mono" x-text="prod?.sku_comercial || prod?.sku || ''"></p>
+        <p class="text-[10px] text-slate-500" x-text="prod?.marca ? ('Marca: '+prod.marca) : ''"></p>
+      </div>
+      <button @click="$store.invSide.open = false" class="dax-btn-ghost p-1"><i class="fas fa-xmark"></i></button>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 text-center">
+      <div class="rounded bg-slate-800 p-2">
+        <p class="text-[9px] uppercase text-slate-500">Físico</p>
+        <p class="text-lg font-bold text-slate-200" x-text="d.stock_actual"></p>
+      </div>
+      <div class="rounded bg-amber-500/10 p-2">
+        <p class="text-[9px] uppercase text-amber-300">Reservado</p>
+        <p class="text-lg font-bold text-amber-200" x-text="d.reservado"></p>
+      </div>
+      <div class="rounded bg-cyan-500/10 p-2">
+        <p class="text-[9px] uppercase text-cyan-300">Disponible</p>
+        <p class="text-lg font-bold text-cyan-200" x-text="d.disponible"></p>
+      </div>
+    </div>
+
+    <div class="text-[11px] text-slate-400">
+      Proveedor principal: <span class="text-slate-200" x-text="proveedorTexto(prod?.proveedor_principal_id)"></span> ·
+      tiempo entrega: <span class="text-slate-200" x-text="(prod?.tiempo_entrega_dias || 7) + ' días'"></span>
+    </div>
+
+    <div>
+      <p class="text-[10px] uppercase text-slate-500 font-bold mb-2">Movimientos (30 días)</p>
+      <div class="space-y-1.5 text-[11px]">
+        <template x-for="m in movs" :key="m.id">
+          <div class="flex justify-between items-center rounded px-2 py-1 hover:bg-slate-800">
+            <div>
+              <span class="font-bold uppercase" :class="movClass(m.tipo)" x-text="m.tipo"></span>
+              <span class="text-slate-500 ml-1" x-text="(m.referencia_tipo || '') + (m.referencia_id ? (' #'+m.referencia_id) : '')"></span>
+              <span class="text-slate-600 ml-1" x-text="m.motivo ? '· '+m.motivo : ''"></span>
+            </div>
+            <div class="font-mono">
+              <span :class="m.cantidad>0?'text-emerald-300':'text-rose-300'" x-text="(m.cantidad>0?'+':'')+m.cantidad"></span>
+              <span class="text-slate-500 ml-1" x-text="'→ '+m.stock_resultante"></span>
+            </div>
+          </div>
+        </template>
+        <p x-show="!movs.length" class="text-slate-500 text-center py-3">Sin movimientos en 30 días.</p>
+      </div>
+    </div>
+
+    <div class="pt-2 border-t border-slate-700 flex gap-2">
+      <button @click="dispararAjuste()" class="dax-btn-ghost text-xs flex-1">
+        <i class="fas fa-pen-to-square mr-1"></i> Ajuste manual
+      </button>
+      <button @click="dispararEditar()" class="dax-btn-ghost text-xs flex-1">
+        <i class="fas fa-cog mr-1"></i> Editar ficha
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal: Ajuste manual con motivo                              -->
+<!-- ============================================================ -->
+<div id="modal-ajuste"
+     x-data="ajusteManual()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="open = false"
+     @inv-ajuste-open.window="abrir($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-sm p-5 space-y-3" @click.outside="open = false">
+    <div class="flex justify-between items-center">
+      <h3 class="text-base font-bold text-slate-200">Ajuste de inventario</h3>
+      <button @click="open = false" class="dax-btn-ghost p-1"><i class="fas fa-xmark"></i></button>
+    </div>
+    <p class="text-[10px] text-slate-500" x-text="prod ? (prod.sku_comercial || prod.sku) + ' · ' + prod.nombre : ''"></p>
+    <div>
+      <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Cantidad (+ entrada / − salida)</label>
+      <input type="number" x-model.number="delta" :disabled="saving" class="dax-input text-right font-mono">
+    </div>
+    <div>
+      <label class="block text-[10px] font-semibold text-slate-400 uppercase mb-1">Motivo *</label>
+      <input type="text" x-model="motivo" :disabled="saving"
+             placeholder="Ej. conteo físico Q2, daño, devolución" class="dax-input">
+    </div>
+    <div x-show="error" x-cloak class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+         x-text="error"></div>
+    <div class="flex justify-end gap-2 pt-1">
+      <button type="button" @click="open = false" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+      <button type="button" @click="aplicar()" class="dax-btn-primary" :disabled="saving">
+        <i class="fas fa-check text-xs mr-1"></i>
+        <span x-text="saving ? 'Aplicando…' : 'Aplicar'"></span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -352,10 +465,15 @@
 
 {% block extra_scripts %}
 <script>
+document.addEventListener('alpine:init', () => {
+  Alpine.store('invSide', { open: false });
+});
+
 function inventario() {
   return {
     loading: true,
     todos: [], filtrados: [],
+    disp: {},  // {producto_id: {stock_actual, reservado, disponible, en_oc_pendiente}}
     q: '', filtroEstatus: '', filtroMarca: '',
     kpi: { total:0, criticos:0, sin_stock:0, ok:0 },
     importMsg: { text:'', type:'success', hint:'' },
@@ -372,8 +490,27 @@ function inventario() {
         const res = await fetch('/api/productos/?limit=2000', { credentials:'include' });
         if (res.ok) this.todos = await res.json();
         this.calcularKpi();
+        this.cargarDisponibilidades();  // sin await, llena en segundo plano
       } catch(e) { console.warn(e); }
       finally { this.loading=false; this.filtrar(); }
+    },
+
+    async cargarDisponibilidades() {
+      // Limita a productos no-servicio con id; pequeño paralelismo manual
+      const ids = this.todos.filter(p => !p.es_servicio).map(p => p.id);
+      const chunkSize = 8;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const results = await Promise.all(chunk.map(id =>
+          fetch(`/api/inventario/disponibilidad/${id}`, {credentials:'include'}).then(r => r.ok ? r.json() : null).catch(() => null)
+        ));
+        results.forEach((d, j) => { if (d) this.disp[chunk[j]] = d; });
+      }
+    },
+
+    abrirSidePanel(p) {
+      Alpine.store('invSide').open = true;
+      window.dispatchEvent(new CustomEvent('inv-side-open', { detail: p }));
     },
 
     calcularKpi() {
@@ -671,6 +808,91 @@ function modalProducto() {
       }
     },
   }
+}
+
+function sidePanel() {
+  return {
+    prod: null,
+    d: { stock_actual: 0, reservado: 0, disponible: 0, en_oc_pendiente: 0 },
+    movs: [],
+    proveedores: {},
+    init() {
+      // Cache liviano de proveedores para mostrar nombre
+      fetch('/api/clientes/?limit=1', { credentials:'include' }).catch(()=>null);
+      // Nota: si tuviéramos /api/proveedores cargaríamos aquí. Por ahora muestra ID.
+    },
+    proveedorTexto(id) { return id ? `#${id}` : '— sin asignar —'; },
+    movClass(tipo) {
+      return ({entrada:'text-emerald-300', salida:'text-rose-300', ajuste:'text-amber-300', reserva:'text-cyan-300', liberacion:'text-slate-300'})[tipo] || 'text-slate-300';
+    },
+    async onOpen(p) {
+      this.prod = p;
+      this.d = { stock_actual: p.stock_actual || 0, reservado: 0, disponible: p.stock_actual || 0, en_oc_pendiente: 0 };
+      this.movs = [];
+      try {
+        const [d, m] = await Promise.all([
+          fetch(`/api/inventario/disponibilidad/${p.id}`, {credentials:'include'}).then(r => r.ok ? r.json() : null),
+          fetch(`/api/inventario/movimientos?producto_id=${p.id}&dias=30`, {credentials:'include'}).then(r => r.ok ? r.json() : []),
+        ]);
+        if (d) this.d = d;
+        this.movs = m || [];
+      } catch(e) { console.warn(e); }
+    },
+    dispararAjuste() {
+      window.dispatchEvent(new CustomEvent('inv-ajuste-open', { detail: this.prod }));
+    },
+    dispararEditar() {
+      Alpine.store('invSide').open = false;
+      window.dispatchEvent(new CustomEvent('producto-modal-edit', { detail: this.prod }));
+    },
+  };
+}
+
+function ajusteManual() {
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    prod: null,
+    delta: 0,
+    motivo: '',
+    abrir(p) {
+      this.prod = p;
+      this.delta = 0;
+      this.motivo = '';
+      this.error = '';
+      this.open = true;
+    },
+    async aplicar() {
+      if (!this.prod) return;
+      if (!this.motivo || this.motivo.trim().length < 3) { this.error = 'Motivo requerido (≥ 3 caracteres).'; return; }
+      const delta = Number(this.delta);
+      if (!Number.isFinite(delta) || delta === 0) { this.error = 'Cantidad debe ser distinta de 0.'; return; }
+      this.saving = true;
+      this.error = '';
+      try {
+        const r = await fetch('/api/inventario/movimientos', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ producto_id: this.prod.id, cantidad: delta, motivo: this.motivo.trim() }),
+        });
+        if (r.ok) {
+          this.open = false;
+          window.dispatchEvent(new CustomEvent('producto-saved'));
+          // recargar side panel si está abierto sobre este producto
+          window.dispatchEvent(new CustomEvent('inv-side-open', { detail: this.prod }));
+        } else {
+          const e = await r.json().catch(()=>({}));
+          this.error = (typeof e.detail === 'string') ? e.detail : (e.detail?.mensaje || 'No se pudo aplicar el ajuste.');
+        }
+      } catch(e) {
+        this.error = 'Error de red al ajustar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
 }
 </script>
 {% endblock %}
