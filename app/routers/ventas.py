@@ -1088,3 +1088,30 @@ def cancelar_cotizacion(
     orden.estatus = models.EstatusOrden.CANCELADA
     db.commit()
     return {"ok": True, "folio": orden.folio, "productos_liberados": liberadas}
+
+
+# --- 8. AUTO-OC: sugerir + generar ---
+@router.post("/{id}/sugerir-oc", dependencies=[Depends(allow_all_staff)])
+def sugerir_oc(id: int, db: Session = Depends(get_db)):
+    from app.services.auto_oc_service import previsualizar_ocs
+    orden = (
+        db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+    return previsualizar_ocs(db, orden)
+
+
+@router.post("/{id}/generar-oc", dependencies=[Depends(allow_all_staff)])
+def generar_oc_endpoint(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    from app.services.auto_oc_service import generar_ocs
+    orden = (
+        db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    )
+    if not orden:
+        raise HTTPException(404, "Cotización no encontrada")
+    return {"ocs": generar_ocs(db, orden, usuario=current_user)}
