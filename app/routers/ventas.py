@@ -303,6 +303,8 @@ def crear_orden(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
+    from app.security.permissions import require
+    require(current_user, "create", "cotizacion")  # operativo: 403
     cliente = (
         db.query(models.Cliente)
         .filter(
@@ -741,7 +743,8 @@ def listar_historial(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    from app.security.permissions import is_owner_scoped
+    from app.security.permissions import is_owner_scoped, require
+    require(current_user, "read", "cotizacion")  # operativo: 403
     query = db.query(models.OrdenVenta)
     if is_owner_scoped(current_user, "read", "cotizacion"):
         query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
