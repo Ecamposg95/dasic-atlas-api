@@ -63,5 +63,9 @@ class DetalleOrden(Base):
     descuento_aplicado = Column(DECIMAL(10, 2), default=0.00)
     subtotal = Column(DECIMAL(12, 2), nullable=False)
 
+    tipo_linea = Column(String(20), nullable=False, default="producto_catalogo")
+    proveedor_sugerido_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+
     orden = relationship("OrdenVenta", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles_orden")
+    proveedor_sugerido = relationship("Proveedor", foreign_keys=[proveedor_sugerido_id])

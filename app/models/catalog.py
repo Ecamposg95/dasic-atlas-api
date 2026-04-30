@@ -2,7 +2,7 @@
 Catalog models: Producto, Promocion.
 """
 
-from sqlalchemy import Boolean, Column, DateTime, DECIMAL, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, DECIMAL, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -20,6 +20,11 @@ class Producto(Base):
     marca = Column(String(80), index=True, nullable=True)
     unidad = Column(String(20), nullable=True, default="PZA")
 
+    proveedor_principal_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True, index=True)
+    proveedor_alterno_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    tiempo_entrega_dias = Column(Integer, nullable=False, default=7)
+    es_servicio = Column(Boolean, nullable=False, default=False)
+
     stock_actual = Column(Integer, default=0)
     stock_minimo = Column(Integer, default=5)
 
@@ -32,6 +37,11 @@ class Producto(Base):
     promociones = relationship("Promocion", back_populates="producto")
     detalles_orden = relationship("DetalleOrden", back_populates="producto")
     detalles_compra = relationship("DetalleCompra", back_populates="producto")
+    proveedor_principal = relationship("Proveedor", foreign_keys=[proveedor_principal_id])
+    proveedor_alterno = relationship("Proveedor", foreign_keys=[proveedor_alterno_id])
+    movimientos_stock = relationship(
+        "MovimientoStock", back_populates="producto", cascade="all, delete-orphan"
+    )
 
 
 class Promocion(Base):

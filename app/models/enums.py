@@ -74,3 +74,17 @@ class EstatusOrden(str, enum.Enum):
 class TipoMovimiento(str, enum.Enum):
     CARGO = "cargo"
     ABONO = "abono"
+
+
+class TipoLineaCotizacion(str, enum.Enum):
+    PRODUCTO_CATALOGO = "producto_catalogo"
+    PRODUCTO_FANTASMA = "producto_fantasma"
+    SERVICIO = "servicio"
+
+
+class TipoMovimientoStock(str, enum.Enum):
+    ENTRADA = "entrada"
+    SALIDA = "salida"
+    AJUSTE = "ajuste"
+    RESERVA = "reserva"
+    LIBERACION = "liberacion"

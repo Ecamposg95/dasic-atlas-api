@@ -20,6 +20,8 @@ from app.models.enums import (  # noqa: F401
     RolUsuario,
     EstatusOrden,
     TipoMovimiento,
+    TipoLineaCotizacion,
+    TipoMovimientoStock,
 )
 from app.models.users import Usuario  # noqa: F401
 from app.models.catalog import Producto, Promocion  # noqa: F401
@@ -31,10 +33,13 @@ from app.models.finance import (  # noqa: F401
 from app.models.sales import OrdenVenta, DetalleOrden  # noqa: F401
 from app.models.purchases import OrdenCompra, DetalleCompra  # noqa: F401
 from app.models.quote_events import QuoteEvent  # noqa: F401
+from app.models.inventory import MovimientoStock  # noqa: F401
+from app.models.fx import TipoCambioDia  # noqa: F401
 
 __all__ = [
     "Base",
     "RolUsuario", "EstatusOrden", "TipoMovimiento",
+    "TipoLineaCotizacion", "TipoMovimientoStock",
     "Usuario",
     "Producto", "Promocion",
     "Cliente", "Proveedor",
@@ -42,4 +47,6 @@ __all__ = [
     "OrdenVenta", "DetalleOrden",
     "OrdenCompra", "DetalleCompra",
     "QuoteEvent",
+    "MovimientoStock",
+    "TipoCambioDia",
 ]
