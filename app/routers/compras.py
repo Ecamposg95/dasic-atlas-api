@@ -203,7 +203,8 @@ def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(ge
     db.refresh(nuevo)
     return nuevo
 
-# Listar Historial
+# Listar Historial (alias en "/" para compat con clientes con caché viejo)
+@router.get("/")
 @router.get("/historial")
 def listar_historial_compras(limit: int = 50, db: Session = Depends(get_db)):
     ordenes = db.query(models.OrdenCompra)\
