@@ -1,12 +1,15 @@
 from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response, StreamingResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 import csv
 import io
+import json
 import secrets
 from datetime import datetime
+from pathlib import Path
 from app import models
 from app import schemas
 from app.db import get_db
@@ -15,14 +18,18 @@ from app.security import allow_admin, allow_admin_asistente, allow_all_staff
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
 DEFAULT_PURCHASE_CURRENCY = "MXN"
+DEFAULT_UNIDAD = "PZA"
+MARCA_TAXONOMY_FILE = Path(__file__).resolve().parent.parent / "data" / "marca_abreviaturas.json"
 IMPORT_COLUMN_ALIASES = {
     "sku": ("sku", "codigo", "codigo_interno"),
-    "sku_comercial": ("sku_comercial", "sku comercial", "commercial_sku"),
+    "sku_comercial": ("sku_comercial", "sku comercial", "commercial_sku", "catalogo", "catálogo"),
     "nombre": ("nombre", "producto"),
     "descripcion": ("descripcion", "descripción"),
-    "stock_actual": ("stock", "stock_actual", "existencia"),
+    "marca": ("marca", "brand"),
+    "unidad": ("unidad", "unit"),
+    "stock_actual": ("stock", "stock_actual", "existencia", "cantidad"),
     "stock_minimo": ("stock_minimo", "stock mínimo", "minimo"),
-    "costo_compra": ("costo", "costo_compra", "purchase_cost"),
+    "costo_compra": ("costo", "costo_compra", "purchase_cost", "precio unitario"),
     "precio_publico": ("precio_publico", "precio público", "precio_lista"),
     "precio_mayorista": ("precio_mayorista",),
     "precio_distribuidor": ("precio_distribuidor",),
@@ -33,6 +40,8 @@ IMPORT_TEMPLATE_COLUMNS = [
     "sku_comercial",
     "nombre",
     "descripcion",
+    "marca",
+    "unidad",
     "stock",
     "stock_minimo",
     "costo",
@@ -160,23 +169,90 @@ def _normalize_csv_row(row: dict) -> dict:
 # --- 1. OBTENER PRODUCTOS (LISTADO INTELIGENTE) ---
 @router.get("/", response_model=Union[List[schemas.ProductoResponseAdmin], List[schemas.ProductoResponseVendedor]])
 def listar_productos(
-    skip: int = 0, 
-    limit: int = 500, # Aumentamos el límite por defecto
+    skip: int = 0,
+    limit: int = 500,
+    q: Optional[str] = None,
+    marca: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(allow_all_staff)
+    current_user: models.Usuario = Depends(allow_all_staff),
 ):
-    """
-    Lista productos. 
-    - Admin/Asistente ven el Costo.
-    - Vendedores solo ven Precios de Venta y Stock.
-    """
-    productos = db.query(models.Producto).offset(skip).limit(limit).all()
+    """Lista productos. Admin/Asistente ven costo; vendedor solo precios de venta."""
+    query = db.query(models.Producto)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.Producto.sku.ilike(like),
+            models.Producto.sku_comercial.ilike(like),
+            models.Producto.nombre.ilike(like),
+            models.Producto.marca.ilike(like),
+        ))
+    if marca:
+        query = query.filter(models.Producto.marca.ilike(marca.strip()))
 
-    # Lógica de "Camaleón": Decidimos qué schema usar según el rol
+    productos = (
+        query.order_by(models.Producto.nombre.asc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     if current_user.rol in [models.RolUsuario.ADMIN, models.RolUsuario.ASISTENTE]:
         return [schemas.ProductoResponseAdmin.model_validate(p) for p in productos]
-    
     return [schemas.ProductoResponseVendedor.model_validate(p) for p in productos]
+
+
+# --- 1.5 LISTA DE MARCAS (taxonomía DASIC + marcas en uso) ---
+@router.get("/marcas", dependencies=[Depends(allow_all_staff)])
+def listar_marcas(db: Session = Depends(get_db)):
+    """Devuelve marcas en uso + taxonomía histórica DASIC.
+
+    Cada item: { abreviatura, marca, categoria, prefijo_sku, codigos_ejemplo }.
+    El frontend puede usar `prefijo_sku` (ej. ABPB) para sugerir SKUs internos.
+    """
+    items_taxonomia: list[dict] = []
+    if MARCA_TAXONOMY_FILE.exists():
+        try:
+            data = json.loads(MARCA_TAXONOMY_FILE.read_text(encoding="utf-8"))
+            for it in data.get("items", []):
+                items_taxonomia.append({
+                    "abreviatura": it.get("abreviatura"),
+                    "marca": (it.get("marca") or "").strip() or None,
+                    "categoria": (it.get("categoria") or "").strip() or None,
+                    "prefijo_sku": it.get("abreviatura"),
+                    "codigos_ejemplo": it.get("codigos_ejemplo") or [],
+                    "fuente": "taxonomia",
+                })
+        except Exception:
+            pass
+
+    en_uso = (
+        db.query(models.Producto.marca)
+        .filter(models.Producto.marca.is_not(None))
+        .distinct()
+        .all()
+    )
+    marcas_db = {m.strip() for (m,) in en_uso if m and m.strip()}
+    marcas_taxonomia = {
+        (i["marca"] or "").strip().upper() for i in items_taxonomia if i["marca"]
+    }
+    extras = [
+        {
+            "abreviatura": None,
+            "marca": m,
+            "categoria": None,
+            "prefijo_sku": None,
+            "codigos_ejemplo": [],
+            "fuente": "db",
+        }
+        for m in sorted(marcas_db)
+        if m.upper() not in marcas_taxonomia
+    ]
+
+    return {
+        "items": items_taxonomia + extras,
+        "unidades_sugeridas": ["PZA", "CAJA", "MTS", "KG", "JUEGO", "SERVICIO", "PAR"],
+        "monedas": ["MXN", "USD"],
+    }
 
 # --- 2. OBTENER UN SOLO PRODUCTO ---
 @router.get("/{id}", response_model=Union[schemas.ProductoResponseAdmin, schemas.ProductoResponseVendedor])
@@ -209,8 +285,11 @@ def crear_producto(
 
     payload = producto.model_dump()
     payload["sku"] = sku
-    payload["sku_comercial"] = _normalize_optional_text(producto.sku_comercial)
+    sku_comercial_norm = _normalize_optional_text(producto.sku_comercial)
+    payload["sku_comercial"] = sku_comercial_norm or sku  # autocompleta con interno
     payload["moneda_compra"] = _normalize_currency(producto.moneda_compra)
+    payload["marca"] = _normalize_optional_text(producto.marca)
+    payload["unidad"] = _normalize_optional_text(producto.unidad) or DEFAULT_UNIDAD
     if payload.get("precio_publico") is None:
         payload.pop("precio_publico", None)
 
@@ -235,6 +314,10 @@ def actualizar_producto(
     update_data = producto_update.model_dump(exclude_unset=True)
     if "sku_comercial" in update_data:
         update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
+    if "marca" in update_data:
+        update_data["marca"] = _normalize_optional_text(update_data["marca"])
+    if "unidad" in update_data:
+        update_data["unidad"] = _normalize_optional_text(update_data["unidad"]) or DEFAULT_UNIDAD
     if "moneda_compra" in update_data:
         update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
     for key, value in update_data.items():
@@ -250,10 +333,45 @@ def eliminar_producto(id: int, db: Session = Depends(get_db)):
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    
+
+    en_uso = (
+        db.query(models.DetalleOrden)
+        .filter(models.DetalleOrden.producto_id == id)
+        .first()
+    )
+    if en_uso:
+        raise HTTPException(
+            status_code=409,
+            detail="Producto referenciado en órdenes existentes. No se puede eliminar.",
+        )
+
     db.delete(db_producto)
     db.commit()
     return {"mensaje": "Producto eliminado correctamente"}
+
+
+# --- 5.5 AJUSTAR STOCK MANUALMENTE (Admin/Asistente) ---
+from pydantic import BaseModel as _PydBase  # noqa: E402
+
+
+class AjusteStockIn(_PydBase):
+    delta: int
+    motivo: Optional[str] = None
+
+
+@router.post("/{id}/ajustar-stock", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
+def ajustar_stock(id: int, payload: AjusteStockIn, db: Session = Depends(get_db)):
+    """Suma `delta` al stock_actual (puede ser negativo). El stock no baja de 0."""
+    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    nuevo = (producto.stock_actual or 0) + payload.delta
+    if nuevo < 0:
+        raise HTTPException(status_code=400, detail="El stock no puede quedar negativo")
+    producto.stock_actual = nuevo
+    db.commit()
+    db.refresh(producto)
+    return producto
 
 # --- 6. CARGA MASIVA CSV / XLSX (IMPORTAR) ---
 @router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
@@ -307,6 +425,8 @@ async def cargar_inventario_csv(
             sku_comercial = _read_text(row, "sku_comercial")
             nombre = _read_text(row, "nombre", "Sin Nombre") or "Sin Nombre"
             descripcion = _read_text(row, "descripcion", "") or ""
+            marca = _read_text(row, "marca")
+            unidad = _read_text(row, "unidad") or DEFAULT_UNIDAD
             moneda_compra = _normalize_currency(_read_text(row, "moneda_compra", DEFAULT_PURCHASE_CURRENCY))
             costo_compra = _read_decimal(row, "costo_compra") or Decimal("0")
             precio_publico = _read_decimal(row, "precio_publico")
@@ -321,9 +441,13 @@ async def cargar_inventario_csv(
             if producto_existente:
                 # Actualizar Stock y Precios si vienen en el CSV
                 producto_existente.stock_actual += stock_actual
-                producto_existente.sku_comercial = sku_comercial or producto_existente.sku_comercial
+                producto_existente.sku_comercial = sku_comercial or producto_existente.sku_comercial or sku
                 producto_existente.nombre = nombre or producto_existente.nombre
                 producto_existente.descripcion = descripcion or producto_existente.descripcion
+                if marca:
+                    producto_existente.marca = marca
+                if unidad:
+                    producto_existente.unidad = unidad
                 producto_existente.stock_minimo = stock_minimo
                 producto_existente.moneda_compra = moneda_compra
                 producto_existente.costo_compra = costo_compra
@@ -336,9 +460,11 @@ async def cargar_inventario_csv(
                 # Crear nuevo
                 kwargs = dict(
                     sku=sku,
-                    sku_comercial=sku_comercial,
+                    sku_comercial=sku_comercial or sku,
                     nombre=nombre,
                     descripcion=descripcion,
+                    marca=marca,
+                    unidad=unidad,
                     precio_mayorista=precio_mayorista,
                     precio_distribuidor=precio_distribuidor,
                     costo_compra=costo_compra,
@@ -399,14 +525,16 @@ def exportar_productos_csv(db: Session = Depends(get_db)):
     
     # Encabezados
     writer.writerow([
-        'SKU', 'SKU Comercial', 'Nombre', 'Descripción', 'Stock Actual', 'Stock Mínimo',
+        'SKU', 'SKU Comercial', 'Nombre', 'Descripción', 'Marca', 'Unidad',
+        'Stock Actual', 'Stock Mínimo',
         'Costo', 'Moneda Compra', 'Precio Público', 'Precio Mayorista', 'Precio Distribuidor'
     ])
-    
+
     # Datos
     for p in productos:
         writer.writerow([
-            p.sku, p.sku_comercial, p.nombre, p.descripcion, p.stock_actual, p.stock_minimo,
+            p.sku, p.sku_comercial, p.nombre, p.descripcion, p.marca, p.unidad,
+            p.stock_actual, p.stock_minimo,
             p.costo_compra, p.moneda_compra, p.precio_publico, p.precio_mayorista, p.precio_distribuidor
         ])
     

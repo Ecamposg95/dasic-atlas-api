@@ -1,0 +1,249 @@
+{
+  "fuente": "context/01 AB_05 JUNIO_ 2022. REF.VTA (1).xlsx",
+  "descripcion": "Tabla histórica DASIC: prefijos para SKUs internos por marca/categoría.",
+  "items": [
+    {
+      "abreviatura": "ABPS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Packaged Solutions (146)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABPSW",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Product Selection Wizards (7)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABCM",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Condition Monitoring (8)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABCSSC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Condition Sensors, Switches and Controls (19)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABCS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Connection Systems (11)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABCCLP",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Control Circuit and Load Protection (75)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABD",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Drives (67)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABAHL",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Hazardous Locations (2)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABIO",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "I/O (27)",
+      "codigos_ejemplo": [
+        "ABIO5069RTB64SCREW-B1",
+        "ABIO5069RTB18SCREW-B1",
+        "ABIO5069RTB14CJCSCREW-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABICM",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Industrial Computers and Monitors (26)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABLC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Lighting Control (10)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABMVP",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Medium Voltage Products (44)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABMC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Motion Control (70)",
+      "codigos_ejemplo": [
+        "ABMC2094PRF-A1"
+      ]
+    },
+    {
+      "abreviatura": "ABMCEMS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Motor Control, Electronic Motor Starter (2)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABMCIEC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Motor Control, IEC (103)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABMCNEMA",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Motor Control, NEMA (76)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABMCSS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Motor Control, Solid-State (49)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABNC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Networks and Communication (29)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABNSI",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Network Security & Infrastructure (2)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABOI",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Operator Interfaces (25)",
+      "codigos_ejemplo": [
+        "ABOI2711PT15C21D8S-A1",
+        "ABOI2711PRN6-A1"
+      ]
+    },
+    {
+      "abreviatura": "ABPQEM",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Power Quality and Energy Management (8)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABPS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Power Supplies (12)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABPD",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Power Distribution (1)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABPC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Programmable Controllers (19)",
+      "codigos_ejemplo": [
+        "ABPC5069AENTR-A1",
+        "ABPC1769CRL1-A1",
+        "AB5069OB16-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABPB",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Push Buttons (179)",
+      "codigos_ejemplo": [
+        "ABPB800TU29-B1",
+        "800TQH2A-B1",
+        "ABPB800TQA24R-B1",
+        "ABPB800TQA24G-B1",
+        "ABPB800TCXD2-B1",
+        "ABPB800TA7A-B1",
+        "ABPB800TA1A-B1",
+        "ABPB800HJR2-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABRYT",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Relays & Timers (45)",
+      "codigos_ejemplo": [
+        "ABRYT700SCF530EJBC-A1",
+        "ABRYT700SCF620DC-B1",
+        "ABRYT700SCF440EJC-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABIS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Identification Sensors (6)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABSFT",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Safety (128)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Sensia (23)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABSE",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Sensors (136)",
+      "codigos_ejemplo": [
+        "ABSE802TCTP-B1",
+        "ABSE802TATP-B1",
+        "ABSE802TAP-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABSS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Services and Support (37)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABSI",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Signaling (54)",
+      "codigos_ejemplo": [
+        "ABSI855PB30SE22-B1",
+        "ABSI855EBCBC-B1"
+      ]
+    },
+    {
+      "abreviatura": "ABSC",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Signal Conditioners (5)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABSFT",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Software (25)",
+      "codigos_ejemplo": []
+    },
+    {
+      "abreviatura": "ABTBWS",
+      "marca": "ALLEN BRADLEY",
+      "categoria": "Terminal Blocks and Wiring Systems (28)",
+      "codigos_ejemplo": []
+    }
+  ]
+}

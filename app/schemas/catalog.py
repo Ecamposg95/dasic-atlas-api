@@ -15,6 +15,8 @@ class ProductoBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150)
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
+    marca: Optional[str] = Field(None, max_length=80)
+    unidad: Optional[str] = Field("PZA", max_length=20)
     stock_minimo: int = Field(5, ge=0)
     moneda_compra: str = Field("MXN", min_length=3, max_length=3)
     precio_publico: Optional[Decimal] = Field(None, ge=0)
@@ -32,6 +34,8 @@ class ProductoUpdate(BaseModel):
     sku_comercial: Optional[str] = Field(None, min_length=2, max_length=80)
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
+    marca: Optional[str] = Field(None, max_length=80)
+    unidad: Optional[str] = Field(None, max_length=20)
     moneda_compra: Optional[str] = Field(None, min_length=3, max_length=3)
     precio_publico: Optional[Decimal] = Field(None, ge=0)
     precio_mayorista: Optional[Decimal] = Field(None, ge=0)

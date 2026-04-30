@@ -4,14 +4,14 @@
 
 {% block header_actions %}
   <button class="dax-btn-primary"
-          onclick="document.getElementById('modal-usuario').classList.remove('hidden')">
+          onclick="window.dispatchEvent(new CustomEvent('usuario-modal-open'))">
     <i class="fas fa-user-plus text-xs"></i>
     Nuevo Usuario
   </button>
 {% endblock %}
 
 {% block content %}
-<div x-data="usuarios()" x-init="init()">
+<div x-data="usuarios()" x-init="init()" @usuario-created.window="init()">
 
   <div class="dax-card overflow-hidden">
     <table class="dax-table">
@@ -69,66 +69,121 @@
 
 <!-- Modal Nuevo Usuario -->
 <div id="modal-usuario"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-  <div class="dax-card w-full max-w-md p-6 m-4">
+     x-data="modalUsuario()"
+     x-init="init()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @usuario-modal-open.window="openModal()"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="dax-card w-full max-w-md p-6 m-4" @click.outside="close()">
     <div class="flex items-center justify-between mb-5">
       <h2 class="text-base font-bold text-slate-200">Nuevo Usuario</h2>
-      <button onclick="document.getElementById('modal-usuario').classList.add('hidden')"
-              class="dax-btn-ghost p-2 rounded-lg">
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
         <i class="fas fa-xmark"></i>
       </button>
     </div>
-    <div class="space-y-4">
+
+    <form @submit.prevent="submit()" class="space-y-4">
       <div>
         <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre Completo</label>
-        <input type="text" placeholder="Juan García" class="dax-input">
+        <input type="text" placeholder="Juan García" class="dax-input"
+               x-model="form.nombre" :disabled="saving" required maxlength="100" minlength="2">
       </div>
       <div>
         <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</label>
-        <input type="email" placeholder="juan@dasic.com" class="dax-input">
+        <input type="email" placeholder="juan@dasic.com" class="dax-input"
+               x-model="form.email" :disabled="saving" required>
       </div>
       <div>
         <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contraseña temporal</label>
-        <input type="password" placeholder="••••••••" class="dax-input">
+        <input type="password" placeholder="Mínimo 6 caracteres" class="dax-input"
+               x-model="form.password" :disabled="saving" required minlength="6" autocomplete="new-password">
       </div>
+
       <div>
-        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Rol</label>
-        <select class="dax-input bg-slate-700/50">
+        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tipo de Usuario</label>
+        <div class="grid grid-cols-1 gap-2">
           <template x-for="role in roleOptions" :key="role.value">
-            <option :value="role.value" x-text="role.label"></option>
+            <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                   :class="form.rol === role.value
+                            ? 'border-cyan-500/70 bg-cyan-500/10'
+                            : 'border-slate-700/60 bg-slate-800/40 hover:border-slate-600'">
+              <input type="radio" name="rol" class="mt-0.5 accent-cyan-500"
+                     :value="role.value" x-model="form.rol" :disabled="saving">
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <i :class="role.icon" class="text-xs text-cyan-400"></i>
+                  <p class="text-xs font-semibold text-slate-200" x-text="role.label"></p>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5" x-text="role.desc"></p>
+              </div>
+            </label>
           </template>
-        </select>
+        </div>
       </div>
-    </div>
-    <div class="flex justify-end gap-3 mt-6">
-      <button onclick="document.getElementById('modal-usuario').classList.add('hidden')"
-              class="dax-btn-ghost">Cancelar</button>
-      <button class="dax-btn-primary">
-        <i class="fas fa-save text-xs"></i>
-        Crear Usuario
-      </button>
-    </div>
+
+      <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+        <input type="checkbox" x-model="form.activo" :disabled="saving" class="accent-cyan-500">
+        Activar al crear
+      </label>
+
+      <div x-show="error" x-cloak
+           class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+           x-text="error"></div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+        <button type="submit" class="dax-btn-primary" :disabled="saving">
+          <template x-if="!saving">
+            <span class="flex items-center gap-2">
+              <i class="fas fa-save text-xs"></i> Crear Usuario
+            </span>
+          </template>
+          <template x-if="saving">
+            <span class="flex items-center gap-2">
+              <i class="fas fa-circle-notch fa-spin text-xs"></i> Creando…
+            </span>
+          </template>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-function usuarios() {
-  const ROLE_OPTIONS = [
-    { value: 'administrador', label: 'Administrador' },
-    { value: 'gerente_comercial', label: 'Gerente comercial' },
-    { value: 'ventas', label: 'Ventas' },
-  ];
-  const ROLE_LABELS = {
-    administrador: 'Administrador',
-    gerente_comercial: 'Gerente comercial',
-    ventas: 'Ventas',
-    admin: 'Administrador',
-    asistente: 'Gerente comercial',
-    vendedor: 'Ventas',
-  };
+const ROLE_OPTIONS = [
+  {
+    value: 'administrador',
+    label: 'Administrador',
+    desc: 'Acceso total: usuarios, catálogo, reportes y configuración.',
+    icon: 'fas fa-user-shield',
+  },
+  {
+    value: 'gerente_comercial',
+    label: 'Gerente Comercial',
+    desc: 'Supervisa ventas y cotizaciones del equipo, sin gestión de usuarios.',
+    icon: 'fas fa-user-tie',
+  },
+  {
+    value: 'ventas',
+    label: 'Ventas',
+    desc: 'Crea cotizaciones y da seguimiento a sus propios clientes.',
+    icon: 'fas fa-headset',
+  },
+];
+const ROLE_LABELS = {
+  administrador: 'Administrador',
+  gerente_comercial: 'Gerente Comercial',
+  ventas: 'Ventas',
+  admin: 'Administrador',
+  asistente: 'Gerente Comercial',
+  vendedor: 'Ventas',
+};
 
+function usuarios() {
   return {
     loading: true,
     lista: [],
@@ -137,12 +192,94 @@ function usuarios() {
       return ROLE_LABELS[role] || role || 'Sin rol';
     },
     async init() {
+      this.loading = true;
       try {
         const res = await fetch('/api/usuarios/', { credentials:'include' });
         if (res.ok) this.lista = await res.json();
       } catch(e) { console.warn(e); }
       finally { this.loading = false; }
     }
+  }
+}
+
+function modalUsuario() {
+  const blank = () => ({
+    nombre: '',
+    email: '',
+    password: '',
+    rol: 'ventas',
+    activo: true,
+  });
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: blank(),
+    roleOptions: ROLE_OPTIONS,
+    init() {},
+    openModal() {
+      this.form = blank();
+      this.error = '';
+      this.open = true;
+      this.$nextTick(() => {
+        const el = this.$root.querySelector('input[type="text"]');
+        if (el) el.focus();
+      });
+    },
+    close() {
+      if (this.saving) return;
+      this.open = false;
+      this.error = '';
+    },
+    async submit() {
+      if (this.saving) return;
+      this.error = '';
+      const f = this.form;
+      if (!f.nombre || f.nombre.trim().length < 2) {
+        this.error = 'El nombre debe tener al menos 2 caracteres.';
+        return;
+      }
+      if (!f.email || !f.email.includes('@')) {
+        this.error = 'Email inválido.';
+        return;
+      }
+      if (!f.password || f.password.length < 6) {
+        this.error = 'La contraseña debe tener al menos 6 caracteres.';
+        return;
+      }
+      this.saving = true;
+      try {
+        const res = await fetch('/api/usuarios/', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: f.nombre.trim(),
+            email: f.email.trim().toLowerCase(),
+            password: f.password,
+            rol: f.rol,
+            activo: !!f.activo,
+          }),
+        });
+        if (!res.ok) {
+          let msg = 'No se pudo crear el usuario.';
+          try {
+            const data = await res.json();
+            if (typeof data.detail === 'string') msg = data.detail;
+            else if (Array.isArray(data.detail)) msg = data.detail.map(d => d.msg).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.open = false;
+        this.form = blank();
+        window.dispatchEvent(new CustomEvent('usuario-created'));
+      } catch(e) {
+        this.error = 'Error de red. Intenta de nuevo.';
+      } finally {
+        this.saving = false;
+      }
+    },
   }
 }
 </script>

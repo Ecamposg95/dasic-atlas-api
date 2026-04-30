@@ -17,6 +17,8 @@ class Producto(Base):
     nombre = Column(String(150), index=True, nullable=False)
     descripcion = Column(Text, nullable=True)
     imagen_url = Column(String(255), nullable=True)
+    marca = Column(String(80), index=True, nullable=True)
+    unidad = Column(String(20), nullable=True, default="PZA")
 
     stock_actual = Column(Integer, default=0)
     stock_minimo = Column(Integer, default=5)

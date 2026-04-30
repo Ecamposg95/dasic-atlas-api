@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
 from fastapi.responses import HTMLResponse
@@ -18,18 +19,24 @@ router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 def listar_clientes(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
 ):
-    """
-    Lista todos los clientes. El campo 'saldo_actual' permite ver rápidamente quién debe dinero.
-    """
-    clientes = (
-        db.query(models.Cliente)
+    """Lista clientes. Filtro opcional `q` busca en empresa, contacto y email."""
+    query = db.query(models.Cliente)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.Cliente.nombre_empresa.ilike(like),
+            models.Cliente.contacto_nombre.ilike(like),
+            models.Cliente.email.ilike(like),
+        ))
+    return (
+        query.order_by(models.Cliente.nombre_empresa.asc())
         .offset(skip)
         .limit(limit)
         .all()
     )
-    return clientes
 
 # --- 2. CREAR CLIENTE ---
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])

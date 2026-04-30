@@ -173,22 +173,21 @@ class OCDesdeCotizacionInput(BaseModel):
     afecta_stock: bool = False  # default: solo persiste OC, no toca stock
 
 
-def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None") -> str:
+def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None" = None) -> str:
+    """Folio OC formato DASIC: OC-YYMM<seq> (consecutivo global por mes)."""
     ahora = datetime.utcnow()
-    yyyymm = ahora.strftime("%Y%m")
-    iniciales = "OC"
-    if vendedor and vendedor.nombre:
-        parts = [p for p in vendedor.nombre.split() if p]
-        if parts:
-            iniciales = (parts[0][0] + (parts[1][0] if len(parts) > 1 else parts[0][1] if len(parts[0]) > 1 else "X")).upper()
+    yymm = ahora.strftime("%y%m")
     inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     consecutivo = (
         db.query(models.OrdenCompra)
-        .filter(models.OrdenCompra.fecha >= inicio_mes)
+        .filter(
+            models.OrdenCompra.fecha >= inicio_mes,
+            models.OrdenCompra.folio.like("OC-%"),
+        )
         .count()
         + 1
     )
-    return f"OC-{yyyymm}-{iniciales}-{consecutivo:04d}"
+    return f"OC-{yymm}{consecutivo:03d}"
 
 # --- ENDPOINTS ---
 

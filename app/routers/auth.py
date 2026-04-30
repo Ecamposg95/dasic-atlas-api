@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
@@ -49,6 +50,12 @@ def login_for_access_token(
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(request: Request, response: Response):
+    accept = request.headers.get("accept", "")
+    wants_html = "text/html" in accept and "application/json" not in accept
+    if wants_html:
+        redirect = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        redirect.delete_cookie(key=settings.token_cookie_name)
+        return redirect
     response.delete_cookie(key=settings.token_cookie_name)
     return {"ok": True}

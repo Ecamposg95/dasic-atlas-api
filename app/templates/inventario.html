@@ -3,6 +3,11 @@
 {% block page_title %}Inventario{% endblock %}
 
 {% block header_actions %}
+  <button type="button" class="dax-btn-ghost"
+          onclick="window.dispatchEvent(new CustomEvent('producto-modal-open'))">
+    <i class="fas fa-plus text-xs"></i>
+    Nuevo Producto
+  </button>
   <button type="button" class="dax-btn-primary" onclick="document.getElementById('inventario-import-file')?.click()">
     <i class="fas fa-arrow-up-from-bracket text-xs"></i>
     Importar Excel
@@ -10,7 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<div x-data="inventario()" x-init="init()">
+<div x-data="inventario()" x-init="init()" @producto-saved.window="init()">
   <input
     id="inventario-import-file"
     x-ref="importFile"
@@ -87,6 +92,14 @@
       <option value="sin_stock">Sin Stock</option>
       <option value="ok">OK</option>
     </select>
+    <select x-model="filtroMarca" @change="filtrar()"
+            class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
+                   rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
+      <option value="">Todas las marcas</option>
+      <template x-for="m in marcasEnUso" :key="m">
+        <option :value="m" x-text="m"></option>
+      </template>
+    </select>
   </div>
 
   <!-- Tabla -->
@@ -96,16 +109,18 @@
         <tr>
           <th>Producto / SKU</th>
           <th>Marca</th>
+          <th class="text-center">Unidad</th>
           <th class="text-right">Stock</th>
           <th class="text-right">Mínimo</th>
           <th class="text-right">Costo</th>
           <th>Estatus</th>
+          <th class="text-right">Acciones</th>
         </tr>
       </thead>
       <tbody>
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
-            <tr><td colspan="6">
+            <tr><td colspan="8">
               <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
@@ -118,6 +133,7 @@
                 <p class="text-[10px] text-slate-500 font-mono" x-text="displaySku(p)"></p>
               </td>
               <td class="text-xs text-slate-400" x-text="p.marca||'—'"></td>
+              <td class="text-xs text-slate-400 text-center" x-text="p.unidad||'PZA'"></td>
               <td class="text-right font-mono font-bold text-xs"
                   :class="p.stock_actual<=0 ? 'text-red-400' : p.stock_actual<=p.stock_minimo ? 'text-amber-400' : 'text-emerald-400'"
                   x-text="p.stock_actual"></td>
@@ -129,10 +145,27 @@
                 <span class="dax-badge-amber" x-show="p.stock_actual>0 && p.stock_actual<=p.stock_minimo">Crítico</span>
                 <span class="dax-badge-green" x-show="p.stock_actual>p.stock_minimo">OK</span>
               </td>
+              <td class="text-right">
+                <div class="inline-flex items-center gap-1">
+                  <button @click="ajustarStock(p, -1)" :disabled="p.stock_actual<=0"
+                          class="dax-btn-ghost py-1 px-2 disabled:opacity-30" title="−1 stock">
+                    <i class="fas fa-minus text-[10px]"></i>
+                  </button>
+                  <button @click="ajustarStock(p, +1)" class="dax-btn-ghost py-1 px-2" title="+1 stock">
+                    <i class="fas fa-plus text-[10px]"></i>
+                  </button>
+                  <button @click="abrirEdicion(p)" class="dax-btn-ghost py-1 px-2" title="Editar">
+                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  </button>
+                  <button @click="eliminar(p)" class="dax-btn-ghost py-1 px-2 hover:text-red-400" title="Eliminar">
+                    <i class="fas fa-trash text-[10px]"></i>
+                  </button>
+                </div>
+              </td>
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="6" class="text-center text-slate-500 py-12 text-sm">
+            <td colspan="8" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-boxes-stacked text-2xl mb-2 block opacity-30"></i>
               Sin productos encontrados
             </td>
@@ -140,6 +173,179 @@
         </template>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal Nuevo / Editar Producto                                -->
+<!-- ============================================================ -->
+<div id="modal-producto"
+     x-data="modalProducto()"
+     x-init="init()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @producto-modal-open.window="openCreate()"
+     @producto-modal-edit.window="openEdit($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-3xl max-h-[92vh] overflow-y-auto custom-scroll p-6"
+       @click.outside="close()">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-base font-bold text-slate-200" x-text="form.id ? 'Editar producto' : 'Nuevo producto'"></h2>
+        <p class="text-xs text-slate-500 mt-0.5">Identificación, costos, inventario y precios.</p>
+      </div>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <form @submit.prevent="submit()" class="space-y-4">
+
+      <!-- SECCIÓN: identificación -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Identificación</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU interno</label>
+            <input x-model="form.sku" :disabled="saving"
+                   @blur="form.sku = (form.sku||'').toUpperCase().trim(); if(!form.sku_comercial) form.sku_comercial = form.sku"
+                   placeholder="Auto: DAS-YYMM-XXXX" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">Vacío → se autogenera. Se pasa a MAYÚSCULAS.</p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU comercial / Catálogo</label>
+            <input x-model="form.sku_comercial" :disabled="saving"
+                   placeholder="P/N visible al cliente" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">El que aparece en el PDF de la cotización.</p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre *</label>
+            <input x-model="form.nombre" :disabled="saving" required minlength="2" maxlength="150"
+                   placeholder="Ej. RELEVADOR TIPO CLEMA 24V" class="dax-input">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Marca</label>
+            <input x-model="form.marca" list="marcas-list" :disabled="saving" maxlength="80"
+                   @change="sugerirPrefijoSku()" class="dax-input">
+            <datalist id="marcas-list">
+              <template x-for="m in marcas" :key="m.marca || m.abreviatura">
+                <option :value="m.marca || ''"></option>
+              </template>
+            </datalist>
+            <p class="text-[10px] text-slate-500 mt-1" x-show="prefijoSugerido">
+              Prefijo SKU sugerido: <code x-text="prefijoSugerido"></code>
+              <button type="button" class="ml-1 underline text-cyan-400 hover:text-cyan-300"
+                      @click="aplicarPrefijo()">aplicar</button>
+            </p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Unidad</label>
+            <input x-model="form.unidad" list="unidades-list" :disabled="saving" maxlength="20"
+                   placeholder="PZA, CAJA, MTS…" class="dax-input">
+            <datalist id="unidades-list">
+              <template x-for="u in unidades" :key="u">
+                <option :value="u"></option>
+              </template>
+            </datalist>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción</label>
+            <textarea x-model="form.descripcion" :disabled="saving" rows="2"
+                      placeholder="Detalles técnicos, modelo, etc." class="dax-input"></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SECCIÓN: costo + moneda -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Costo de compra</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Costo *</label>
+            <input type="number" min="0" step="0.01"
+                   x-model.number="form.costo_compra" :disabled="saving" required
+                   class="dax-input text-right font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Moneda compra</label>
+            <select x-model="form.moneda_compra" :disabled="saving" class="dax-input">
+              <template x-for="m in monedas" :key="m">
+                <option :value="m" x-text="m"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SECCIÓN: inventario -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Inventario</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Stock actual</label>
+            <input type="number" min="0" step="1" x-model.number="form.stock_actual" :disabled="saving"
+                   class="dax-input text-right font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Stock mínimo</label>
+            <input type="number" min="0" step="1" x-model.number="form.stock_minimo" :disabled="saving"
+                   class="dax-input text-right font-mono">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SECCIÓN: precios públicos (opcional) -->
+      <details class="border border-slate-700/40 rounded-xl p-4">
+        <summary class="text-[10px] uppercase tracking-wider text-slate-500 font-bold cursor-pointer">
+          Precios públicos (opcional — el cotizador usa cost+utilidad)
+        </summary>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Público</label>
+            <input type="number" min="0" step="0.01" x-model.number="form.precio_publico" :disabled="saving" class="dax-input text-right font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Mayorista</label>
+            <input type="number" min="0" step="0.01" x-model.number="form.precio_mayorista" :disabled="saving" class="dax-input text-right font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Distribuidor</label>
+            <input type="number" min="0" step="0.01" x-model.number="form.precio_distribuidor" :disabled="saving" class="dax-input text-right font-mono">
+          </div>
+        </div>
+      </details>
+
+      <div x-show="error" x-cloak
+           class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+           x-text="error"></div>
+
+      <div class="flex justify-between items-center pt-1">
+        <div>
+          <button type="button" x-show="form.id" @click="eliminarDesdeModal()"
+                  class="dax-btn-ghost text-rose-400 hover:text-rose-300" :disabled="saving">
+            <i class="fas fa-trash text-xs mr-1"></i> Eliminar
+          </button>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+          <button type="submit" class="dax-btn-primary" :disabled="saving">
+            <template x-if="!saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-save text-xs"></i>
+                <span x-text="form.id ? 'Guardar cambios' : 'Crear producto'"></span>
+              </span>
+            </template>
+            <template x-if="saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                Guardando…
+              </span>
+            </template>
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
@@ -150,11 +356,18 @@ function inventario() {
   return {
     loading: true,
     todos: [], filtrados: [],
-    q: '', filtroEstatus: '',
+    q: '', filtroEstatus: '', filtroMarca: '',
     kpi: { total:0, criticos:0, sin_stock:0, ok:0 },
     importMsg: { text:'', type:'success', hint:'' },
 
+    get marcasEnUso() {
+      const set = new Set();
+      for (const p of this.todos) if (p.marca) set.add(p.marca);
+      return Array.from(set).sort();
+    },
+
     async init() {
+      this.loading = true;
       try {
         const res = await fetch('/api/productos/?limit=2000', { credentials:'include' });
         if (res.ok) this.todos = await res.json();
@@ -175,12 +388,6 @@ function inventario() {
       return null;
     },
 
-    getPrecioLista(p) {
-      if (p.precio_publico !== undefined && p.precio_publico !== null && p.precio_publico !== '' && Number(p.precio_publico) > 0) return Number(p.precio_publico);
-      if (p.precio_lista !== undefined && p.precio_lista !== null && p.precio_lista !== '' && Number(p.precio_lista) > 0) return Number(p.precio_lista);
-      return null;
-    },
-
     displayCosto(p) {
       const costo = this.getCosto(p);
       if (costo === null || Number.isNaN(costo)) return '—';
@@ -189,18 +396,45 @@ function inventario() {
       return sym + costo.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
 
-    displayPrice(p) {
-      const precio = this.getPrecioLista(p);
-      if (precio === null || Number.isNaN(precio)) return '—';
-      return '$' + precio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    },
-
     displaySku(p) {
-      return p.sku_comercial || '—';
+      return p.sku_comercial || p.sku || '—';
     },
 
-    displaySkuInterno(p) {
-      return p.sku || p.numero_parte || '';
+    abrirEdicion(p) {
+      window.dispatchEvent(new CustomEvent('producto-modal-edit', { detail: p }));
+    },
+
+    async ajustarStock(p, delta) {
+      try {
+        const res = await fetch(`/api/productos/${p.id}/ajustar-stock`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ delta }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          p.stock_actual = updated.stock_actual;
+          this.calcularKpi();
+        } else {
+          const err = await res.json().catch(()=>({}));
+          this.importMsg = { text: err.detail || 'No se pudo ajustar el stock.', type: 'error', hint: '' };
+        }
+      } catch(e) { console.warn(e); }
+    },
+
+    async eliminar(p) {
+      if (!confirm(`Eliminar el producto "${p.nombre}"? Esta acción no se puede deshacer.`)) return;
+      try {
+        const res = await fetch(`/api/productos/${p.id}`, { method:'DELETE', credentials:'include' });
+        if (res.ok) {
+          this.importMsg = { text: 'Producto eliminado.', type: 'success', hint: '' };
+          await this.init();
+        } else {
+          const err = await res.json().catch(()=>({}));
+          this.importMsg = { text: err.detail || 'No se pudo eliminar.', type: 'error', hint: '' };
+        }
+      } catch(e) { console.warn(e); }
     },
 
     async subirArchivo(event) {
@@ -249,15 +483,193 @@ function inventario() {
       const q = this.q.toLowerCase();
       this.filtrados = this.todos.filter(p => {
         const skuComercial = (p.sku_comercial || '').toLowerCase();
-        const skuInterno = (p.sku || p.numero_parte || '').toLowerCase();
+        const skuInterno = (p.sku || '').toLowerCase();
         const matchQ = !q || (p.nombre||'').toLowerCase().includes(q) || skuComercial.includes(q) || skuInterno.includes(q) || (p.marca||'').toLowerCase().includes(q);
         const matchE = !this.filtroEstatus
           || (this.filtroEstatus==='sin_stock' && p.stock_actual<=0)
           || (this.filtroEstatus==='critico' && p.stock_actual>0 && p.stock_actual<=p.stock_minimo)
           || (this.filtroEstatus==='ok' && p.stock_actual>p.stock_minimo);
-        return matchQ && matchE;
+        const matchM = !this.filtroMarca || (p.marca || '') === this.filtroMarca;
+        return matchQ && matchE && matchM;
       });
     }
+  }
+}
+
+function modalProducto() {
+  const blank = () => ({
+    id: null,
+    sku: '',
+    sku_comercial: '',
+    nombre: '',
+    descripcion: '',
+    marca: '',
+    unidad: 'PZA',
+    costo_compra: 0,
+    moneda_compra: 'MXN',
+    stock_actual: 0,
+    stock_minimo: 5,
+    precio_publico: null,
+    precio_mayorista: null,
+    precio_distribuidor: null,
+  });
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: blank(),
+    marcas: [],
+    unidades: ['PZA','CAJA','MTS','KG','JUEGO','SERVICIO','PAR'],
+    monedas: ['MXN','USD'],
+    prefijoSugerido: '',
+
+    async init() {
+      try {
+        const res = await fetch('/api/productos/marcas', { credentials:'include' });
+        if (res.ok) {
+          const data = await res.json();
+          this.marcas = data.items || [];
+          if (Array.isArray(data.unidades_sugeridas) && data.unidades_sugeridas.length) this.unidades = data.unidades_sugeridas;
+          if (Array.isArray(data.monedas) && data.monedas.length) this.monedas = data.monedas;
+        }
+      } catch(_) {}
+    },
+
+    openCreate() {
+      this.form = blank();
+      this.error = '';
+      this.prefijoSugerido = '';
+      this.open = true;
+      this.$nextTick(() => {
+        const el = this.$root.querySelector('input[x-model="form.sku"]');
+        if (el) el.focus();
+      });
+    },
+
+    openEdit(p) {
+      this.form = {
+        id: p.id,
+        sku: p.sku || '',
+        sku_comercial: p.sku_comercial || '',
+        nombre: p.nombre || '',
+        descripcion: p.descripcion || '',
+        marca: p.marca || '',
+        unidad: p.unidad || 'PZA',
+        costo_compra: Number(p.costo_compra ?? 0),
+        moneda_compra: p.moneda_compra || 'MXN',
+        stock_actual: Number(p.stock_actual ?? 0),
+        stock_minimo: Number(p.stock_minimo ?? 5),
+        precio_publico: p.precio_publico !== undefined && p.precio_publico !== null ? Number(p.precio_publico) : null,
+        precio_mayorista: p.precio_mayorista !== undefined && p.precio_mayorista !== null ? Number(p.precio_mayorista) : null,
+        precio_distribuidor: p.precio_distribuidor !== undefined && p.precio_distribuidor !== null ? Number(p.precio_distribuidor) : null,
+      };
+      this.error = '';
+      this.prefijoSugerido = '';
+      this.open = true;
+    },
+
+    close() {
+      if (this.saving) return;
+      this.open = false;
+      this.error = '';
+    },
+
+    sugerirPrefijoSku() {
+      this.prefijoSugerido = '';
+      if (!this.form.marca) return;
+      const target = this.form.marca.trim().toLowerCase();
+      const m = this.marcas.find(x => (x.marca || '').toLowerCase() === target && x.prefijo_sku);
+      if (m) this.prefijoSugerido = m.prefijo_sku;
+    },
+
+    aplicarPrefijo() {
+      if (!this.prefijoSugerido) return;
+      const cur = (this.form.sku || '').toUpperCase();
+      if (cur && !cur.startsWith(this.prefijoSugerido)) {
+        this.form.sku = this.prefijoSugerido + cur;
+      } else if (!cur) {
+        this.form.sku = this.prefijoSugerido;
+      }
+    },
+
+    async submit() {
+      if (this.saving) return;
+      this.error = '';
+      const f = this.form;
+      if (!f.nombre || f.nombre.trim().length < 2) {
+        this.error = 'El nombre debe tener al menos 2 caracteres.';
+        return;
+      }
+      if (f.costo_compra === null || f.costo_compra === undefined || Number.isNaN(Number(f.costo_compra)) || Number(f.costo_compra) < 0) {
+        this.error = 'El costo de compra es requerido (>= 0).';
+        return;
+      }
+
+      const body = {
+        sku: (f.sku || '').trim() || null,
+        sku_comercial: (f.sku_comercial || '').trim() || null,
+        nombre: f.nombre.trim(),
+        descripcion: (f.descripcion || '').trim() || null,
+        marca: (f.marca || '').trim() || null,
+        unidad: (f.unidad || '').trim() || 'PZA',
+        costo_compra: Number(f.costo_compra),
+        moneda_compra: f.moneda_compra || 'MXN',
+        stock_actual: Number(f.stock_actual) || 0,
+        stock_minimo: Number(f.stock_minimo) || 0,
+      };
+      if (f.precio_publico !== null && f.precio_publico !== '' && !Number.isNaN(Number(f.precio_publico))) body.precio_publico = Number(f.precio_publico);
+      if (f.precio_mayorista !== null && f.precio_mayorista !== '' && !Number.isNaN(Number(f.precio_mayorista))) body.precio_mayorista = Number(f.precio_mayorista);
+      if (f.precio_distribuidor !== null && f.precio_distribuidor !== '' && !Number.isNaN(Number(f.precio_distribuidor))) body.precio_distribuidor = Number(f.precio_distribuidor);
+
+      this.saving = true;
+      try {
+        const url = f.id ? `/api/productos/${f.id}` : '/api/productos/';
+        const method = f.id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          let msg = 'No se pudo guardar el producto.';
+          try {
+            const data = await res.json();
+            if (typeof data.detail === 'string') msg = data.detail;
+            else if (Array.isArray(data.detail)) msg = data.detail.map(d => d.msg || JSON.stringify(d)).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.open = false;
+        this.form = blank();
+        window.dispatchEvent(new CustomEvent('producto-saved'));
+      } catch(e) {
+        this.error = 'Error de red al guardar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async eliminarDesdeModal() {
+      if (!this.form.id) return;
+      if (!confirm(`Eliminar el producto "${this.form.nombre}"?`)) return;
+      this.saving = true;
+      try {
+        const res = await fetch(`/api/productos/${this.form.id}`, { method:'DELETE', credentials:'include' });
+        if (res.ok) {
+          this.open = false;
+          window.dispatchEvent(new CustomEvent('producto-saved'));
+        } else {
+          const err = await res.json().catch(()=>({}));
+          this.error = err.detail || 'No se pudo eliminar.';
+        }
+      } catch(e) {
+        this.error = 'Error de red al eliminar.';
+      } finally {
+        this.saving = false;
+      }
+    },
   }
 }
 </script>

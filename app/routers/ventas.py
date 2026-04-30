@@ -24,38 +24,29 @@ router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 DEFAULT_QUOTE_VALIDITY_DAYS = 15
 
 
-def _user_initials(usuario: "models.Usuario") -> str:
-    nombre = (usuario.nombre or usuario.email or "USR").strip()
-    parts = [p for p in nombre.split() if p]
-    if len(parts) >= 2:
-        return (parts[0][0] + parts[1][0]).upper()
-    if parts:
-        return parts[0][:2].upper()
-    return "USR"
-
-
 def _generar_folio(
     db: Session,
     tipo_orden: "models.EstatusOrden",
     vendedor: "models.Usuario",
 ) -> str:
-    """COT-YYYYMM-USR-NNNN (NNNN = consecutivo del usuario en el mes)."""
+    """Folio formato DASIC: C-YYMM<seq> (cotización) o V-YYMM<seq> (venta).
+
+    El consecutivo es global por mes y por tipo (no por usuario), con padding
+    mínimo de 3 dígitos. Refleja el formato real usado en los PDFs históricos
+    (ej. C-2604227, OC-2604001).
+    """
     ahora = datetime.utcnow()
-    yyyymm = ahora.strftime("%Y%m")
-    iniciales = _user_initials(vendedor)
-    prefijo = "COT" if tipo_orden == models.EstatusOrden.COTIZACION else "VTA"
+    yymm = ahora.strftime("%y%m")
+    es_cot = tipo_orden == models.EstatusOrden.COTIZACION
+    prefijo = "C" if es_cot else "V"
     inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    consecutivo = (
-        db.query(models.OrdenVenta)
-        .filter(
-            models.OrdenVenta.vendedor_id == vendedor.id,
-            models.OrdenVenta.fecha_creacion >= inicio_mes,
-        )
-        .count()
-        + 1
+    q = db.query(models.OrdenVenta).filter(
+        models.OrdenVenta.fecha_creacion >= inicio_mes,
+        models.OrdenVenta.folio.like(f"{prefijo}-%"),
     )
-    return f"{prefijo}-{yyyymm}-{iniciales}-{consecutivo:04d}"
+    consecutivo = q.count() + 1
+    return f"{prefijo}-{yymm}{consecutivo:03d}"
 
 
 def _normalize_currency(moneda: str | None) -> str:
@@ -92,164 +83,187 @@ def _convert_cost_to_quote_currency(
 def _currency_symbol(moneda: str) -> str:
     return "US$" if moneda == "USD" else "$"
 
-# --- PLANTILLA PDF PROFESIONAL (DISEÑO FINAL) ---
+# --- PLANTILLA PDF: layout DASIC real (cotización / nota de venta) ---
 PDF_TEMPLATE_VENTA = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ tipo_doc }} {{ orden.folio }}</title>
-    <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; padding: 40px; font-size: 14px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        
-        /* HEADER */
-        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #1e3a8a; padding-bottom: 20px; margin-bottom: 30px; }
-        .logo-area { width: 60%; }
-        .company-name { font-size: 32px; font-weight: 900; color: #1e3a8a; margin: 0; letter-spacing: -1px; }
-        .company-details { font-size: 12px; color: #555; line-height: 1.4; margin-top: 5px; }
-        
-        .doc-info { width: 35%; text-align: right; }
-        .doc-title { font-size: 24px; font-weight: bold; color: #333; text-transform: uppercase; margin-bottom: 5px; }
-        .doc-meta { font-size: 13px; color: #666; line-height: 1.6; }
-        
-        /* CLIENTE */
-        .client-section { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 30px; border-left: 5px solid #3b82f6; display: flex; }
-        .client-col { width: 50%; }
-        .label { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
-        .value { font-weight: bold; color: #1e293b; margin-bottom: 8px; font-size: 14px; }
-        .sub-value { font-size: 13px; color: #475569; }
+<meta charset="UTF-8">
+<title>{{ tipo_doc }} {{ orden.folio }}</title>
+<style>
+  @page { size: Letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 12px; }
 
-        /* TABLA */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th { background: #1e3a8a; color: white; padding: 10px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-        td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        tr:nth-child(even) { background: #f8fafc; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .meta-text { color: #0f766e; font-size: 10px; display: block; }
+  .page { width: 100%; min-height: 100vh; padding: 28px 38px 96px 38px; position: relative; }
 
-        /* TOTALES */
-        .totals-container { display: flex; justify-content: flex-end; margin-bottom: 30px; }
-        .totals-box { width: 40%; }
-        .total-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #475569; }
-        .grand-total { font-size: 20px; font-weight: bold; color: #1e3a8a; border-top: 2px solid #1e3a8a; padding-top: 10px; margin-top: 5px; }
+  /* Header DASIC */
+  .brand-row { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 4px solid #0f3a66; }
+  .brand-mark { width: 46px; height: 46px; border-radius: 8px; background: linear-gradient(135deg,#0f3a66,#1d6fb8); color:#fff; font-weight: 900; font-size: 24px; display:flex; align-items:center; justify-content:center; letter-spacing: -1px; }
+  .brand-name { font-size: 30px; font-weight: 900; color:#0f3a66; letter-spacing: 1px; }
+  .brand-tag { font-size: 11px; color:#475569; margin-top: 2px; letter-spacing: 0.5px; }
+  .brand-rule { height: 6px; background: linear-gradient(90deg,#0f3a66,#1d6fb8 60%,#cbd5e1); margin-bottom: 22px; }
 
-        /* CONDICIONES */
-        .terms-box { border-top: 1px solid #cbd5e1; padding-top: 20px; margin-top: 40px; font-size: 11px; color: #475569; }
-        .terms-title { font-weight: bold; text-transform: uppercase; margin-bottom: 10px; color: #1e3a8a; }
-        .bank-info { background: #eff6ff; padding: 10px; border-radius: 6px; margin-top: 10px; display: inline-block; width: 100%; box-sizing: border-box; }
-        
-        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #94a3b8; }
-    </style>
+  /* Encabezado documento */
+  .doc-head { display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .doc-fecha { font-size: 13px; color:#0f172a; }
+  .doc-fecha .lbl { font-weight: 700; }
+  .doc-fecha .val { text-decoration: underline; font-weight: 600; }
+  .doc-title { color:#0f3a66; font-weight: 800; font-size: 26px; letter-spacing: 1px; }
+  .doc-folio { color:#0f172a; font-weight: 700; font-size: 16px; margin-left: 6px; }
+
+  /* Bloque cliente (alineado a la derecha como los PDFs reales) */
+  .cliente { text-align: right; margin-bottom: 14px; }
+  .cliente .row { font-size: 12.5px; color:#0f172a; line-height: 1.45; }
+  .cliente .lbl { font-weight: 700; }
+  .cliente .name, .cliente .email a { color: #1d6fb8; font-weight: 700; }
+
+  /* Tabla */
+  table.items { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 8px; font-size: 11px; }
+  table.items thead th {
+    background:#0f3a66; color:#fff; padding: 8px 6px; font-weight: 700;
+    border-right: 1px solid #1d6fb8; text-transform: capitalize; font-size: 11px;
+  }
+  table.items thead th:last-child { border-right: none; }
+  table.items tbody td { background:#f1f5f9; padding: 10px 8px; border-bottom: 4px solid #fff; vertical-align: top; }
+  table.items td.center { text-align: center; }
+  table.items td.right { text-align: right; }
+  .item-cat { font-weight: 700; color:#0f172a; }
+  .item-desc { color:#0f172a; white-space: pre-line; }
+  table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 9px 8px; border-bottom: 4px solid #fff; }
+
+  /* Condiciones */
+  .terms-title { font-weight: 800; color:#0f172a; margin-top: 22px; margin-bottom: 6px; font-size: 12px; }
+  ul.terms { padding-left: 18px; margin: 0; color:#1e293b; font-size: 11px; line-height: 1.55; }
+  ul.terms li { margin-bottom: 3px; }
+  ul.terms strong { color:#0f172a; }
+
+  /* Firma */
+  .firma { margin-top: 32px; text-align: center; font-size: 12px; color:#0f172a; }
+  .firma .label { font-weight: 800; letter-spacing: 1px; }
+  .firma .line { width: 240px; border-top: 1px solid #0f172a; margin: 36px auto 4px; }
+  .firma .name { font-weight: 700; }
+  .firma .mail a { color:#1d6fb8; }
+
+  /* Footer */
+  .footer-bar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, #0f3a66 0%, #0a2949 100%);
+    color:#cbd5e1; font-size: 12px; text-align: center; padding: 14px 0; letter-spacing: 1px;
+  }
+  .footer-bar .web { color:#fff; font-weight: 700; }
+
+  .print-btn { position: fixed; top: 14px; right: 14px; background:#1d6fb8; color:#fff; border: 0; padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
+  @media print { .print-btn { display:none; } body { background:#fff; } }
+</style>
 </head>
-<body onload="window.print()">
-    <div class="container">
-        <div class="header">
-            <div class="logo-area">
-                <div class="company-name">DASIC ERP</div>
-                <div class="company-details">
-                    Soluciones Industriales S.A. de C.V.<br>
-                    RFC: DAS-010101-ABC<br>
-                    Av. Revolución 123, Ciudad de México<br>
-                    contacto@dasic.com | (55) 5555-5555
-                </div>
-            </div>
-            <div class="doc-info">
-                <div class="doc-title">{{ tipo_doc }}</div>
-                <div class="doc-meta">
-                    Folio: <strong style="color: #000;">{{ orden.folio }}</strong><br>
-                    Fecha: {{ orden.fecha_creacion.strftime('%d/%m/%Y') }}<br>
-                    Vendedor: {{ orden.vendedor.nombre }}
-                </div>
-            </div>
-        </div>
+<body>
+<button class="print-btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+<div class="page">
 
-        <div class="client-section">
-            <div class="client-col">
-                <div class="label">Cliente</div>
-                <div class="value">{{ orden.cliente.nombre_empresa }}</div>
-                <div class="sub-value">{{ orden.cliente.rfc_tax_id or "XAXX010101000" }}</div>
-                <div class="sub-value">{{ orden.cliente.direccion or "Domicilio Conocido" }}</div>
-            </div>
-            <div class="client-col">
-                <div class="label">Contacto</div>
-                <div class="value">{{ orden.cliente.contacto_nombre }}</div>
-                <div class="sub-value">{{ orden.cliente.email }}</div>
-                <div class="sub-value">Tel: {{ orden.cliente.telefono }}</div>
-            </div>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th width="15%">SKU</th>
-                    <th width="45%">Descripción</th>
-                    <th width="10%" class="text-center">Cant.</th>
-                    <th width="15%" class="text-right">P. Unitario</th>
-                    <th width="15%" class="text-right">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in orden.detalles %}
-                <tr>
-                    <td style="font-weight: bold; color: #475569;">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or "—" }}</td>
-                    <td>
-                        {{ item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial") }}
-                        {% if item.utilidad_aplicada and item.utilidad_aplicada > 0 %}
-                            <span class="meta-text">Utilidad {{ item.utilidad_aplicada|int }}%</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center">{{ item.cantidad }}</td>
-                    <td class="text-right">{{ simbolo_moneda }}{{ "{:,.2f}".format(item.precio_unitario) }}</td>
-                    <td class="text-right font-bold text-slate-700">{{ simbolo_moneda }}{{ "{:,.2f}".format(item.subtotal) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div class="totals-container">
-            <div class="totals-box">
-                <div class="total-row">
-                    <span>Subtotal:</span>
-                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(orden.total) }}</span>
-                </div>
-                <div class="total-row">
-                    <span>IVA (16%):</span>
-                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(iva) }}</span>
-                </div>
-                <div class="total-row grand-total">
-                    <span>TOTAL:</span>
-                    <span>{{ simbolo_moneda }}{{ "{:,.2f}".format(gran_total) }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="terms-box">
-            <div class="terms-title">Términos y Condiciones Comerciales</div>
-            <ul>
-                <li>Precios expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>. Sujetos a cambio sin previo aviso.</li>
-                {% if orden.moneda == "USD" %}
-                <li>Tipo de cambio referencia: <strong>{{ "{:,.4f}".format(orden.tipo_cambio) }} MXN por USD</strong>. Pago en USD o en MXN al T.C. del día de pago.</li>
-                {% endif %}
-                <li>Vigencia de la cotización: <strong>{{ vigencia_dias }} días naturales</strong>.</li>
-                <li>Tiempo de entrega sujeto a disponibilidad de stock.</li>
-                <li>{{ orden.observaciones or "Sin observaciones adicionales." }}</li>
-            </ul>
-
-            <div class="bank-info">
-                {% if orden.moneda == "USD" %}
-                <strong>DATOS BANCARIOS (USD):</strong> Solicite datos de cuenta en dólares al ejecutivo de cuenta.
-                {% else %}
-                <strong>DATOS BANCARIOS (MXN):</strong> BBVA Bancomer | DASIC S.A. DE C.V. | Cuenta: 0123 4567 89
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="footer">
-            www.dasic.com | Soluciones integrales para la industria
-        </div>
+  <div class="brand-row">
+    <div class="brand-mark">D</div>
+    <div>
+      <div class="brand-name">DASIC</div>
+      <div class="brand-tag">Development Of Automation System And Industrial Control</div>
     </div>
+  </div>
+  <div class="brand-rule"></div>
+
+  <div class="doc-head">
+    <div class="doc-fecha">
+      <span class="lbl">Fecha:</span>
+      <span class="val">{{ fecha_str }}</span>
+    </div>
+    <div>
+      <span class="doc-title">{{ tipo_doc }}:</span>
+      <span class="doc-folio">{{ orden.folio }}</span>
+    </div>
+  </div>
+
+  <div class="cliente">
+    {% if orden.cliente.contacto_nombre %}
+      <div class="row"><span class="lbl">Nombre:</span> <span class="name">{{ orden.cliente.contacto_nombre }}</span></div>
+    {% endif %}
+    <div class="row"><span class="lbl">Compañía:</span> {{ orden.cliente.nombre_empresa }}</div>
+    {% if orden.cliente.email %}
+      <div class="row email"><span class="lbl">E-mail:</span> <a href="mailto:{{ orden.cliente.email }}">{{ orden.cliente.email }}</a></div>
+    {% endif %}
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width: 6%;">Item</th>
+        <th style="width: 16%;">Catalog #</th>
+        <th>Description</th>
+        <th style="width: 7%;">Qty</th>
+        <th style="width: 14%;">UNIT</th>
+        <th style="width: 14%;">SubTotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in orden.detalles %}
+      <tr>
+        <td class="center">{{ loop.index }}</td>
+        <td><div class="item-cat">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or (item.producto.sku if item.producto else "—") }}</div></td>
+        <td><div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div></td>
+        <td class="center">{{ item.cantidad }}</td>
+        <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
+        <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.subtotal) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      {% if es_cotizacion %}
+        <tr>
+          <td colspan="5" class="right">subtotal({{ etiqueta_moneda_corta }})</td>
+          <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(orden.total) }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="right">SubTotal({{ etiqueta_moneda_corta }})</td>
+          <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(orden.total) }}</td>
+        </tr>
+        <tr>
+          <td colspan="5" class="right">IVA(16%)</td>
+          <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(iva) }}</td>
+        </tr>
+        <tr>
+          <td colspan="5" class="right">Total({{ etiqueta_moneda_corta }})</td>
+          <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(gran_total) }}</td>
+        </tr>
+      {% endif %}
+    </tfoot>
+  </table>
+
+  {% if es_cotizacion %}
+  <div class="terms-title">CONDICIONES COMERCIALES:</div>
+  <ul class="terms">
+    <li><strong>Agregar el IVA correspondiente.</strong> Tiempo de entrega S.P.V.</li>
+    <li><strong>Verificar que el material cotizado cumpla con sus requerimientos técnicos.</strong></li>
+    <li>Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.</li>
+    <li>Los precios están expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>{% if orden.moneda == "USD" %} — tipo de cambio referencia: {{ "{:,.4f}".format(orden.tipo_cambio) }} MXN/USD{% endif %}.</li>
+    <li>Condiciones de pago: {{ orden.observaciones or "según acuerdo comercial" }}.</li>
+    <li>En caso de cancelación se cobrará el 25% del monto total.</li>
+    <li>Los precios indicados no incluyen flete.</li>
+    <li>Si se tiene el material en existencia y el cliente se encuentra ubicado en CDMX y/o área metropolitana se entregará en 2 a 3 días hábiles. En caso contrario el flete será cubierto por el cliente.</li>
+    <li>Para procesar su pedido es necesario colocar una orden de compra indicando el número de cotización y aceptación de estas condiciones comerciales (más anticipo cuando aplique).</li>
+    <li>La garantía de los productos es la que otorga cada fabricante.</li>
+    <li>Vigencia de esta cotización: <strong>{{ vigencia_dias }} días a partir de la fecha de emisión.</strong></li>
+  </ul>
+  {% endif %}
+
+  <div class="firma">
+    <div class="label">ATENTAMENTE</div>
+    <div class="line"></div>
+    <div class="name">{{ orden.vendedor.nombre if orden.vendedor else "Equipo DASIC" }}</div>
+    <div class="mail">{% if orden.vendedor and orden.vendedor.email %}<a href="mailto:{{ orden.vendedor.email }}">{{ orden.vendedor.email }}</a>{% endif %}</div>
+  </div>
+
+  <div class="footer-bar"><span class="web">www.dasic.mx</span></div>
+</div>
 </body>
 </html>
 """
@@ -509,7 +523,8 @@ def recotizar(
     )
 
     folio_nuevo = _generar_folio(db, models.EstatusOrden.COTIZACION, current_user)
-    folio_versionado = f"{folio_nuevo}-V{siguiente_version}"
+    # Formato versionado alineado al folio real DASIC: C-YYMMNNN + V<n>  (ej. C-2604227V2)
+    folio_versionado = f"{folio_nuevo}V{siguiente_version}"
 
     nueva = models.OrdenVenta(
         folio=folio_versionado,
@@ -602,15 +617,21 @@ def convertir_cotizacion(
         raise HTTPException(400, "Orden no válida para conversión")
 
     try:
-        # Descontar Stock
+        # Descontar Stock — los productos fantasma (sin producto_id) no afectan inventario.
         for det in orden.detalles:
+            if det.producto is None:
+                continue
             if det.producto.stock_actual < det.cantidad:
                 raise HTTPException(400, f"Stock insuficiente para {det.producto.sku}")
             det.producto.stock_actual -= det.cantidad
-        
-        # Cambiar Estatus y Folio
+
+        # Cambiar Estatus y Folio (formato real: C-YYMMNNN -> V-YYMMNNN; legacy: COT- -> VTA-)
         orden.estatus = models.EstatusOrden.PENDIENTE
-        orden.folio = orden.folio.replace("COT", "VTA")
+        if orden.folio:
+            if orden.folio.startswith("C-"):
+                orden.folio = "V" + orden.folio[1:]
+            elif orden.folio.startswith("COT-"):
+                orden.folio = orden.folio.replace("COT-", "VTA-", 1)
         
         # Generar Deuda
         total_con_iva = orden.total * Decimal("1.16")
@@ -714,13 +735,20 @@ def generar_pdf(
     )
     if not orden: raise HTTPException(404)
 
-    iva = orden.total * Decimal("0.16")
-    gran_total = orden.total + iva
-    tipo_doc = (
-        "COTIZACIÓN" if orden.estatus == models.EstatusOrden.COTIZACION else "NOTA DE VENTA"
-    )
+    iva = (orden.total * Decimal("0.16")).quantize(Decimal("0.01"))
+    gran_total = (orden.total + iva).quantize(Decimal("0.01"))
+    es_cotizacion = orden.estatus == models.EstatusOrden.COTIZACION
+    tipo_doc = "COTIZACION" if es_cotizacion else "NOTA DE VENTA"
     simbolo_moneda = _currency_symbol(orden.moneda)
     etiqueta_moneda = "Dólares Americanos" if orden.moneda == "USD" else "Moneda Nacional"
+    etiqueta_moneda_corta = "USD" if orden.moneda == "USD" else "MN"
+
+    meses_es = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+    if orden.fecha_creacion:
+        f = orden.fecha_creacion
+        fecha_str = f"{f.day} de {meses_es[f.month-1]} de {f.year}"
+    else:
+        fecha_str = ""
     vigencia_dias = (
         max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
         if orden.fecha_vencimiento and orden.fecha_creacion
@@ -733,9 +761,12 @@ def generar_pdf(
         iva=iva,
         gran_total=gran_total,
         tipo_doc=tipo_doc,
+        es_cotizacion=es_cotizacion,
         simbolo_moneda=simbolo_moneda,
         etiqueta_moneda=etiqueta_moneda,
+        etiqueta_moneda_corta=etiqueta_moneda_corta,
         vigencia_dias=vigencia_dias,
+        fecha_str=fecha_str,
     )
 
 

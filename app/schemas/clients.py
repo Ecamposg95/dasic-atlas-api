@@ -10,10 +10,10 @@ from pydantic import BaseModel, ConfigDict
 
 class ClienteBase(BaseModel):
     nombre_empresa: str
-    contacto_nombre: str
+    contacto_nombre: Optional[str] = None
     rfc_tax_id: Optional[str] = None
-    email: str  # EmailStr omitido para evitar error en Windows
-    telefono: str
+    email: Optional[str] = None  # EmailStr omitido para evitar error en Windows
+    telefono: Optional[str] = None
     direccion: Optional[str] = None
 
 
@@ -29,9 +29,9 @@ class ClienteResponse(ClienteBase):
 
 class ProveedorBase(BaseModel):
     nombre_empresa: str
-    contacto_nombre: str
-    telefono: str
-    email: str  # EmailStr omitido para evitar error en Windows
+    contacto_nombre: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None  # EmailStr omitido para evitar error en Windows
 
 
 class ProveedorCreate(ProveedorBase):
