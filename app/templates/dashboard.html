@@ -9,266 +9,621 @@
         x-text="d"></span>
 {% endblock %}
 
-{% block header_actions %}
-  <button onclick="window.location.reload()"
-          class="dax-btn-ghost gap-2 text-xs">
-    <i class="fas fa-rotate text-cyan-400"></i>
-    Actualizar
-  </button>
+{% block extra_head %}
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+  <style>
+    .kpi-spark { height: 36px; width: 100%; }
+    .pipeline-col { min-width: 220px; }
+    .heatmap-cell { display: inline-block; width: 11px; height: 11px; margin: 1.5px; border-radius: 2px; }
+    .delta-up { color: #34d399; }
+    .delta-down { color: #fb7185; }
+    .delta-flat { color: #94a3b8; }
+    .echarts-target { width: 100%; height: 100%; }
+  </style>
 {% endblock %}
 
-{% block extra_head %}
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block header_actions %}
+  <div class="flex items-center gap-2 text-xs">
+    <select x-data x-bind:value="$store.dash?.window || 'mtd'"
+            @change="$store.dash.setWindow($event.target.value)"
+            class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-cyan-500">
+      <option value="today">Hoy</option>
+      <option value="7d">7 días</option>
+      <option value="mtd" selected>Mes</option>
+      <option value="qtd">Trimestre</option>
+      <option value="ytd">Año</option>
+      <option value="30d">Últimos 30d</option>
+    </select>
+    <button @click="$store.dash?.reload()" class="dax-btn-ghost gap-2 text-xs"
+            x-data x-bind:disabled="$store.dash?.loading">
+      <i class="fas fa-rotate text-cyan-400"
+         x-bind:class="$store.dash?.loading && 'fa-spin'"></i>
+      Actualizar
+    </button>
+  </div>
 {% endblock %}
 
 {% block content %}
-<div x-data="dashboard()" x-init="init()">
+<div x-data="dashboard()" x-init="init()" class="space-y-6">
 
-  <!-- ── KPI Strip ────────────────────────────────────────── -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+  <!-- ===== HERO STRIP ===== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
-    <!-- Ventas del Mes -->
-    <div class="kpi-card group">
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ventas (Mes)</p>
-        <p class="text-2xl font-bold text-slate-100"
-           x-text="kpi.ventas_mes"></p>
-        <p class="text-xs text-slate-500 mt-1">órdenes confirmadas</p>
+    <!-- Ventas -->
+    <div class="dax-card p-5 relative overflow-hidden">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ventas</p>
+          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="fmt.money(hero.ventas.monto_mxn)"></p>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            <span x-text="hero.ventas.count"></span> órdenes ·
+            <span :class="deltaClass(hero.ventas.delta_pct)" x-text="fmt.delta(hero.ventas.delta_pct)"></span>
+          </p>
+        </div>
+        <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-cyan-500/10 ring-1 ring-cyan-500/20 text-cyan-400">
+          <i class="fas fa-chart-line"></i>
+        </div>
       </div>
-      <div class="h-11 w-11 flex items-center justify-center rounded-xl
-                  bg-cyan-500/10 ring-1 ring-cyan-500/20 text-cyan-400
-                  group-hover:bg-cyan-500/20 transition-colors">
-        <i class="fas fa-chart-line text-lg"></i>
-      </div>
+      <div id="spark-ventas" class="kpi-spark"></div>
     </div>
 
-    <!-- Cotizaciones Activas -->
-    <div class="kpi-card group">
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cotizaciones</p>
-        <p class="text-2xl font-bold text-slate-100"
-           x-text="kpi.cotizaciones"></p>
-        <p class="text-xs text-slate-500 mt-1">en seguimiento</p>
+    <!-- Pipeline -->
+    <div class="dax-card p-5 relative overflow-hidden">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pipeline activo</p>
+          <p class="text-2xl font-bold text-slate-100 mt-1" x-text="fmt.money(hero.pipeline.monto_mxn)"></p>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            <span x-text="hero.pipeline.count"></span> cotiz. ·
+            <span class="text-slate-400">ticket prom.</span>
+            <span class="font-mono" x-text="fmt.money(hero.pipeline.ticket_promedio_mxn)"></span>
+          </p>
+        </div>
+        <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20 text-amber-400">
+          <i class="fas fa-file-invoice"></i>
+        </div>
       </div>
-      <div class="h-11 w-11 flex items-center justify-center rounded-xl
-                  bg-amber-500/10 ring-1 ring-amber-500/20 text-amber-400
-                  group-hover:bg-amber-500/20 transition-colors">
-        <i class="fas fa-file-invoice text-lg"></i>
-      </div>
+      <div class="text-[10px] text-slate-500 mt-2">Cotizaciones abiertas, monto en MXN</div>
     </div>
 
-    <!-- Clientes Activos -->
-    <div class="kpi-card group">
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Clientes</p>
-        <p class="text-2xl font-bold text-slate-100"
-           x-text="kpi.clientes"></p>
-        <p class="text-xs text-slate-500 mt-1">cuentas activas</p>
+    <!-- Conversión -->
+    <div class="dax-card p-5 relative overflow-hidden">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Conversión 30d</p>
+          <p class="text-2xl font-bold text-slate-100 mt-1">
+            <span x-text="hero.conversion.tasa_pct"></span><span class="text-slate-500 text-lg">%</span>
+          </p>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            target <span class="text-slate-300" x-text="hero.conversion.target_pct + '%'"></span>
+          </p>
+        </div>
+        <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 text-emerald-400">
+          <i class="fas fa-bullseye"></i>
+        </div>
       </div>
-      <div class="h-11 w-11 flex items-center justify-center rounded-xl
-                  bg-violet-500/10 ring-1 ring-violet-500/20 text-violet-400
-                  group-hover:bg-violet-500/20 transition-colors">
-        <i class="fas fa-users text-lg"></i>
-      </div>
+      <div id="spark-conv" class="kpi-spark"></div>
     </div>
 
-    <!-- Stock Crítico -->
-    <div class="kpi-card group">
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Stock Crítico</p>
-        <p class="text-2xl font-bold"
-           :class="kpi.stock_critico > 0 ? 'text-red-400' : 'text-emerald-400'"
-           x-text="kpi.stock_critico"></p>
-        <p class="text-xs text-slate-500 mt-1">SKUs bajo mínimo</p>
+    <!-- Margen -->
+    <div class="dax-card p-5 relative overflow-hidden">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Margen promedio</p>
+          <p class="text-2xl font-bold text-slate-100 mt-1">
+            <span x-text="hero.margen.pct"></span><span class="text-slate-500 text-lg">%</span>
+          </p>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            sobre <span x-text="hero.margen.muestra_lineas"></span> líneas
+          </p>
+        </div>
+        <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-500/20 text-violet-400">
+          <i class="fas fa-percent"></i>
+        </div>
       </div>
-      <div class="h-11 w-11 flex items-center justify-center rounded-xl
-                  bg-red-500/10 ring-1 ring-red-500/20 text-red-400
-                  group-hover:bg-red-500/20 transition-colors">
-        <i class="fas fa-triangle-exclamation text-lg"></i>
+      <div class="h-2 bg-slate-700/40 rounded mt-3 overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+             :style="`width:${Math.min(100, hero.margen.pct)}%`"></div>
       </div>
     </div>
   </div>
 
-  <!-- KPI strip secundario operativo -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-    <div class="dax-card p-4 flex items-center justify-between">
+  <!-- ===== PIPELINE KANBAN ===== -->
+  <div class="dax-card p-5">
+    <div class="flex items-center justify-between mb-4">
       <div>
-        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cotiz. Vencidas</p>
-        <p class="text-xl font-black text-rose-400" x-text="kpiOps.vencidas"></p>
+        <h2 class="text-sm font-bold text-slate-200">Pipeline de cotizaciones</h2>
+        <p class="text-[11px] text-slate-500 mt-0.5">Drag mental: Nueva → Seguimiento → Por vencer → Vencida → Convertida (últimos 30d).</p>
       </div>
-      <i class="fas fa-hourglass-end text-rose-400/50"></i>
     </div>
-    <div class="dax-card p-4 flex items-center justify-between">
-      <div>
-        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Por vencer 3d</p>
-        <p class="text-xl font-black text-amber-400" x-text="kpiOps.por_vencer"></p>
-      </div>
-      <i class="fas fa-bell text-amber-400/50"></i>
-    </div>
-    <div class="dax-card p-4 flex items-center justify-between">
-      <div>
-        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OC Borrador</p>
-        <p class="text-xl font-black text-cyan-300" x-text="kpiOps.oc_borrador"></p>
-      </div>
-      <i class="fas fa-truck-loading text-cyan-300/50"></i>
-    </div>
-    <div class="dax-card p-4 flex items-center justify-between">
-      <div>
-        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OC Recibidas</p>
-        <p class="text-xl font-black text-emerald-400" x-text="kpiOps.oc_recibidas"></p>
-      </div>
-      <i class="fas fa-box-open text-emerald-400/50"></i>
+
+    <div class="flex gap-3 overflow-x-auto custom-scroll pb-2">
+      <template x-for="col in pipelineColumns" :key="col.key">
+        <div class="pipeline-col flex-1 bg-slate-900/50 border border-slate-700/40 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full" :class="col.dot"></span>
+              <p class="text-[11px] font-bold uppercase tracking-wider" :class="col.text" x-text="col.label"></p>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400" x-text="(pipeline[col.key]?.count || 0)"></span>
+          </div>
+          <p class="text-[10px] text-slate-500 mb-2">
+            <span class="font-mono" x-text="fmt.money(pipeline[col.key]?.monto_total_mxn || 0)"></span>
+          </p>
+          <div class="space-y-2 max-h-72 overflow-y-auto custom-scroll pr-1">
+            <template x-for="i in (pipeline[col.key]?.items || [])" :key="i.id">
+              <a :href="`/api/ventas/${i.id}/pdf`" target="_blank"
+                 class="block rounded-lg p-2.5 bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/40 hover:border-cyan-500/40 transition group">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-mono text-[11px] font-bold text-slate-200 group-hover:text-cyan-300" x-text="i.folio"></span>
+                  <span class="text-[10px] text-slate-500" x-text="badgeDias(col.key, i)"></span>
+                </div>
+                <p class="text-[11px] text-slate-300 truncate" x-text="i.cliente"></p>
+                <div class="flex items-center justify-between mt-1.5">
+                  <span class="text-[9px] text-slate-500 uppercase" x-text="i.contacto || ''"></span>
+                  <span class="text-[11px] font-mono font-bold text-cyan-400" x-text="fmt.money(i.monto_mxn)"></span>
+                </div>
+              </a>
+            </template>
+            <p x-show="!(pipeline[col.key]?.items?.length)" class="text-[10px] text-slate-600 italic text-center py-3">vacío</p>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 
-  <!-- ── Grid principal ─────────────────────────────────── -->
+  <!-- ===== TENDENCIA + ALERTAS ===== -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Gráfica de ventas -->
-    <div class="dax-card lg:col-span-2 p-6">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-sm font-bold text-slate-200">Tendencia de Ventas</h2>
-        <span class="text-xs text-slate-500">Últimos 6 meses</span>
+    <div class="dax-card lg:col-span-2 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold text-slate-200">Tendencia ventas vs cotizaciones</h2>
+        <span class="text-[11px] text-slate-500">Últimos 12 meses · MXN</span>
       </div>
-      <div class="h-56">
-        <canvas id="salesChart"></canvas>
-      </div>
+      <div id="chart-tendencia" style="height: 320px;"></div>
     </div>
 
-    <!-- Actividad Reciente -->
-    <div class="dax-card p-6 flex flex-col">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-bold text-slate-200">Actividad Reciente</h2>
-        <a href="/ventas/cotizador"
-           class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
-          Ver todas →
-        </a>
-      </div>
+    <div class="dax-card p-5 flex flex-col">
+      <h2 class="text-sm font-bold text-slate-200 mb-3">Acciones urgentes</h2>
+      <div class="space-y-3 overflow-y-auto custom-scroll" style="max-height: 360px;">
 
-      <!-- Skeleton loading -->
-      <div x-show="loading" class="space-y-3">
-        <template x-for="i in 5" :key="i">
-          <div class="flex items-center gap-3 animate-pulse">
-            <div class="h-8 w-8 rounded-lg bg-slate-700 shrink-0"></div>
-            <div class="flex-1 space-y-1.5">
-              <div class="h-2.5 bg-slate-700 rounded w-3/4"></div>
-              <div class="h-2 bg-slate-700/60 rounded w-1/2"></div>
-            </div>
-            <div class="h-2.5 bg-slate-700 rounded w-14 shrink-0"></div>
-          </div>
-        </template>
-      </div>
+        <!-- por vencer -->
+        <div x-show="alertas.por_vencer_3d?.length">
+          <p class="text-[10px] uppercase tracking-wider font-bold text-amber-400 mb-1.5">⏰ Cotizaciones por vencer</p>
+          <template x-for="a in alertas.por_vencer_3d" :key="a.id">
+            <a :href="`/api/ventas/${a.id}/pdf`" target="_blank"
+               class="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-amber-500/10 transition">
+              <div class="min-w-0">
+                <p class="text-[11px] font-mono font-bold text-amber-300" x-text="a.folio"></p>
+                <p class="text-[10px] text-slate-500 truncate" x-text="a.cliente"></p>
+              </div>
+              <span class="text-[10px] font-mono shrink-0"
+                    :class="a.dias_restantes <= 1 ? 'text-rose-400' : 'text-amber-400'"
+                    x-text="a.dias_restantes + 'd'"></span>
+            </a>
+          </template>
+        </div>
 
-      <!-- Tabla -->
-      <div x-show="!loading" class="flex-1 overflow-y-auto space-y-1">
-        <template x-for="v in recientes" :key="v.folio">
-          <div class="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-700/40 transition-colors">
-            <div class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg"
-                 :class="v.estatus==='cotizacion' ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'">
-              <i class="text-xs" :class="v.estatus==='cotizacion' ? 'fas fa-file-alt' : 'fas fa-check'"></i>
+        <!-- stock crítico cotizado -->
+        <div x-show="alertas.stock_critico_cotizado?.length">
+          <p class="text-[10px] uppercase tracking-wider font-bold text-rose-400 mb-1.5">⚠️ Stock crítico ya cotizado</p>
+          <template x-for="a in alertas.stock_critico_cotizado" :key="a.producto_id">
+            <div class="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+              <div class="min-w-0">
+                <p class="text-[11px] font-mono font-bold text-rose-300" x-text="a.sku"></p>
+                <p class="text-[10px] text-slate-500 truncate" x-text="a.nombre"></p>
+              </div>
+              <span class="text-[10px] font-mono text-rose-400 shrink-0"
+                    x-text="`${a.stock_actual}/${a.cantidad_cotizada}`" title="stock / cotizado"></span>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-semibold text-slate-200 truncate" x-text="v.folio"></p>
-              <p class="text-[10px] text-slate-500 truncate" x-text="v.cliente"></p>
+          </template>
+        </div>
+
+        <!-- saldos vencidos -->
+        <div x-show="alertas.saldos_vencidos?.length">
+          <p class="text-[10px] uppercase tracking-wider font-bold text-fuchsia-400 mb-1.5">💸 Saldos &gt; 60d</p>
+          <template x-for="a in alertas.saldos_vencidos" :key="a.id">
+            <div class="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold text-fuchsia-300 truncate" x-text="a.empresa"></p>
+                <p class="text-[10px] text-slate-500" x-text="a.dias_sin_pago + ' días sin pago'"></p>
+              </div>
+              <span class="text-[10px] font-mono text-fuchsia-400 shrink-0" x-text="fmt.money(a.saldo)"></span>
             </div>
-            <p class="text-xs font-mono font-bold text-slate-300 shrink-0"
-               x-text="'$'+parseFloat(v.total).toLocaleString('en-US',{minimumFractionDigits:0})"></p>
-          </div>
-        </template>
-        <p x-show="recientes.length===0 && !loading"
-           class="text-xs text-slate-500 text-center py-8">Sin actividad reciente</p>
+          </template>
+        </div>
+
+        <!-- OC borrador -->
+        <div x-show="alertas.oc_borrador?.length">
+          <p class="text-[10px] uppercase tracking-wider font-bold text-cyan-400 mb-1.5">📦 OC en borrador</p>
+          <template x-for="a in alertas.oc_borrador" :key="a.id">
+            <div class="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+              <div class="min-w-0">
+                <p class="text-[11px] font-mono font-bold text-cyan-300" x-text="a.folio || ('OC#'+a.id)"></p>
+                <p class="text-[10px] text-slate-500 truncate" x-text="a.proveedor || '—'"></p>
+              </div>
+              <span class="text-[10px] font-mono text-cyan-400 shrink-0" x-text="fmt.money(a.total)"></span>
+            </div>
+          </template>
+        </div>
+
+        <p x-show="!alertasTotal" class="text-[11px] text-emerald-400 text-center py-6">
+          ✅ Sin alertas pendientes.
+        </p>
       </div>
     </div>
-
   </div>
 
+  <!-- ===== HEATMAP ===== -->
+  <div class="dax-card p-5">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="text-sm font-bold text-slate-200">Actividad de cotizaciones · 90 días</h2>
+        <p class="text-[11px] text-slate-500 mt-0.5">Total: <span x-text="heatmap.total"></span> cotizaciones · pico diario: <span x-text="heatmap.max"></span></p>
+      </div>
+      <div class="flex items-center gap-1.5 text-[10px] text-slate-500">
+        <span>menos</span>
+        <span class="heatmap-cell" style="background:#1e293b"></span>
+        <span class="heatmap-cell" style="background:#0e7490"></span>
+        <span class="heatmap-cell" style="background:#0891b2"></span>
+        <span class="heatmap-cell" style="background:#06b6d4"></span>
+        <span class="heatmap-cell" style="background:#22d3ee"></span>
+        <span>más</span>
+      </div>
+    </div>
+    <div class="overflow-x-auto custom-scroll">
+      <div id="heatmap-grid" class="inline-block"></div>
+    </div>
+  </div>
+
+  <!-- ===== TOPS ===== -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="dax-card p-5">
+      <h2 class="text-sm font-bold text-slate-200 mb-3">Top clientes (mes)</h2>
+      <div class="space-y-2">
+        <template x-for="(c, i) in tops.clientes" :key="c.id">
+          <div class="flex items-center gap-3">
+            <span class="h-6 w-6 flex items-center justify-center rounded-full bg-cyan-500/10 text-cyan-400 font-bold text-xs" x-text="i+1"></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-bold text-slate-200 truncate" x-text="c.empresa"></p>
+              <p class="text-[10px] text-slate-500" x-text="c.orden_count + ' órdenes · saldo ' + fmt.money(c.saldo)"></p>
+            </div>
+            <p class="text-xs font-mono font-bold text-cyan-400" x-text="fmt.money(c.monto_mxn)"></p>
+          </div>
+        </template>
+        <p x-show="!tops.clientes?.length" class="text-[11px] text-slate-500 text-center py-4">Sin datos del mes</p>
+      </div>
+    </div>
+
+    <div class="dax-card p-5">
+      <h2 class="text-sm font-bold text-slate-200 mb-3">Top productos cotizados (30d)</h2>
+      <div class="space-y-2">
+        <template x-for="(p, i) in tops.productos" :key="p.id">
+          <div class="flex items-center gap-3">
+            <span class="h-6 w-6 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-400 font-bold text-xs" x-text="i+1"></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-mono font-bold text-slate-200 truncate" x-text="p.sku"></p>
+              <p class="text-[10px] text-slate-500 truncate" x-text="p.nombre"></p>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-xs font-mono font-bold text-amber-400" x-text="p.cantidad_total"></p>
+              <p class="text-[10px]" :class="p.stock_riesgo ? 'text-rose-400' : 'text-slate-500'"
+                 x-text="'stock: ' + p.stock_actual"></p>
+            </div>
+          </div>
+        </template>
+        <p x-show="!tops.productos?.length" class="text-[11px] text-slate-500 text-center py-4">Sin movimiento de productos</p>
+      </div>
+    </div>
+
+    <div class="dax-card p-5" x-show="tops.ve_equipo">
+      <h2 class="text-sm font-bold text-slate-200 mb-3">Top vendedores (mes)</h2>
+      <div class="space-y-2">
+        <template x-for="(v, i) in tops.vendedores" :key="v.id">
+          <div class="flex items-center gap-3">
+            <span class="h-6 w-6 flex items-center justify-center rounded-full bg-violet-500/10 text-violet-400 font-bold text-xs" x-text="i+1"></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-bold text-slate-200 truncate" x-text="v.nombre"></p>
+              <p class="text-[10px] text-slate-500" x-text="v.orden_count + ' órdenes'"></p>
+            </div>
+            <p class="text-xs font-mono font-bold text-violet-400" x-text="fmt.money(v.monto_mxn)"></p>
+          </div>
+        </template>
+        <p x-show="!tops.vendedores?.length" class="text-[11px] text-slate-500 text-center py-4">Sin ventas del mes</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-[10px] text-slate-600 text-center pt-2">
+    Actualización automática cada 60s ·
+    <span x-text="ultimaActualizacionLabel"></span>
+  </p>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+document.addEventListener('alpine:init', () => {
+  Alpine.store('dash', {
+    window: 'mtd',
+    loading: false,
+    setWindow(w) {
+      this.window = w;
+      window.dispatchEvent(new CustomEvent('dash-window-change'));
+    },
+    reload() {
+      window.dispatchEvent(new CustomEvent('dash-reload'));
+    },
+  });
+});
+
+const fmt = {
+  money(v) {
+    const n = Number(v || 0);
+    if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
+    if (n >= 10_000) return '$' + (n / 1000).toFixed(1) + 'K';
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  },
+  delta(v) {
+    if (v === null || v === undefined) return '—';
+    const arrow = v > 0 ? '▲' : v < 0 ? '▼' : '·';
+    return `${arrow} ${Math.abs(v)}% vs anterior`;
+  },
+};
+
+const PIPELINE_COLUMNS = [
+  { key: 'nueva',        label: 'Nueva (24h)',  dot: 'bg-cyan-400',     text: 'text-cyan-300' },
+  { key: 'seguimiento',  label: 'En seguimiento', dot: 'bg-blue-400',   text: 'text-blue-300' },
+  { key: 'por_vencer',   label: 'Por vencer ≤3d', dot: 'bg-amber-400',  text: 'text-amber-300' },
+  { key: 'vencida',      label: 'Vencida',      dot: 'bg-rose-500',     text: 'text-rose-300' },
+  { key: 'convertida',   label: 'Convertida 30d', dot: 'bg-emerald-400', text: 'text-emerald-300' },
+];
+
+const HEATMAP_COLORS = ['#1e293b', '#0e7490', '#0891b2', '#06b6d4', '#22d3ee'];
+
 function dashboard() {
   return {
-    loading: true,
-    kpi: { ventas_mes:'$0', cotizaciones:0, clientes:0, stock_critico:0 },
-    kpiOps: { vencidas:0, por_vencer:0, oc_borrador:0, oc_recibidas:0 },
-    recientes: [],
-    chart: null,
+    pipelineColumns: PIPELINE_COLUMNS,
+    fmt,
+    hero: {
+      ventas: { monto_mxn: 0, count: 0, delta_pct: null, sparkline_30d: [] },
+      pipeline: { monto_mxn: 0, count: 0, ticket_promedio_mxn: 0 },
+      conversion: { tasa_pct: 0, target_pct: 50, sparkline_4w: [] },
+      margen: { pct: 0, muestra_lineas: 0 },
+    },
+    pipeline: {},
+    tendencia: { series: [] },
+    alertas: { por_vencer_3d: [], stock_critico_cotizado: [], saldos_vencidos: [], oc_borrador: [] },
+    tops: { clientes: [], productos: [], vendedores: [], ve_equipo: false },
+    heatmap: { days: [], max: 0, total: 0 },
+    charts: {},
+    autoTimer: null,
+    ultimaActualizacion: null,
+
+    get alertasTotal() {
+      const a = this.alertas;
+      return (a.por_vencer_3d?.length || 0) + (a.stock_critico_cotizado?.length || 0)
+           + (a.saldos_vencidos?.length || 0) + (a.oc_borrador?.length || 0);
+    },
+
+    get ultimaActualizacionLabel() {
+      if (!this.ultimaActualizacion) return '—';
+      return 'Última actualización: ' + this.ultimaActualizacion.toLocaleTimeString('es-MX');
+    },
+
+    deltaClass(v) {
+      if (v === null || v === undefined) return 'delta-flat';
+      if (v > 0) return 'delta-up';
+      if (v < 0) return 'delta-down';
+      return 'delta-flat';
+    },
+
+    badgeDias(colKey, item) {
+      if (colKey === 'vencida' && item.dias_restantes !== null) return Math.abs(item.dias_restantes) + 'd vencida';
+      if (colKey === 'por_vencer' && item.dias_restantes !== null) return item.dias_restantes + 'd';
+      if (colKey === 'nueva') return 'hoy';
+      if (colKey === 'seguimiento') return (item.edad_dias || 0) + 'd';
+      if (colKey === 'convertida') return (item.estatus || '').toUpperCase();
+      return '';
+    },
 
     async init() {
+      window.addEventListener('dash-window-change', () => this.cargar(true));
+      window.addEventListener('dash-reload', () => this.cargar(true));
+      await this.cargar(true);
+      this.autoTimer = setInterval(() => this.cargar(false), 60000);
+    },
+
+    async cargar(showLoading) {
+      if (showLoading) Alpine.store('dash').loading = true;
+      const w = Alpine.store('dash').window || 'mtd';
       try {
-        const [resKpi, resVentas] = await Promise.all([
-          fetch('/api/dashboard/kpis', { credentials:'include' }),
-          fetch('/api/ventas/historial?limit=20', { credentials:'include' })
+        const [hero, pipe, tend, alert, tops, hm] = await Promise.all([
+          fetch(`/api/dashboard/hero?window=${w}`, {credentials:'include'}).then(r=>r.json()),
+          fetch('/api/dashboard/pipeline', {credentials:'include'}).then(r=>r.json()),
+          fetch('/api/dashboard/tendencia?meses=12', {credentials:'include'}).then(r=>r.json()),
+          fetch('/api/dashboard/alertas', {credentials:'include'}).then(r=>r.json()),
+          fetch('/api/dashboard/tops', {credentials:'include'}).then(r=>r.json()),
+          fetch('/api/dashboard/heatmap?dias=90', {credentials:'include'}).then(r=>r.json()),
         ]);
-
-        if (!resKpi.ok) throw new Error('Dashboard endpoint failed');
-
-        const k = await resKpi.json();
-        const ventas = resVentas.ok ? await resVentas.json() : [];
-
-        this.kpi = {
-          ventas_mes: '$' + Number(k.ventas?.mes_total || 0).toLocaleString('es-MX', { minimumFractionDigits: 0 }),
-          cotizaciones: k.cotizaciones?.activas || 0,
-          clientes: k.clientes?.total || 0,
-          stock_critico: k.inventario?.stock_critico || 0,
-        };
-        this.kpiOps = {
-          vencidas: k.cotizaciones?.vencidas || 0,
-          por_vencer: k.cotizaciones?.por_vencer_3d || 0,
-          oc_borrador: k.ordenes_compra?.borrador || 0,
-          oc_recibidas: k.ordenes_compra?.recibidas || 0,
-        };
-
-        this.recientes = ventas.slice(0, 8);
-
-        const labels = (k.tendencia_ventas_6m || []).map(t => t.mes);
-        const data = (k.tendencia_ventas_6m || []).map(t => t.total);
-        this.renderChart(labels, data);
+        this.hero = hero;
+        this.pipeline = pipe;
+        this.tendencia = tend;
+        this.alertas = alert;
+        this.tops = tops;
+        this.heatmap = hm;
+        this.ultimaActualizacion = new Date();
+        this.$nextTick(() => this.renderCharts());
       } catch(e) {
-        console.warn('Dashboard:', e.message);
+        console.warn('Dashboard fetch error:', e);
       } finally {
-        this.loading = false;
+        Alpine.store('dash').loading = false;
       }
     },
 
-    renderChart(labels, data) {
-      const ctx = document.getElementById('salesChart').getContext('2d');
-      this.chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Ventas',
-            data,
-            borderColor: '#22d3ee',
-            backgroundColor: 'rgba(34,211,238,0.08)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 3,
-            pointBackgroundColor: '#22d3ee',
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(148,163,184,0.08)' },
-              ticks: { color: '#64748b', font: { size: 11 } }
+    renderCharts() {
+      this.renderSparkVentas();
+      this.renderSparkConv();
+      this.renderTendencia();
+      this.renderHeatmap();
+    },
+
+    sparkOptions(data, color) {
+      return {
+        animation: false,
+        grid: { left: 0, right: 0, top: 4, bottom: 4 },
+        xAxis: { type: 'category', show: false, data: data.map((_,i)=>i) },
+        yAxis: { type: 'value', show: false, scale: true },
+        tooltip: { show: false },
+        series: [{
+          type: 'line', smooth: true, symbol: 'none',
+          data,
+          lineStyle: { color, width: 1.6 },
+          areaStyle: {
+            color: {
+              type: 'linear', x:0, y:0, x2:0, y2:1,
+              colorStops: [{offset:0, color: color+'55'}, {offset:1, color: color+'00'}],
             },
-            x: {
-              grid: { display: false },
-              ticks: { color: '#64748b', font: { size: 11 } }
-            }
-          }
+          },
+        }],
+      };
+    },
+
+    renderSparkVentas() {
+      const el = document.getElementById('spark-ventas');
+      if (!el) return;
+      const data = (this.hero.ventas.sparkline_30d || []).map(p => p.v);
+      this.charts.sparkVentas?.dispose();
+      this.charts.sparkVentas = echarts.init(el, null, { renderer: 'canvas' });
+      this.charts.sparkVentas.setOption(this.sparkOptions(data, '#22d3ee'));
+    },
+
+    renderSparkConv() {
+      const el = document.getElementById('spark-conv');
+      if (!el) return;
+      const data = (this.hero.conversion.sparkline_4w || []);
+      this.charts.sparkConv?.dispose();
+      this.charts.sparkConv = echarts.init(el, null, { renderer: 'canvas' });
+      this.charts.sparkConv.setOption(this.sparkOptions(data, '#34d399'));
+    },
+
+    renderTendencia() {
+      const el = document.getElementById('chart-tendencia');
+      if (!el) return;
+      const series = this.tendencia.series || [];
+      const labels = series.map(s => s.label);
+      const ventas = series.map(s => s.ventas_mxn);
+      const cotiz = series.map(s => s.cotizaciones_mxn);
+
+      this.charts.tendencia?.dispose();
+      this.charts.tendencia = echarts.init(el, null, { renderer: 'canvas' });
+      this.charts.tendencia.setOption({
+        animation: false,
+        grid: { left: 50, right: 30, top: 30, bottom: 30 },
+        legend: {
+          data: ['Ventas cerradas', 'Cotizaciones'],
+          textStyle: { color: '#94a3b8', fontSize: 11 },
+          right: 0, top: 0,
+        },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#0f172a',
+          borderColor: '#334155',
+          textStyle: { color: '#e2e8f0', fontSize: 11 },
+          formatter: (params) => {
+            const lines = params.map(p => `<span style="color:${p.color}">●</span> ${p.seriesName}: <b>${fmt.money(p.value)}</b>`);
+            return `<div style="font-weight:bold;margin-bottom:4px">${params[0].axisValue}</div>${lines.join('<br/>')}`;
+          },
+        },
+        xAxis: {
+          type: 'category', data: labels,
+          axisLine: { lineStyle: { color: '#334155' } },
+          axisLabel: { color: '#94a3b8', fontSize: 10 },
+        },
+        yAxis: {
+          type: 'value',
+          splitLine: { lineStyle: { color: 'rgba(148,163,184,0.08)' } },
+          axisLabel: {
+            color: '#64748b', fontSize: 10,
+            formatter: (v) => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v,
+          },
+        },
+        series: [
+          {
+            name: 'Ventas cerradas', type: 'bar', data: ventas, barWidth: '45%',
+            itemStyle: {
+              color: { type:'linear', x:0,y:0,x2:0,y2:1,
+                colorStops:[{offset:0,color:'#22d3ee'},{offset:1,color:'#0891b2'}] },
+              borderRadius: [4,4,0,0],
+            },
+          },
+          {
+            name: 'Cotizaciones', type: 'line', data: cotiz, smooth: true,
+            lineStyle: { color: '#fbbf24', width: 2 },
+            symbol: 'circle', symbolSize: 6,
+            itemStyle: { color: '#fbbf24' },
+          },
+        ],
+      });
+    },
+
+    renderHeatmap() {
+      const el = document.getElementById('heatmap-grid');
+      if (!el) return;
+      const days = this.heatmap.days || [];
+      const max = Math.max(this.heatmap.max || 1, 1);
+
+      // Build column-based grid (7 rows = días de la semana)
+      const cellsByCol = [];
+      let curWeek = [];
+      // Start from first sunday boundary
+      const firstDate = days[0] ? new Date(days[0].d) : new Date();
+      const firstDow = firstDate.getDay(); // 0=Sun
+      // Pad start
+      for (let i = 0; i < firstDow; i++) curWeek.push(null);
+
+      days.forEach(d => {
+        curWeek.push(d);
+        if (curWeek.length === 7) {
+          cellsByCol.push(curWeek);
+          curWeek = [];
         }
       });
-    }
-  }
+      if (curWeek.length) cellsByCol.push(curWeek);
+
+      const colorFor = (v) => {
+        if (!v) return HEATMAP_COLORS[0];
+        const ratio = v / max;
+        if (ratio < 0.25) return HEATMAP_COLORS[1];
+        if (ratio < 0.5) return HEATMAP_COLORS[2];
+        if (ratio < 0.75) return HEATMAP_COLORS[3];
+        return HEATMAP_COLORS[4];
+      };
+
+      let html = '<div style="display:flex; align-items:flex-end;">';
+      cellsByCol.forEach(week => {
+        html += '<div style="display:flex; flex-direction:column;">';
+        week.forEach(cell => {
+          if (!cell) {
+            html += '<span class="heatmap-cell" style="background:transparent"></span>';
+          } else {
+            html += `<span class="heatmap-cell" title="${cell.d}: ${cell.v} cotizaciones"
+                     style="background:${colorFor(cell.v)}"></span>`;
+          }
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    },
+  };
 }
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('canvas').forEach(c => {
+    const inst = echarts.getInstanceByDom(c.parentElement);
+    if (inst) inst.resize();
+  });
+});
 </script>
 {% endblock %}
