@@ -43,7 +43,11 @@
         </div>
         <div id="div-tc" class="opacity-50 pointer-events-none">
           <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">T.C.</label>
-          <input type="number" id="input-tc" value="20.00" onchange="recalculer()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+          <input type="number" id="input-tc" step="0.0001" min="0.0001" value="20.00" onchange="recalculer()"
+                 class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+          <span id="fx-badge" onclick="recargarTC()"
+                class="hidden mt-1 inline-block text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 cursor-pointer"
+                title="Click para recargar TC del día"></span>
         </div>
       </div>
       <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones...">
@@ -62,10 +66,62 @@
           <i class="fas fa-barcode text-4xl"></i>
         </div>
 
-        <button type="button" onclick="abrirModalFantasma()"
-            class="mt-2 w-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-lg py-2 transition flex items-center justify-center gap-2">
-          <i class="fas fa-ghost"></i> Agregar producto fantasma
-        </button>
+        <div class="grid grid-cols-3 gap-1 mt-2">
+          <button type="button" onclick="document.getElementById('buscador').focus()"
+                  class="bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/40 border border-dashed border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
+            <i class="fas fa-box"></i> Producto
+          </button>
+          <button type="button" onclick="abrirModalServicio()"
+                  class="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 border border-dashed border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
+            <i class="fas fa-wrench"></i> Servicio
+          </button>
+          <button type="button" onclick="abrirModalFantasma()"
+                  class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
+            <i class="fas fa-ghost"></i> Fantasma
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Servicio -->
+      <div id="modal-servicio" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-300 dark:border-emerald-700 overflow-hidden">
+          <div class="px-6 py-4 bg-emerald-50 dark:bg-emerald-900/30 border-b border-emerald-200 dark:border-emerald-800 flex justify-between items-center">
+            <div>
+              <h3 class="text-base font-black text-emerald-700 dark:text-emerald-300 uppercase">Servicio</h3>
+              <p class="text-xs text-emerald-600 dark:text-emerald-400">Programación, instalación, capacitación, etc.</p>
+            </div>
+            <button onclick="cerrarModalServicio()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="p-5 space-y-3">
+            <div>
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
+              <input id="servicio-desc" type="text" placeholder="Ej. Programación PLC y HMI 8 hrs" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Tarifa *</label>
+                <input id="servicio-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+              </div>
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
+                <select id="servicio-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                  <option value="MXN">MXN</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant./Hrs</label>
+                <input id="servicio-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+              </div>
+            </div>
+          </div>
+          <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+            <button onclick="cerrarModalServicio()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+            <button onclick="agregarServicio()" class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
+              <i class="fas fa-plus mr-1"></i> Agregar
+            </button>
+          </div>
+        </div>
       </div>
 
       <div id="modal-fantasma" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -194,6 +250,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
       loadData();
+      cargarTC();
       const input = document.getElementById('buscador');
       input.addEventListener('input', (e) => filterProds(e.target.value));
       input.addEventListener('focus', () => { if(input.value) filterProds(input.value); });
@@ -223,6 +280,65 @@
           }
       });
   });
+
+  async function cargarTC() {
+      try {
+          const r = await fetch('/api/fx/usd-mxn', { credentials:'include' });
+          if (!r.ok) return;
+          const d = await r.json();
+          state.tc = parseFloat(d.usd_mxn);
+          const tcInput = document.getElementById('input-tc');
+          if (tcInput) tcInput.value = state.tc.toFixed(4);
+          const badge = document.getElementById('fx-badge');
+          if (badge) {
+              badge.textContent = `${d.fuente} · ${d.fecha} · ${state.tc.toFixed(2)}`;
+              badge.classList.remove('hidden');
+          }
+      } catch (e) { console.warn('FX:', e); }
+  }
+  async function recargarTC() {
+      try {
+          const r = await fetch('/api/fx/refresh', { method:'POST', credentials:'include' });
+          if (r.ok) await cargarTC();
+      } catch (e) { console.warn('FX refresh:', e); }
+  }
+
+  function abrirModalServicio() {
+      document.getElementById('modal-servicio').classList.remove('hidden');
+      document.getElementById('modal-servicio').classList.add('flex');
+      document.getElementById('servicio-desc').focus();
+  }
+  function cerrarModalServicio() {
+      const m = document.getElementById('modal-servicio');
+      m.classList.add('hidden'); m.classList.remove('flex');
+  }
+  function agregarServicio() {
+      const desc = document.getElementById('servicio-desc').value.trim();
+      const cost = parseFloat(document.getElementById('servicio-cost').value);
+      const qty = parseInt(document.getElementById('servicio-qty').value) || 1;
+      if (!desc || !Number.isFinite(cost) || cost < 0) {
+          Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción/tarifa', timer:1500, showConfirmButton:false});
+          return;
+      }
+      state.cart.push({
+          id: null,
+          ghost: true,
+          servicio: true,
+          sku: '— SERVICIO',
+          nom: desc,
+          cost: cost,
+          productCurrency: document.getElementById('servicio-mon').value,
+          qty: qty,
+          max: 9999,
+          utilidad: 0,
+          tipoLinea: 'servicio',
+      });
+      cerrarModalServicio();
+      document.getElementById('servicio-desc').value = '';
+      document.getElementById('servicio-cost').value = '0';
+      document.getElementById('servicio-qty').value = '1';
+      renderCart();
+  }
 
   function cambiarTab(tab) {
       document.getElementById('view-nuevo').classList.add('hidden');
@@ -420,11 +536,12 @@
               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
               : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
 
-          const ghostBadge = i.ghost ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
+          const servicioBadge = i.servicio ? '<span class="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded ml-1 uppercase">Servicio</span>' : '';
+          const ghostBadge = (i.ghost && !i.servicio) ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
           tb.innerHTML += `
               <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                   <td class="p-3">
-                      <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${ghostBadge}</div>
+                      <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${servicioBadge}${ghostBadge}</div>
                       <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
                   </td>
                   <td class="p-3 text-center">
@@ -489,9 +606,11 @@
               utilidad: i.utilidad,
               descuento: 0,
               moneda_origen: i.productCurrency,
-              sku_libre: i.ghost ? (i.sku === '— FANTASMA' ? null : i.sku) : null,
+              sku_libre: i.ghost ? (i.sku === '— FANTASMA' || i.sku === '— SERVICIO' ? null : i.sku) : null,
               descripcion_libre: i.ghost ? i.nom : null,
-              costo_unitario: i.ghost ? i.cost : null
+              costo_unitario: i.ghost ? i.cost : null,
+              tipo_linea: i.tipoLinea || (i.servicio ? 'servicio' : (i.ghost ? 'producto_fantasma' : 'producto_catalogo')),
+              proveedor_sugerido_id: i.proveedor_sugerido_id || null,
           })),
           observaciones: document.getElementById('observaciones').value
       };
