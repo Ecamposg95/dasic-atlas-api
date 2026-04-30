@@ -49,24 +49,89 @@ def crear_cliente(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """
-    Permite registrar un nuevo cliente. Accesible para Vendedores.
-    """
-    # Verificar si el email o nombre ya existe para evitar duplicados
-    if (
-        db.query(models.Cliente)
-        .filter(
-            models.Cliente.email == cliente.email,
+    """Registra un nuevo cliente. Accesible para todo el staff."""
+    require(current_user, "create", "cliente")
+    if not cliente.nombre_empresa or not cliente.nombre_empresa.strip():
+        raise HTTPException(status_code=400, detail="nombre_empresa es requerido")
+    if cliente.email:
+        existing = (
+            db.query(models.Cliente)
+            .filter(models.Cliente.email == cliente.email)
+            .first()
         )
-        .first()
-    ):
-        raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
+        if existing:
+            raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
 
     nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
     db.add(nuevo_cliente)
     db.commit()
     db.refresh(nuevo_cliente)
     return nuevo_cliente
+
+
+# --- 2.5 EDITAR CLIENTE ---
+@router.put("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
+def editar_cliente(
+    cliente_id: int,
+    payload: schemas.ClienteUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Edita un cliente. VENTAS sólo puede editar los que él creó."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    if is_owner_scoped(current_user, "write", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo puedes editar clientes que tú creaste")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "email" in data and data["email"] and data["email"] != cliente.email:
+        otro = (
+            db.query(models.Cliente)
+            .filter(models.Cliente.email == data["email"], models.Cliente.id != cliente_id)
+            .first()
+        )
+        if otro:
+            raise HTTPException(status_code=400, detail="Ya existe otro cliente con este email")
+
+    for k, v in data.items():
+        setattr(cliente, k, v)
+    db.commit()
+    db.refresh(cliente)
+    return cliente
+
+
+# --- 2.6 ELIMINAR CLIENTE (admin) ---
+@router.delete("/{cliente_id}", dependencies=[Depends(allow_admin_asistente)])
+def eliminar_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+):
+    """Elimina cliente. Bloquea si tiene cotizaciones/ventas o saldo > 0."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    if cliente.saldo_actual and float(cliente.saldo_actual) != 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cliente tiene saldo {cliente.saldo_actual}. Liquida antes de eliminar.",
+        )
+
+    en_uso = (
+        db.query(models.OrdenVenta)
+        .filter(models.OrdenVenta.cliente_id == cliente_id)
+        .first()
+    )
+    if en_uso:
+        raise HTTPException(
+            status_code=409,
+            detail="Cliente referenciado en cotizaciones/ventas. No se puede eliminar.",
+        )
+
+    db.delete(cliente)
+    db.commit()
+    return {"mensaje": "Cliente eliminado", "id": cliente_id}
 
 # --- 3. OBTENER DETALLE CLIENTE ---
 @router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])

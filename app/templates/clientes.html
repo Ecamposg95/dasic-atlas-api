@@ -3,16 +3,16 @@
 {% block page_title %}Clientes{% endblock %}
 
 {% block header_actions %}
-  <button id="btn-nuevo-cliente"
+  <button x-show="$store.user.can('crear_cliente')" x-cloak
           class="dax-btn-primary"
-          onclick="document.getElementById('modal-cliente').classList.remove('hidden')">
+          onclick="window.dispatchEvent(new CustomEvent('cliente-modal-open'))">
     <i class="fas fa-plus text-xs"></i>
     Nuevo Cliente
   </button>
 {% endblock %}
 
 {% block content %}
-<div x-data="clientes()" x-init="init()">
+<div x-data="clientes()" x-init="init()" @cliente-saved.window="init()">
 
   <!-- Filtros -->
   <div class="flex flex-col sm:flex-row gap-3 mb-6">
@@ -21,19 +21,58 @@
       <input type="search"
              x-model="busqueda"
              @input.debounce.300ms="filtrar()"
-             placeholder="Buscar por nombre, RFC, contacto..."
+             placeholder="Buscar empresa, RFC, contacto, email..."
              class="w-full bg-slate-800 border border-slate-700 text-slate-200
                     placeholder-slate-500 rounded-lg pl-8 pr-3 py-2 text-sm
                     focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition">
     </div>
-    <select x-model="tipoFiltro" @change="filtrar()"
+    <select x-model="filtroSaldo" @change="filtrar()"
             class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
                    rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
-      <option value="">Todos los tipos</option>
-      <option value="industrial">Industrial</option>
-      <option value="gobierno">Gobierno</option>
-      <option value="comercial">Comercial</option>
+      <option value="">Todos</option>
+      <option value="con_saldo">Con saldo pendiente</option>
+      <option value="sin_saldo">Sin saldo</option>
     </select>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card group">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total clientes</p>
+        <p class="text-2xl font-bold text-slate-100" x-text="todos.length"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 ring-1 ring-violet-500/20">
+        <i class="fas fa-users"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Con saldo</p>
+        <p class="text-2xl font-bold text-amber-400" x-text="todos.filter(c => Number(c.saldo_actual) > 0).length"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Saldo total MXN</p>
+        <p class="text-2xl font-bold text-rose-400" x-text="fmtMoney(saldoTotal())"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20">
+        <i class="fas fa-dollar-sign"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Sin proveedor</p>
+        <p class="text-2xl font-bold text-slate-300" x-text="todos.filter(c => !c.creado_por_id).length"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-500/10 text-slate-400 ring-1 ring-slate-500/20">
+        <i class="fas fa-user-slash"></i>
+      </div>
+    </div>
   </div>
 
   <!-- Tabla -->
@@ -42,15 +81,14 @@
       <thead>
         <tr>
           <th>Cliente</th>
-          <th>RFC</th>
           <th>Contacto</th>
-          <th>Ciudad</th>
-          <th>Estatus</th>
+          <th>RFC</th>
+          <th>Teléfono</th>
+          <th class="text-right">Saldo</th>
           <th class="text-right">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <!-- Skeleton -->
         <template x-if="loading">
           <template x-for="i in 6" :key="i">
             <tr>
@@ -63,41 +101,49 @@
             </tr>
           </template>
         </template>
-        <!-- Datos -->
         <template x-if="!loading">
           <template x-for="c in filtrados" :key="c.id">
-            <tr>
+            <tr class="cursor-pointer hover:bg-slate-700/30" @click="abrirEdicion(c)">
               <td>
                 <div class="flex items-center gap-3">
                   <div class="h-8 w-8 shrink-0 flex items-center justify-center
                               rounded-lg bg-violet-500/15 text-violet-400 text-xs font-bold">
-                    <span x-text="c.nombre ? c.nombre[0].toUpperCase() : '?'"></span>
+                    <span x-text="(c.nombre_empresa || '?')[0].toUpperCase()"></span>
                   </div>
                   <div>
-                    <p class="font-medium text-slate-200 text-xs" x-text="c.nombre"></p>
+                    <p class="font-medium text-slate-200 text-xs" x-text="c.nombre_empresa"></p>
                     <p class="text-[10px] text-slate-500" x-text="c.email || '—'"></p>
                   </div>
                 </div>
               </td>
-              <td class="font-mono text-xs text-slate-400" x-text="c.rfc || '—'"></td>
-              <td class="text-xs" x-text="c.contacto_principal || '—'"></td>
-              <td class="text-xs" x-text="c.ciudad || '—'"></td>
-              <td>
-                <span class="dax-badge-green" x-show="c.activo">Activo</span>
-                <span class="dax-badge-slate" x-show="!c.activo">Inactivo</span>
-              </td>
-              <td class="text-right">
-                <button class="dax-btn-ghost text-xs py-1 px-2"
-                        @click="editar(c)">
-                  <i class="fas fa-pen-to-square"></i>
-                </button>
+              <td class="text-xs text-slate-300" x-text="c.contacto_nombre || '—'"></td>
+              <td class="font-mono text-xs text-slate-400" x-text="c.rfc_tax_id || '—'"></td>
+              <td class="text-xs text-slate-300" x-text="c.telefono || '—'"></td>
+              <td class="text-right font-mono text-xs"
+                  :class="Number(c.saldo_actual) > 0 ? 'text-amber-400 font-bold' : 'text-slate-500'"
+                  x-text="fmtMoney(c.saldo_actual)"></td>
+              <td class="text-right" @click.stop>
+                <div class="inline-flex items-center gap-1">
+                  <button @click="abrirEdicion(c)"
+                          class="dax-btn-ghost py-1 px-2"
+                          x-show="puedeEditar(c)" x-cloak
+                          title="Editar">
+                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  </button>
+                  <button @click="eliminar(c)"
+                          class="dax-btn-ghost py-1 px-2 hover:text-rose-400"
+                          x-show="$store.user.can('gestionar_usuarios')" x-cloak
+                          title="Eliminar (admin)">
+                    <i class="fas fa-trash text-[10px]"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
             <td colspan="6" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-users text-2xl mb-2 block opacity-30"></i>
-              Sin clientes registrados
+              <span x-text="todos.length === 0 ? 'Sin clientes registrados' : 'Sin resultados con ese filtro'"></span>
             </td>
           </tr>
         </template>
@@ -106,75 +152,328 @@
   </div>
 </div>
 
-<!-- Modal Nuevo Cliente (stub) -->
+<!-- ============================================================ -->
+<!-- Modal Nuevo / Editar Cliente                                  -->
+<!-- ============================================================ -->
 <div id="modal-cliente"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-  <div class="dax-card w-full max-w-lg p-6 m-4">
+     x-data="modalCliente()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @cliente-modal-open.window="openCreate()"
+     @cliente-modal-edit.window="openEdit($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-2xl max-h-[92vh] overflow-y-auto custom-scroll p-6"
+       @click.outside="close()">
     <div class="flex items-center justify-between mb-5">
-      <h2 class="text-base font-bold text-slate-200">Nuevo Cliente</h2>
-      <button onclick="document.getElementById('modal-cliente').classList.add('hidden')"
-              class="dax-btn-ghost p-2 rounded-lg">
+      <div>
+        <h2 class="text-base font-bold text-slate-200" x-text="form.id ? 'Editar cliente' : 'Nuevo cliente'"></h2>
+        <p class="text-xs text-slate-500 mt-0.5">Datos comerciales y de contacto.</p>
+      </div>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
         <i class="fas fa-xmark"></i>
       </button>
     </div>
-    <div class="space-y-4">
-      <div>
-        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre / Razón Social</label>
-        <input type="text" placeholder="ACME Industrial SA de CV" class="dax-input">
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">RFC</label>
-          <input type="text" placeholder="ACM010101AAA" class="dax-input font-mono">
+
+    <form @submit.prevent="submit()" class="space-y-4">
+
+      <!-- Sección: empresa -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Empresa</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre / Razón social *</label>
+            <input type="text" x-model="form.nombre_empresa" :disabled="saving" required minlength="2" maxlength="150"
+                   placeholder="Vitracoat Pinturas en Polvo" class="dax-input">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">RFC</label>
+            <input type="text" x-model="form.rfc_tax_id" :disabled="saving" maxlength="50"
+                   @input="form.rfc_tax_id = (form.rfc_tax_id || '').toUpperCase()"
+                   placeholder="XAXX010101000" class="dax-input font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Teléfono</label>
+            <input type="tel" x-model="form.telefono" :disabled="saving" maxlength="20"
+                   placeholder="55 1234 5678" class="dax-input">
+          </div>
         </div>
+      </fieldset>
+
+      <!-- Sección: contacto -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Contacto</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre del contacto</label>
+            <input type="text" x-model="form.contacto_nombre" :disabled="saving" maxlength="100"
+                   placeholder="Ing. José Popoca" class="dax-input">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Email</label>
+            <input type="email" x-model="form.email" :disabled="saving"
+                   placeholder="contacto@empresa.com" class="dax-input">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Sección: dirección -->
+      <fieldset class="border border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Dirección</legend>
         <div>
-          <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ciudad</label>
-          <input type="text" placeholder="Monterrey" class="dax-input">
+          <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Dirección completa</label>
+          <textarea x-model="form.direccion" :disabled="saving" rows="2"
+                    placeholder="Calle, colonia, ciudad, estado, CP" class="dax-input"></textarea>
+        </div>
+      </fieldset>
+
+      <!-- Saldo (solo lectura, en edición) -->
+      <div x-show="form.id" x-cloak class="flex items-center justify-between rounded-lg bg-slate-800/40 border border-slate-700/40 px-4 py-3">
+        <div>
+          <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Saldo actual</p>
+          <p class="text-xs text-slate-400 mt-0.5">Se actualiza con ventas y pagos.</p>
+        </div>
+        <p class="font-mono font-bold text-base"
+           :class="Number(form._saldo) > 0 ? 'text-amber-300' : 'text-emerald-300'"
+           x-text="fmtMoney(form._saldo || 0)"></p>
+      </div>
+
+      <div x-show="error" x-cloak
+           class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+           x-text="error"></div>
+
+      <div class="flex justify-between items-center pt-1">
+        <div>
+          <button type="button" x-show="form.id && $store.user.can('gestionar_usuarios')" x-cloak
+                  @click="eliminarDesdeModal()"
+                  class="dax-btn-ghost text-rose-400 hover:text-rose-300" :disabled="saving">
+            <i class="fas fa-trash text-xs mr-1"></i> Eliminar
+          </button>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+          <button type="submit" class="dax-btn-primary" :disabled="saving">
+            <template x-if="!saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-save text-xs"></i>
+                <span x-text="form.id ? 'Guardar cambios' : 'Crear cliente'"></span>
+              </span>
+            </template>
+            <template x-if="saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-circle-notch fa-spin text-xs"></i> Guardando…
+              </span>
+            </template>
+          </button>
         </div>
       </div>
-      <div>
-        <label class="block mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</label>
-        <input type="email" placeholder="contacto@empresa.com" class="dax-input">
-      </div>
-    </div>
-    <div class="flex justify-end gap-3 mt-6">
-      <button onclick="document.getElementById('modal-cliente').classList.add('hidden')"
-              class="dax-btn-ghost">Cancelar</button>
-      <button class="dax-btn-primary">
-        <i class="fas fa-save text-xs"></i>
-        Guardar
-      </button>
-    </div>
+    </form>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+function fmtMoney(v) {
+  const n = Number(v || 0);
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function clientes() {
   return {
     loading: true,
     todos: [],
     filtrados: [],
     busqueda: '',
-    tipoFiltro: '',
+    filtroSaldo: '',
+
+    fmtMoney,
+
+    saldoTotal() {
+      return this.todos.reduce((acc, c) => acc + (Number(c.saldo_actual) || 0), 0);
+    },
+
+    puedeEditar(c) {
+      const u = Alpine.store('user');
+      if (!u || !u.loaded) return false;
+      // admin/gerente editan todos; ventas solo lo que creó
+      if (u.gestionar_usuarios) return true;          // admin
+      if (u.editar_cliente && !u.modulos_visibles.includes('usuarios')) {
+        // gerente o ventas: si es ventas (sin usuarios en sidebar) solo lo suyo
+        if (u.modulos_visibles.includes('reportes') && !u.gestionar_usuarios && !u.ver_dashboard_team) {
+          // ventas
+          return c.creado_por_id === u.id;
+        }
+        return true; // gerente
+      }
+      return false;
+    },
 
     async init() {
+      this.loading = true;
       try {
-        const res = await fetch('/api/clientes/', { credentials:'include' });
+        const res = await fetch('/api/clientes/?limit=500', { credentials:'include' });
         if (res.ok) this.todos = await res.json();
       } catch(e) { console.warn(e); }
       finally { this.loading = false; this.filtrar(); }
     },
 
-    filtrar() {
-      const q = this.busqueda.toLowerCase();
-      this.filtrados = this.todos.filter(c =>
-        (!q || (c.nombre||'').toLowerCase().includes(q) || (c.rfc||'').toLowerCase().includes(q))
-      );
+    abrirEdicion(c) {
+      window.dispatchEvent(new CustomEvent('cliente-modal-edit', { detail: c }));
     },
 
-    editar(c) { console.log('Editar', c.id); }
+    async eliminar(c) {
+      if (!confirm(`¿Eliminar a "${c.nombre_empresa}"? Si tiene cotizaciones o saldo, no se puede.`)) return;
+      try {
+        const r = await fetch(`/api/clientes/${c.id}`, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) {
+          await this.init();
+        } else {
+          const e = await r.json().catch(()=>({}));
+          alert(e.detail || 'No se pudo eliminar');
+        }
+      } catch(e) { console.warn(e); }
+    },
+
+    filtrar() {
+      const q = (this.busqueda || '').toLowerCase();
+      this.filtrados = this.todos.filter(c => {
+        const matchQ = !q
+          || (c.nombre_empresa || '').toLowerCase().includes(q)
+          || (c.contacto_nombre || '').toLowerCase().includes(q)
+          || (c.rfc_tax_id || '').toLowerCase().includes(q)
+          || (c.email || '').toLowerCase().includes(q);
+        const saldo = Number(c.saldo_actual || 0);
+        const matchS = !this.filtroSaldo
+          || (this.filtroSaldo === 'con_saldo' && saldo > 0)
+          || (this.filtroSaldo === 'sin_saldo' && saldo <= 0);
+        return matchQ && matchS;
+      });
+    },
+  }
+}
+
+function modalCliente() {
+  const blank = () => ({
+    id: null,
+    nombre_empresa: '',
+    contacto_nombre: '',
+    rfc_tax_id: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+    _saldo: 0,
+  });
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: blank(),
+
+    fmtMoney,
+
+    openCreate() {
+      this.form = blank();
+      this.error = '';
+      this.open = true;
+      this.$nextTick(() => {
+        const el = this.$root.querySelector('input[type="text"]');
+        if (el) el.focus();
+      });
+    },
+
+    openEdit(c) {
+      this.form = {
+        id: c.id,
+        nombre_empresa: c.nombre_empresa || '',
+        contacto_nombre: c.contacto_nombre || '',
+        rfc_tax_id: c.rfc_tax_id || '',
+        email: c.email || '',
+        telefono: c.telefono || '',
+        direccion: c.direccion || '',
+        _saldo: Number(c.saldo_actual || 0),
+      };
+      this.error = '';
+      this.open = true;
+    },
+
+    close() {
+      if (this.saving) return;
+      this.open = false;
+      this.error = '';
+    },
+
+    async submit() {
+      if (this.saving) return;
+      this.error = '';
+      const f = this.form;
+      if (!f.nombre_empresa || f.nombre_empresa.trim().length < 2) {
+        this.error = 'Nombre / Razón social requerido (≥ 2 caracteres).';
+        return;
+      }
+      if (f.email && !f.email.includes('@')) {
+        this.error = 'Email inválido.';
+        return;
+      }
+
+      const body = {
+        nombre_empresa: f.nombre_empresa.trim(),
+        contacto_nombre: (f.contacto_nombre || '').trim() || null,
+        rfc_tax_id: (f.rfc_tax_id || '').trim() || null,
+        email: (f.email || '').trim() || null,
+        telefono: (f.telefono || '').trim() || null,
+        direccion: (f.direccion || '').trim() || null,
+      };
+
+      this.saving = true;
+      try {
+        const url = f.id ? `/api/clientes/${f.id}` : '/api/clientes/';
+        const method = f.id ? 'PUT' : 'POST';
+        const r = await fetch(url, {
+          method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          let msg = 'No se pudo guardar.';
+          try {
+            const d = await r.json();
+            if (typeof d.detail === 'string') msg = d.detail;
+            else if (Array.isArray(d.detail)) msg = d.detail.map(x => x.msg || JSON.stringify(x)).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.open = false;
+        this.form = blank();
+        window.dispatchEvent(new CustomEvent('cliente-saved'));
+      } catch(e) {
+        this.error = 'Error de red al guardar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async eliminarDesdeModal() {
+      if (!this.form.id) return;
+      if (!confirm(`¿Eliminar a "${this.form.nombre_empresa}"?`)) return;
+      this.saving = true;
+      try {
+        const r = await fetch(`/api/clientes/${this.form.id}`, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) {
+          this.open = false;
+          window.dispatchEvent(new CustomEvent('cliente-saved'));
+        } else {
+          const e = await r.json().catch(()=>({}));
+          this.error = e.detail || 'No se pudo eliminar.';
+        }
+      } catch(e) {
+        this.error = 'Error de red al eliminar.';
+      } finally {
+        this.saving = false;
+      }
+    },
   }
 }
 </script>

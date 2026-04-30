@@ -21,9 +21,19 @@ class ClienteCreate(ClienteBase):
     pass
 
 
+class ClienteUpdate(BaseModel):
+    nombre_empresa: Optional[str] = None
+    contacto_nombre: Optional[str] = None
+    rfc_tax_id: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    direccion: Optional[str] = None
+
+
 class ClienteResponse(ClienteBase):
     id: int
     saldo_actual: Decimal
+    creado_por_id: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
 

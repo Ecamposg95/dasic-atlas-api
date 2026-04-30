@@ -34,6 +34,7 @@ from app.schemas.catalog import (  # noqa: F401
 from app.schemas.clients import (  # noqa: F401
     ClienteBase,
     ClienteCreate,
+    ClienteUpdate,
     ClienteResponse,
     ProveedorBase,
     ProveedorCreate,
@@ -68,7 +69,7 @@ __all__ = [
     "ProductoResponseVendedor", "ProductoResponseAdmin", "ProductoInfo",
     "PromocionBase", "PromocionCreate", "PromocionResponse",
     # clients
-    "ClienteBase", "ClienteCreate", "ClienteResponse",
+    "ClienteBase", "ClienteCreate", "ClienteUpdate", "ClienteResponse",
     "ProveedorBase", "ProveedorCreate", "ProveedorResponse",
     # finance
     "TransaccionCreate", "TransaccionResponse",
