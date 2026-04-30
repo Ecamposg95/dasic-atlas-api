@@ -98,8 +98,20 @@
                   <button title="Eventos" class="dax-btn-ghost text-xs py-1 px-2" @click="verEventos(v)">
                     <i class="fas fa-clock-rotate-left"></i>
                   </button>
-                  <button x-show="v.estatus==='cotizacion'" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
+                  <button x-show="v.estatus==='cotizacion'" title="Borrador OC" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
                     <i class="fas fa-file-invoice"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Sugerir OC (auto)" class="dax-btn-ghost text-xs py-1 px-2 hover:text-violet-300" @click="sugerirOC(v)">
+                    <i class="fas fa-truck text-violet-400"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Recotizar (nueva versión)" class="dax-btn-ghost text-xs py-1 px-2 hover:text-amber-300" @click="recotizar(v)">
+                    <i class="fas fa-code-branch text-amber-400"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Convertir a venta" class="dax-btn-ghost text-xs py-1 px-2 hover:text-emerald-300" @click="convertir(v)">
+                    <i class="fas fa-check-circle text-emerald-400"></i>
+                  </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Cancelar cotización" class="dax-btn-ghost text-xs py-1 px-2 hover:text-rose-300" @click="cancelar(v)">
+                    <i class="fas fa-ban text-rose-400"></i>
                   </button>
                 </div>
               </td>
@@ -240,6 +252,63 @@ function seguimiento() {
         if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
         alert(`[${data.modo}] Próximo paso para ${v.folio}\n\n${data.resumen}`);
       } catch(e) { console.warn(e); }
+    },
+
+    async sugerirOC(v) {
+      try {
+        const r = await fetch(`/api/ventas/${v.id}/sugerir-oc`, { method:'POST', credentials:'include' });
+        const d = await r.json();
+        if (!r.ok) return alert(d.detail?.mensaje || d.detail || 'Error');
+        if (!d.por_proveedor?.length && !d.sin_proveedor?.length) {
+          return alert(`${v.folio}: sin faltantes, no se requiere OC.`);
+        }
+        let txt = `Sugerencia para ${v.folio}:\n\n`;
+        d.por_proveedor.forEach(p => {
+          txt += `Proveedor #${p.proveedor_id} ${p.proveedor_empresa || ''}: $${p.subtotal}\n`;
+          p.items.forEach(i => txt += `  ${i.sku} × ${i.cantidad} @ $${i.costo_unitario}\n`);
+        });
+        if (d.sin_proveedor?.length) {
+          txt += '\nSin proveedor asignado:\n' + d.sin_proveedor.map(s => `  ${s.sku || '—'}: ${s.nombre} (×${s.faltante})`).join('\n');
+        }
+        if (!confirm(txt + '\n\n¿Generar las OCs ahora?')) return;
+        const g = await fetch(`/api/ventas/${v.id}/generar-oc`, { method:'POST', credentials:'include' });
+        const gd = await g.json();
+        if (!g.ok) return alert(gd.detail?.mensaje || gd.detail || 'Error');
+        alert('OCs generadas: ' + (gd.ocs || []).map(o => o.folio).join(', '));
+      } catch(e) { console.warn(e); alert('Error de red'); }
+    },
+
+    async recotizar(v) {
+      if (!confirm(`¿Crear nueva versión de ${v.folio}? Se duplica con un folio versionado.`)) return;
+      try {
+        const r = await fetch(`/api/ventas/${v.id}/recotizar`, { method:'POST', credentials:'include' });
+        const d = await r.json();
+        if (!r.ok) return alert(d.detail || 'Error al recotizar');
+        alert(`Versión creada: ${d.folio}`);
+        await this.init();
+      } catch(e) { console.warn(e); alert('Error de red'); }
+    },
+
+    async convertir(v) {
+      if (!confirm(`¿Convertir ${v.folio} a venta? Se descuenta stock y se emite cargo al cliente.`)) return;
+      try {
+        const r = await fetch(`/api/ventas/${v.id}/convertir`, { method:'POST', credentials:'include' });
+        const d = await r.json();
+        if (!r.ok) return alert(d.detail || 'Error al convertir');
+        alert(`Convertido: ${d.nuevo_folio}`);
+        await this.init();
+      } catch(e) { console.warn(e); alert('Error de red'); }
+    },
+
+    async cancelar(v) {
+      if (!confirm(`¿Cancelar ${v.folio}? Se liberan las reservas de inventario.`)) return;
+      try {
+        const r = await fetch(`/api/ventas/${v.id}/cancelar`, { method:'POST', credentials:'include' });
+        const d = await r.json();
+        if (!r.ok) return alert(d.detail || 'Error al cancelar');
+        alert(`Cancelada: ${d.folio} (${d.productos_liberados} productos liberados)`);
+        await this.init();
+      } catch(e) { console.warn(e); alert('Error de red'); }
     },
 
     async verEventos(v) {

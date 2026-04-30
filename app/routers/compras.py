@@ -438,3 +438,57 @@ def imprimir_oc(id: int, db: Session = Depends(get_db)):
         iva=iva, 
         gran_total=gran_total
     )
+
+
+@router.post("/{id}/recibir", dependencies=[Depends(allow_admin_asistente)])
+def recibir_oc(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Marca OC como recibida y emite ENTRADA por cada DetalleCompra."""
+    from app.services.stock_service import aplicar_movimiento
+    from app.models.enums import TipoMovimientoStock
+
+    orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    if not orden:
+        raise HTTPException(404, "OC no encontrada")
+    if orden.estatus == "recibido":
+        raise HTTPException(400, "La OC ya fue recibida")
+    if orden.estatus not in ("borrador", "enviada", "confirmada"):
+        raise HTTPException(400, f"Estatus '{orden.estatus}' no permite recepción")
+
+    detalles = (
+        db.query(models.DetalleCompra)
+        .filter(models.DetalleCompra.orden_compra_id == id)
+        .all()
+    )
+    if not detalles:
+        raise HTTPException(400, "OC sin detalles, nada que recibir")
+
+    procesados = 0
+    for det in detalles:
+        if not det.producto_id:
+            continue
+        producto = db.get(models.Producto, det.producto_id)
+        if not producto:
+            continue
+        aplicar_movimiento(
+            db,
+            producto=producto,
+            tipo=TipoMovimientoStock.ENTRADA.value,
+            cantidad=int(det.cantidad),
+            referencia_tipo="oc",
+            referencia_id=orden.id,
+            motivo=f"Recepción OC {orden.folio or '#'+str(orden.id)}",
+            usuario=current_user,
+        )
+        procesados += 1
+
+    orden.estatus = "recibido"
+    db.commit()
+    return {
+        "ok": True,
+        "folio": orden.folio,
+        "productos_ingresados": procesados,
+    }

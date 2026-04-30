@@ -1,27 +1,343 @@
 {% extends "base.html" %}
 {% block title %}Gastos{% endblock %}
-{% block page_title %}Control de Gastos{% endblock %}
+{% block page_title %}Gastos Operativos{% endblock %}
 
 {% block header_actions %}
-  <button class="dax-btn-primary">
+  <button x-show="$store.user.can('ver_gastos')" x-cloak
+          class="dax-btn-primary"
+          onclick="window.dispatchEvent(new CustomEvent('gasto-modal-open'))">
     <i class="fas fa-plus text-xs"></i>
-    Registrar Gasto
+    Nuevo Gasto
   </button>
 {% endblock %}
 
 {% block content %}
-<div class="dax-card p-10 text-center">
-  <div class="mx-auto h-14 w-14 flex items-center justify-center rounded-2xl
-              bg-amber-500/10 text-amber-400 text-2xl mb-4">
-    <i class="fas fa-file-invoice-dollar"></i>
+<div x-data="gastos()" x-init="init()" @gasto-saved.window="init()">
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total registros</p>
+        <p class="text-2xl font-bold text-slate-100" x-text="todos.length"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20">
+        <i class="fas fa-file-invoice-dollar"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total mes (MXN)</p>
+        <p class="text-2xl font-bold text-amber-400" x-text="fmtMoney(totalMes())"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+        <i class="fas fa-calendar-day"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Categorías</p>
+        <p class="text-2xl font-bold text-cyan-300" x-text="categorias().length"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20">
+        <i class="fas fa-tags"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Promedio gasto</p>
+        <p class="text-2xl font-bold text-violet-300" x-text="fmtMoney(promedio())"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 ring-1 ring-violet-500/20">
+        <i class="fas fa-chart-line"></i>
+      </div>
+    </div>
   </div>
-  <h2 class="text-base font-bold text-slate-200 mb-2">Módulo de Gastos</h2>
-  <p class="text-sm text-slate-400 max-w-sm mx-auto">
-    Este módulo está programado para <strong class="text-slate-300">Sprint 2</strong> del roadmap.
-    Incluirá categorización de gastos, conciliación y exportación a PDF.
-  </p>
-  <div class="mt-6">
-    <span class="dax-badge-amber text-xs py-1 px-3">Próximamente</span>
+
+  <!-- Filtros -->
+  <div class="flex gap-3 mb-4">
+    <div class="relative flex-1 max-w-sm">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+      <input type="search" x-model="q" @input.debounce.300ms="filtrar()"
+             placeholder="Categoría o descripción..."
+             class="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500
+                    rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500 transition">
+    </div>
+    <select x-model="filtroCategoria" @change="filtrar()"
+            class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
+                   rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
+      <option value="">Todas las categorías</option>
+      <template x-for="c in categorias()" :key="c">
+        <option :value="c" x-text="c"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Tabla -->
+  <div class="dax-card overflow-hidden">
+    <table class="dax-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Categoría</th>
+          <th>Descripción</th>
+          <th>Usuario</th>
+          <th class="text-right">Monto</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="loading">
+          <template x-for="i in 6" :key="i">
+            <tr><td colspan="6"><div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div></td></tr>
+          </template>
+        </template>
+        <template x-if="!loading">
+          <template x-for="g in filtrados" :key="g.id">
+            <tr>
+              <td class="text-xs text-slate-500" x-text="new Date(g.fecha).toLocaleDateString('es-MX')"></td>
+              <td>
+                <span class="dax-badge-slate uppercase text-[10px]" x-text="g.categoria"></span>
+              </td>
+              <td class="text-xs text-slate-300" x-text="g.descripcion || '—'"></td>
+              <td class="text-[10px] text-slate-500" x-text="g.usuario || '—'"></td>
+              <td class="text-right font-mono text-xs font-bold text-rose-300"
+                  x-text="(g.moneda==='USD'?'US$':'$') + Number(g.monto).toLocaleString('en-US',{minimumFractionDigits:2})"></td>
+              <td class="text-right">
+                <div class="inline-flex items-center gap-1">
+                  <button @click="editar(g)" class="dax-btn-ghost py-1 px-2" title="Editar">
+                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  </button>
+                  <button @click="eliminar(g)"
+                          x-show="$store.user.can('gestionar_usuarios')" x-cloak
+                          class="dax-btn-ghost py-1 px-2 hover:text-rose-400" title="Eliminar">
+                    <i class="fas fa-trash text-[10px]"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="filtrados.length===0">
+            <td colspan="6" class="text-center text-slate-500 py-12 text-sm">
+              <i class="fas fa-file-invoice-dollar text-2xl mb-2 block opacity-30"></i>
+              <span x-text="todos.length === 0 ? 'Sin gastos registrados' : 'Sin resultados con ese filtro'"></span>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
   </div>
 </div>
+
+<!-- Modal Nuevo / Editar Gasto -->
+<div id="modal-gasto"
+     x-data="modalGasto()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @gasto-modal-open.window="openCreate()"
+     @gasto-modal-edit.window="openEdit($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-md p-6" @click.outside="close()">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-base font-bold text-slate-200" x-text="form.id ? 'Editar gasto' : 'Nuevo gasto'"></h2>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+    <form @submit.prevent="guardar()" class="space-y-3">
+      <div>
+        <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Categoría *</label>
+        <input type="text" x-model="form.categoria" list="cat-list" :disabled="saving" required maxlength="80"
+               placeholder="Renta · Energía · Combustible · Papelería..." class="dax-input">
+        <datalist id="cat-list">
+          <option value="Renta"></option>
+          <option value="Energía eléctrica"></option>
+          <option value="Internet"></option>
+          <option value="Combustible"></option>
+          <option value="Papelería"></option>
+          <option value="Mantenimiento"></option>
+          <option value="Sueldos"></option>
+          <option value="Capacitación"></option>
+          <option value="Marketing"></option>
+          <option value="Otro"></option>
+        </datalist>
+      </div>
+      <div>
+        <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción</label>
+        <textarea x-model="form.descripcion" :disabled="saving" rows="2"
+                  placeholder="Detalle del gasto" class="dax-input"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Monto *</label>
+          <input type="number" min="0.01" step="0.01" x-model.number="form.monto" :disabled="saving" required class="dax-input text-right font-mono">
+        </div>
+        <div>
+          <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Moneda</label>
+          <select x-model="form.moneda" :disabled="saving" class="dax-input">
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+      </div>
+      <div x-show="error" x-cloak class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2" x-text="error"></div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+        <button type="submit" class="dax-btn-primary" :disabled="saving">
+          <i class="fas fa-save text-xs mr-1"></i>
+          <span x-text="saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Registrar gasto')"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function fmtMoney(v) {
+  const n = Number(v || 0);
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function gastos() {
+  return {
+    loading: true,
+    todos: [], filtrados: [],
+    q: '', filtroCategoria: '',
+
+    fmtMoney,
+
+    categorias() {
+      const set = new Set();
+      this.todos.forEach(g => g.categoria && set.add(g.categoria));
+      return Array.from(set).sort();
+    },
+
+    totalMes() {
+      const ahora = new Date();
+      return this.todos
+        .filter(g => {
+          const d = new Date(g.fecha);
+          return d.getFullYear() === ahora.getFullYear() && d.getMonth() === ahora.getMonth();
+        })
+        .reduce((acc, g) => acc + Number(g.monto || 0), 0);
+    },
+
+    promedio() {
+      if (!this.todos.length) return 0;
+      const total = this.todos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
+      return total / this.todos.length;
+    },
+
+    async init() {
+      this.loading = true;
+      try {
+        const r = await fetch('/api/gastos/?limit=500', { credentials:'include' });
+        if (r.ok) this.todos = await r.json();
+      } catch(e) { console.warn(e); }
+      finally { this.loading = false; this.filtrar(); }
+    },
+
+    filtrar() {
+      const q = (this.q || '').toLowerCase();
+      this.filtrados = this.todos.filter(g => {
+        const matchQ = !q
+          || (g.categoria || '').toLowerCase().includes(q)
+          || (g.descripcion || '').toLowerCase().includes(q);
+        const matchC = !this.filtroCategoria || g.categoria === this.filtroCategoria;
+        return matchQ && matchC;
+      });
+    },
+
+    editar(g) {
+      window.dispatchEvent(new CustomEvent('gasto-modal-edit', { detail: g }));
+    },
+
+    async eliminar(g) {
+      if (!confirm(`¿Eliminar gasto "${g.categoria}" por ${fmtMoney(g.monto)}?`)) return;
+      try {
+        const r = await fetch(`/api/gastos/${g.id}`, { method: 'DELETE', credentials: 'include' });
+        if (r.ok) await this.init();
+        else {
+          const e = await r.json().catch(()=>({}));
+          alert(e.detail || 'No se pudo eliminar');
+        }
+      } catch(e) { console.warn(e); }
+    },
+  }
+}
+
+function modalGasto() {
+  const blank = () => ({ id: null, categoria: '', descripcion: '', monto: 0, moneda: 'MXN' });
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: blank(),
+
+    openCreate() { this.form = blank(); this.error = ''; this.open = true; },
+
+    openEdit(g) {
+      this.form = {
+        id: g.id,
+        categoria: g.categoria || '',
+        descripcion: g.descripcion || '',
+        monto: Number(g.monto || 0),
+        moneda: g.moneda || 'MXN',
+      };
+      this.error = '';
+      this.open = true;
+    },
+
+    close() { if (!this.saving) { this.open = false; this.error = ''; } },
+
+    async guardar() {
+      if (this.saving) return;
+      this.error = '';
+      const f = this.form;
+      if (!f.categoria || f.categoria.trim().length < 1) { this.error = 'Categoría requerida.'; return; }
+      if (!f.monto || Number(f.monto) <= 0) { this.error = 'Monto debe ser mayor a 0.'; return; }
+
+      const body = {
+        categoria: f.categoria.trim(),
+        descripcion: (f.descripcion || '').trim() || null,
+        monto: Number(f.monto),
+        moneda: f.moneda || 'MXN',
+      };
+
+      this.saving = true;
+      try {
+        const url = f.id ? `/api/gastos/${f.id}` : '/api/gastos/';
+        const method = f.id ? 'PUT' : 'POST';
+        const r = await fetch(url, {
+          method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          let msg = 'No se pudo guardar.';
+          try {
+            const d = await r.json();
+            if (typeof d.detail === 'string') msg = d.detail;
+            else if (Array.isArray(d.detail)) msg = d.detail.map(x => x.msg || JSON.stringify(x)).join(' · ');
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        this.open = false;
+        this.form = blank();
+        window.dispatchEvent(new CustomEvent('gasto-saved'));
+      } catch(e) {
+        this.error = 'Error de red.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  }
+}
+</script>
 {% endblock %}

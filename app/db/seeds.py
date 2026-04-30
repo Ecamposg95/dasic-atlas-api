@@ -39,6 +39,8 @@ _BACKFILL_DDL = [
     # 20260430_02: RBAC owner scoping para clientes
     "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS creado_por_id INTEGER REFERENCES usuarios(id)",
     "CREATE INDEX IF NOT EXISTS ix_clientes_creado_por_id ON clientes (creado_por_id)",
+    # 20260430_03 (no migration formal): gastos.moneda
+    "ALTER TABLE IF EXISTS gastos ADD COLUMN IF NOT EXISTS moneda VARCHAR(3) NOT NULL DEFAULT 'MXN'",
 ]
 
 

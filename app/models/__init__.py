@@ -35,6 +35,7 @@ from app.models.purchases import OrdenCompra, DetalleCompra  # noqa: F401
 from app.models.quote_events import QuoteEvent  # noqa: F401
 from app.models.inventory import MovimientoStock  # noqa: F401
 from app.models.fx import TipoCambioDia  # noqa: F401
+from app.models.expenses import Gasto  # noqa: F401
 
 __all__ = [
     "Base",
@@ -49,4 +50,5 @@ __all__ = [
     "QuoteEvent",
     "MovimientoStock",
     "TipoCambioDia",
+    "Gasto",
 ]
