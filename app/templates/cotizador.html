@@ -201,12 +201,17 @@
 
         <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
           <div class="flex flex-col md:flex-row justify-between items-end gap-4">
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
               <button onclick="guardar('cotizacion')" class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition flex items-center">
                 <i class="fas fa-save mr-2 text-yellow-500"></i> Guardar
               </button>
               <button onclick="guardar('pendiente')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center">
                 <i class="fas fa-check-circle mr-2"></i> Vender
+              </button>
+              <button onclick="abrirSugerirOC()" id="btn-sugerir-oc"
+                      class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled title="Guarda la cotización primero">
+                <i class="fas fa-truck mr-2"></i> Sugerir OC
               </button>
             </div>
 
@@ -219,6 +224,27 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal preview Sugerir OC -->
+  <div id="modal-oc-preview" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-6 py-4 bg-violet-50 dark:bg-violet-900/30 border-b border-violet-200 dark:border-violet-800 flex justify-between items-center">
+        <div>
+          <h3 class="text-base font-black text-violet-700 dark:text-violet-300 uppercase">Sugerencia de OC</h3>
+          <p class="text-xs text-violet-600 dark:text-violet-400">Genera órdenes de compra borrador para los faltantes.</p>
+        </div>
+        <button onclick="cerrarSugerirOC()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="oc-preview-body" class="p-5 overflow-y-auto flex-1 custom-scroll text-slate-700 dark:text-slate-200"></div>
+      <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+        <button onclick="cerrarSugerirOC()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cerrar</button>
+        <button onclick="confirmarGenerarOC()" id="btn-confirmar-oc" disabled
+                class="px-4 py-1.5 bg-violet-500 hover:bg-violet-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+          <i class="fas fa-check mr-1"></i> Generar OCs
+        </button>
       </div>
     </div>
   </div>
@@ -246,7 +272,22 @@
 
 {% block extra_scripts %}
 <script>
-  let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00 };
+  let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00, lastSavedId: null, firstMatch: null };
+
+  function stockBadgeHTML(item) {
+      if (!item.id || item.servicio || item.ghost) return '';
+      const p = state.prods.find(x => x.id === item.id);
+      if (!p) return '';
+      const stock = p.stock_actual || 0;
+      const tieneProveedor = !!p.proveedor_principal_id || !!p.proveedor_alterno_id;
+      let cls = 'bg-emerald-500/20 text-emerald-300';
+      let label = `${stock} en stock`;
+      if (stock < item.qty) {
+          if (tieneProveedor) { cls = 'bg-amber-500/20 text-amber-300'; label = `${stock}/${item.qty} · OC`; }
+          else { cls = 'bg-rose-500/20 text-rose-300'; label = `sin proveedor`; }
+      }
+      return `<span class="text-[9px] font-bold ${cls} px-1.5 py-0.5 rounded ml-1">${label}</span>`;
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
       loadData();
@@ -301,6 +342,67 @@
           const r = await fetch('/api/fx/refresh', { method:'POST', credentials:'include' });
           if (r.ok) await cargarTC();
       } catch (e) { console.warn('FX refresh:', e); }
+  }
+
+  function cerrarSugerirOC() {
+      const m = document.getElementById('modal-oc-preview');
+      m.classList.add('hidden'); m.classList.remove('flex');
+  }
+
+  async function abrirSugerirOC() {
+      if (!state.lastSavedId) {
+          Swal.fire({icon:'info', title:'Guarda la cotización primero', text:'Una vez guardada podrás sugerir órdenes de compra.'});
+          return;
+      }
+      try {
+          const r = await fetch(`/api/ventas/${state.lastSavedId}/sugerir-oc`, { method:'POST', credentials:'include' });
+          const d = await r.json();
+          const body = document.getElementById('oc-preview-body');
+          let html = '';
+          if (d.sin_proveedor && d.sin_proveedor.length) {
+              html += `<div class="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-200 text-xs">
+                  <p class="font-bold mb-1"><i class="fas fa-exclamation-triangle"></i> Productos sin proveedor (no se incluirán):</p>
+                  <ul class="ml-5 list-disc">${d.sin_proveedor.map(s=>`<li>${s.sku||'—'}: ${s.nombre} (faltan ${s.faltante})</li>`).join('')}</ul>
+                  <p class="mt-2 text-[10px]">Asigna proveedor en inventario y vuelve a sugerir.</p>
+              </div>`;
+          }
+          (d.por_proveedor || []).forEach(p => {
+              html += `<div class="mb-3 p-3 rounded-lg bg-slate-100 dark:bg-slate-700/40 border border-slate-300 dark:border-slate-600">
+                  <div class="flex justify-between items-center mb-2">
+                      <p class="text-xs font-bold">Proveedor: <span class="text-violet-700 dark:text-violet-300">${p.proveedor_empresa || ('#'+p.proveedor_id)}</span></p>
+                      <p class="text-xs font-mono font-bold text-cyan-700 dark:text-cyan-300">$${p.subtotal.toLocaleString('en-US',{minimumFractionDigits:2})}</p>
+                  </div>
+                  <ul class="text-[11px] ml-4 list-disc space-y-0.5">${p.items.map(i=>`<li><b>${i.sku}</b> × ${i.cantidad} @ $${i.costo_unitario.toLocaleString('en-US',{minimumFractionDigits:2})} ${i.moneda}</li>`).join('')}</ul>
+              </div>`;
+          });
+          if (!(d.por_proveedor && d.por_proveedor.length) && !(d.sin_proveedor && d.sin_proveedor.length)) {
+              html = '<p class="text-sm text-slate-500 text-center py-6"><i class="fas fa-circle-check mr-1 text-emerald-500"></i> Sin faltantes. No se requiere generar OC.</p>';
+          }
+          body.innerHTML = html;
+          document.getElementById('btn-confirmar-oc').disabled = !(d.por_proveedor && d.por_proveedor.length);
+          const m = document.getElementById('modal-oc-preview');
+          m.classList.remove('hidden'); m.classList.add('flex');
+      } catch (e) {
+          Swal.fire('Error', 'No se pudo obtener la sugerencia', 'error');
+      }
+  }
+
+  async function confirmarGenerarOC() {
+      if (!state.lastSavedId) return;
+      try {
+          const r = await fetch(`/api/ventas/${state.lastSavedId}/generar-oc`, { method:'POST', credentials:'include' });
+          const d = await r.json();
+          if (r.ok) {
+              cerrarSugerirOC();
+              const folios = (d.ocs || []).map(o=>o.folio).join(', ');
+              Swal.fire({icon:'success', title:'OCs generadas', text:folios || 'Sin OCs creadas'});
+          } else {
+              const msg = (d.detail && d.detail.mensaje) || JSON.stringify(d.detail || d);
+              Swal.fire('Error', msg, 'error');
+          }
+      } catch (e) {
+          Swal.fire('Error', 'No se pudo generar la OC', 'error');
+      }
   }
 
   function abrirModalServicio() {
@@ -538,10 +640,11 @@
 
           const servicioBadge = i.servicio ? '<span class="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded ml-1 uppercase">Servicio</span>' : '';
           const ghostBadge = (i.ghost && !i.servicio) ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
+          const stockBadge = stockBadgeHTML(i);
           tb.innerHTML += `
               <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                   <td class="p-3">
-                      <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${servicioBadge}${ghostBadge}</div>
+                      <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">${i.sku}${servicioBadge}${ghostBadge}${stockBadge}</div>
                       <div class="text-xs text-slate-500 truncate w-48">${i.nom}</div>
                   </td>
                   <td class="p-3 text-center">
@@ -620,6 +723,9 @@
           const res = await fetch(`/api/ventas/?tipo_orden=${tipo}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
           if(res.ok) {
               const d = await res.json();
+              state.lastSavedId = d.id;
+              const btnOC = document.getElementById('btn-sugerir-oc');
+              if (btnOC) { btnOC.disabled = false; btnOC.title = ''; }
               const r = await Swal.fire({
                   icon:'success',
                   title: tipo==='cotizacion' ? 'Cotización guardada' : 'Venta registrada',
@@ -628,8 +734,10 @@
                   confirmButtonText: 'Ver PDF', denyButtonText: 'Nueva', cancelButtonText: 'Cerrar',
               });
               if (r.isConfirmed) window.open(`/api/ventas/${d.id}/pdf`, '_blank');
-              if (!r.isDismissed) {
+              if (r.isDenied) {
                   state.cart = [];
+                  state.lastSavedId = null;
+                  if (btnOC) { btnOC.disabled = true; btnOC.title = 'Guarda la cotización primero'; }
                   renderCart();
                   document.getElementById('observaciones').value = '';
               }
