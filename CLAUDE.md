@@ -96,7 +96,9 @@ Canonical roles in `RolUsuario`: `ADMINISTRADOR`, `GERENTE_COMERCIAL`, `VENTAS`.
 - **Folios, totals, stock movements are server-side.** Never compute folios in the frontend. Recompute subtotal/IVA/total in the backend on save. Stock changes only via `MovimientoStock` rows.
 - **Cookie auth.** SSR routes read the JWT from the `access_token` cookie; API routes accept `Authorization: Bearer …` or the same cookie. Do not move auth client-side.
 - **DB URL normalization.** `app/core/config.py::normalize_database_url` rewrites `postgres://` and `postgresql://` to `postgresql+psycopg://`. Don't hand-craft URLs that bypass it.
-- **Required env vars:** `DATABASE_URL`, `SECRET_KEY`. Optional: `ACCESS_TOKEN_EXPIRE_MINUTES`, `TOKEN_COOKIE_NAME`, `COOKIE_SECURE`, `ALLOWED_ORIGINS`, `SMTP_*`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`. Settings are validated at boot — the app refuses to start with a missing `DATABASE_URL` or `SECRET_KEY`.
+- **Required env vars:** `DATABASE_URL`, `SECRET_KEY`. Optional: `ACCESS_TOKEN_EXPIRE_MINUTES`, `TOKEN_COOKIE_NAME`, `COOKIE_SECURE`, `ALLOWED_ORIGINS`, `SMTP_*`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `BANXICO_TOKEN`. Settings are validated at boot — the app refuses to start with a missing `DATABASE_URL` or `SECRET_KEY`.
+- **Tipo de cambio (USD/MXN):** `app/services/fx_service.py` resuelve TC del día con cache en `tipos_cambio_dia`. Fuente primaria: Banxico SIE serie SF63528 (TC FIX) — requiere `BANXICO_TOKEN` (registro gratuito en https://www.banxico.org.mx/SieAPIRest/service/v1/token/registro). Fallback público sin token: `open.er-api.com`. Endpoint `GET /api/fx/usd-mxn?fecha=YYYY-MM-DD` y `POST /api/fx/refresh` (admin).
+- **Inventario auditable:** toda mutación de `productos.stock_actual` pasa por `app/services/stock_service.py::aplicar_movimiento`, que registra row en `movimientos_stock` (tipos: ENTRADA/SALIDA/AJUSTE/RESERVA/LIBERACION). Disponible = `stock_actual − reservas activas`. Las reservas se crean al guardar cotización (catálogo, no fantasma ni servicio) y se liberan/consumen al cancelar/convertir.
 
 ## Known transitional state
 

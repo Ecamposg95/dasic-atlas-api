@@ -83,10 +83,25 @@ def parse_lista_material(path: Path) -> list[dict]:
     return out
 
 
+DIMEINT_MARCAS = {"ALLEN BRADLEY", "AUTOMATIONDIRECT"}
+
+
+def _dimeint_id(db) -> "int | None":
+    prov = (
+        db.query(models.Proveedor)
+        .filter(models.Proveedor.email == "aramirez@dimeint.com")
+        .first()
+    )
+    return prov.id if prov else None
+
+
 def upsert_productos(db, items: Iterable[dict], dry_run: bool) -> tuple[int, int]:
     created = updated = 0
+    dimeint_id = _dimeint_id(db)
     for it in items:
         existing = db.query(models.Producto).filter(models.Producto.sku == it["sku"]).first()
+        marca_upper = (it["marca"] or "").upper()
+        prov_principal = dimeint_id if (dimeint_id and marca_upper in DIMEINT_MARCAS) else None
         if existing:
             existing.nombre = it["nombre"][:150]
             existing.descripcion = it["nombre"]
@@ -96,6 +111,8 @@ def upsert_productos(db, items: Iterable[dict], dry_run: bool) -> tuple[int, int
             existing.moneda_compra = it["moneda_compra"]
             if not existing.sku_comercial:
                 existing.sku_comercial = it["sku"][:80]
+            if not existing.proveedor_principal_id and prov_principal:
+                existing.proveedor_principal_id = prov_principal
             if (existing.stock_actual or 0) == 0:
                 existing.stock_actual = it["stock_actual"]
             updated += 1
@@ -107,6 +124,7 @@ def upsert_productos(db, items: Iterable[dict], dry_run: bool) -> tuple[int, int
                 descripcion=it["nombre"],
                 marca=(it["marca"] or None) and it["marca"][:80],
                 unidad=(it["unidad"] or "PZA")[:20],
+                proveedor_principal_id=prov_principal,
                 costo_compra=it["costo_compra"],
                 moneda_compra=it["moneda_compra"],
                 stock_actual=it["stock_actual"],
