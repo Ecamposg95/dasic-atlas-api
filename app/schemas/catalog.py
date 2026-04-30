@@ -17,6 +17,10 @@ class ProductoBase(BaseModel):
     imagen_url: Optional[str] = None
     marca: Optional[str] = Field(None, max_length=80)
     unidad: Optional[str] = Field("PZA", max_length=20)
+    proveedor_principal_id: Optional[int] = None
+    proveedor_alterno_id: Optional[int] = None
+    tiempo_entrega_dias: int = Field(7, ge=0)
+    es_servicio: bool = False
     stock_minimo: int = Field(5, ge=0)
     moneda_compra: str = Field("MXN", min_length=3, max_length=3)
     precio_publico: Optional[Decimal] = Field(None, ge=0)
@@ -36,6 +40,10 @@ class ProductoUpdate(BaseModel):
     imagen_url: Optional[str] = None
     marca: Optional[str] = Field(None, max_length=80)
     unidad: Optional[str] = Field(None, max_length=20)
+    proveedor_principal_id: Optional[int] = None
+    proveedor_alterno_id: Optional[int] = None
+    tiempo_entrega_dias: Optional[int] = Field(None, ge=0)
+    es_servicio: Optional[bool] = None
     moneda_compra: Optional[str] = Field(None, min_length=3, max_length=3)
     precio_publico: Optional[Decimal] = Field(None, ge=0)
     precio_mayorista: Optional[Decimal] = Field(None, ge=0)

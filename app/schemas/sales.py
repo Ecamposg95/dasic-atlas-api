@@ -19,10 +19,13 @@ class DetalleOrdenCreate(BaseModel):
     utilidad: Decimal = Field(default=Decimal("0"), ge=0, lt=100)
     descuento: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     moneda_origen: Optional[str] = Field(default=None, min_length=3, max_length=3)
-    # Productos fantasma
+    # Productos fantasma / servicios
     sku_libre: Optional[str] = Field(default=None, max_length=80)
     descripcion_libre: Optional[str] = Field(default=None, max_length=255)
     costo_unitario: Optional[Decimal] = Field(default=None, ge=0)
+    # Tipo de línea: producto_catalogo / producto_fantasma / servicio
+    tipo_linea: Optional[str] = Field(default="producto_catalogo", max_length=20)
+    proveedor_sugerido_id: Optional[int] = None
 
 
 class DetalleOrdenResponse(BaseModel):
@@ -36,6 +39,8 @@ class DetalleOrdenResponse(BaseModel):
     utilidad_aplicada: Decimal
     descuento_aplicado: Decimal
     subtotal: Decimal
+    tipo_linea: Optional[str] = "producto_catalogo"
+    proveedor_sugerido_id: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
 

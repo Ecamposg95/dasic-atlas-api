@@ -52,6 +52,13 @@ from app.schemas.sales import (  # noqa: F401
     OrdenVentaResponse,
 )
 
+from app.schemas.fx import TipoCambioDiaResponse  # noqa: F401
+from app.schemas.inventory import (  # noqa: F401
+    MovimientoStockResponse,
+    AjusteManualIn,
+    DisponibilidadResponse,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -68,4 +75,8 @@ __all__ = [
     # sales
     "DetalleOrdenCreate", "DetalleOrdenResponse",
     "OrdenVentaCreate", "OrdenVentaResponse",
+    # fx
+    "TipoCambioDiaResponse",
+    # inventory
+    "MovimientoStockResponse", "AjusteManualIn", "DisponibilidadResponse",
 ]
