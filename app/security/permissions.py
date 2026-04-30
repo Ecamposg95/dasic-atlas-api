@@ -78,10 +78,12 @@ PERMISSIONS: dict[RolUsuario, set[tuple[str, str]]] = {
         ("create", "cotizacion"), ("convert:own", "cotizacion"),
         ("cancel:own", "cotizacion"),
         ("read:own", "venta"),
-        # clientes: ve los suyos y puede crear
-        ("read:own", "cliente"), ("create", "cliente"), ("write:own", "cliente"),
+        # clientes: lectura completa (cartera compartida B2B), edición sólo de los que creó
+        ("read", "cliente"), ("create", "cliente"), ("write:own", "cliente"),
         # productos: solo precios (sin costo). El schema ProductoResponseVendedor ya filtra.
         ("read", "producto"),
+        # inventario: lectura para ver stock al cotizar
+        ("read", "stock"),
         # OCs: solo las vinculadas a sus cotizaciones
         ("read:own", "oc"),
         # dashboard solo lo suyo
@@ -224,7 +226,7 @@ MODULOS_VISIBLES_BY_ROL: dict[RolUsuario, list[str]] = {
         "clientes", "compras", "gastos", "reportes",
     ],
     RolUsuario.VENTAS: [
-        "dashboard", "cotizador", "seguimiento",
+        "dashboard", "cotizador", "seguimiento", "inventario",
         "clientes", "compras", "reportes",
     ],
     RolUsuario.OPERATIVO: [
