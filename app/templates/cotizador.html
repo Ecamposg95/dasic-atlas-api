@@ -51,6 +51,7 @@
         </div>
       </div>
       <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones...">
+      <div id="ultima-cot-cliente" class="hidden mt-2 text-[11px] text-slate-400"></div>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
@@ -199,6 +200,9 @@
           </table>
         </div>
 
+        <!-- Productos relacionados -->
+        <div id="relacionados" class="hidden px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-violet-500/5"></div>
+
         <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
           <div class="flex flex-col md:flex-row justify-between items-end gap-4">
             <div class="flex gap-2 flex-wrap">
@@ -212,6 +216,25 @@
                       class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled title="Guarda la cotización primero">
                 <i class="fas fa-truck mr-2"></i> Sugerir OC
+              </button>
+              <button onclick="abrirPlantillas()" type="button"
+                      class="dax-btn-ghost px-3 py-2 text-xs"
+                      title="Plantillas (P)">
+                <i class="fas fa-bookmark text-amber-400"></i>
+              </button>
+              <button onclick="exportarBorradorJSON()" type="button"
+                      class="dax-btn-ghost px-3 py-2 text-xs"
+                      title="Exportar borrador JSON">
+                <i class="fas fa-download text-cyan-400"></i>
+              </button>
+              <label class="dax-btn-ghost px-3 py-2 text-xs cursor-pointer" title="Importar borrador JSON">
+                <i class="fas fa-upload text-cyan-400"></i>
+                <input type="file" accept="application/json" class="hidden" onchange="importarBorradorJSON(event.target.files[0]); event.target.value=''">
+              </label>
+              <button onclick="undoCarrito()" type="button"
+                      class="dax-btn-ghost px-3 py-2 text-xs"
+                      title="Deshacer (Ctrl+Z)">
+                <i class="fas fa-rotate-left"></i>
               </button>
             </div>
 
@@ -272,7 +295,165 @@
 
 {% block extra_scripts %}
 <script>
-  let state = { prods: [], cart: [], moneda: 'MXN', tc: 20.00, lastSavedId: null, firstMatch: null };
+  let state = {
+    prods: [], cart: [], moneda: 'MXN', tc: 20.00,
+    lastSavedId: null, firstMatch: null,
+    sinonimos: [],
+    plantillas: [],
+    ultimaCotCliente: null,
+    productosRelacionados: [],
+    historyStack: [],     // undo/redo del carrito
+    fxBadge: { text: '', fuente: '' },
+    DRAFT_KEY: 'dasic_cotizador_borrador',
+    AUTOSAVE_DELAY: 1500,
+  };
+
+  // ============ AUTO-SAVE (A1) ============
+  let _autosaveTimer = null;
+  function autosaveBorrador() {
+      clearTimeout(_autosaveTimer);
+      _autosaveTimer = setTimeout(() => {
+          try {
+              const payload = {
+                  cart: state.cart,
+                  cliente_id: document.getElementById('select-cliente')?.value || '',
+                  moneda: state.moneda,
+                  tc: state.tc,
+                  observaciones: document.getElementById('observaciones')?.value || '',
+                  ts: Date.now(),
+              };
+              localStorage.setItem(state.DRAFT_KEY, JSON.stringify(payload));
+          } catch(e) { console.warn('autosave fail:', e); }
+      }, state.AUTOSAVE_DELAY);
+  }
+  function cargarBorrador() {
+      try {
+          const raw = localStorage.getItem(state.DRAFT_KEY);
+          if (!raw) return null;
+          const d = JSON.parse(raw);
+          if (!d || !d.cart || !Array.isArray(d.cart) || !d.cart.length) return null;
+          // TTL 24h
+          if (Date.now() - (d.ts || 0) > 24 * 3600 * 1000) {
+              localStorage.removeItem(state.DRAFT_KEY);
+              return null;
+          }
+          return d;
+      } catch(e) { return null; }
+  }
+  function limpiarBorrador() {
+      try { localStorage.removeItem(state.DRAFT_KEY); } catch(_) {}
+  }
+
+  // ============ HISTORIAL undo/redo (D4) ============
+  function snapshotHistorial() {
+      try {
+          state.historyStack.push(JSON.parse(JSON.stringify(state.cart)));
+          if (state.historyStack.length > 20) state.historyStack.shift();
+      } catch(_) {}
+  }
+  function undoCarrito() {
+      if (!state.historyStack.length) return;
+      state.cart = state.historyStack.pop();
+      renderCart();
+      autosaveBorrador();
+  }
+
+  // ============ SEMÁFORO MARGEN (A5) ============
+  function colorMargen(util) {
+      const u = Number(util || 0);
+      if (u < 5) return 'bg-rose-500/20 text-rose-300';
+      if (u < 10) return 'bg-amber-500/20 text-amber-300';
+      if (u < 20) return 'bg-yellow-500/20 text-yellow-300';
+      return 'bg-emerald-500/20 text-emerald-300';
+  }
+
+  // ============ BÚSQUEDA SEMÁNTICA (C1+C2+C3+C4+C5) ============
+  function levenshteinShort(a, b) {
+      // Levenshtein truncado: si supera maxDist, retorna Infinity rápido.
+      const maxDist = 2;
+      a = a.toLowerCase(); b = b.toLowerCase();
+      if (Math.abs(a.length - b.length) > maxDist) return Infinity;
+      const m = a.length, n = b.length;
+      if (!m) return n; if (!n) return m;
+      let prev = Array.from({length:n+1}, (_,i)=>i);
+      for (let i = 1; i <= m; i++) {
+          const curr = [i];
+          let minRow = i;
+          for (let j = 1; j <= n; j++) {
+              const cost = a[i-1] === b[j-1] ? 0 : 1;
+              const v = Math.min(curr[j-1]+1, prev[j]+1, prev[j-1]+cost);
+              curr.push(v);
+              if (v < minRow) minRow = v;
+          }
+          if (minRow > maxDist) return Infinity;
+          prev = curr;
+      }
+      return prev[n];
+  }
+
+  function expandirConSinonimos(texto) {
+      // Devuelve set de keywords expandidas con sinónimos del diccionario.
+      const t = (texto || '').toLowerCase().trim();
+      if (!t) return new Set();
+      const keys = new Set([t]);
+      // tokens individuales
+      t.split(/\s+/).filter(Boolean).forEach(tok => keys.add(tok));
+      (state.sinonimos || []).forEach(entry => {
+          const all = [entry.canonico, ...(entry.sinonimos || [])].map(s => (s || '').toLowerCase());
+          if (all.some(s => t.includes(s))) {
+              all.forEach(s => keys.add(s));
+          }
+      });
+      return keys;
+  }
+
+  function parsearCantidadDeQuery(q) {
+      // "5 GV2ME14" → {cantidad: 5, resto: "GV2ME14"}; sino {cantidad: 1, resto: q}
+      // No matchea cuando el query empieza con un SKU numérico tipo "39.31..."
+      const m = (q || '').match(/^\s*(\d{1,3})\s+(\S.*)$/);
+      if (!m) return { cantidad: 1, resto: q };
+      const cant = parseInt(m[1]);
+      if (isNaN(cant) || cant < 1 || cant > 999) return { cantidad: 1, resto: q };
+      return { cantidad: cant, resto: m[2] };
+  }
+
+  function matchSemantico(p, q) {
+      // Devuelve score (mayor mejor) o 0 si no matchea.
+      if (!q) return 0;
+      const sku = (p.sku_comercial || p.sku || '').toLowerCase();
+      const skuI = (p.sku || '').toLowerCase();
+      const nombre = (p.nombre || '').toLowerCase();
+      const marca = (p.marca || '').toLowerCase();
+      const desc = (p.descripcion || '').toLowerCase();
+      const haystack = [sku, skuI, nombre, marca, desc].join(' ');
+
+      const qLow = q.toLowerCase();
+      // Match directo
+      if (sku.includes(qLow) || skuI.includes(qLow)) return 100;
+      if (nombre.includes(qLow)) return 50;
+      if (marca.includes(qLow)) return 30;
+      if (desc.includes(qLow)) return 25;
+
+      // Sinónimos
+      const expanded = expandirConSinonimos(qLow);
+      let synScore = 0;
+      for (const k of expanded) {
+          if (k === qLow) continue;
+          if (haystack.includes(k)) { synScore = Math.max(synScore, 35); }
+      }
+      if (synScore) return synScore;
+
+      // Fuzzy en nombre/sku tokens
+      const tokens = nombre.split(/\s+/).filter(Boolean);
+      for (const tk of tokens) {
+          const d = levenshteinShort(qLow, tk);
+          if (d <= 2) return 20 - d * 5;
+      }
+      const dSku = levenshteinShort(qLow, sku);
+      if (dSku <= 2) return 22 - dSku * 5;
+
+      return 0;
+  }
 
   function stockBadgeHTML(item) {
       if (!item.id || item.servicio || item.ghost) return '';
@@ -292,6 +473,9 @@
   document.addEventListener('DOMContentLoaded', () => {
       loadData();
       cargarTC();
+      cargarSinonimos();
+      cargarPlantillas();
+
       const input = document.getElementById('buscador');
       input.addEventListener('input', (e) => filterProds(e.target.value));
       input.addEventListener('focus', () => { if(input.value) filterProds(input.value); });
@@ -299,6 +483,8 @@
           if (e.key === 'Enter' && state.firstMatch) {
               e.preventDefault();
               addCart(state.firstMatch);
+              input.value = '';
+              filterProds('');
           }
           if (e.key === 'Escape') {
               input.value = '';
@@ -312,6 +498,35 @@
           state.tc = v;
           renderCart();
       });
+      // observaciones autosave
+      const obs = document.getElementById('observaciones');
+      if (obs) obs.addEventListener('input', autosaveBorrador);
+      // cliente change → cargar última cot del cliente
+      const selCli = document.getElementById('select-cliente');
+      if (selCli) selCli.addEventListener('change', () => { cargarUltimaCotCliente(); autosaveBorrador(); });
+
+      // ATAJOS GLOBALES (A3)
+      window.addEventListener('keydown', (e) => {
+          // ignorar si está escribiendo en input/textarea (excepto navegación)
+          const t = e.target;
+          const enInput = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+              e.preventDefault();
+              guardar('cotizacion');
+              return;
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+              e.preventDefault();
+              undoCarrito();
+              return;
+          }
+          if (enInput) return;
+          if (e.key === '/') { e.preventDefault(); input.focus(); }
+          if (e.key === 'n') { e.preventDefault(); abrirModalServicio(); }
+          if (e.key === 'f') { e.preventDefault(); abrirModalFantasma(); }
+          if (e.key === 'p') { e.preventDefault(); abrirPlantillas(); }
+      });
+
       document.addEventListener('click', (e) => {
           const list = document.getElementById('lista-resultados');
           const empty = document.getElementById('empty-search');
@@ -320,7 +535,192 @@
               if(input.value === '') empty.classList.remove('hidden');
           }
       });
+
+      // Restaurar borrador si existe (A1)
+      setTimeout(() => {
+          const d = cargarBorrador();
+          if (!d) return;
+          if (confirm(`Hay un borrador guardado de ${new Date(d.ts).toLocaleString('es-MX')} con ${d.cart.length} línea(s). ¿Restaurar?`)) {
+              state.cart = d.cart || [];
+              state.moneda = d.moneda || 'MXN';
+              state.tc = d.tc || 20;
+              if (d.cliente_id) {
+                  const sel = document.getElementById('select-cliente');
+                  if (sel) sel.value = String(d.cliente_id);
+              }
+              const obsEl = document.getElementById('observaciones');
+              if (obsEl && d.observaciones) obsEl.value = d.observaciones;
+              renderCart();
+              cargarUltimaCotCliente();
+          } else {
+              limpiarBorrador();
+          }
+      }, 600);
   });
+
+  // ============ Cargas auxiliares ============
+  async function cargarSinonimos() {
+      try {
+          const r = await fetch('/api/ventas/sinonimos', { credentials:'include' });
+          if (r.ok) {
+              const d = await r.json();
+              state.sinonimos = d.entradas || [];
+          }
+      } catch(_) {}
+  }
+  async function cargarPlantillas() {
+      try {
+          const r = await fetch('/api/ventas/plantillas', { credentials:'include' });
+          if (r.ok) state.plantillas = await r.json();
+      } catch(_) {}
+  }
+  async function cargarUltimaCotCliente() {
+      const cli = document.getElementById('select-cliente')?.value;
+      if (!cli) { state.ultimaCotCliente = null; renderUltimaCotCliente(); return; }
+      try {
+          const r = await fetch(`/api/ventas/ultima-cotizacion-cliente/${cli}`, { credentials:'include' });
+          if (r.ok) state.ultimaCotCliente = await r.json();
+          renderUltimaCotCliente();
+      } catch(_) {}
+  }
+  function renderUltimaCotCliente() {
+      const el = document.getElementById('ultima-cot-cliente');
+      if (!el) return;
+      const d = state.ultimaCotCliente;
+      if (!d) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+      const sym = d.moneda === 'USD' ? 'US$' : '$';
+      const monto = sym + Number(d.total).toLocaleString('en-US', { minimumFractionDigits: 0 });
+      el.innerHTML = `<i class="fas fa-history mr-1"></i> Última cot: <b>${d.folio}</b> · ${monto} · hace ${d.dias_atras}d (${d.estatus})`;
+      el.classList.remove('hidden');
+  }
+  async function cargarProductosRelacionados(producto_id) {
+      try {
+          const r = await fetch(`/api/ventas/productos-relacionados/${producto_id}?limit=4`, { credentials:'include' });
+          if (r.ok) {
+              const data = await r.json();
+              state.productosRelacionados = data || [];
+              renderProductosRelacionados();
+          }
+      } catch(_) {}
+  }
+  function renderProductosRelacionados() {
+      const el = document.getElementById('relacionados');
+      if (!el) return;
+      const items = state.productosRelacionados || [];
+      const enCarrito = new Set(state.cart.map(c => c.id));
+      const filtrados = items.filter(it => !enCarrito.has(it.producto_id));
+      if (!filtrados.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      el.innerHTML = `
+          <div class="text-[10px] font-bold uppercase text-slate-500 mb-2">Suelen ir juntos</div>
+          <div class="flex flex-wrap gap-1">
+              ${filtrados.map(p => `
+                  <button onclick="agregarRelacionado(${p.producto_id})"
+                          class="text-[10px] px-2 py-1 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 rounded border border-violet-500/30">
+                      + ${p.sku} <span class="text-violet-500">(${p.co_apariciones}×)</span>
+                  </button>
+              `).join('')}
+          </div>`;
+  }
+  function agregarRelacionado(id) {
+      const p = state.prods.find(x => x.id === id);
+      if (p) addCart(p);
+  }
+
+  // ============ Plantillas (B4) ============
+  async function abrirPlantillas() {
+      await cargarPlantillas();
+      const opciones = state.plantillas.map(p => p.id + ': ' + p.nombre + ' (' + p.n_lineas + ' líneas)').join('\n');
+      const choice = prompt(`Plantillas disponibles:\n\n${opciones || '(ninguna)'}\n\nID a cargar (cancel para crear una nueva del carrito actual):`, '');
+      if (choice === null) {
+          // crear nueva
+          if (!state.cart.length) { alert('Carrito vacío.'); return; }
+          const nombre = prompt('Nombre de la plantilla:', '');
+          if (!nombre) return;
+          const desc = prompt('Descripción (opcional):', '') || '';
+          const lineas = state.cart.map(i => ({
+              producto_id: i.id || null,
+              cantidad: i.qty,
+              utilidad: i.utilidad,
+              descuento: 0,
+              moneda_origen: i.productCurrency,
+              sku_libre: i.ghost && i.sku !== '— FANTASMA' && i.sku !== '— SERVICIO' ? i.sku : null,
+              descripcion_libre: i.ghost ? i.nom : null,
+              costo_unitario: i.ghost ? i.cost : null,
+              tipo_linea: i.tipoLinea || (i.servicio ? 'servicio' : (i.ghost ? 'producto_fantasma' : 'producto_catalogo')),
+              proveedor_sugerido_id: i.proveedor_sugerido_id || null,
+          }));
+          try {
+              const r = await fetch('/api/ventas/plantillas', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nombre, descripcion: desc, lineas })});
+              if (r.ok) { alert('Plantilla guardada.'); await cargarPlantillas(); }
+              else { const e = await r.json(); alert('Error: ' + (e.detail || 'no se pudo')); }
+          } catch(_) { alert('Error de red.'); }
+          return;
+      }
+      const id = parseInt(choice);
+      const p = state.plantillas.find(x => x.id === id);
+      if (!p) { alert('No encontrada.'); return; }
+      if (state.cart.length && !confirm(`Carrito tiene ${state.cart.length} línea(s). ¿Reemplazar con la plantilla "${p.nombre}"?`)) return;
+      snapshotHistorial();
+      state.cart = (p.lineas || []).map(l => ({
+          id: l.producto_id,
+          ghost: !l.producto_id,
+          servicio: l.tipo_linea === 'servicio',
+          sku: l.sku_libre || (l.tipo_linea === 'servicio' ? '— SERVICIO' : (l.producto_id ? '' : '— FANTASMA')),
+          nom: l.descripcion_libre || '',
+          cost: Number(l.costo_unitario || 0),
+          productCurrency: l.moneda_origen || 'MXN',
+          qty: l.cantidad || 1,
+          max: 9999,
+          utilidad: Number(l.utilidad || 30),
+          tipoLinea: l.tipo_linea,
+          proveedor_sugerido_id: l.proveedor_sugerido_id,
+      }));
+      // Rellenar nombres/skus desde state.prods cuando aplique
+      state.cart.forEach(it => {
+          if (it.id) {
+              const pr = state.prods.find(x => x.id === it.id);
+              if (pr) { it.sku = pr.sku_comercial || pr.sku; it.nom = pr.nombre; it.cost = parseFloat(pr.costo_compra || 0); it.productCurrency = (pr.moneda_compra || 'MXN').toUpperCase(); }
+          }
+      });
+      renderCart();
+      autosaveBorrador();
+  }
+
+  // ============ Export/Import JSON (D5) ============
+  function exportarBorradorJSON() {
+      const payload = {
+          cart: state.cart,
+          moneda: state.moneda,
+          tc: state.tc,
+          observaciones: document.getElementById('observaciones')?.value || '',
+          exportado: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cotizacion_borrador_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+  }
+  function importarBorradorJSON(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+          try {
+              const d = JSON.parse(e.target.result);
+              if (!d.cart || !Array.isArray(d.cart)) return alert('JSON inválido');
+              snapshotHistorial();
+              state.cart = d.cart;
+              state.moneda = d.moneda || 'MXN';
+              state.tc = d.tc || 20;
+              if (d.observaciones) document.getElementById('observaciones').value = d.observaciones;
+              renderCart();
+              autosaveBorrador();
+          } catch(_) { alert('Error al leer archivo'); }
+      };
+      reader.readAsText(file);
+  }
 
   async function cargarTC() {
       try {
@@ -516,23 +916,35 @@
       const empty = document.getElementById('empty-search');
       list.innerHTML = '';
 
-      const clean = txt.toLowerCase();
-      if(clean.length < 1) {
+      if(!txt || txt.trim().length < 1) {
           list.classList.add('hidden');
           empty.classList.remove('hidden');
           return;
       }
 
-      const matches = state.prods.filter(p =>
-          p.nombre.toLowerCase().includes(clean) ||
-          p.sku.toLowerCase().includes(clean) ||
-          ((p.sku_comercial || '').toLowerCase().includes(clean))
-      );
+      // Parser cantidad: "5 GV2ME14" → cant=5, query="GV2ME14"
+      const parsed = parsearCantidadDeQuery(txt);
+      const queryEfectiva = parsed.resto || txt;
+      state.lastParsedQty = parsed.cantidad;
+
+      // Score con búsqueda semántica
+      const scored = state.prods
+          .map(p => ({ p, score: matchSemantico(p, queryEfectiva) }))
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score);
+      const matches = scored.map(x => x.p);
 
       empty.classList.add('hidden');
       list.classList.remove('hidden');
 
-      if(matches.length === 0) { list.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Sin resultados</div>'; return; }
+      if(matches.length === 0) {
+          // Sugerencia: ofrecer agregar como fantasma
+          list.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">
+              Sin resultados para <b class="text-slate-300">${txt}</b>.
+              <br><button onclick="abrirModalFantasma()" class="mt-2 text-amber-400 underline">Agregar como producto fantasma</button>
+          </div>`;
+          return;
+      }
 
       matches.slice(0, 10).forEach((p, idx) => {
           const el = document.createElement('div');
@@ -591,23 +1003,41 @@
       renderCart();
   }
 
-  function addCart(p) {
+  async function addCart(p) {
       if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
+      snapshotHistorial();
+      const cantidadParseada = state.lastParsedQty || 1;
       const ex = state.cart.find(x => x.id === p.id);
       if(ex) {
-          ex.qty++;
+          ex.qty += cantidadParseada;
       } else {
+          // B1: auto-utilidad sugerida desde backend (cliente actual + producto)
+          let util = 30;
+          try {
+              const cli = document.getElementById('select-cliente')?.value || '';
+              const url = `/api/ventas/auto-utilidad?producto_id=${p.id}` + (cli ? `&cliente_id=${cli}` : '');
+              const r = await fetch(url, { credentials: 'include' });
+              if (r.ok) {
+                  const d = await r.json();
+                  if (d && typeof d.sugerido === 'number') util = d.sugerido;
+              }
+          } catch(_) {}
+
           state.cart.push({
               id: p.id,
               sku: p.sku_comercial || p.sku || '—',
               nom: p.nombre,
               cost: parseFloat(p.costo_compra || 0),
               productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
-              qty: 1,
+              qty: cantidadParseada,
               max: p.stock_actual,
-              utilidad: 30
+              utilidad: util,
           });
+          // B5: cargar productos relacionados (no bloquea)
+          cargarProductosRelacionados(p.id);
       }
+      state.lastParsedQty = 1;
+      autosaveBorrador();
 
       const input = document.getElementById('buscador');
       input.value = ''; input.focus();
@@ -661,29 +1091,62 @@
                   <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
                   <td class="p-3 text-center">
                       <input type="number" min="0" max="99" value="${i.utilidad}" onchange="updItem(${idx}, 'utilidad', this.value)"
-                          class="w-12 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-center text-xs rounded text-emerald-700 dark:text-emerald-300 font-bold outline-none">
+                          class="w-14 text-center text-xs rounded font-bold outline-none border ${colorMargen(i.utilidad)}"
+                          title="Margen %">
                   </td>
                   <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
                   <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
-                  <td class="p-3 text-center cursor-pointer text-slate-300 hover:text-red-500 transition" onclick="delItem(${idx})"><i class="fas fa-times"></i></td>
+                  <td class="p-3 text-center text-slate-400">
+                      <div class="inline-flex items-center gap-1">
+                          <button onclick="moverItem(${idx}, -1)" class="hover:text-cyan-300" title="Subir"><i class="fas fa-arrow-up text-[10px]"></i></button>
+                          <button onclick="moverItem(${idx}, +1)" class="hover:text-cyan-300" title="Bajar"><i class="fas fa-arrow-down text-[10px]"></i></button>
+                          <button onclick="duplicarItem(${idx})" class="hover:text-cyan-300" title="Duplicar"><i class="fas fa-clone text-[10px]"></i></button>
+                          <button onclick="delItem(${idx})" class="hover:text-red-400" title="Eliminar"><i class="fas fa-times text-xs"></i></button>
+                      </div>
+                  </td>
               </tr>`;
       });
       updTotal(subtotal);
       document.getElementById('items-count').innerText = state.cart.length + " Ítems";
+      renderProductosRelacionados();
   }
 
   function updItem(idx, t, v) {
+      snapshotHistorial();
       if(t=='productCurrency') {
           state.cart[idx].productCurrency = (v === 'USD') ? 'USD' : 'MXN';
           renderCart();
+          autosaveBorrador();
           return;
       }
       let val = parseFloat(v)||0;
       if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
       if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
       renderCart();
+      autosaveBorrador();
   }
-  function delItem(i) { state.cart.splice(i, 1); renderCart(); }
+  function delItem(i) {
+      snapshotHistorial();
+      state.cart.splice(i, 1);
+      renderCart();
+      autosaveBorrador();
+  }
+  function duplicarItem(idx) {
+      snapshotHistorial();
+      const copia = JSON.parse(JSON.stringify(state.cart[idx]));
+      state.cart.splice(idx + 1, 0, copia);
+      renderCart();
+      autosaveBorrador();
+  }
+  function moverItem(idx, delta) {
+      const nuevo = idx + delta;
+      if (nuevo < 0 || nuevo >= state.cart.length) return;
+      snapshotHistorial();
+      const [it] = state.cart.splice(idx, 1);
+      state.cart.splice(nuevo, 0, it);
+      renderCart();
+      autosaveBorrador();
+  }
   function updTotal(sub) {
       const iva = sub * 0.16;
       document.getElementById('lbl-sub').innerText = fmtMoney(sub);
@@ -697,6 +1160,19 @@
       if (state.cart.length === 0) return Swal.fire('Carrito vacío', 'Agrega al menos un producto.', 'warning');
       if (state.moneda === 'USD' && (!state.tc || state.tc <= 0)) {
           return Swal.fire('Tipo de cambio inválido', 'Captura un T.C. mayor a 0 para cotizar en USD.', 'warning');
+      }
+
+      // D6: alerta margen <5%
+      const margenBajo = state.cart.filter(i => Number(i.utilidad) < 5 && !i.servicio);
+      if (margenBajo.length) {
+          const lista = margenBajo.map(i => `• ${i.sku} (${i.utilidad}%)`).join('<br>');
+          const r = await Swal.fire({
+              icon: 'warning',
+              title: 'Margen muy bajo',
+              html: `<div class="text-xs text-left">Hay ${margenBajo.length} línea(s) con utilidad &lt; 5%:<br>${lista}</div>`,
+              showCancelButton: true, confirmButtonText: 'Guardar igual', cancelButtonText: 'Revisar',
+          });
+          if (!r.isConfirmed) return;
       }
 
       const payload = {
@@ -726,14 +1202,35 @@
               state.lastSavedId = d.id;
               const btnOC = document.getElementById('btn-sugerir-oc');
               if (btnOC) { btnOC.disabled = false; btnOC.title = ''; }
+              limpiarBorrador();
+
+              // B3: auto-prompt OC si tipo cotización y hay líneas con stock<cant
+              let necesitaOC = false;
+              if (tipo === 'cotizacion') {
+                  for (const i of state.cart) {
+                      if (i.servicio || i.ghost) {
+                          if (i.ghost && i.proveedor_sugerido_id) { necesitaOC = true; break; }
+                          continue;
+                      }
+                      const p = state.prods.find(x => x.id === i.id);
+                      if (p && (p.stock_actual || 0) < i.qty && (p.proveedor_principal_id || p.proveedor_alterno_id)) {
+                          necesitaOC = true; break;
+                      }
+                  }
+              }
+
               const r = await Swal.fire({
                   icon:'success',
                   title: tipo==='cotizacion' ? 'Cotización guardada' : 'Venta registrada',
-                  html: `<div class="text-sm">Folio: <b>${d.folio}</b></div>`,
+                  html: `<div class="text-sm">Folio: <b>${d.folio}</b></div>` + (necesitaOC ? '<div class="text-xs text-amber-300 mt-2">Hay faltantes con proveedor asignado. Te conviene generar OC ahora.</div>' : ''),
                   showDenyButton: true, showCancelButton: true,
-                  confirmButtonText: 'Ver PDF', denyButtonText: 'Nueva', cancelButtonText: 'Cerrar',
+                  confirmButtonText: necesitaOC ? 'Sugerir OC' : 'Ver PDF',
+                  denyButtonText: 'Nueva', cancelButtonText: 'Cerrar',
               });
-              if (r.isConfirmed) window.open(`/api/ventas/${d.id}/pdf`, '_blank');
+              if (r.isConfirmed) {
+                  if (necesitaOC) abrirSugerirOC();
+                  else window.open(`/api/ventas/${d.id}/pdf`, '_blank');
+              }
               if (r.isDenied) {
                   state.cart = [];
                   state.lastSavedId = null;

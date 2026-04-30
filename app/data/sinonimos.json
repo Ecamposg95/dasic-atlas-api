@@ -1,0 +1,325 @@
+{
+  "fuente": "diccionario manual + REF.VTA DASIC",
+  "actualizado": "2026-04-30",
+  "descripcion": "Diccionario bilingue ES-MX / EN / abreviaturas para automatizacion industrial. Usado por el cotizador para hacer match difuso entre lo que tipea el usuario y la descripcion del producto.",
+  "entradas": [
+    {
+      "canonico": "relevador",
+      "sinonimos": ["rele", "relay", "relevador de control", "relevador electromecanico", "ice cube relay"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Finder", "Phoenix Contact", "Omron"]
+    },
+    {
+      "canonico": "contactor",
+      "sinonimos": ["contactor electromagnetico", "contactor de potencia", "contactor magnetico", "magnetic contactor"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "interruptor termomagnetico",
+      "sinonimos": ["breaker", "pastilla", "termomagnetico", "circuit breaker", "MCB", "interruptor automatico"],
+      "categoria": "proteccion",
+      "marcas_comunes": ["Schneider Electric", "Siemens", "Allen Bradley", "ABB"]
+    },
+    {
+      "canonico": "guardamotor",
+      "sinonimos": ["motor protector", "motor protection circuit breaker", "MPCB", "interruptor guardamotor", "manual motor starter"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "arrancador",
+      "sinonimos": ["arrancador suave", "soft starter", "starter", "arrancador de motor", "arrancador estado solido"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "variador de frecuencia",
+      "sinonimos": ["variador", "drive", "VFD", "variable frequency drive", "convertidor de frecuencia", "inversor", "AC drive"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens", "ABB"]
+    },
+    {
+      "canonico": "pulsador",
+      "sinonimos": ["boton", "boton pulsador", "push button", "boton de mando", "pulsador rasante", "pulsador saliente"],
+      "categoria": "operador",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "paro de emergencia",
+      "sinonimos": ["seta", "boton de emergencia", "emergency stop", "e-stop", "hongo de emergencia", "paro emergencia"],
+      "categoria": "operador",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "selector",
+      "sinonimos": ["selector de mando", "selector switch", "switch selector", "selector 2 posiciones", "selector 3 posiciones", "selector con llave"],
+      "categoria": "operador",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "sensor fotoelectrico",
+      "sinonimos": ["sensor optico", "fotocelda", "photoelectric sensor", "photo sensor", "sensor fotoelectrico difuso", "sensor fotoelectrico retrorreflectivo", "barrera fotoelectrica"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "SMC", "Phoenix Contact", "Banner"]
+    },
+    {
+      "canonico": "sensor inductivo",
+      "sinonimos": ["inductivo", "inductive sensor", "sensor de proximidad inductivo", "proxy inductivo"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "SMC", "Phoenix Contact", "Turck"]
+    },
+    {
+      "canonico": "sensor capacitivo",
+      "sinonimos": ["capacitivo", "capacitive sensor", "sensor de proximidad capacitivo"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "SMC", "Turck"]
+    },
+    {
+      "canonico": "sensor ultrasonico",
+      "sinonimos": ["ultrasonico", "ultrasonic sensor", "sensor de ultrasonido"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "SMC", "Banner"]
+    },
+    {
+      "canonico": "sensor de proximidad",
+      "sinonimos": ["proximity sensor", "proxy", "detector de proximidad"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "SMC", "Phoenix Contact"]
+    },
+    {
+      "canonico": "encoder",
+      "sinonimos": ["codificador", "encoder rotatorio", "rotary encoder", "encoder incremental", "encoder absoluto"],
+      "categoria": "sensor",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Heidenhain"]
+    },
+    {
+      "canonico": "presostato",
+      "sinonimos": ["pressure switch", "interruptor de presion", "switch de presion", "sensor de presion", "transductor de presion"],
+      "categoria": "sensor",
+      "marcas_comunes": ["SMC", "Allen Bradley", "Schneider Electric"]
+    },
+    {
+      "canonico": "sensor de flujo",
+      "sinonimos": ["flujometro", "flow sensor", "flow switch", "interruptor de flujo", "medidor de flujo", "caudalimetro"],
+      "categoria": "sensor",
+      "marcas_comunes": ["SMC", "Allen Bradley"]
+    },
+    {
+      "canonico": "PLC",
+      "sinonimos": ["controlador logico programable", "programmable logic controller", "automata programable", "controlador programable"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Schneider Electric", "AutomationDirect"]
+    },
+    {
+      "canonico": "HMI",
+      "sinonimos": ["panel operador", "pantalla operador", "human machine interface", "interfaz hombre maquina", "panel view", "pantalla tactil"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Schneider Electric", "AutomationDirect"]
+    },
+    {
+      "canonico": "modulo de I/O",
+      "sinonimos": ["modulo entradas salidas", "I/O module", "tarjeta I/O", "modulo digital", "modulo de entradas", "modulo de salidas"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Phoenix Contact"]
+    },
+    {
+      "canonico": "modulo analogico",
+      "sinonimos": ["modulo analogo", "analog module", "tarjeta analogica", "modulo entrada analogica", "modulo salida analogica"],
+      "categoria": "control",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Phoenix Contact"]
+    },
+    {
+      "canonico": "fuente de poder",
+      "sinonimos": ["fuente de alimentacion", "power supply", "PSU", "fuente DC", "fuente 24V"],
+      "categoria": "alimentacion",
+      "marcas_comunes": ["Allen Bradley", "Phoenix Contact", "Siemens", "Mean Well"]
+    },
+    {
+      "canonico": "cable AWG",
+      "sinonimos": ["cable calibre", "calibre AWG", "cable THHN", "cable THW", "alambre AWG", "wire AWG"],
+      "categoria": "cableado",
+      "marcas_comunes": ["Belden", "Condumex"]
+    },
+    {
+      "canonico": "cable uso rudo",
+      "sinonimos": ["cable SOOW", "SJOOW", "uso rudo", "cable encauchetado", "cable industrial flexible"],
+      "categoria": "cableado",
+      "marcas_comunes": ["Condumex", "Belden"]
+    },
+    {
+      "canonico": "conduit",
+      "sinonimos": ["tuberia conduit", "tubo conduit", "EMT", "liquidtight", "tuberia electrica", "coraza"],
+      "categoria": "cableado",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "manguera neumatica",
+      "sinonimos": ["tubing neumatico", "tubo neumatico", "pneumatic tubing", "manguera de aire", "tubing poliuretano", "TU"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo"]
+    },
+    {
+      "canonico": "prensaestopa",
+      "sinonimos": ["glandula", "cable gland", "conector prensaestopa", "racor de cable", "estopas"],
+      "categoria": "cableado",
+      "marcas_comunes": ["Phoenix Contact", "Schneider Electric"]
+    },
+    {
+      "canonico": "conector circular",
+      "sinonimos": ["conector M12", "conector M8", "conector industrial", "circular connector", "cordset", "cable con conector"],
+      "categoria": "cableado",
+      "marcas_comunes": ["Phoenix Contact", "Allen Bradley", "Turck"]
+    },
+    {
+      "canonico": "clema",
+      "sinonimos": ["terminal block", "borne", "borna", "bloque terminal", "terminal de paso", "clema riel din"],
+      "categoria": "conexion",
+      "marcas_comunes": ["Phoenix Contact", "Allen Bradley", "Schneider Electric", "Wago"]
+    },
+    {
+      "canonico": "clema push-in",
+      "sinonimos": ["terminal push-in", "borne push-in", "clema de empuje", "terminal de resorte", "spring terminal", "push-in terminal"],
+      "categoria": "conexion",
+      "marcas_comunes": ["Phoenix Contact", "Wago"]
+    },
+    {
+      "canonico": "puente",
+      "sinonimos": ["jumper", "puente para clema", "barra de puenteo", "insertion bridge", "puente de clemas"],
+      "categoria": "conexion",
+      "marcas_comunes": ["Phoenix Contact", "Wago"]
+    },
+    {
+      "canonico": "terminal de cable",
+      "sinonimos": ["terminal punta", "ferrule", "puntera", "terminal tubular", "lug", "zapata", "terminal de ojillo"],
+      "categoria": "conexion",
+      "marcas_comunes": ["Phoenix Contact", "Panduit"]
+    },
+    {
+      "canonico": "piloto",
+      "sinonimos": ["lampara piloto", "luz piloto", "pilot light", "indicador luminoso", "piloto LED"],
+      "categoria": "iluminacion",
+      "marcas_comunes": ["Allen Bradley", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "baliza",
+      "sinonimos": ["torreta", "torre de senalizacion", "stack light", "tower light", "columna luminosa", "semaforo industrial"],
+      "categoria": "iluminacion",
+      "marcas_comunes": ["Allen Bradley", "Patlite", "Schneider Electric"]
+    },
+    {
+      "canonico": "lampara LED",
+      "sinonimos": ["luminaria LED", "LED light", "lampara industrial", "luminaria industrial"],
+      "categoria": "iluminacion",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "gabinete",
+      "sinonimos": ["tablero", "enclosure", "caja metalica", "envolvente", "armario electrico", "cabinet"],
+      "categoria": "proteccion",
+      "marcas_comunes": ["Hoffman", "Rittal", "Schneider Electric"]
+    },
+    {
+      "canonico": "fusible",
+      "sinonimos": ["fuse", "fusible cilindrico", "fusible cuchilla", "fusible NH", "porta fusible"],
+      "categoria": "proteccion",
+      "marcas_comunes": ["Bussmann", "Schneider Electric", "Siemens"]
+    },
+    {
+      "canonico": "supresor de transientes",
+      "sinonimos": ["supresor de picos", "supresor de sobretension", "surge protector", "SPD", "TVSS", "descargador"],
+      "categoria": "proteccion",
+      "marcas_comunes": ["Phoenix Contact", "Schneider Electric", "DEHN"]
+    },
+    {
+      "canonico": "condulet",
+      "sinonimos": ["caja condulet", "conduit body", "T conduit", "L conduit", "caja de paso"],
+      "categoria": "proteccion",
+      "marcas_comunes": ["Crouse-Hinds", "Appleton"]
+    },
+    {
+      "canonico": "clasificacion NEMA",
+      "sinonimos": ["NEMA 4", "NEMA 4X", "NEMA 12", "NEMA rating", "tipo NEMA"],
+      "categoria": "proteccion",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "grado IP",
+      "sinonimos": ["IP65", "IP66", "IP67", "IP rating", "ingress protection", "grado de proteccion"],
+      "categoria": "proteccion",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "electrovalvula",
+      "sinonimos": ["valvula solenoide", "solenoid valve", "valvula electrica", "valvula 5/2", "valvula 3/2", "valvula direccional"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo", "Parker"]
+    },
+    {
+      "canonico": "cilindro neumatico",
+      "sinonimos": ["piston neumatico", "actuador neumatico", "pneumatic cylinder", "cilindro doble efecto", "cilindro simple efecto"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo", "Parker"]
+    },
+    {
+      "canonico": "FRL",
+      "sinonimos": ["filtro regulador lubricador", "unidad de mantenimiento", "unidad FRL", "air preparation", "tratamiento de aire"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo"]
+    },
+    {
+      "canonico": "racor neumatico",
+      "sinonimos": ["conexion neumatica", "fitting", "push to connect", "racor instantaneo", "conector rapido neumatico", "one touch fitting"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo", "Parker"]
+    },
+    {
+      "canonico": "silenciador neumatico",
+      "sinonimos": ["silenciador", "muffler", "silenciador de escape", "exhaust silencer"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo"]
+    },
+    {
+      "canonico": "regulador de presion",
+      "sinonimos": ["regulador neumatico", "pressure regulator", "valvula reguladora de presion"],
+      "categoria": "neumatica",
+      "marcas_comunes": ["SMC", "Festo", "Parker"]
+    },
+    {
+      "canonico": "programacion PLC",
+      "sinonimos": ["servicio de programacion", "PLC programming", "desarrollo PLC", "ingenieria de control", "logica de control"],
+      "categoria": "servicio",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "SCADA",
+      "sinonimos": ["supervisorio", "sistema SCADA", "supervisory control", "FactoryTalk", "WinCC", "Ignition"],
+      "categoria": "servicio",
+      "marcas_comunes": ["Allen Bradley", "Siemens", "Inductive Automation"]
+    },
+    {
+      "canonico": "puesta en marcha",
+      "sinonimos": ["comisionamiento", "commissioning", "arranque", "start up", "startup", "puesta en servicio"],
+      "categoria": "servicio",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "instalacion",
+      "sinonimos": ["servicio de instalacion", "montaje", "instalacion electrica", "installation"],
+      "categoria": "servicio",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "capacitacion",
+      "sinonimos": ["entrenamiento", "training", "curso", "capacitacion tecnica"],
+      "categoria": "servicio",
+      "marcas_comunes": []
+    },
+    {
+      "canonico": "T.E.S.P.V.",
+      "sinonimos": ["TESPV", "tiempo de entrega sobre pedido de venta", "tiempo entrega pedido", "lead time sobre pedido", "sobre pedido"],
+      "categoria": "servicio",
+      "marcas_comunes": []
+    }
+  ]
+}

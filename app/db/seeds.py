@@ -41,6 +41,16 @@ _BACKFILL_DDL = [
     "CREATE INDEX IF NOT EXISTS ix_clientes_creado_por_id ON clientes (creado_por_id)",
     # 20260430_03 (no migration formal): gastos.moneda
     "ALTER TABLE IF EXISTS gastos ADD COLUMN IF NOT EXISTS moneda VARCHAR(3) NOT NULL DEFAULT 'MXN'",
+    # plantillas_cotizacion (create_all la genera; este DDL es seguro idempotente)
+    """CREATE TABLE IF NOT EXISTS plantillas_cotizacion (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(120) NOT NULL,
+        descripcion TEXT,
+        usuario_id INTEGER REFERENCES usuarios(id),
+        lineas TEXT NOT NULL DEFAULT '[]',
+        creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_plantillas_cotizacion_usuario_id ON plantillas_cotizacion (usuario_id)",
 ]
 
 

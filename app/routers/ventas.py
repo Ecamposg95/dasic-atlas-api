@@ -1131,3 +1131,228 @@ def generar_oc_endpoint(
     if not orden:
         raise HTTPException(404, "Cotización no encontrada")
     return {"ocs": generar_ocs(db, orden, usuario=current_user)}
+
+
+# ============================================================
+# CR (Cotizador Robusto): endpoints inteligentes
+# ============================================================
+import json as _cr_json
+from sqlalchemy import func as _cr_func
+from pydantic import BaseModel as _CRBase
+
+
+@router.get("/auto-utilidad", dependencies=[Depends(allow_all_staff)])
+def auto_utilidad(
+    cliente_id: Optional[int] = None,
+    producto_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Sugerencia inteligente de % de utilidad.
+
+    Prioridad: promedio para (cliente,producto) → cliente → producto → default 30.
+    Devuelve {sugerido: float, fuente: str, n: int}.
+    """
+    base = db.query(models.DetalleOrden).join(
+        models.OrdenVenta, models.DetalleOrden.orden_id == models.OrdenVenta.id
+    ).filter(
+        models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
+        models.DetalleOrden.utilidad_aplicada.is_not(None),
+        models.DetalleOrden.utilidad_aplicada > 0,
+    )
+
+    def _avg(rows):
+        vals = [float(r.utilidad_aplicada) for r in rows if r.utilidad_aplicada]
+        return round(sum(vals) / len(vals), 2) if vals else None
+
+    if cliente_id and producto_id:
+        rows = base.filter(
+            models.OrdenVenta.cliente_id == cliente_id,
+            models.DetalleOrden.producto_id == producto_id,
+        ).limit(50).all()
+        v = _avg(rows)
+        if v is not None:
+            return {"sugerido": v, "fuente": "cliente_producto", "n": len(rows)}
+
+    if cliente_id:
+        rows = base.filter(models.OrdenVenta.cliente_id == cliente_id).limit(100).all()
+        v = _avg(rows)
+        if v is not None:
+            return {"sugerido": v, "fuente": "cliente", "n": len(rows)}
+
+    if producto_id:
+        rows = base.filter(models.DetalleOrden.producto_id == producto_id).limit(100).all()
+        v = _avg(rows)
+        if v is not None:
+            return {"sugerido": v, "fuente": "producto", "n": len(rows)}
+
+    return {"sugerido": 30.0, "fuente": "default", "n": 0}
+
+
+class _PlantillaIn(_CRBase):
+    nombre: str
+    descripcion: Optional[str] = None
+    lineas: list
+
+
+@router.get("/plantillas", dependencies=[Depends(allow_all_staff)])
+def listar_plantillas(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Plantillas del usuario + plantillas globales (usuario_id NULL)."""
+    rows = (
+        db.query(models.PlantillaCotizacion)
+        .filter(
+            (models.PlantillaCotizacion.usuario_id == current_user.id)
+            | (models.PlantillaCotizacion.usuario_id.is_(None))
+        )
+        .order_by(desc(models.PlantillaCotizacion.creado_en))
+        .all()
+    )
+    out = []
+    for p in rows:
+        try:
+            lineas = _cr_json.loads(p.lineas or "[]")
+        except Exception:
+            lineas = []
+        out.append({
+            "id": p.id,
+            "nombre": p.nombre,
+            "descripcion": p.descripcion,
+            "lineas": lineas,
+            "n_lineas": len(lineas),
+            "creado_en": p.creado_en.isoformat() if p.creado_en else None,
+            "es_global": p.usuario_id is None,
+            "es_propia": p.usuario_id == current_user.id,
+        })
+    return out
+
+
+@router.post("/plantillas", dependencies=[Depends(allow_all_staff)])
+def crear_plantilla(
+    payload: _PlantillaIn,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    if not payload.nombre or not payload.nombre.strip():
+        raise HTTPException(400, "nombre requerido")
+    if not isinstance(payload.lineas, list) or not payload.lineas:
+        raise HTTPException(400, "lineas debe ser una lista no vacía")
+
+    nueva = models.PlantillaCotizacion(
+        nombre=payload.nombre.strip()[:120],
+        descripcion=(payload.descripcion or "").strip() or None,
+        usuario_id=current_user.id,
+        lineas=_cr_json.dumps(payload.lineas, ensure_ascii=False),
+    )
+    db.add(nueva)
+    db.commit()
+    db.refresh(nueva)
+    return {"id": nueva.id, "nombre": nueva.nombre, "n_lineas": len(payload.lineas)}
+
+
+@router.delete("/plantillas/{id}", dependencies=[Depends(allow_all_staff)])
+def eliminar_plantilla(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    p = db.query(models.PlantillaCotizacion).filter(models.PlantillaCotizacion.id == id).first()
+    if not p:
+        raise HTTPException(404, "Plantilla no encontrada")
+    # Solo el dueño o admin puede borrar
+    from app.security.permissions import _normalize_role
+    rol = _normalize_role(getattr(current_user, "rol", None))
+    is_admin = rol in (models.RolUsuario.ADMINISTRADOR, models.RolUsuario.SUPERADMIN)
+    if not is_admin and p.usuario_id != current_user.id:
+        raise HTTPException(403, "Solo puedes borrar tus propias plantillas")
+    db.delete(p)
+    db.commit()
+    return {"ok": True, "id": id}
+
+
+@router.get("/productos-relacionados/{producto_id}", dependencies=[Depends(allow_all_staff)])
+def productos_relacionados(
+    producto_id: int,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    """Co-ocurrencia: productos que aparecen en las MISMAS cotizaciones que este.
+
+    Devuelve top N por frecuencia de aparición conjunta.
+    """
+    # subquery: ids de órdenes que contienen el producto pivot
+    ordenes_pivot = (
+        db.query(models.DetalleOrden.orden_id)
+        .filter(models.DetalleOrden.producto_id == producto_id)
+        .subquery()
+    )
+    rows = (
+        db.query(
+            models.Producto.id,
+            models.Producto.sku_comercial,
+            models.Producto.sku,
+            models.Producto.nombre,
+            models.Producto.marca,
+            models.Producto.stock_actual,
+            _cr_func.count(models.DetalleOrden.id).label("cooccurrences"),
+        )
+        .join(models.DetalleOrden, models.DetalleOrden.producto_id == models.Producto.id)
+        .filter(
+            models.DetalleOrden.orden_id.in_(ordenes_pivot),
+            models.Producto.id != producto_id,
+        )
+        .group_by(models.Producto.id)
+        .order_by(desc(_cr_func.count(models.DetalleOrden.id)))
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "producto_id": r.id,
+            "sku": r.sku_comercial or r.sku,
+            "nombre": r.nombre,
+            "marca": r.marca,
+            "stock_actual": r.stock_actual,
+            "co_apariciones": int(r.cooccurrences),
+        }
+        for r in rows
+    ]
+
+
+@router.get("/ultima-cotizacion-cliente/{cliente_id}", dependencies=[Depends(allow_all_staff)])
+def ultima_cotizacion_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Para mostrar widget "última cotización de este cliente"."""
+    from app.security.permissions import is_owner_scoped
+
+    q = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
+    if is_owner_scoped(current_user, "read", "cotizacion"):
+        q = q.filter(models.OrdenVenta.vendedor_id == current_user.id)
+    o = q.order_by(desc(models.OrdenVenta.fecha_creacion)).first()
+    if not o:
+        return None
+    fc = o.fecha_creacion.replace(tzinfo=None) if o.fecha_creacion and o.fecha_creacion.tzinfo else o.fecha_creacion
+    dias = (datetime.utcnow() - fc).days if fc else None
+    return {
+        "id": o.id,
+        "folio": o.folio,
+        "fecha": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+        "dias_atras": dias,
+        "total": float(o.total or 0),
+        "moneda": o.moneda,
+        "estatus": o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus),
+    }
+
+
+@router.get("/sinonimos", dependencies=[Depends(allow_all_staff)])
+def sinonimos_industriales():
+    """Diccionario para búsqueda semántica en el cotizador."""
+    from pathlib import Path as _P
+    p = _P(__file__).resolve().parent.parent / "data" / "sinonimos.json"
+    if not p.exists():
+        return {"entradas": []}
+    return _cr_json.loads(p.read_text(encoding="utf-8"))
