@@ -39,15 +39,16 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     try:
         run_all_seeds(db)
 
-        # 3. Opcional: ingesta inicial de context/ (productos/clientes/etc.).
-        #    Activar con env var SEED_CONTEXT_ON_STARTUP=1. Idempotente.
-        if os.getenv("SEED_CONTEXT_ON_STARTUP", "").strip() == "1":
+        # 3. Ingesta de datos de context/ — siempre al startup. Idempotente:
+        #    no duplica registros existentes (match por SKU / email / folio).
+        #    Para desactivar setear env var SEED_CONTEXT_DISABLED=1.
+        if os.getenv("SEED_CONTEXT_DISABLED", "").strip() != "1":
             try:
                 from scripts.import_context_data import run_seed
                 resultado = run_seed(db, dry_run=False)
-                logger.info("SEED_CONTEXT_ON_STARTUP resultado: %s", resultado)
+                logger.info("Seed context/ OK → %s", resultado)
             except Exception as exc:
-                logger.warning("Seed de context/ falló (no bloqueante): %s", exc, exc_info=True)
+                logger.error("Seed context/ FALLÓ (no bloqueante): %s", exc, exc_info=True)
     except Exception as exc:
         logger.error("Error en startup seeds: %s", exc, exc_info=True)
         raise
