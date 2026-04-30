@@ -2,7 +2,7 @@
 Clients models: Cliente, Proveedor.
 """
 
-from sqlalchemy import Column, DECIMAL, Integer, String, Text
+from sqlalchemy import Column, DECIMAL, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -20,9 +20,11 @@ class Cliente(Base):
     direccion = Column(Text)
 
     saldo_actual = Column(DECIMAL(12, 2), default=0.00)
+    creado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, index=True)
 
     ordenes = relationship("OrdenVenta", back_populates="cliente")
     transacciones = relationship("TransaccionCliente", back_populates="cliente")
+    creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
 
 
 class Proveedor(Base):

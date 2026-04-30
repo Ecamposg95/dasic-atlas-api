@@ -11,6 +11,7 @@ from app import models
 from app import schemas
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff, get_current_user
+from app.security.permissions import is_owner_scoped, require
 
 router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 
@@ -21,9 +22,12 @@ def listar_clientes(
     limit: int = 100,
     q: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Lista clientes. Filtro opcional `q` busca en empresa, contacto y email."""
+    """Lista clientes. VENTAS solo ve los que ellos crearon."""
     query = db.query(models.Cliente)
+    if is_owner_scoped(current_user, "read", "cliente"):
+        query = query.filter(models.Cliente.creado_por_id == current_user.id)
     if q:
         like = f"%{q.strip()}%"
         query = query.filter(or_(
@@ -42,7 +46,8 @@ def listar_clientes(
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def crear_cliente(
     cliente: schemas.ClienteCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     """
     Permite registrar un nuevo cliente. Accesible para Vendedores.
@@ -57,7 +62,7 @@ def crear_cliente(
     ):
         raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
 
-    nuevo_cliente = models.Cliente(**cliente.model_dump())
+    nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
     db.add(nuevo_cliente)
     db.commit()
     db.refresh(nuevo_cliente)
@@ -67,7 +72,8 @@ def crear_cliente(
 @router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def obtener_cliente(
     cliente_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     cliente = (
         db.query(models.Cliente)
@@ -77,6 +83,8 @@ def obtener_cliente(
         .first()
     )
     if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
 

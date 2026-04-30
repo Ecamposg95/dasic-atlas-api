@@ -8,7 +8,8 @@ from app.core import get_settings
 from app.db import get_db
 from app import schemas
 from app.services import UserService
-from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
+from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
+from app.security.permissions import capabilities_for
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 settings = get_settings()
@@ -47,6 +48,19 @@ def login_for_access_token(
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/me")
+def me(current_user=Depends(get_current_user)):
+    """User logueado + capabilities (consumido por el frontend para esconder UI)."""
+    caps = capabilities_for(current_user)
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "nombre": current_user.nombre,
+        "activo": current_user.activo,
+        **caps,
+    }
 
 
 @router.post("/logout")

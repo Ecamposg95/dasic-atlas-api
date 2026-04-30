@@ -26,6 +26,14 @@ from app.services.stock_service import (
 )
 
 
+def _check_owner_or_403(orden: "models.OrdenVenta", current_user: "models.Usuario", action: str = "read") -> None:
+    """Bloquea acciones de VENTAS sobre cotizaciones que no son suyas. Admin/Gerente pasan."""
+    from app.security.permissions import is_owner_scoped
+    if is_owner_scoped(current_user, action, "cotizacion"):
+        if orden.vendedor_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Cotización no encontrada")
+
+
 def _resolve_tipo_linea(item, producto: "models.Producto | None") -> str:
     """Determina tipo_linea efectivo. Producto del catálogo marcado es_servicio
     fuerza 'servicio'. Si no hay producto y hay descripcion_libre, default fantasma."""
@@ -677,6 +685,7 @@ def convertir_cotizacion(
     )
     if not orden or orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Orden no válida para conversión")
+    _check_owner_or_403(orden, current_user, action="convert")
 
     try:
         # Verificar disponible considerando reservas de OTRAS cotizaciones.
@@ -730,10 +739,13 @@ def convertir_cotizacion(
 def listar_historial(
     limit: int = 50,
     db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
-    ordenes = db.query(models.OrdenVenta)\
-        .order_by(desc(models.OrdenVenta.fecha_creacion))\
-        .limit(limit).all()
+    from app.security.permissions import is_owner_scoped
+    query = db.query(models.OrdenVenta)
+    if is_owner_scoped(current_user, "read", "cotizacion"):
+        query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
+    ordenes = query.order_by(desc(models.OrdenVenta.fecha_creacion)).limit(limit).all()
 
     ahora = datetime.utcnow().date()
 
@@ -1078,6 +1090,7 @@ def cancelar_cotizacion(
         raise HTTPException(404, "Cotización no encontrada")
     if orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Sólo se cancelan cotizaciones abiertas")
+    _check_owner_or_403(orden, current_user, action="cancel")
 
     liberadas = liberar_reservas_cotizacion(
         db,

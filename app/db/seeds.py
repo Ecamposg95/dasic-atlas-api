@@ -36,6 +36,9 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS marca VARCHAR(80)",
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS unidad VARCHAR(20) DEFAULT 'PZA'",
     "CREATE INDEX IF NOT EXISTS ix_productos_marca ON productos (marca)",
+    # 20260430_02: RBAC owner scoping para clientes
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS creado_por_id INTEGER REFERENCES usuarios(id)",
+    "CREATE INDEX IF NOT EXISTS ix_clientes_creado_por_id ON clientes (creado_por_id)",
 ]
 
 

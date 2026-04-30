@@ -39,13 +39,14 @@ def listar_movimientos(
 @router.post(
     "/movimientos",
     response_model=schemas.MovimientoStockResponse,
-    dependencies=[Depends(allow_admin_asistente)],
 )
 def crear_ajuste_manual(
     payload: schemas.AjusteManualIn,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    from app.security.permissions import require
+    require(current_user, "ajuste", "stock")  # admin/gerente/operativo OK; ventas 403
     producto = db.get(models.Producto, payload.producto_id)
     if not producto:
         raise HTTPException(404, "Producto no encontrado")
