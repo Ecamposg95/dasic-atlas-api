@@ -438,49 +438,60 @@ def upsert_ordenes_compra(db, dry_run: bool) -> tuple[int, int]:
 
 # ---------- main ----------
 
+def run_seed(db, dry_run: bool = False) -> dict:
+    """Idempotente: corre todo el seed sobre una sesión existente.
+
+    Diseñado para invocarse desde:
+      - CLI (main()) con SessionLocal()
+      - Endpoint HTTP (POST /api/admin/seed-context) con la sesión request-scoped
+      - Lifespan de FastAPI cuando SEED_CONTEXT_ON_STARTUP=1
+
+    Devuelve un dict con conteos para logging/UI.
+    """
+    if not LISTA_MATERIAL_FILE.exists():
+        log.warning("No existe %s — se omite seed", LISTA_MATERIAL_FILE)
+        return {"ok": False, "razon": f"archivo faltante: {LISTA_MATERIAL_FILE.name}"}
+
+    productos = parse_lista_material(LISTA_MATERIAL_FILE)
+    marcas = parse_ref_vta(REF_VTA_FILE) if REF_VTA_FILE.exists() else []
+
+    created_p, updated_p = upsert_productos(db, productos, dry_run)
+    created_c, skipped_c = upsert_clientes(db, dry_run)
+    created_pr, skipped_pr = upsert_proveedores(db, dry_run)
+    created_q, skipped_q = upsert_cotizaciones(db, dry_run)
+    created_oc, skipped_oc = upsert_ordenes_compra(db, dry_run)
+
+    taxonomia_path = None
+    if marcas:
+        try:
+            taxonomia_path = str(write_marca_taxonomy(marcas, dry_run).relative_to(ROOT))
+        except Exception as exc:
+            log.warning("No se pudo escribir taxonomía de marcas: %s", exc)
+
+    return {
+        "ok": True,
+        "dry_run": dry_run,
+        "productos": {"creados": created_p, "actualizados": updated_p, "leidos": len(productos)},
+        "clientes": {"creados": created_c, "skipped": skipped_c},
+        "proveedores": {"creados": created_pr, "skipped": skipped_pr},
+        "cotizaciones": {"creadas": created_q, "skipped": skipped_q},
+        "ordenes_compra": {"creadas": created_oc, "skipped": skipped_oc},
+        "taxonomia_marcas": taxonomia_path,
+        "abreviaturas_leidas": len(marcas),
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true", help="No persiste cambios")
     args = ap.parse_args()
 
-    if not LISTA_MATERIAL_FILE.exists():
-        log.error("No existe %s", LISTA_MATERIAL_FILE)
-        return 2
-    if not REF_VTA_FILE.exists():
-        log.warning("No existe %s — se omite taxonomía de marcas", REF_VTA_FILE)
-
-    log.info("== Productos (LISTA_MATERIAL.xlsx) ==")
-    productos = parse_lista_material(LISTA_MATERIAL_FILE)
-    log.info("Filas leídas: %d", len(productos))
-
-    log.info("== Taxonomía de marcas (REF.VTA) ==")
-    marcas = parse_ref_vta(REF_VTA_FILE) if REF_VTA_FILE.exists() else []
-    log.info("Abreviaturas leídas: %d", len(marcas))
-
     db = SessionLocal()
     try:
-        created_p, updated_p = upsert_productos(db, productos, args.dry_run)
-        log.info("Productos: %d creados, %d actualizados", created_p, updated_p)
-
-        created_c, skipped_c = upsert_clientes(db, args.dry_run)
-        log.info("Clientes: %d creados, %d ya existentes", created_c, skipped_c)
-
-        created_pr, skipped_pr = upsert_proveedores(db, args.dry_run)
-        log.info("Proveedores: %d creados, %d ya existentes", created_pr, skipped_pr)
-
-        created_q, skipped_q = upsert_cotizaciones(db, args.dry_run)
-        log.info("Cotizaciones de muestra: %d creadas, %d ya existentes", created_q, skipped_q)
-
-        created_oc, skipped_oc = upsert_ordenes_compra(db, args.dry_run)
-        log.info("Órdenes de compra de muestra: %d creadas, %d ya existentes", created_oc, skipped_oc)
-
-        out = write_marca_taxonomy(marcas, args.dry_run)
-        log.info("Taxonomía de marcas escrita en %s", out.relative_to(ROOT))
-
-        if args.dry_run:
-            log.info("--dry-run: nada fue persistido en la base de datos.")
-        else:
-            log.info("Listo.")
+        resultado = run_seed(db, dry_run=args.dry_run)
+        log.info("Resultado: %s", resultado)
+        if not resultado.get("ok"):
+            return 2
     finally:
         db.close()
     return 0
