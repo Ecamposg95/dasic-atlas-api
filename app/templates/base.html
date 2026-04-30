@@ -224,39 +224,48 @@
 
     <!-- Nav -->
     <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1">
-      <a href="/dashboard" class="sidebar-item {% if _path == '/dashboard' %}is-active{% endif %}">
+      <a href="/dashboard" class="sidebar-item {% if _path == '/dashboard' %}is-active{% endif %}"
+         x-show="$store.user.canVer('dashboard')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-chart-line text-[12px]"></i></span>
         <span>Dashboard</span>
       </a>
-      <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}">
+      <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}"
+         x-show="$store.user.canVer('clientes')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-users text-[12px]"></i></span>
         <span>Clientes</span>
       </a>
-      <a href="/ventas/cotizador" class="sidebar-item {% if '/cotizador' in _path %}is-active{% endif %}">
+      <a href="/ventas/cotizador" class="sidebar-item {% if '/cotizador' in _path %}is-active{% endif %}"
+         x-show="$store.user.canVer('cotizador')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-cash-register text-[12px]"></i></span>
         <span>Cotizador</span>
       </a>
-      <a href="/seguimiento" class="sidebar-item {% if _path == '/seguimiento' %}is-active{% endif %}">
+      <a href="/seguimiento" class="sidebar-item {% if _path == '/seguimiento' %}is-active{% endif %}"
+         x-show="$store.user.canVer('seguimiento')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-route text-[12px]"></i></span>
         <span>Seguimiento</span>
       </a>
-      <a href="/inventario" class="sidebar-item {% if _path == '/inventario' %}is-active{% endif %}">
+      <a href="/inventario" class="sidebar-item {% if _path == '/inventario' %}is-active{% endif %}"
+         x-show="$store.user.canVer('inventario')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-boxes-stacked text-[12px]"></i></span>
         <span>Inventario</span>
       </a>
-      <a href="/compras" class="sidebar-item {% if _path == '/compras' %}is-active{% endif %}">
+      <a href="/compras" class="sidebar-item {% if _path == '/compras' %}is-active{% endif %}"
+         x-show="$store.user.canVer('compras')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-truck text-[12px]"></i></span>
         <span>Compras</span>
       </a>
-      <a href="/reportes" class="sidebar-item {% if _path == '/reportes' %}is-active{% endif %}">
+      <a href="/reportes" class="sidebar-item {% if _path == '/reportes' %}is-active{% endif %}"
+         x-show="$store.user.canVer('reportes')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-chart-pie text-[12px]"></i></span>
         <span>Reportes</span>
       </a>
-      <a href="/gastos" class="sidebar-item {% if _path == '/gastos' %}is-active{% endif %}">
+      <a href="/gastos" class="sidebar-item {% if _path == '/gastos' %}is-active{% endif %}"
+         x-show="$store.user.canVer('gastos')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-file-invoice-dollar text-[12px]"></i></span>
         <span>Gastos</span>
       </a>
-      <a href="/usuarios" class="sidebar-item {% if _path == '/usuarios' %}is-active{% endif %}">
+      <a href="/usuarios" class="sidebar-item {% if _path == '/usuarios' %}is-active{% endif %}"
+         x-show="$store.user.canVer('usuarios')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-user-shield text-[12px]"></i></span>
         <span>Usuarios</span>
       </a>
@@ -412,6 +421,69 @@
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       Alpine store de usuario + capabilities (RBAC)
+  ═══════════════════════════════════════════════════════ -->
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('user', {
+        loaded: false,
+        rol: null,
+        rol_label: '—',
+        modulos_visibles: [],
+        nombre: '',
+        email: '',
+        // flags can_*
+        ver_costos: false,
+        ver_cotizaciones: false,
+        crear_cotizacion: false,
+        editar_cotizacion: false,
+        convertir_a_venta: false,
+        cancelar_cotizacion: false,
+        ver_clientes: false,
+        crear_cliente: false,
+        editar_cliente: false,
+        ver_productos: false,
+        editar_producto: false,
+        ver_oc: false,
+        crear_oc: false,
+        recibir_oc: false,
+        ajustar_stock: false,
+        ver_dashboard_full: false,
+        ver_dashboard_team: false,
+        ver_dashboard_inventory: false,
+        ver_reportes: false,
+        exportar_reportes: false,
+        ver_gastos: false,
+        gestionar_usuarios: false,
+        ver_fx: false,
+
+        async load() {
+          try {
+            const r = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!r.ok) return;
+            const d = await r.json();
+            Object.assign(this, d);
+            this.loaded = true;
+          } catch (e) { console.warn('user store load:', e); }
+        },
+
+        canVer(modulo) {
+          // antes de cargar, mostramos todo (evita flicker en dev)
+          if (!this.loaded) return true;
+          return (this.modulos_visibles || []).includes(modulo);
+        },
+
+        can(flag) {
+          // antes de cargar, asumimos no
+          if (!this.loaded) return false;
+          return !!this[flag];
+        },
+      });
+      Alpine.store('user').load();
+    });
+  </script>
 
   {% block extra_scripts %}{% endblock %}
 </body>

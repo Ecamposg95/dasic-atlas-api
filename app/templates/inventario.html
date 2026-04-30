@@ -4,6 +4,7 @@
 
 {% block header_actions %}
   <button type="button" class="dax-btn-ghost"
+          x-show="$store.user.can('editar_producto')" x-cloak
           onclick="window.dispatchEvent(new CustomEvent('producto-modal-open'))">
     <i class="fas fa-plus text-xs"></i>
     Nuevo Producto
@@ -114,7 +115,7 @@
           <th class="text-right">Reservado</th>
           <th class="text-right">Disponible</th>
           <th class="text-right">Mínimo</th>
-          <th class="text-right">Costo</th>
+          <th class="text-right" x-show="$store.user.can('ver_costos')" x-cloak>Costo</th>
           <th>Estatus</th>
           <th class="text-right">Acciones</th>
         </tr>
@@ -145,6 +146,7 @@
                   x-text="(disp[p.id]?.disponible ?? p.stock_actual)"></td>
               <td class="text-right font-mono text-xs text-slate-500" x-text="p.stock_minimo"></td>
               <td class="text-right font-mono text-xs text-slate-300"
+                  x-show="$store.user.can('ver_costos')" x-cloak
                   x-text="displayCosto(p)"></td>
               <td>
                 <span class="dax-badge-red" x-show="p.stock_actual<=0">Sin Stock</span>
