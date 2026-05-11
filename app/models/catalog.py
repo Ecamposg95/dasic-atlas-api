@@ -58,8 +58,12 @@ class Producto(Base):
     detalles_compra = relationship("DetalleCompra", back_populates="producto")
     proveedor_principal = relationship("Proveedor", foreign_keys=[proveedor_principal_id])
     proveedor_alterno = relationship("Proveedor", foreign_keys=[proveedor_alterno_id])
+    # passive_deletes=True: la DB tiene ON DELETE RESTRICT sobre
+    # movimientos_stock.producto_id (migración 20260512_02). El ORM no debe
+    # cascadear borrados; el kardex es inmutable. Borrar un producto con
+    # historial debe fallar en la DB y en el endpoint con 409.
     movimientos_stock = relationship(
-        "MovimientoStock", back_populates="producto", cascade="all, delete-orphan"
+        "MovimientoStock", back_populates="producto", passive_deletes=True
     )
 
 

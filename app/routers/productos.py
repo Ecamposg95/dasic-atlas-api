@@ -437,17 +437,24 @@ def eliminar_producto(id: int, db: Session = Depends(get_db)):
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    en_uso = (
-        db.query(models.DetalleOrden)
-        .filter(models.DetalleOrden.producto_id == id)
+    # Kardex es inmutable. La DB tiene ON DELETE RESTRICT, pero damos un
+    # error explicativo antes de que Postgres regrese SQLSTATE 23503.
+    kardex = (
+        db.query(models.MovimientoStock.id)
+        .filter(models.MovimientoStock.producto_id == id)
         .first()
     )
-    if en_uso:
+    if kardex:
         raise HTTPException(
             status_code=409,
-            detail="Producto referenciado en órdenes existentes. No se puede eliminar.",
+            detail=(
+                "El producto tiene historial en el kardex. No se puede eliminar. "
+                "Considera marcarlo como inactivo (TODO) o ajustar su stock a 0."
+            ),
         )
 
+    # detalles_orden / detalles_compra ahora son ON DELETE SET NULL: el
+    # producto puede borrarse y los detalles históricos conservan sku_libre.
     db.delete(db_producto)
     db.commit()
     return {"mensaje": "Producto eliminado correctamente"}
