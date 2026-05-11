@@ -58,7 +58,7 @@ router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 # DEFAULTS_TERMINOS de cotizador.html (mantener en paralelo).
 _DEFAULT_TERMINOS = (
     "Agregar el IVA correspondiente. Tiempo de entrega S.P.V.\n"
-    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Todos los tiempos de entrega indicados están sujetos a confirmación de disponibilidad con el proveedor al momento de la orden.\n"
+    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Todos los tiempos de entrega están expresados en días hábiles (lunes a viernes, excluyendo días festivos) y sujetos a confirmación de disponibilidad con el proveedor al momento de la orden.\n"
     "Verificar que el material cotizado cumpla con sus requerimientos técnicos.\n"
     "Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.\n"
     "En caso de cancelación se cobrará el 25% del monto total.\n"
