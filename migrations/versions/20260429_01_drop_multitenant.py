@@ -33,4 +33,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    raise NotImplementedError("Downgrade no soportado — restaurar desde backup.")
+    # Decisión arquitectónica: el drop de multi-tenant eliminó las tablas
+    # organizations / branches / user_organizations y las columnas
+    # organization_id de las tablas de negocio. Esto es irreversible vía
+    # Alembic porque los datos del scope multi-tenant se perdieron (no
+    # quedan filas que reconstruir el grafo organizacional).
+    #
+    # Para revertir:
+    # 1. Restaurar dump pre-2026-04-29 (antes de aplicar este upgrade).
+    # 2. Reaplicar manualmente migraciones posteriores con cuidado, ya
+    #    que la columna organization_id es la fuente del scope.
+    # 3. Considerar si realmente vale la pena: el roadmap fue mono-tenant
+    #    a partir de esa fecha.
+    raise NotImplementedError(
+        "Downgrade no soportado por diseño: el drop de multi-tenant eliminó "
+        "datos del scope organizacional. Restaurar desde backup pre-2026-04-29."
+    )
