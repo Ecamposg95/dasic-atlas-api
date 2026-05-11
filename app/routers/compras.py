@@ -247,11 +247,25 @@ def borrador_orden_compra_desde_cotizacion(
         raise HTTPException(400, "Solo se puede generar borrador desde cotizaciones")
 
     detalles = []
+    omitidas = []
     total_estimado = Decimal("0")
     symbol = "US$" if quote.moneda == "USD" else "$"
 
     for item in quote.detalles:
         producto = item.producto
+
+        # Saltar líneas sin producto del catálogo: servicios, fantasmas, o
+        # FK huérfana. No tienen sentido en una OC a proveedor.
+        if producto is None:
+            tipo = item.tipo_linea or ("servicio" if not item.producto_id else "huerfano")
+            omitidas.append({
+                "sku": item.sku_libre or "—",
+                "descripcion": item.descripcion_libre or "Línea sin producto del catálogo",
+                "cantidad": item.cantidad,
+                "motivo": f"{tipo}: no se incluye en OC a proveedor",
+            })
+            continue
+
         costo_unitario = Decimal(producto.costo_compra or 0)
         if (producto.moneda_compra or "MXN").upper() != quote.moneda:
             if quote.moneda == "USD":
@@ -283,6 +297,7 @@ def borrador_orden_compra_desde_cotizacion(
         "moneda": symbol,
         "total_estimado": total_estimado.quantize(Decimal("0.01")),
         "detalles": detalles,
+        "omitidas": omitidas,
         "nota": "Borrador de orden de compra. No genera stock ni cuentas por pagar.",
     }
 
@@ -326,9 +341,12 @@ def crear_oc_desde_cotizacion(
         total = Decimal("0")
         for item in quote.detalles:
             if not item.producto_id:
-                # Productos fantasma no se pueden ordenar al proveedor automáticamente
+                # Productos fantasma/servicios: no se pueden ordenar al proveedor.
                 continue
             producto = item.producto
+            if producto is None:
+                # FK apuntando a producto borrado (orphan). Saltar sin tronar.
+                continue
             costo_unitario = Decimal(producto.costo_compra or item.costo_base_linea or 0)
             origen = (item.moneda_origen_linea or producto.moneda_compra or "MXN").upper()
             if origen != quote.moneda:
