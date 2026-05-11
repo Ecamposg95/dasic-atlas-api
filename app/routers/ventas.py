@@ -216,17 +216,27 @@ PDF_TEMPLATE_VENTA = """
   ul.terms li { margin-bottom: 3px; }
   ul.terms strong { color:#0f172a; }
 
-  /* Firma */
-  .firma { margin-top: 28px; text-align: center; font-size: 12px; color:#0f172a; }
-  .firma .label { font-weight: 800; letter-spacing: 1px; }
-  .firma .area { font-weight: 700; color:#0f3a66; margin-top: 4px; font-size: 13px; letter-spacing: 0.5px; }
-  .firma .qr { width: 120px; height: 120px; margin: 14px auto 6px; display: block; }
-  .firma .qr-label { font-size: 10px; color:#475569; }
-  .firma .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
-  .consultor { text-align: center; margin-top: 18px; font-size: 11px; color:#0f172a; }
-  .consultor-nombre { font-weight: 700; }
-  .consultor-titulo { font-style: italic; color:#475569; margin-top: 2px; }
-  .consultor-mail a { color:#1d6fb8; }
+  /* Cierre: layout horizontal compacto (texto izq + QR der) para caber en 1 hoja */
+  .cierre {
+    margin-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    page-break-inside: avoid;
+  }
+  .cierre-left { flex: 1; font-size: 12px; color:#0f172a; }
+  .cierre-left .label { font-weight: 800; letter-spacing: 1px; }
+  .cierre-left .area { font-weight: 700; color:#0f3a66; margin-top: 2px; font-size: 13px; letter-spacing: 0.5px; }
+  .cierre-left .consultor-block { margin-top: 12px; }
+  .cierre-left .consultor-nombre { font-weight: 700; font-size: 11.5px; }
+  .cierre-left .consultor-titulo { font-style: italic; color:#475569; font-size: 10.5px; margin-top: 1px; }
+  .cierre-left .consultor-mail { font-size: 10.5px; margin-top: 1px; }
+  .cierre-left .consultor-mail a { color:#1d6fb8; }
+  .cierre-right { text-align: center; }
+  .cierre-right .qr { width: 90px; height: 90px; display: block; margin: 0 auto; }
+  .cierre-right .qr-label { font-size: 9px; color:#475569; margin-top: 3px; }
+  .cierre-right .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
 
   /* Footer */
   .footer-bar {
@@ -236,12 +246,42 @@ PDF_TEMPLATE_VENTA = """
   }
   .footer-bar .web { color:#fff; font-weight: 700; }
 
-  .print-btn { position: fixed; top: 14px; right: 14px; background:#1d6fb8; color:#fff; border: 0; padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
-  @media print { .print-btn { display:none; } body { background:#fff; } }
+  .print-btn {
+    position: fixed; top: 14px; right: 14px;
+    background:#1d6fb8; color:#fff; border: 0;
+    padding: 10px 18px; border-radius: 6px;
+    font-weight: 700; font-size: 13px; cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    z-index: 1000;
+    transition: transform 0.1s, background 0.1s;
+  }
+  .print-btn:hover { background:#155a8d; transform: translateY(-1px); }
+  .print-btn:active { transform: translateY(0); }
+
+  /* Garantizar 1 sola página al imprimir */
+  @media print {
+    .print-btn { display:none; }
+    body { background:#fff; }
+    html, body { height: auto; }
+    .page { page-break-after: avoid; page-break-inside: avoid; }
+    table.items { page-break-inside: auto; }
+    table.items tr { page-break-inside: avoid; page-break-after: auto; }
+  }
 </style>
 </head>
 <body>
-<button class="print-btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+<button class="print-btn" onclick="window.print()" title="Atajo: Ctrl+P">
+  🖨 Imprimir / Guardar PDF
+</button>
+<script>
+  // Atajo Ctrl+P / Cmd+P como respaldo si el botón no responde
+  window.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      window.print();
+    }
+  });
+</script>
 <div class="page">
 
   <div class="brand-row">
@@ -362,19 +402,23 @@ PDF_TEMPLATE_VENTA = """
   </ul>
   {% endif %}
 
-  <div class="firma">
-    <div class="label">ATENTAMENTE</div>
-    <div class="area">ÁREA COMERCIAL · DASIC INDUSTRIAL</div>
+  <div class="cierre">
+    <div class="cierre-left">
+      <div class="label">ATENTAMENTE</div>
+      <div class="area">ÁREA COMERCIAL · DASIC INDUSTRIAL</div>
+      <div class="consultor-block">
+        <div class="consultor-nombre">{{ orden.vendedor.nombre if orden.vendedor else "Equipo DASIC" }}</div>
+        <div class="consultor-titulo">Consultor de Ventas Industrial</div>
+        {% if orden.vendedor and orden.vendedor.email %}
+          <div class="consultor-mail"><a href="mailto:{{ orden.vendedor.email }}">{{ orden.vendedor.email }}</a></div>
+        {% endif %}
+      </div>
+    </div>
     {% if qr_data_uri %}
+    <div class="cierre-right">
       <img class="qr" src="{{ qr_data_uri }}" alt="QR folio {{ orden.folio }}">
       <div class="qr-label">Folio: <span class="folio-text">{{ orden.folio }}</span></div>
-    {% endif %}
-  </div>
-  <div class="consultor">
-    <div class="consultor-nombre">{{ orden.vendedor.nombre if orden.vendedor else "Equipo DASIC" }}</div>
-    <div class="consultor-titulo">Consultor de Ventas Industrial</div>
-    {% if orden.vendedor and orden.vendedor.email %}
-      <div class="consultor-mail"><a href="mailto:{{ orden.vendedor.email }}">{{ orden.vendedor.email }}</a></div>
+    </div>
     {% endif %}
   </div>
 
