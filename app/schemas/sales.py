@@ -30,20 +30,16 @@ class DetalleOrdenCreate(BaseModel):
     # ninguno; min <= max. Se valida en model_validator.
     entrega_min: Optional[int] = Field(default=None, ge=0)
     entrega_max: Optional[int] = Field(default=None, ge=0)
-    entrega_unidad: Optional[Literal["dias", "semanas", "tespv"]] = None
+    entrega_unidad: Optional[Literal["dias", "semanas"]] = None
     # Nota libre por línea: productos similares manuales u observaciones
     # específicas para esta línea (no aplica a toda la cotización).
     observaciones_linea: Optional[str] = Field(default=None, max_length=1000)
 
     @model_validator(mode="after")
     def _validar_entrega(self) -> "DetalleOrdenCreate":
-        # TESPV (Tiempo de Entrega Salvo Previa Venta): unidad sin rango.
-        # min/max se ignoran (forzados a None) cuando la unidad es tespv.
-        if self.entrega_unidad == "tespv":
-            self.entrega_min = None
-            self.entrega_max = None
-            return self
-
+        # T.E.S.P.V. (Salvo Previa Venta) NO es una unidad: es un sufijo
+        # del PDF que aplica siempre que hay tiempo de entrega capturado.
+        # Las únicas unidades válidas son 'dias' y 'semanas'.
         provistos = [
             self.entrega_min is not None,
             self.entrega_max is not None,

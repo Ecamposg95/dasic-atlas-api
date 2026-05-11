@@ -58,7 +58,7 @@ router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 # DEFAULTS_TERMINOS de cotizador.html (mantener en paralelo).
 _DEFAULT_TERMINOS = (
     "Agregar el IVA correspondiente. Tiempo de entrega S.P.V.\n"
-    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Los tiempos marcados con esta sigla están sujetos a confirmación de disponibilidad con el proveedor.\n"
+    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Todos los tiempos de entrega indicados están sujetos a confirmación de disponibilidad con el proveedor al momento de la orden.\n"
     "Verificar que el material cotizado cumpla con sus requerimientos técnicos.\n"
     "Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.\n"
     "En caso de cancelación se cobrará el 25% del monto total.\n"
@@ -207,6 +207,7 @@ PDF_TEMPLATE_VENTA = """
   .item-cat { font-weight: 700; color:#0f172a; }
   .item-desc { color:#0f172a; white-space: pre-line; }
   .item-nota { font-size: 10px; color:#64748b; font-style: italic; margin-top: 4px; padding-left: 6px; border-left: 2px solid #cbd5e1; white-space: pre-line; }
+  .tespv-tag { display: inline-block; font-size: 9px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
   table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 9px 8px; border-bottom: 4px solid #fff; }
 
   /* Condiciones */
@@ -276,7 +277,7 @@ PDF_TEMPLATE_VENTA = """
   {% set ns = namespace(has_desc=false, has_entrega=false) %}
   {% for d in orden.detalles %}
     {% if (d.descuento_aplicado or 0) > 0 %}{% set ns.has_desc = true %}{% endif %}
-    {% if (d.entrega_min is not none and d.entrega_max is not none and d.entrega_unidad) or d.entrega_unidad == 'tespv' %}{% set ns.has_entrega = true %}{% endif %}
+    {% if d.entrega_min is not none and d.entrega_max is not none and d.entrega_unidad %}{% set ns.has_entrega = true %}{% endif %}
   {% endfor %}
   {% set cols_extra = (1 if ns.has_desc else 0) + (1 if ns.has_entrega else 0) %}
   {% set cols_label = 5 + cols_extra %}
@@ -303,7 +304,7 @@ PDF_TEMPLATE_VENTA = """
           {% if item.observaciones_linea %}<div class="item-nota">{{ item.observaciones_linea }}</div>{% endif %}
         </td>
         <td class="center">{{ item.cantidad }}</td>
-        {% if ns.has_entrega %}<td class="center">{% if item.entrega_unidad == 'tespv' %}T.E.S.P.V.{% elif item.entrega_min is not none and item.entrega_max is not none and item.entrega_unidad %}{% if item.entrega_min == item.entrega_max %}{{ item.entrega_min }} {{ item.entrega_unidad }}{% else %}{{ item.entrega_min }}–{{ item.entrega_max }} {{ item.entrega_unidad }}{% endif %}{% else %}—{% endif %}</td>{% endif %}
+        {% if ns.has_entrega %}<td class="center">{% if item.entrega_min is not none and item.entrega_max is not none and item.entrega_unidad %}{% if item.entrega_min == item.entrega_max %}{{ item.entrega_min }} {{ item.entrega_unidad }} <span class="tespv-tag">T.E.S.P.V.</span>{% else %}{{ item.entrega_min }}–{{ item.entrega_max }} {{ item.entrega_unidad }} <span class="tespv-tag">T.E.S.P.V.</span>{% endif %}{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
         {% if ns.has_desc %}<td class="center">{% if (item.descuento_aplicado or 0) > 0 %}{{ "{:g}".format(item.descuento_aplicado|float) }}%{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.subtotal) }}</td>

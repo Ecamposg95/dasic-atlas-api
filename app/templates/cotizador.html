@@ -364,7 +364,7 @@
   // Defaults editables del PDF (sincronizado con _DEFAULT_TERMINOS en ventas.py).
   const DEFAULTS_TERMINOS = [
     "Agregar el IVA correspondiente. Tiempo de entrega S.P.V.",
-    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Los tiempos marcados con esta sigla están sujetos a confirmación de disponibilidad con el proveedor.",
+    "T.E.S.P.V. = Tiempo de Entrega Salvo Previa Venta. Todos los tiempos de entrega indicados están sujetos a confirmación de disponibilidad con el proveedor al momento de la orden.",
     "Verificar que el material cotizado cumpla con sus requerimientos técnicos.",
     "Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.",
     "En caso de cancelación se cobrará el 25% del monto total.",
@@ -1287,26 +1287,24 @@
                           title="Descuento %">
                   </td>
                   <td class="p-3 text-center">
-                      <div class="inline-flex items-center gap-0.5 justify-center" title="Tiempo de entrega: mín–máx + unidad, o T.E.S.P.V. (sujeto a confirmación)">
-                          ${i.entrega_unidad === 'tespv' ? `
-                              <span class="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 px-1.5">T.E.S.P.V.</span>
-                          ` : `
-                              <input type="number" min="0" value="${i.entrega_min ?? ''}" onchange="updItem(${idx}, 'entrega_min', this.value)"
-                                  placeholder="—" aria-label="Entrega mínima"
-                                  class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
-                              <span class="text-[10px] text-slate-400">–</span>
-                              <input type="number" min="0" value="${i.entrega_max ?? ''}" onchange="updItem(${idx}, 'entrega_max', this.value)"
-                                  placeholder="—" aria-label="Entrega máxima"
-                                  class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
-                          `}
+                      <div class="inline-flex items-center gap-0.5 justify-center" title="Tiempo de entrega: mín–máx + unidad. T.E.S.P.V. (Salvo Previa Venta) se sufija automáticamente en el PDF.">
+                          <input type="number" min="0" value="${i.entrega_min ?? ''}" onchange="updItem(${idx}, 'entrega_min', this.value)"
+                              placeholder="—" aria-label="Entrega mínima"
+                              class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
+                          <span class="text-[10px] text-slate-400">–</span>
+                          <input type="number" min="0" value="${i.entrega_max ?? ''}" onchange="updItem(${idx}, 'entrega_max', this.value)"
+                              placeholder="—" aria-label="Entrega máxima"
+                              class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
                           <select onchange="updItem(${idx}, 'entrega_unidad', this.value)"
                               aria-label="Unidad de entrega"
                               class="text-[10px] rounded border border-slate-300 dark:border-slate-600 ml-0.5 px-0.5 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
                               <option value="" ${!i.entrega_unidad ? 'selected' : ''}>—</option>
                               <option value="dias" ${i.entrega_unidad === 'dias' ? 'selected' : ''}>días</option>
                               <option value="semanas" ${i.entrega_unidad === 'semanas' ? 'selected' : ''}>sem.</option>
-                              <option value="tespv" ${i.entrega_unidad === 'tespv' ? 'selected' : ''}>T.E.S.P.V.</option>
                           </select>
+                          ${(i.entrega_min !== null && i.entrega_max !== null && i.entrega_unidad) ? `
+                              <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 ml-1" title="Sufijo automático en el PDF: Tiempo de Entrega Salvo Previa Venta">T.E.S.P.V.</span>
+                          ` : ''}
                       </div>
                   </td>
                   <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
@@ -1340,12 +1338,10 @@
           return;
       }
       if(t=='entrega_unidad') {
-          const u = (v === 'dias' || v === 'semanas' || v === 'tespv') ? v : null;
+          const u = (v === 'dias' || v === 'semanas') ? v : null;
           state.cart[idx].entrega_unidad = u;
-          // Si se borra unidad o se elige T.E.S.P.V., limpia min/max.
-          // - sin unidad → invariante "los 3 o ninguno"
-          // - tespv → no aplica rango (tiempo depende del proveedor)
-          if (!u || u === 'tespv') {
+          // Si se borra unidad, limpia min/max (invariante "los 3 o ninguno").
+          if (!u) {
               state.cart[idx].entrega_min = null;
               state.cart[idx].entrega_max = null;
           }
