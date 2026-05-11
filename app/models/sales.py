@@ -71,11 +71,17 @@ class DetalleOrden(Base):
     proveedor_sugerido_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
 
     # Tiempos de entrega por línea (estructurado). Los 3 viajan juntos: o
-    # vienen los 3 o ninguno. unidad ∈ {'dias','semanas'}. min <= max.
-    # Defaults NULL — los captura el usuario en el cotizador.
+    # vienen los 3 o ninguno. unidad ∈ {'dias','semanas','tespv'}. min <= max
+    # cuando aplica (NULL para tespv). Defaults NULL — los captura el usuario.
     entrega_min = Column(Integer, nullable=True)
     entrega_max = Column(Integer, nullable=True)
     entrega_unidad = Column(String(10), nullable=True)
+
+    # Nota libre por línea: el vendedor captura productos similares o
+    # comentarios que se imprimen en el PDF bajo el nombre del producto.
+    # Mientras el stock no esté bien definido para sugerir similares
+    # automáticamente, esto reemplaza al motor de "productos relacionados".
+    observaciones_linea = Column(Text, nullable=True)
 
     orden = relationship("OrdenVenta", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles_orden")

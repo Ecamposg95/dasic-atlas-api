@@ -299,6 +299,45 @@
     </div>
   </div>
 
+  <!-- Modal Nota por línea (productos similares manuales) -->
+  <div id="modal-nota-linea" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-5 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex justify-between items-center">
+        <div>
+          <h3 class="text-sm font-black text-amber-700 dark:text-amber-300 uppercase">
+            <i class="fas fa-sticky-note text-xs mr-1"></i> Nota / Productos similares
+          </h3>
+          <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">Aparece en el PDF debajo del producto, en italic gris</p>
+        </div>
+        <button onclick="cerrarNotaLinea()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-2">
+        <label class="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+          Producto: <span id="nota-linea-sku" class="font-mono text-slate-700 dark:text-slate-300">—</span>
+        </label>
+        <textarea id="nota-linea-input" rows="4" maxlength="1000"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700
+                         rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100
+                         placeholder-slate-400 dark:placeholder-slate-500
+                         focus:outline-none focus:border-amber-500 transition resize-none"
+                  placeholder="Ej. Considerar también el modelo XYZ-200 con flujo similar de 10 GPM."></textarea>
+        <p class="text-[10px] text-slate-500"><span id="nota-linea-count">0</span> / 1000 caracteres</p>
+      </div>
+      <div class="px-5 py-3 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center gap-2">
+        <button onclick="limpiarNotaLinea()" class="text-[11px] text-slate-500 hover:text-rose-500 font-bold uppercase tracking-wider">
+          <i class="fas fa-eraser text-[10px] mr-1"></i> Vaciar
+        </button>
+        <div class="flex gap-2">
+          <button onclick="cerrarNotaLinea()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+          <button onclick="guardarNotaLinea()"
+                  class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
+            <i class="fas fa-check text-[10px] mr-1"></i> Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="view-historial" class="hidden flex-1 overflow-hidden bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
     <div class="h-full overflow-y-auto custom-scroll">
       <table class="min-w-full text-sm text-left">
@@ -720,6 +759,7 @@
               entrega_min: i.entrega_min ?? null,
               entrega_max: i.entrega_max ?? null,
               entrega_unidad: i.entrega_unidad || null,
+              observaciones_linea: i.observaciones_linea ?? null,
           }));
           try {
               const r = await fetch('/api/ventas/plantillas', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nombre, descripcion: desc, lineas })});
@@ -750,6 +790,7 @@
           entrega_min: l.entrega_min ?? null,
           entrega_max: l.entrega_max ?? null,
           entrega_unidad: l.entrega_unidad || null,
+          observaciones_linea: l.observaciones_linea ?? null,
       }));
       // Rellenar nombres/skus desde state.prods cuando aplique
       state.cart.forEach(it => {
@@ -920,6 +961,7 @@
           entrega_min: null,
           entrega_max: null,
           entrega_unidad: null,
+          observaciones_linea: null,
           tipoLinea: 'servicio',
       });
       cerrarModalServicio();
@@ -1107,6 +1149,7 @@
           entrega_min: null,
           entrega_max: null,
           entrega_unidad: null,
+          observaciones_linea: null,
       });
       cerrarModalFantasma();
       ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
@@ -1264,6 +1307,11 @@
                   <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
                   <td class="p-3 text-center text-slate-400">
                       <div class="inline-flex items-center gap-1">
+                          <button onclick="abrirNotaLinea(${idx})"
+                                  class="${i.observaciones_linea ? 'text-amber-500' : 'hover:text-amber-400'}"
+                                  title="${i.observaciones_linea ? 'Editar nota: ' + (i.observaciones_linea.length > 60 ? i.observaciones_linea.slice(0,60)+'…' : i.observaciones_linea) : 'Agregar nota / productos similares'}">
+                              <i class="fas fa-sticky-note text-[10px]"></i>${i.observaciones_linea ? '<span class="absolute -mt-1 ml-0.5 inline-block h-1 w-1 rounded-full bg-amber-500"></span>' : ''}
+                          </button>
                           <button onclick="moverItem(${idx}, -1)" class="hover:text-cyan-300" title="Subir"><i class="fas fa-arrow-up text-[10px]"></i></button>
                           <button onclick="moverItem(${idx}, +1)" class="hover:text-cyan-300" title="Bajar"><i class="fas fa-arrow-down text-[10px]"></i></button>
                           <button onclick="duplicarItem(${idx})" class="hover:text-cyan-300" title="Duplicar"><i class="fas fa-clone text-[10px]"></i></button>
@@ -1333,6 +1381,54 @@
       renderCart();
       autosaveBorrador();
   }
+
+  // ====== NOTA POR LÍNEA (productos similares manuales) ======
+  let _notaLineaIdx = null;
+
+  function abrirNotaLinea(idx) {
+      const item = state.cart[idx];
+      if (!item) return;
+      _notaLineaIdx = idx;
+      const skuLabel = item.sku || '—';
+      const nombre = item.nom ? ` · ${item.nom.length > 40 ? item.nom.slice(0, 40) + '…' : item.nom}` : '';
+      document.getElementById('nota-linea-sku').textContent = skuLabel + nombre;
+      const textarea = document.getElementById('nota-linea-input');
+      textarea.value = item.observaciones_linea || '';
+      document.getElementById('nota-linea-count').textContent = textarea.value.length;
+      document.getElementById('modal-nota-linea').classList.remove('hidden');
+      textarea.focus();
+  }
+  function cerrarNotaLinea() {
+      _notaLineaIdx = null;
+      document.getElementById('modal-nota-linea').classList.add('hidden');
+  }
+  function guardarNotaLinea() {
+      if (_notaLineaIdx === null) return;
+      const valor = document.getElementById('nota-linea-input').value.trim();
+      snapshotHistorial();
+      state.cart[_notaLineaIdx].observaciones_linea = valor || null;
+      cerrarNotaLinea();
+      renderCart();
+      autosaveBorrador();
+  }
+  function limpiarNotaLinea() {
+      document.getElementById('nota-linea-input').value = '';
+      document.getElementById('nota-linea-count').textContent = '0';
+  }
+  // Contador en vivo del textarea
+  document.addEventListener('DOMContentLoaded', () => {
+      const ta = document.getElementById('nota-linea-input');
+      if (ta) ta.addEventListener('input', () => {
+          document.getElementById('nota-linea-count').textContent = ta.value.length;
+      });
+      // Esc cierra el modal
+      window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !document.getElementById('modal-nota-linea').classList.contains('hidden')) {
+              cerrarNotaLinea();
+          }
+      });
+  });
+
   function updTotal(sub) {
       const iva = sub * (Number(state.config.ivaRate) || 0.16);
       document.getElementById('lbl-sub').innerText = fmtMoney(sub);
@@ -1393,6 +1489,7 @@
               entrega_min: i.entrega_min ?? null,
               entrega_max: i.entrega_max ?? null,
               entrega_unidad: i.entrega_unidad || null,
+              observaciones_linea: i.observaciones_linea ?? null,
           })),
           observaciones: document.getElementById('observaciones').value,
           terminos_condiciones: document.getElementById('terminos')?.value ?? null,

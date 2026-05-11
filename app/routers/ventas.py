@@ -205,6 +205,7 @@ PDF_TEMPLATE_VENTA = """
   table.items td.right { text-align: right; }
   .item-cat { font-weight: 700; color:#0f172a; }
   .item-desc { color:#0f172a; white-space: pre-line; }
+  .item-nota { font-size: 10px; color:#64748b; font-style: italic; margin-top: 4px; padding-left: 6px; border-left: 2px solid #cbd5e1; white-space: pre-line; }
   table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 9px 8px; border-bottom: 4px solid #fff; }
 
   /* Condiciones */
@@ -291,7 +292,10 @@ PDF_TEMPLATE_VENTA = """
       <tr>
         <td class="center">{{ loop.index }}</td>
         <td><div class="item-cat">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or (item.producto.sku if item.producto else "—") }}</div></td>
-        <td><div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div></td>
+        <td>
+          <div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div>
+          {% if item.observaciones_linea %}<div class="item-nota">{{ item.observaciones_linea }}</div>{% endif %}
+        </td>
         <td class="center">{{ item.cantidad }}</td>
         {% if ns.has_entrega %}<td class="center">{% if item.entrega_min is not none and item.entrega_max is not none and item.entrega_unidad %}{% if item.entrega_min == item.entrega_max %}{{ item.entrega_min }} {{ item.entrega_unidad }}{% else %}{{ item.entrega_min }}–{{ item.entrega_max }} {{ item.entrega_unidad }}{% endif %}{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
@@ -498,6 +502,7 @@ def crear_orden(
                 entrega_min=item.entrega_min,
                 entrega_max=item.entrega_max,
                 entrega_unidad=item.entrega_unidad,
+                observaciones_linea=item.observaciones_linea,
             ))
 
             # Reserva inventario sólo si es producto del catálogo y la orden es cotización
@@ -645,6 +650,7 @@ def actualizar_orden(
                 entrega_min=item.entrega_min,
                 entrega_max=item.entrega_max,
                 entrega_unidad=item.entrega_unidad,
+                observaciones_linea=item.observaciones_linea,
             ))
 
             if (
@@ -739,6 +745,7 @@ def recotizar(
             entrega_min=det.entrega_min,
             entrega_max=det.entrega_max,
             entrega_unidad=det.entrega_unidad,
+            observaciones_linea=det.observaciones_linea,
         ))
 
     db.commit()
@@ -914,6 +921,7 @@ def obtener_detalle_orden(
             "entrega_min": d.entrega_min,
             "entrega_max": d.entrega_max,
             "entrega_unidad": d.entrega_unidad,
+            "observaciones_linea": d.observaciones_linea,
         })
         
     return {

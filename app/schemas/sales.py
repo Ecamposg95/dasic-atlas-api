@@ -31,6 +31,9 @@ class DetalleOrdenCreate(BaseModel):
     entrega_min: Optional[int] = Field(default=None, ge=0)
     entrega_max: Optional[int] = Field(default=None, ge=0)
     entrega_unidad: Optional[Literal["dias", "semanas"]] = None
+    # Nota libre por línea: productos similares manuales u observaciones
+    # específicas para esta línea (no aplica a toda la cotización).
+    observaciones_linea: Optional[str] = Field(default=None, max_length=1000)
 
     @model_validator(mode="after")
     def _validar_entrega(self) -> "DetalleOrdenCreate":
@@ -64,6 +67,7 @@ class DetalleOrdenResponse(BaseModel):
     entrega_min: Optional[int] = None
     entrega_max: Optional[int] = None
     entrega_unidad: Optional[str] = None
+    observaciones_linea: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
