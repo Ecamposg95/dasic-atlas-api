@@ -10,6 +10,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from app import models
 from app import schemas
+from app.core.config import get_settings
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.services.email_service import (
@@ -48,7 +49,29 @@ def _resolve_tipo_linea(item, producto: "models.Producto | None") -> str:
 
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
-DEFAULT_QUOTE_VALIDITY_DAYS = 15
+
+def _iva_rate() -> Decimal:
+    return Decimal(str(get_settings().iva_rate))
+
+
+def _iva_pct_label() -> str:
+    rate = get_settings().iva_rate * 100
+    return f"{rate:g}%"
+
+
+def _quote_validity_days() -> int:
+    return get_settings().quote_validity_days
+
+
+@router.get("/config/cotizador-defaults", dependencies=[Depends(allow_all_staff)])
+def cotizador_defaults():
+    """Defaults dinámicos para el frontend del cotizador (IVA, vigencia)."""
+    s = get_settings()
+    return {
+        "iva_rate": s.iva_rate,
+        "iva_pct_label": f"{s.iva_rate * 100:g}%",
+        "quote_validity_days": s.quote_validity_days,
+    }
 
 
 def _generar_folio(
@@ -265,7 +288,7 @@ PDF_TEMPLATE_VENTA = """
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(orden.total) }}</td>
         </tr>
         <tr>
-          <td colspan="{{ cols_label }}" class="right">IVA(16%)</td>
+          <td colspan="{{ cols_label }}" class="right">IVA({{ iva_pct_label }})</td>
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(iva) }}</td>
         </tr>
         <tr>
@@ -339,7 +362,7 @@ def crear_orden(
             observaciones=orden_data.observaciones,
             moneda=moneda_cotizacion,
             tipo_cambio=tipo_cambio,
-            fecha_vencimiento=datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS),
+            fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             total=0,
         )
         db.add(nueva_orden)
@@ -485,7 +508,7 @@ def actualizar_orden(
         orden.observaciones = orden_update.observaciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
-        orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS)
+        orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
 
         # Liberar reservas previas antes de borrar y reinsertar detalles
         liberar_reservas_cotizacion(
@@ -627,7 +650,7 @@ def recotizar(
         moneda=origen.moneda,
         tipo_cambio=origen.tipo_cambio,
         total=origen.total,
-        fecha_vencimiento=datetime.utcnow() + timedelta(days=DEFAULT_QUOTE_VALIDITY_DAYS),
+        fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
         cotizacion_origen_id=raiz_id,
         version=siguiente_version,
     )
@@ -846,7 +869,7 @@ def generar_pdf(
     )
     if not orden: raise HTTPException(404)
 
-    iva = (orden.total * Decimal("0.16")).quantize(Decimal("0.01"))
+    iva = (orden.total * _iva_rate()).quantize(Decimal("0.01"))
     gran_total = (orden.total + iva).quantize(Decimal("0.01"))
     es_cotizacion = orden.estatus == models.EstatusOrden.COTIZACION
     tipo_doc = "COTIZACION" if es_cotizacion else "NOTA DE VENTA"
@@ -863,7 +886,7 @@ def generar_pdf(
     vigencia_dias = (
         max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
         if orden.fecha_vencimiento and orden.fecha_creacion
-        else DEFAULT_QUOTE_VALIDITY_DAYS
+        else _quote_validity_days()
     )
 
     env = Environment(loader=BaseLoader())
@@ -878,6 +901,7 @@ def generar_pdf(
         etiqueta_moneda_corta=etiqueta_moneda_corta,
         vigencia_dias=vigencia_dias,
         fecha_str=fecha_str,
+        iva_pct_label=_iva_pct_label(),
     )
 
 

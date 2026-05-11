@@ -241,7 +241,7 @@
 
             <div class="text-right text-xs text-slate-600 dark:text-slate-400 space-y-1 min-w-[200px]">
               <div class="flex justify-between"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold">$0.00</span></div>
-              <div class="flex justify-between"><span>IVA (16%):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
+              <div class="flex justify-between"><span>IVA (<span id="lbl-iva-pct">16%</span>):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
               <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-1 mt-1 text-base text-blue-900 dark:text-cyan-400 font-bold">
                 <span>Total:</span> <span id="lbl-total">$0.00</span>
               </div>
@@ -305,6 +305,7 @@
     productosRelacionados: [],
     historyStack: [],     // undo/redo del carrito
     fxBadge: { text: '', fuente: '' },
+    config: { ivaRate: 0.16, ivaPctLabel: '16%', quoteValidityDays: 15 },
     DRAFT_KEY: 'dasic_cotizador_borrador',
     AUTOSAVE_DELAY: 1500,
   };
@@ -473,6 +474,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
       loadData();
+      cargarConfig();
       cargarTC();
       cargarSinonimos();
       cargarPlantillas();
@@ -1168,10 +1170,24 @@
       autosaveBorrador();
   }
   function updTotal(sub) {
-      const iva = sub * 0.16;
+      const iva = sub * (Number(state.config.ivaRate) || 0.16);
       document.getElementById('lbl-sub').innerText = fmtMoney(sub);
       document.getElementById('lbl-iva').innerText = fmtMoney(iva);
       document.getElementById('lbl-total').innerText = fmtMoney(sub + iva);
+  }
+
+  async function cargarConfig() {
+      try {
+          const r = await fetch('/api/ventas/config/cotizador-defaults', { credentials:'include' });
+          if (r.ok) {
+              const d = await r.json();
+              state.config.ivaRate = Number(d.iva_rate);
+              state.config.ivaPctLabel = d.iva_pct_label || '16%';
+              state.config.quoteValidityDays = Number(d.quote_validity_days) || 15;
+              const lbl = document.getElementById('lbl-iva-pct');
+              if (lbl) lbl.textContent = state.config.ivaPctLabel;
+          }
+      } catch(_) {}
   }
 
   async function guardar(tipo) {

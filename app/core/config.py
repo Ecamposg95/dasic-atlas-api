@@ -34,6 +34,8 @@ class Settings:
     smtp_use_tls: bool
     anthropic_api_key: str
     anthropic_model: str
+    iva_rate: float
+    quote_validity_days: int
 
 
 @lru_cache(maxsize=1)
@@ -68,4 +70,6 @@ def get_settings() -> Settings:
         smtp_use_tls=_as_bool(os.getenv("SMTP_USE_TLS", "true"), default=True),
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", "").strip(),
         anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6").strip() or "claude-sonnet-4-6",
+        iva_rate=float(os.getenv("IVA_RATE", "0.16") or "0.16"),
+        quote_validity_days=int(os.getenv("QUOTE_VALIDITY_DAYS", "15") or "15"),
     )

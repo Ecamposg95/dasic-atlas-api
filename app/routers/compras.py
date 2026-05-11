@@ -9,9 +9,18 @@ from jinja2 import Environment, BaseLoader
 
 from app import models
 from app import schemas
+from app.core.config import get_settings
 from app.db import get_db
 from app.security import allow_admin_asistente, get_current_user
 from pydantic import BaseModel
+
+
+def _iva_rate() -> Decimal:
+    return Decimal(str(get_settings().iva_rate))
+
+
+def _iva_pct_label() -> str:
+    return f"{get_settings().iva_rate * 100:g}%"
 
 router = APIRouter(prefix="/api/compras", tags=["Proveedores y Gastos"])
 
@@ -130,7 +139,7 @@ PDF_TEMPLATE_COMPRA = """
                 <span>${{ "{:,.2f}".format(orden.total) }}</span>
             </div>
             <div class="total-row" style="color: #666;">
-                <span>IVA (16%) (Estimado):</span>
+                <span>IVA ({{ iva_pct_label }}) (Estimado):</span>
                 <span>${{ "{:,.2f}".format(iva) }}</span>
             </div>
             <div class="total-row total-final">
@@ -429,15 +438,15 @@ def imprimir_oc(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
     if not orden: raise HTTPException(404)
     
-    # CÁLCULOS SEGUROS EN PYTHON (CORRECCIÓN CLAVE)
-    iva = orden.total * Decimal("0.16")
+    iva = orden.total * _iva_rate()
     gran_total = orden.total + iva
-    
+
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_COMPRA).render(
-        orden=orden, 
-        iva=iva, 
-        gran_total=gran_total
+        orden=orden,
+        iva=iva,
+        gran_total=gran_total,
+        iva_pct_label=_iva_pct_label(),
     )
 
 
