@@ -225,6 +225,9 @@ PDF_TEMPLATE_VENTA = """
     {% endif %}
   </div>
 
+  {% set ns = namespace(has_desc=false) %}
+  {% for d in orden.detalles %}{% if (d.descuento_aplicado or 0) > 0 %}{% set ns.has_desc = true %}{% endif %}{% endfor %}
+  {% set cols_label = 6 if ns.has_desc else 5 %}
   <table class="items">
     <thead>
       <tr>
@@ -233,6 +236,7 @@ PDF_TEMPLATE_VENTA = """
         <th>Description</th>
         <th style="width: 7%;">Qty</th>
         <th style="width: 14%;">UNIT</th>
+        {% if ns.has_desc %}<th style="width: 8%;">Dto%</th>{% endif %}
         <th style="width: 14%;">SubTotal</th>
       </tr>
     </thead>
@@ -244,6 +248,7 @@ PDF_TEMPLATE_VENTA = """
         <td><div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div></td>
         <td class="center">{{ item.cantidad }}</td>
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
+        {% if ns.has_desc %}<td class="center">{% if (item.descuento_aplicado or 0) > 0 %}{{ "{:g}".format(item.descuento_aplicado|float) }}%{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.subtotal) }}</td>
       </tr>
       {% endfor %}
@@ -251,20 +256,20 @@ PDF_TEMPLATE_VENTA = """
     <tfoot>
       {% if es_cotizacion %}
         <tr>
-          <td colspan="5" class="right">subtotal({{ etiqueta_moneda_corta }})</td>
+          <td colspan="{{ cols_label }}" class="right">subtotal({{ etiqueta_moneda_corta }})</td>
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(orden.total) }}</td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="5" class="right">SubTotal({{ etiqueta_moneda_corta }})</td>
+          <td colspan="{{ cols_label }}" class="right">SubTotal({{ etiqueta_moneda_corta }})</td>
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(orden.total) }}</td>
         </tr>
         <tr>
-          <td colspan="5" class="right">IVA(16%)</td>
+          <td colspan="{{ cols_label }}" class="right">IVA(16%)</td>
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(iva) }}</td>
         </tr>
         <tr>
-          <td colspan="5" class="right">Total({{ etiqueta_moneda_corta }})</td>
+          <td colspan="{{ cols_label }}" class="right">Total({{ etiqueta_moneda_corta }})</td>
           <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(gran_total) }}</td>
         </tr>
       {% endif %}
@@ -386,9 +391,13 @@ def crear_orden(
                 tipo_cambio,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
-            precio_final = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
-
-            subtotal = precio_final * item.cantidad
+            descuento_pct = Decimal(item.descuento or 0)
+            precio_unit_bruto = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+            subtotal = (
+                precio_unit_bruto
+                * item.cantidad
+                * (Decimal("1.0") - (descuento_pct / Decimal("100")))
+            )
             total_orden += subtotal
 
             tipo_linea = _resolve_tipo_linea(item, producto)
@@ -400,10 +409,12 @@ def crear_orden(
                 moneda_origen_linea=moneda_origen_linea,
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 cantidad=item.cantidad,
-                precio_unitario=precio_final.quantize(Decimal("0.01")),
+                # precio_unitario = bruto pre-descuento (lo que el cliente ve por unidad).
+                # subtotal ya incluye el descuento aplicado.
+                precio_unitario=precio_unit_bruto.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
-                descuento_aplicado=Decimal(item.descuento or 0),
-                subtotal=subtotal,
+                descuento_aplicado=descuento_pct,
+                subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
             ))
@@ -524,9 +535,13 @@ def actualizar_orden(
                 tipo_cambio,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
-            precio_final = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
-
-            subtotal = precio_final * item.cantidad
+            descuento_pct = Decimal(item.descuento or 0)
+            precio_unit_bruto = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+            subtotal = (
+                precio_unit_bruto
+                * item.cantidad
+                * (Decimal("1.0") - (descuento_pct / Decimal("100")))
+            )
             total_orden += subtotal
 
             tipo_linea = _resolve_tipo_linea(item, producto)
@@ -538,10 +553,10 @@ def actualizar_orden(
                 moneda_origen_linea=moneda_origen_linea,
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 cantidad=item.cantidad,
-                precio_unitario=precio_final.quantize(Decimal("0.01")),
+                precio_unitario=precio_unit_bruto.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
-                descuento_aplicado=Decimal(item.descuento or 0),
-                subtotal=subtotal,
+                descuento_aplicado=descuento_pct,
+                subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
             ))

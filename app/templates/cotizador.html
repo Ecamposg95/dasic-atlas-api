@@ -189,13 +189,14 @@
                 <th class="p-3 bg-white dark:bg-slate-800 text-center w-20">Mon. Origen</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Desc%</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
                 <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
               </tr>
             </thead>
             <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
-              <tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
+              <tr><td colspan="9" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
             </tbody>
           </table>
         </div>
@@ -642,7 +643,7 @@
               producto_id: i.id || null,
               cantidad: i.qty,
               utilidad: i.utilidad,
-              descuento: 0,
+              descuento: Number(i.descuento) || 0,
               moneda_origen: i.productCurrency,
               sku_libre: i.ghost && i.sku !== '— FANTASMA' && i.sku !== '— SERVICIO' ? i.sku : null,
               descripcion_libre: i.ghost ? i.nom : null,
@@ -673,6 +674,7 @@
           qty: l.cantidad || 1,
           max: 9999,
           utilidad: Number(l.utilidad || 30),
+          descuento: Number(l.descuento || 0),
           tipoLinea: l.tipo_linea,
           proveedor_sugerido_id: l.proveedor_sugerido_id,
       }));
@@ -841,6 +843,7 @@
           qty: qty,
           max: 9999,
           utilidad: 0,
+          descuento: 0,
           tipoLinea: 'servicio',
       });
       cerrarModalServicio();
@@ -1002,6 +1005,7 @@
           qty: qty,
           max: 9999,
           utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
+          descuento: 0,
       });
       cerrarModalFantasma();
       ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
@@ -1040,6 +1044,7 @@
               qty: cantidadParseada,
               max: p.stock_actual,
               utilidad: util,
+              descuento: 0,
           });
           // B5: cargar productos relacionados (no bloquea)
           cargarProductosRelacionados(p.id);
@@ -1060,7 +1065,7 @@
       let subtotal = 0;
 
       if(state.cart.length === 0) {
-          tb.innerHTML = '<tr><td colspan="8" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+          tb.innerHTML = '<tr><td colspan="9" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
           updTotal(0); return;
       }
 
@@ -1069,7 +1074,8 @@
           if(i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
           if(i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
           const precioFinal = costo * (1 + (i.utilidad / 100));
-          const importe = i.qty * precioFinal;
+          const descPct = Number(i.descuento) || 0;
+          const importe = i.qty * precioFinal * (1 - descPct / 100);
           subtotal += importe;
 
           const monedaBadge = i.productCurrency === 'USD'
@@ -1102,6 +1108,11 @@
                           class="w-14 text-center text-xs rounded font-bold outline-none border ${colorMargen(i.utilidad)}"
                           title="Margen %">
                   </td>
+                  <td class="p-3 text-center">
+                      <input type="number" min="0" max="100" step="0.5" value="${descPct}" onchange="updItem(${idx}, 'descuento', this.value)"
+                          class="w-14 text-center text-xs rounded font-bold outline-none border ${descPct > 0 ? 'border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-300 dark:border-slate-600 text-slate-500'}"
+                          title="Descuento %">
+                  </td>
                   <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
                   <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
                   <td class="p-3 text-center text-slate-400">
@@ -1130,6 +1141,7 @@
       let val = parseFloat(v)||0;
       if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
       if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
+      if(t=='descuento') state.cart[idx].descuento = val < 0 ? 0 : (val > 100 ? 100 : val);
       renderCart();
       autosaveBorrador();
   }
@@ -1191,7 +1203,7 @@
               producto_id: i.id || null,
               cantidad: i.qty,
               utilidad: i.utilidad,
-              descuento: 0,
+              descuento: Number(i.descuento) || 0,
               moneda_origen: i.productCurrency,
               sku_libre: i.ghost ? (i.sku === '— FANTASMA' || i.sku === '— SERVICIO' ? null : i.sku) : null,
               descripcion_libre: i.ghost ? i.nom : null,
