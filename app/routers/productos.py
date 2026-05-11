@@ -58,6 +58,20 @@ def _normalize_sku(value: str) -> str:
     return value.strip().upper()
 
 
+def _validar_fk_proveedores(db: Session, *, principal_id, alterno_id) -> None:
+    """Levanta 400 si algún proveedor_id viene no-None y no existe en la tabla.
+
+    Antes era posible crear/editar producto con proveedor_id apuntando a una
+    fila inexistente; la FK lo permitía técnicamente (default NO ACTION) pero
+    quedaba huérfano en la app.
+    """
+    for nombre, pid in (("proveedor_principal_id", principal_id), ("proveedor_alterno_id", alterno_id)):
+        if pid is None:
+            continue
+        if not db.get(models.Proveedor, pid):
+            raise HTTPException(status_code=400, detail=f"{nombre}={pid} no existe")
+
+
 def _generate_internal_sku(db: Session, marca: str | None = None) -> str:
     """Genera SKU interno único.
 
@@ -311,6 +325,12 @@ def crear_producto(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    _validar_fk_proveedores(
+        db,
+        principal_id=producto.proveedor_principal_id,
+        alterno_id=producto.proveedor_alterno_id,
+    )
+
     raw_sku = (producto.sku or "").strip()
     sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db, marca=producto.marca)
 
@@ -364,6 +384,12 @@ def actualizar_producto(
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    _validar_fk_proveedores(
+        db,
+        principal_id=producto_update.proveedor_principal_id,
+        alterno_id=producto_update.proveedor_alterno_id,
+    )
 
     # Actualizamos solo los campos enviados.
     update_data = producto_update.model_dump(exclude_unset=True)
