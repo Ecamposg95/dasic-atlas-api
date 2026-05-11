@@ -4,7 +4,7 @@
 
 {% block header_actions %}
   <button type="button" class="dax-btn-primary"
-          x-show="$store.user.can('editar_producto')" x-cloak
+          x-show="!$store.user.loaded || $store.user.can('editar_producto')" x-cloak
           @click="abrirModalNueva()">
     <i class="fas fa-plus text-xs"></i>
     Nueva Marca
@@ -142,13 +142,13 @@
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="inline-flex items-center gap-1">
-                  <button x-show="$store.user.can('editar_producto')"
+                  <button x-show="!$store.user.loaded || $store.user.can('editar_producto')"
                           @click="abrirModalEditar(m)"
                           class="p-1.5 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition"
                           title="Editar">
                     <i class="fas fa-pen text-[11px]"></i>
                   </button>
-                  <button x-show="$store.user.can('editar_producto')"
+                  <button x-show="!$store.user.loaded || $store.user.can('editar_producto')"
                           @click="eliminarMarca(m)"
                           :disabled="m.n_productos > 0"
                           :class="m.n_productos > 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-red-400'"
