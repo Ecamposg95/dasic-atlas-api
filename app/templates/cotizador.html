@@ -1175,8 +1175,9 @@
 
       state.cart.forEach((i, idx) => {
           let costo = i.cost;
-          if(i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
-          if(i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
+          let convertido = false;
+          if(i.productCurrency === 'USD' && state.moneda === 'MXN') { costo *= state.tc; convertido = true; }
+          if(i.productCurrency === 'MXN' && state.moneda === 'USD') { costo /= state.tc; convertido = true; }
           const precioFinal = costo * (1 + (i.utilidad / 100));
           const descPct = Number(i.descuento) || 0;
           const importe = i.qty * precioFinal * (1 - descPct / 100);
@@ -1185,6 +1186,20 @@
           const monedaBadge = i.productCurrency === 'USD'
               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
               : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700';
+
+          // Badge "convertido @ TC" cuando la moneda de origen difiere de la
+          // moneda de la cotización. Muestra el costo original en su divisa
+          // y el TC aplicado, para que sea obvio que se hizo conversión.
+          let badgeTC = '';
+          if (convertido) {
+              const sym = i.productCurrency === 'USD' ? 'US$' : '$';
+              const orig = Number(i.cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              const tcFmt = Number(state.tc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+              badgeTC = `<div class="text-[9px] text-amber-600 dark:text-amber-400 font-mono mt-0.5"
+                              title="Costo original ${sym}${orig} ${i.productCurrency}, convertido a ${state.moneda} con TC ${tcFmt}">
+                              ⇄ ${sym}${orig} ${i.productCurrency} @ ${tcFmt}
+                         </div>`;
+          }
 
           const servicioBadge = i.servicio ? '<span class="text-[9px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded ml-1 uppercase">Servicio</span>' : '';
           const ghostBadge = (i.ghost && !i.servicio) ? '<span class="text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded ml-1 uppercase">Fantasma</span>' : '';
@@ -1213,7 +1228,10 @@
                           </span>
                       `}
                   </td>
-                  <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
+                  <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">
+                      <div>${moneyForQuote(costo)}</div>
+                      ${badgeTC}
+                  </td>
                   <td class="p-3 text-center">
                       <input type="number" min="0" max="99" value="${i.utilidad}" onchange="updItem(${idx}, 'utilidad', this.value)"
                           class="w-14 text-center text-xs rounded font-bold outline-none border ${colorMargen(i.utilidad)}"
