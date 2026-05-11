@@ -190,13 +190,14 @@
                 <th class="p-3 bg-white dark:bg-slate-800 text-right">Costo</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Util%</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-center w-16">Desc%</th>
+                <th class="p-3 bg-white dark:bg-slate-800 text-center w-32">Entrega</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-right">Venta</th>
                 <th class="p-3 bg-white dark:bg-slate-800 text-right font-bold">Total</th>
                 <th class="p-3 bg-white dark:bg-slate-800 w-8"></th>
               </tr>
             </thead>
             <tbody id="tabla-carrito" class="divide-y divide-slate-100 dark:divide-slate-700">
-              <tr><td colspan="9" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
+              <tr><td colspan="10" class="p-10 text-center text-slate-400 italic">Carrito vacío</td></tr>
             </tbody>
           </table>
         </div>
@@ -652,6 +653,9 @@
               costo_unitario: i.ghost ? i.cost : null,
               tipo_linea: i.tipoLinea || (i.servicio ? 'servicio' : (i.ghost ? 'producto_fantasma' : 'producto_catalogo')),
               proveedor_sugerido_id: i.proveedor_sugerido_id || null,
+              entrega_min: i.entrega_min ?? null,
+              entrega_max: i.entrega_max ?? null,
+              entrega_unidad: i.entrega_unidad || null,
           }));
           try {
               const r = await fetch('/api/ventas/plantillas', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nombre, descripcion: desc, lineas })});
@@ -679,6 +683,9 @@
           descuento: Number(l.descuento || 0),
           tipoLinea: l.tipo_linea,
           proveedor_sugerido_id: l.proveedor_sugerido_id,
+          entrega_min: l.entrega_min ?? null,
+          entrega_max: l.entrega_max ?? null,
+          entrega_unidad: l.entrega_unidad || null,
       }));
       // Rellenar nombres/skus desde state.prods cuando aplique
       state.cart.forEach(it => {
@@ -846,6 +853,9 @@
           max: 9999,
           utilidad: 0,
           descuento: 0,
+          entrega_min: null,
+          entrega_max: null,
+          entrega_unidad: null,
           tipoLinea: 'servicio',
       });
       cerrarModalServicio();
@@ -1030,6 +1040,9 @@
           max: 9999,
           utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
           descuento: 0,
+          entrega_min: null,
+          entrega_max: null,
+          entrega_unidad: null,
       });
       cerrarModalFantasma();
       ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
@@ -1069,6 +1082,9 @@
               max: p.stock_actual,
               utilidad: util,
               descuento: 0,
+              entrega_min: null,
+              entrega_max: null,
+              entrega_unidad: null,
           });
           // B5: cargar productos relacionados (no bloquea)
           cargarProductosRelacionados(p.id);
@@ -1089,7 +1105,7 @@
       let subtotal = 0;
 
       if(state.cart.length === 0) {
-          tb.innerHTML = '<tr><td colspan="9" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
+          tb.innerHTML = '<tr><td colspan="10" class="p-10 text-center text-slate-400 italic">Agrega productos</td></tr>';
           updTotal(0); return;
       }
 
@@ -1144,6 +1160,24 @@
                           class="w-14 text-center text-xs rounded font-bold outline-none border ${descPct > 0 ? 'border-amber-500 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-300 dark:border-slate-600 text-slate-500'}"
                           title="Descuento %">
                   </td>
+                  <td class="p-3 text-center">
+                      <div class="inline-flex items-center gap-0.5 justify-center" title="Tiempo de entrega: mín–máx + unidad">
+                          <input type="number" min="0" value="${i.entrega_min ?? ''}" onchange="updItem(${idx}, 'entrega_min', this.value)"
+                              placeholder="—" aria-label="Entrega mínima"
+                              class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
+                          <span class="text-[10px] text-slate-400">–</span>
+                          <input type="number" min="0" value="${i.entrega_max ?? ''}" onchange="updItem(${idx}, 'entrega_max', this.value)"
+                              placeholder="—" aria-label="Entrega máxima"
+                              class="w-9 text-center text-[11px] rounded border border-slate-300 dark:border-slate-600 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
+                          <select onchange="updItem(${idx}, 'entrega_unidad', this.value)"
+                              aria-label="Unidad de entrega"
+                              class="text-[10px] rounded border border-slate-300 dark:border-slate-600 ml-0.5 px-0.5 outline-none focus:border-cyan-500 dark:text-slate-200 bg-transparent">
+                              <option value="" ${!i.entrega_unidad ? 'selected' : ''}>—</option>
+                              <option value="dias" ${i.entrega_unidad === 'dias' ? 'selected' : ''}>días</option>
+                              <option value="semanas" ${i.entrega_unidad === 'semanas' ? 'selected' : ''}>sem.</option>
+                          </select>
+                      </div>
+                  </td>
                   <td class="p-3 text-right text-xs font-bold text-cyan-700 dark:text-cyan-300">${moneyForQuote(precioFinal)}</td>
                   <td class="p-3 text-right text-xs font-bold text-slate-800 dark:text-slate-200">${fmtMoney(importe)}</td>
                   <td class="p-3 text-center text-slate-400">
@@ -1169,10 +1203,29 @@
           autosaveBorrador();
           return;
       }
+      if(t=='entrega_unidad') {
+          const u = (v === 'dias' || v === 'semanas') ? v : null;
+          state.cart[idx].entrega_unidad = u;
+          // Si se borra unidad, también limpia min/max para mantener
+          // el invariante "los 3 o ninguno".
+          if (!u) {
+              state.cart[idx].entrega_min = null;
+              state.cart[idx].entrega_max = null;
+          }
+          renderCart();
+          autosaveBorrador();
+          return;
+      }
       let val = parseFloat(v)||0;
       if(t=='qty') state.cart[idx].qty = val < 1 ? 1 : val;
       if(t=='utilidad') state.cart[idx].utilidad = val < 0 ? 0 : (val > 99 ? 99 : val);
       if(t=='descuento') state.cart[idx].descuento = val < 0 ? 0 : (val > 100 ? 100 : val);
+      if(t=='entrega_min') {
+          state.cart[idx].entrega_min = v === '' ? null : Math.max(0, Math.floor(val));
+      }
+      if(t=='entrega_max') {
+          state.cart[idx].entrega_max = v === '' ? null : Math.max(0, Math.floor(val));
+      }
       renderCart();
       autosaveBorrador();
   }
@@ -1255,6 +1308,9 @@
               costo_unitario: i.ghost ? i.cost : null,
               tipo_linea: i.tipoLinea || (i.servicio ? 'servicio' : (i.ghost ? 'producto_fantasma' : 'producto_catalogo')),
               proveedor_sugerido_id: i.proveedor_sugerido_id || null,
+              entrega_min: i.entrega_min ?? null,
+              entrega_max: i.entrega_max ?? null,
+              entrega_unidad: i.entrega_unidad || null,
           })),
           observaciones: document.getElementById('observaciones').value
       };

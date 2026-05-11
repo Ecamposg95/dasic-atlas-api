@@ -4,9 +4,9 @@ Sales schemas: OrdenVenta, DetalleOrden.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from app.models.enums import EstatusOrden
 from app.schemas.clients import ClienteResponse
@@ -26,6 +26,26 @@ class DetalleOrdenCreate(BaseModel):
     # Tipo de línea: producto_catalogo / producto_fantasma / servicio
     tipo_linea: Optional[str] = Field(default="producto_catalogo", max_length=20)
     proveedor_sugerido_id: Optional[int] = None
+    # Tiempo de entrega por línea (rango + unidad). Los 3 viajan juntos o
+    # ninguno; min <= max. Se valida en model_validator.
+    entrega_min: Optional[int] = Field(default=None, ge=0)
+    entrega_max: Optional[int] = Field(default=None, ge=0)
+    entrega_unidad: Optional[Literal["dias", "semanas"]] = None
+
+    @model_validator(mode="after")
+    def _validar_entrega(self) -> "DetalleOrdenCreate":
+        provistos = [
+            self.entrega_min is not None,
+            self.entrega_max is not None,
+            self.entrega_unidad is not None,
+        ]
+        if any(provistos) and not all(provistos):
+            raise ValueError(
+                "entrega_min, entrega_max y entrega_unidad deben venir los 3 o ninguno"
+            )
+        if all(provistos) and self.entrega_min > self.entrega_max:
+            raise ValueError("entrega_min no puede ser mayor que entrega_max")
+        return self
 
 
 class DetalleOrdenResponse(BaseModel):
@@ -41,6 +61,9 @@ class DetalleOrdenResponse(BaseModel):
     subtotal: Decimal
     tipo_linea: Optional[str] = "producto_catalogo"
     proveedor_sugerido_id: Optional[int] = None
+    entrega_min: Optional[int] = None
+    entrega_max: Optional[int] = None
+    entrega_unidad: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

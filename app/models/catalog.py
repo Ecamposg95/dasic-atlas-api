@@ -46,6 +46,11 @@ class Producto(Base):
 
     proveedor_principal_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True, index=True)
     proveedor_alterno_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    # DEPRECADO: ahora los tiempos de entrega se capturan por línea en
+    # DetalleOrden (entrega_min, entrega_max, entrega_unidad) directamente
+    # desde el cotizador. El campo se mantiene por compat con datos legacy
+    # y CSV imports históricos, pero ya no se hereda al cart ni se muestra
+    # en el side-panel de inventario.
     tiempo_entrega_dias = Column(Integer, nullable=False, default=7)
     es_servicio = Column(Boolean, nullable=False, default=False)
 

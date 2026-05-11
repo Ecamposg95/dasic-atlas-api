@@ -66,6 +66,13 @@ class DetalleOrden(Base):
     tipo_linea = Column(String(20), nullable=False, default="producto_catalogo")
     proveedor_sugerido_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
 
+    # Tiempos de entrega por línea (estructurado). Los 3 viajan juntos: o
+    # vienen los 3 o ninguno. unidad ∈ {'dias','semanas'}. min <= max.
+    # Defaults NULL — los captura el usuario en el cotizador.
+    entrega_min = Column(Integer, nullable=True)
+    entrega_max = Column(Integer, nullable=True)
+    entrega_unidad = Column(String(10), nullable=True)
+
     orden = relationship("OrdenVenta", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles_orden")
     proveedor_sugerido = relationship("Proveedor", foreign_keys=[proveedor_sugerido_id])

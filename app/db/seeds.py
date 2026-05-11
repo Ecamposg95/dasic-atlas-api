@@ -68,6 +68,10 @@ _BACKFILL_DDL = [
     # 20260512_03: FK Producto.marca_id → marcas.id (SET NULL en delete)
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS marca_id INTEGER REFERENCES marcas(id) ON DELETE SET NULL",
     "CREATE INDEX IF NOT EXISTS ix_productos_marca_id ON productos (marca_id)",
+    # 20260513_01: tiempos de entrega por línea (sin CHECK aquí; CHECK solo en migración formal)
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_min INTEGER",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_max INTEGER",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_unidad VARCHAR(10)",
 ]
 
 

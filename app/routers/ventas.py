@@ -250,9 +250,13 @@ PDF_TEMPLATE_VENTA = """
     {% endif %}
   </div>
 
-  {% set ns = namespace(has_desc=false) %}
-  {% for d in orden.detalles %}{% if (d.descuento_aplicado or 0) > 0 %}{% set ns.has_desc = true %}{% endif %}{% endfor %}
-  {% set cols_label = 6 if ns.has_desc else 5 %}
+  {% set ns = namespace(has_desc=false, has_entrega=false) %}
+  {% for d in orden.detalles %}
+    {% if (d.descuento_aplicado or 0) > 0 %}{% set ns.has_desc = true %}{% endif %}
+    {% if d.entrega_min is not none and d.entrega_max is not none and d.entrega_unidad %}{% set ns.has_entrega = true %}{% endif %}
+  {% endfor %}
+  {% set cols_extra = (1 if ns.has_desc else 0) + (1 if ns.has_entrega else 0) %}
+  {% set cols_label = 5 + cols_extra %}
   <table class="items">
     <thead>
       <tr>
@@ -260,6 +264,7 @@ PDF_TEMPLATE_VENTA = """
         <th style="width: 16%;">Catalog #</th>
         <th>Description</th>
         <th style="width: 7%;">Qty</th>
+        {% if ns.has_entrega %}<th style="width: 12%;">Entrega</th>{% endif %}
         <th style="width: 14%;">UNIT</th>
         {% if ns.has_desc %}<th style="width: 8%;">Dto%</th>{% endif %}
         <th style="width: 14%;">SubTotal</th>
@@ -272,6 +277,7 @@ PDF_TEMPLATE_VENTA = """
         <td><div class="item-cat">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or (item.producto.sku if item.producto else "—") }}</div></td>
         <td><div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div></td>
         <td class="center">{{ item.cantidad }}</td>
+        {% if ns.has_entrega %}<td class="center">{% if item.entrega_min is not none and item.entrega_max is not none and item.entrega_unidad %}{% if item.entrega_min == item.entrega_max %}{{ item.entrega_min }} {{ item.entrega_unidad }}{% else %}{{ item.entrega_min }}–{{ item.entrega_max }} {{ item.entrega_unidad }}{% endif %}{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
         {% if ns.has_desc %}<td class="center">{% if (item.descuento_aplicado or 0) > 0 %}{{ "{:g}".format(item.descuento_aplicado|float) }}%{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.subtotal) }}</td>
@@ -454,6 +460,9 @@ def crear_orden(
                 subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                entrega_min=item.entrega_min,
+                entrega_max=item.entrega_max,
+                entrega_unidad=item.entrega_unidad,
             ))
 
             # Reserva inventario sólo si es producto del catálogo y la orden es cotización
@@ -596,6 +605,9 @@ def actualizar_orden(
                 subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                entrega_min=item.entrega_min,
+                entrega_max=item.entrega_max,
+                entrega_unidad=item.entrega_unidad,
             ))
 
             if (
@@ -684,6 +696,11 @@ def recotizar(
             utilidad_aplicada=det.utilidad_aplicada,
             descuento_aplicado=det.descuento_aplicado,
             subtotal=det.subtotal,
+            tipo_linea=det.tipo_linea,
+            proveedor_sugerido_id=det.proveedor_sugerido_id,
+            entrega_min=det.entrega_min,
+            entrega_max=det.entrega_max,
+            entrega_unidad=det.entrega_unidad,
         ))
 
     db.commit()
@@ -855,7 +872,10 @@ def obtener_detalle_orden(
             "precio_unitario": d.precio_unitario,
             "utilidad_aplicada": d.utilidad_aplicada,
             "descuento_aplicado": d.descuento_aplicado,
-            "subtotal": d.subtotal
+            "subtotal": d.subtotal,
+            "entrega_min": d.entrega_min,
+            "entrega_max": d.entrega_max,
+            "entrega_unidad": d.entrega_unidad,
         })
         
     return {
