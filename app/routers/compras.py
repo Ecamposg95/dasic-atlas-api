@@ -11,7 +11,9 @@ from app import models
 from app import schemas
 from app.core.config import get_settings
 from app.db import get_db
+from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin_asistente, get_current_user
+from app.services.stock_service import aplicar_movimiento
 from pydantic import BaseModel
 
 
@@ -365,8 +367,18 @@ def crear_oc_desde_cotizacion(
                 costo_unitario=costo_unitario,
             ))
             if payload.afecta_stock:
-                producto.stock_actual += item.cantidad
-                producto.costo_compra = costo_unitario
+                # ENTRADA auditada con lock pesimista. Antes era mutación directa.
+                aplicar_movimiento(
+                    db,
+                    producto=producto,
+                    tipo=TipoMovimientoStock.ENTRADA.value,
+                    cantidad=item.cantidad,
+                    referencia_tipo="oc",
+                    referencia_id=oc.id,
+                    motivo=f"OC {oc.folio} con afecta_stock=True (desde cotización {quote.folio})",
+                    usuario=current_user,
+                )
+                producto.costo_compra = costo_unitario  # metadato, no stock
 
         oc.total = total
 
@@ -396,7 +408,11 @@ def crear_oc_desde_cotizacion(
 
 
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
-def registrar_compra(compra: CompraInput, db: Session = Depends(get_db)):
+def registrar_compra(
+    compra: CompraInput,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
     proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == compra.proveedor_id).first()
     if not proveedor: raise HTTPException(404, "Proveedor no encontrado")
 
@@ -409,8 +425,18 @@ def registrar_compra(compra: CompraInput, db: Session = Depends(get_db)):
         for item in compra.detalles:
             prod = db.query(models.Producto).filter(models.Producto.id == item.producto_id).first()
             if prod:
-                prod.stock_actual += item.cantidad
-                prod.costo_compra = item.costo_unitario
+                # ENTRADA auditada con lock. Antes mutaba prod.stock_actual directo.
+                aplicar_movimiento(
+                    db,
+                    producto=prod,
+                    tipo=TipoMovimientoStock.ENTRADA.value,
+                    cantidad=item.cantidad,
+                    referencia_tipo="compra_directa",
+                    referencia_id=nueva_orden.id,
+                    motivo=f"compra directa a proveedor #{proveedor.id}",
+                    usuario=current_user,
+                )
+                prod.costo_compra = item.costo_unitario  # metadato, no stock
                 total += item.costo_unitario * item.cantidad
                 db.add(models.DetalleCompra(
                     orden_compra_id=nueva_orden.id, producto_id=prod.id,
@@ -475,9 +501,6 @@ def recibir_oc(
     current_user: models.Usuario = Depends(get_current_user),
 ):
     """Marca OC como recibida y emite ENTRADA por cada DetalleCompra."""
-    from app.services.stock_service import aplicar_movimiento
-    from app.models.enums import TipoMovimientoStock
-
     orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
     if not orden:
         raise HTTPException(404, "OC no encontrada")

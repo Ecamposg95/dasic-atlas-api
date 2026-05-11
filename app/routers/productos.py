@@ -308,7 +308,8 @@ def obtener_producto(
 @router.post("/", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
 def crear_producto(
     producto: schemas.ProductoCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     raw_sku = (producto.sku or "").strip()
     sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db, marca=producto.marca)
@@ -328,8 +329,26 @@ def crear_producto(
     if payload.get("precio_publico") is None:
         payload.pop("precio_publico", None)
 
+    # El stock inicial entra al producto vía aplicar_movimiento (ENTRADA auditable).
+    # Nace con 0 y se ajusta abajo, garantizando kardex completo desde día 1.
+    stock_inicial = int(payload.pop("stock_actual", 0) or 0)
+    payload["stock_actual"] = 0
+
     nuevo_producto = models.Producto(**payload)
     db.add(nuevo_producto)
+    db.flush()
+
+    if stock_inicial > 0:
+        aplicar_movimiento(
+            db,
+            producto=nuevo_producto,
+            tipo=TipoMovimientoStock.ENTRADA.value,
+            cantidad=stock_inicial,
+            referencia_tipo="stock_inicial",
+            motivo="alta de producto con stock inicial",
+            usuario=current_user,
+        )
+
     db.commit()
     db.refresh(nuevo_producto)
     return nuevo_producto
@@ -339,14 +358,18 @@ def crear_producto(
 def actualizar_producto(
     id: int,
     producto_update: schemas.ProductoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    # Actualizamos solo los campos enviados
+    # Actualizamos solo los campos enviados.
     update_data = producto_update.model_dump(exclude_unset=True)
+    # stock_actual sale del setattr loop: lo procesamos al final como AJUSTE auditable.
+    nuevo_stock = update_data.pop("stock_actual", None)
+
     if "sku_comercial" in update_data:
         update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
     if "marca" in update_data:
@@ -357,6 +380,25 @@ def actualizar_producto(
         update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
     for key, value in update_data.items():
         setattr(db_producto, key, value)
+
+    # Si el body trajo stock_actual y cambia, emitimos un AJUSTE por el delta.
+    # Esto preserva kardex aún cuando el cambio entra por el PUT y no por /ajustar-stock.
+    if nuevo_stock is not None:
+        delta = int(nuevo_stock) - int(db_producto.stock_actual or 0)
+        if delta != 0:
+            try:
+                aplicar_movimiento(
+                    db,
+                    producto=db_producto,
+                    tipo=TipoMovimientoStock.AJUSTE.value,
+                    cantidad=delta,
+                    referencia_tipo="put_producto",
+                    motivo="ajuste vía edición de producto",
+                    usuario=current_user,
+                )
+            except ValueError as exc:
+                db.rollback()
+                raise HTTPException(status_code=400, detail=str(exc))
 
     db.commit()
     db.refresh(db_producto)
@@ -430,12 +472,19 @@ def ajustar_stock(
 @router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
 async def cargar_inventario_csv(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     """
     Importa productos desde CSV o Excel (.xlsx).
     Columnas base: sku (opcional, se autogenera), nombre, costo, stock.
-    Columnas opcionales: sku_comercial, moneda_compra, precio_publico, precio_mayorista, precio_distribuidor, descripcion, stock_minimo.
+    Columnas opcionales: sku_comercial, moneda_compra, precio_publico,
+    precio_mayorista, precio_distribuidor, descripcion, stock_minimo.
+
+    Semántica de stock: REPLACE auditable. Si el SKU ya existe, el stock del
+    CSV reemplaza al actual (no se suma). El delta queda registrado en kardex
+    como MovimientoStock AJUSTE con referencia_tipo='import_csv'. Re-subir el
+    mismo archivo no duplica stock.
     """
     filename = (file.filename or "").lower()
     content = await file.read()
@@ -470,12 +519,9 @@ async def cargar_inventario_csv(
             nombre_check = _read_text(row, "nombre")
             if not sku and not nombre_check:
                 continue  # Fila vacía
-            if not sku:
-                # Autogenerar SKU interno si no viene en el archivo
-                sku = _generate_internal_sku(db, marca=marca)
-            else:
-                sku = _normalize_sku(sku)
 
+            # Leer campos ANTES de autogenerar SKU: marca participa en el
+            # SKU autogenerado y antes estaba siendo referenciada sin definir.
             sku_comercial = _read_text(row, "sku_comercial")
             nombre = _read_text(row, "nombre", "Sin Nombre") or "Sin Nombre"
             descripcion = _read_text(row, "descripcion", "") or ""
@@ -488,6 +534,12 @@ async def cargar_inventario_csv(
             precio_distribuidor = _read_decimal(row, "precio_distribuidor") or Decimal("0")
             stock_actual = _read_int(row, "stock_actual", 0)
             stock_minimo = _read_int(row, "stock_minimo", 5)
+
+            if not sku:
+                # Autogenerar SKU interno si no viene en el archivo.
+                sku = _generate_internal_sku(db, marca=marca)
+            else:
+                sku = _normalize_sku(sku)
 
             if stock_actual < 0:
                 raise ValueError(
@@ -506,8 +558,7 @@ async def cargar_inventario_csv(
             producto_existente = db.query(models.Producto).filter(models.Producto.sku == sku).first()
 
             if producto_existente:
-                # Actualizar Stock y Precios si vienen en el CSV
-                producto_existente.stock_actual += stock_actual
+                # Metadata directo (no stock).
                 producto_existente.sku_comercial = sku_comercial or producto_existente.sku_comercial or sku
                 producto_existente.nombre = nombre or producto_existente.nombre
                 producto_existente.descripcion = descripcion or producto_existente.descripcion
@@ -522,9 +573,26 @@ async def cargar_inventario_csv(
                     producto_existente.precio_publico = precio_publico
                 producto_existente.precio_mayorista = precio_mayorista
                 producto_existente.precio_distribuidor = precio_distribuidor
+
+                # Stock con semántica REPLACE auditable: el valor del CSV se
+                # vuelve absoluto. Si difiere del actual, emitimos un AJUSTE
+                # por el delta para preservar kardex. Re-subir el mismo CSV no
+                # duplica nada (delta = 0 → sin movimiento).
+                delta = stock_actual - int(producto_existente.stock_actual or 0)
+                if delta != 0:
+                    aplicar_movimiento(
+                        db,
+                        producto=producto_existente,
+                        tipo=TipoMovimientoStock.AJUSTE.value,
+                        cantidad=delta,
+                        referencia_tipo="import_csv",
+                        motivo=f"import {file.filename} fila {idx}",
+                        usuario=current_user,
+                    )
+
                 registros_actualizados += 1
             else:
-                # Crear nuevo
+                # Crear nuevo con stock=0 y ENTRADA por stock inicial (kardex completo).
                 kwargs = dict(
                     sku=sku,
                     sku_comercial=sku_comercial or sku,
@@ -536,13 +604,24 @@ async def cargar_inventario_csv(
                     precio_distribuidor=precio_distribuidor,
                     costo_compra=costo_compra,
                     moneda_compra=moneda_compra,
-                    stock_actual=stock_actual,
+                    stock_actual=0,
                     stock_minimo=stock_minimo,
                 )
                 if precio_publico is not None:
                     kwargs["precio_publico"] = precio_publico
                 nuevo_prod = models.Producto(**kwargs)
                 db.add(nuevo_prod)
+                db.flush()
+                if stock_actual > 0:
+                    aplicar_movimiento(
+                        db,
+                        producto=nuevo_prod,
+                        tipo=TipoMovimientoStock.ENTRADA.value,
+                        cantidad=stock_actual,
+                        referencia_tipo="import_csv",
+                        motivo=f"alta vía import {file.filename} fila {idx}",
+                        usuario=current_user,
+                    )
                 registros_nuevos += 1
 
         except Exception as e:

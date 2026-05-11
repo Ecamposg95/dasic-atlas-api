@@ -19,7 +19,9 @@ from app.services.email_service import (
     smtp_configured,
 )
 from app.services.ai_service import sugerir_proximo_paso
+from app.models.enums import TipoMovimientoStock
 from app.services.stock_service import (
+    aplicar_movimiento,
     consumir_reservas_a_salida,
     liberar_reservas_cotizacion,
     reservar_para_cotizacion,
@@ -387,9 +389,21 @@ def crear_orden(
                     raise HTTPException(404, f"Producto {item.producto_id} no existe")
 
                 if tipo_orden != models.EstatusOrden.COTIZACION:
-                    if producto.stock_actual < item.cantidad:
-                        raise HTTPException(400, f"Stock insuficiente para {producto.sku}")
-                    producto.stock_actual -= item.cantidad
+                    # SALIDA auditada (kardex) + lock pesimista vía aplicar_movimiento.
+                    # El servicio valida stock no-negativo y levanta ValueError si falla.
+                    try:
+                        aplicar_movimiento(
+                            db,
+                            producto=producto,
+                            tipo=TipoMovimientoStock.SALIDA.value,
+                            cantidad=-item.cantidad,
+                            referencia_tipo="venta_directa",
+                            referencia_id=nueva_orden.id,
+                            motivo=f"venta directa {nueva_orden.folio}",
+                            usuario=current_user,
+                        )
+                    except ValueError as exc:
+                        raise HTTPException(400, f"Stock insuficiente para {producto.sku}: {exc}")
 
                 moneda_origen_linea = (
                     item.moneda_origen or producto.moneda_compra or "MXN"
