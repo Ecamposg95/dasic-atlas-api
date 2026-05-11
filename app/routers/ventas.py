@@ -178,14 +178,18 @@ PDF_TEMPLATE_VENTA = """
   html, body { margin: 0; padding: 0; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 10.5px; line-height: 1.35; }
 
-  /* Página flex column: el footer se empuja al final del contenido con
-     margin-top: auto. No queda gap vacío entre contenido y footer. */
+  /* Página: flex column + footer absoluto al fondo (sin espacio en blanco
+     después del footer). El bloque .cierre tiene margin-top: auto, por lo
+     que se empuja hacia abajo justo antes del footer. En cotizaciones
+     cortas, el gap natural queda entre la tabla y el cierre, no después
+     del footer. */
   .page {
     width: 100%;
     min-height: 100vh;
-    padding: 18px 32px 0 32px;
+    padding: 18px 32px 44px 32px;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
 
   /* Header DASIC — compacto y elegante */
@@ -231,9 +235,12 @@ PDF_TEMPLATE_VENTA = """
   ul.terms li { margin-bottom: 0.5px; }
   ul.terms strong { color:#0f172a; }
 
-  /* Cierre: layout horizontal compacto (texto izq + QR der) para caber en 1 hoja */
+  /* Cierre: layout horizontal compacto (texto izq + QR der).
+     margin-top: auto lo empuja hacia abajo dentro del flex column de
+     la .page, así queda justo arriba del footer absoluto. */
   .cierre {
-    margin-top: 10px;
+    margin-top: auto;
+    padding-top: 18px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -253,12 +260,12 @@ PDF_TEMPLATE_VENTA = """
   .cierre-right .qr-label { font-size: 8px; color:#475569; margin-top: 2px; }
   .cierre-right .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
 
-  /* Footer compacto — en flujo normal. margin-top: auto lo empuja al
-     final si hay espacio, o queda pegado al contenido si la cotización
-     llena la hoja. Margenes negativos compensan el padding del .page
-     para que el footer ocupe todo el ancho de la hoja. */
+  /* Footer absoluto al fondo de la hoja. Sin espacio en blanco después
+     del footer. El .page tiene padding-bottom: 44px para reservar este
+     espacio sin que el contenido se traslape. */
   .footer-bar {
-    margin: auto -32px 0 -32px;
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
     background: linear-gradient(180deg, #0f3a66 0%, #0a2949 100%);
     color:#cbd5e1; font-size: 10px; text-align: center; padding: 8px 0; letter-spacing: 1px;
   }
