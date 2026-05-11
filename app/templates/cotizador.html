@@ -1120,11 +1120,18 @@
                           class="w-12 bg-transparent border border-slate-300 dark:border-slate-600 text-center text-xs rounded focus:border-cyan-500 outline-none dark:text-white">
                   </td>
                   <td class="p-3 text-center">
-                      <select onchange="updItem(${idx}, 'productCurrency', this.value)"
-                          class="text-[11px] font-bold rounded px-1 py-0.5 border ${monedaBadge} outline-none cursor-pointer">
-                          <option value="MXN" ${i.productCurrency==='MXN'?'selected':''}>MXN</option>
-                          <option value="USD" ${i.productCurrency==='USD'?'selected':''}>USD</option>
-                      </select>
+                      ${(i.servicio || i.ghost) ? `
+                          <select onchange="updItem(${idx}, 'productCurrency', this.value)"
+                              class="text-[11px] font-bold rounded px-1 py-0.5 border ${monedaBadge} outline-none cursor-pointer">
+                              <option value="MXN" ${i.productCurrency==='MXN'?'selected':''}>MXN</option>
+                              <option value="USD" ${i.productCurrency==='USD'?'selected':''}>USD</option>
+                          </select>
+                      ` : `
+                          <span class="text-[11px] font-bold rounded px-2 py-0.5 border ${monedaBadge}"
+                                title="Definida al registrar el producto en inventario">
+                              ${i.productCurrency}
+                          </span>
+                      `}
                   </td>
                   <td class="p-3 text-right text-xs text-slate-600 dark:text-slate-300">${moneyForQuote(costo)}</td>
                   <td class="p-3 text-center">
