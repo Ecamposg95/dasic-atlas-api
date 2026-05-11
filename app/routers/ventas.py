@@ -174,7 +174,7 @@ PDF_TEMPLATE_VENTA = """
 
   /* Header DASIC */
   .brand-row { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 4px solid #0f3a66; }
-  .brand-mark { width: 46px; height: 46px; border-radius: 8px; background: linear-gradient(135deg,#0f3a66,#1d6fb8); color:#fff; font-weight: 900; font-size: 24px; display:flex; align-items:center; justify-content:center; letter-spacing: -1px; }
+  .brand-logo { height: 56px; width: auto; object-fit: contain; }
   .brand-name { font-size: 30px; font-weight: 900; color:#0f3a66; letter-spacing: 1px; }
   .brand-tag { font-size: 11px; color:#475569; margin-top: 2px; letter-spacing: 0.5px; }
   .brand-rule { height: 6px; background: linear-gradient(90deg,#0f3a66,#1d6fb8 60%,#cbd5e1); margin-bottom: 22px; }
@@ -237,7 +237,7 @@ PDF_TEMPLATE_VENTA = """
 <div class="page">
 
   <div class="brand-row">
-    <div class="brand-mark">D</div>
+    <img src="/static/img/Logo_main.png" alt="DASIC" class="brand-logo">
     <div>
       <div class="brand-name">DASIC</div>
       <div class="brand-tag">Development Of Automation System And Industrial Control</div>
