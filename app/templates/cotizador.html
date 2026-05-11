@@ -297,7 +297,7 @@
 {% block extra_scripts %}
 <script>
   let state = {
-    prods: [], cart: [], moneda: 'MXN', tc: 20.00,
+    prods: [], prodsTs: 0, cart: [], moneda: 'MXN', tc: 20.00,
     lastSavedId: null, firstMatch: null,
     sinonimos: [],
     plantillas: [],
@@ -888,9 +888,31 @@
                   sel.innerHTML += `<option value="${c.id}">${label}</option>`;
               });
           }
-          if(pRes.ok) state.prods = await pRes.json();
+          if(pRes.ok) {
+              state.prods = await pRes.json();
+              state.prodsTs = Date.now();
+          }
       } catch(e) { console.error(e); }
   }
+
+  // Refresca state.prods en background si pasó más del TTL desde la última
+  // carga. Llamado al ganar foco la ventana, así si el usuario edita stock
+  // en /inventario en otra pestaña y vuelve aquí, ve datos frescos.
+  // TTL pragmático; BroadcastChannel cross-tab queda como follow-up.
+  const PRODS_CACHE_TTL_MS = 60_000;
+  async function refrescarProdsSiViejos() {
+      const ahora = Date.now();
+      if (!state.prodsTs || ahora - state.prodsTs > PRODS_CACHE_TTL_MS) {
+          try {
+              const r = await fetch('/api/productos/?limit=2000', { credentials: 'include' });
+              if (r.ok) {
+                  state.prods = await r.json();
+                  state.prodsTs = ahora;
+              }
+          } catch (_) {}
+      }
+  }
+  window.addEventListener('focus', refrescarProdsSiViejos);
 
   function cambiarMoneda() {
       state.moneda = document.getElementById('select-moneda').value;

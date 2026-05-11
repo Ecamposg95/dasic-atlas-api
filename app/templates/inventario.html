@@ -29,10 +29,36 @@
   <div x-show="importMsg.text" x-cloak class="mb-4">
     <div class="rounded-xl border px-4 py-3 text-sm"
          :class="importMsg.type === 'error'
-           ? 'border-red-500/30 bg-red-500/10 text-red-200'
+           ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'">
-      <p x-text="importMsg.text"></p>
+      <div class="flex items-start justify-between gap-3">
+        <p x-text="importMsg.text" class="flex-1"></p>
+        <button x-show="importMsg.text" type="button" @click="importMsg={text:'',type:'success',hint:'',errores:[]}"
+                aria-label="Cerrar aviso"
+                class="text-slate-400 hover:text-white transition shrink-0">
+          <i class="fas fa-times text-xs"></i>
+        </button>
+      </div>
       <p x-show="importMsg.hint" class="mt-1 text-xs text-slate-300" x-text="importMsg.hint"></p>
+
+      <!-- Errores granulares por fila del CSV -->
+      <template x-if="importMsg.errores && importMsg.errores.length">
+        <div class="mt-2 border-t border-rose-500/20 pt-2">
+          <button type="button" @click="importMsg.expandErrores = !importMsg.expandErrores"
+                  class="text-[11px] text-rose-200 hover:text-white font-bold uppercase tracking-wide flex items-center gap-1">
+            <i class="fas" :class="importMsg.expandErrores ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            <span x-text="`Ver ${importMsg.errores.length} error(es) por fila`"></span>
+          </button>
+          <ul x-show="importMsg.expandErrores" x-cloak class="mt-2 space-y-1 text-[11px] font-mono">
+            <template x-for="(err, i) in importMsg.errores.slice(0, 50)" :key="i">
+              <li class="text-rose-200" x-text="err"></li>
+            </template>
+            <template x-if="importMsg.errores.length > 50">
+              <li class="text-slate-400 italic" x-text="`(+${importMsg.errores.length - 50} errores adicionales no mostrados)`"></li>
+            </template>
+          </ul>
+        </div>
+      </template>
     </div>
   </div>
 
@@ -108,16 +134,16 @@
     <table class="dax-table">
       <thead>
         <tr>
-          <th>Producto / SKU</th>
-          <th>Marca</th>
-          <th class="text-center">Unidad</th>
-          <th class="text-right">Físico</th>
-          <th class="text-right">Reservado</th>
-          <th class="text-right">Disponible</th>
-          <th class="text-right">Mínimo</th>
-          <th class="text-right" x-show="$store.user.can('ver_costos')" x-cloak>Costo</th>
-          <th>Estatus</th>
-          <th class="text-right">Acciones</th>
+          <th scope="col">Producto / SKU</th>
+          <th scope="col">Marca</th>
+          <th scope="col" class="text-center">Unidad</th>
+          <th scope="col" class="text-right">Físico</th>
+          <th scope="col" class="text-right">Reservado</th>
+          <th scope="col" class="text-right">Disponible</th>
+          <th scope="col" class="text-right">Mínimo</th>
+          <th scope="col" class="text-right" x-show="$store.user.can('ver_costos')" x-cloak>Costo</th>
+          <th scope="col">Estatus</th>
+          <th scope="col" class="text-right">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -156,17 +182,21 @@
               <td class="text-right" @click.stop>
                 <div class="inline-flex items-center gap-1">
                   <button @click="ajustarStock(p, -1)" :disabled="p.stock_actual<=0"
-                          class="dax-btn-ghost py-1 px-2 disabled:opacity-30" title="−1 stock">
-                    <i class="fas fa-minus text-[10px]"></i>
+                          class="dax-btn-ghost py-1 px-2 disabled:opacity-30"
+                          title="Restar 1 al stock" :aria-label="`Restar 1 al stock de ${p.nombre || p.sku}`">
+                    <i class="fas fa-minus text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="ajustarStock(p, +1)" class="dax-btn-ghost py-1 px-2" title="+1 stock">
-                    <i class="fas fa-plus text-[10px]"></i>
+                  <button @click="ajustarStock(p, +1)" class="dax-btn-ghost py-1 px-2"
+                          title="Sumar 1 al stock" :aria-label="`Sumar 1 al stock de ${p.nombre || p.sku}`">
+                    <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="abrirEdicion(p)" class="dax-btn-ghost py-1 px-2" title="Editar">
-                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  <button @click="abrirEdicion(p)" class="dax-btn-ghost py-1 px-2"
+                          title="Editar" :aria-label="`Editar producto ${p.nombre || p.sku}`">
+                    <i class="fas fa-pen-to-square text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="eliminar(p)" class="dax-btn-ghost py-1 px-2 hover:text-red-400" title="Eliminar">
-                    <i class="fas fa-trash text-[10px]"></i>
+                  <button @click="eliminar(p)" class="dax-btn-ghost py-1 px-2 hover:text-red-400"
+                          title="Eliminar" :aria-label="`Eliminar producto ${p.nombre || p.sku}`">
+                    <i class="fas fa-trash text-[10px]" aria-hidden="true"></i>
                   </button>
                 </div>
               </td>
@@ -479,6 +509,30 @@ document.addEventListener('alpine:init', () => {
   Alpine.store('invSide', { open: false });
 });
 
+// Helper global: parsea response.json() de FastAPI/Pydantic en mensaje legible.
+// Cubre tres formas comunes de `detail`:
+//   - string plano → se usa tal cual
+//   - array de ValidationError pydantic → "loc.field: msg" por error, joined
+//   - object cualquiera → JSON stringify como fallback
+async function formatApiError(res, fallback) {
+  try {
+    const data = await res.clone().json();
+    const d = data?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) {
+      return d.map(e => {
+        const loc = Array.isArray(e?.loc) ? e.loc.slice(1).join('.') : '';
+        return loc ? `${loc}: ${e.msg || ''}` : (e.msg || JSON.stringify(e));
+      }).join(' · ');
+    }
+    if (d && typeof d === 'object') {
+      if (d.mensaje) return d.mensaje;
+      return JSON.stringify(d);
+    }
+  } catch (_) {}
+  return fallback || 'Error del servidor.';
+}
+
 function inventario() {
   return {
     loading: true,
@@ -486,7 +540,7 @@ function inventario() {
     disp: {},  // {producto_id: {stock_actual, reservado, disponible, en_oc_pendiente}}
     q: '', filtroEstatus: '', filtroMarca: '',
     kpi: { total:0, criticos:0, sin_stock:0, ok:0 },
-    importMsg: { text:'', type:'success', hint:'' },
+    importMsg: { text:'', type:'success', hint:'', errores: [], expandErrores: false },
 
     get marcasEnUso() {
       const set = new Set();
@@ -564,8 +618,10 @@ function inventario() {
           p.stock_actual = updated.stock_actual;
           this.calcularKpi();
         } else {
-          const err = await res.json().catch(()=>({}));
-          this.importMsg = { text: err.detail || 'No se pudo ajustar el stock.', type: 'error', hint: '' };
+          this.importMsg = {
+            text: await formatApiError(res, 'No se pudo ajustar el stock.'),
+            type: 'error', hint: '', errores: [], expandErrores: false,
+          };
         }
       } catch(e) { console.warn(e); }
     },
@@ -575,11 +631,13 @@ function inventario() {
       try {
         const res = await fetch(`/api/productos/${p.id}`, { method:'DELETE', credentials:'include' });
         if (res.ok) {
-          this.importMsg = { text: 'Producto eliminado.', type: 'success', hint: '' };
+          this.importMsg = { text: 'Producto eliminado.', type: 'success', hint: '', errores: [], expandErrores: false };
           await this.init();
         } else {
-          const err = await res.json().catch(()=>({}));
-          this.importMsg = { text: err.detail || 'No se pudo eliminar.', type: 'error', hint: '' };
+          this.importMsg = {
+            text: await formatApiError(res, 'No se pudo eliminar.'),
+            type: 'error', hint: '', errores: [], expandErrores: false,
+          };
         }
       } catch(e) { console.warn(e); }
     },
@@ -588,7 +646,7 @@ function inventario() {
       const [file] = event.target.files || [];
       if (!file) return;
 
-      this.importMsg = { text:'', type:'success', hint:'' };
+      this.importMsg = { text:'', type:'success', hint:'', errores: [], expandErrores: false };
 
       const body = new FormData();
       body.append('file', file);
@@ -603,16 +661,28 @@ function inventario() {
         if (!res.ok) {
           const detail = data.detail || {};
           this.importMsg = {
-            text: detail.mensaje || data.detail || 'No se pudo importar el archivo.',
+            text: detail.mensaje || (typeof data.detail === 'string' ? data.detail : 'No se pudo importar el archivo.'),
             type: 'error',
-            hint: Array.isArray(detail.columnas_compatibles) ? `Plantilla base: ${detail.columnas_compatibles.join(', ')}` : 'Usa CSV UTF-8 como formato de carga temporal.'
+            hint: Array.isArray(detail.columnas_compatibles) ? `Plantilla base: ${detail.columnas_compatibles.join(', ')}` : 'Usa CSV UTF-8 como formato de carga temporal.',
+            errores: [],
+            expandErrores: false,
           };
           return;
         }
 
-        const resumen = `Importación lista: ${data.creados} creados, ${data.actualizados} actualizados.`;
-        const hint = data.errores?.length ? `Se registraron ${data.errores.length} errores. Revisa el backend para el detalle.` : 'Puedes reutilizar el CSV exportado como plantilla para Excel.';
-        this.importMsg = { text: resumen, type: 'success', hint };
+        const omitidos = data.omitidos ?? 0;
+        const resumen = `Importación lista: ${data.creados} creados, ${data.actualizados} actualizados${omitidos ? `, ${omitidos} omitidos` : ''}.`;
+        const tieneErrores = Array.isArray(data.errores) && data.errores.length > 0;
+        const hint = tieneErrores
+          ? `Stock se aplicó como REPLACE auditable (kardex en /inventario timeline).`
+          : 'Importación completa, sin errores. Stock auditado en kardex.';
+        this.importMsg = {
+          text: resumen,
+          type: tieneErrores ? 'error' : 'success',
+          hint,
+          errores: tieneErrores ? data.errores : [],
+          expandErrores: false,
+        };
         await this.init();
       } catch (error) {
         console.warn(error);
@@ -772,13 +842,7 @@ function modalProducto() {
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          let msg = 'No se pudo guardar el producto.';
-          try {
-            const data = await res.json();
-            if (typeof data.detail === 'string') msg = data.detail;
-            else if (Array.isArray(data.detail)) msg = data.detail.map(d => d.msg || JSON.stringify(d)).join(' · ');
-          } catch(_) {}
-          this.error = msg;
+          this.error = await formatApiError(res, 'No se pudo guardar el producto.');
           return;
         }
         this.open = false;
@@ -801,8 +865,7 @@ function modalProducto() {
           this.open = false;
           window.dispatchEvent(new CustomEvent('producto-saved'));
         } else {
-          const err = await res.json().catch(()=>({}));
-          this.error = err.detail || 'No se pudo eliminar.';
+          this.error = await formatApiError(res, 'No se pudo eliminar.');
         }
       } catch(e) {
         this.error = 'Error de red al eliminar.';
