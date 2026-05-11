@@ -73,6 +73,10 @@ class OrdenVentaCreate(BaseModel):
     observaciones: Optional[str] = None
     moneda: str = Field(default="MXN", min_length=3, max_length=3)
     tipo_cambio: Optional[Decimal] = Field(default=None, gt=0)
+    # Bloque editable de Condiciones Comerciales. None → backend aplica
+    # defaults. Vacío "" → usuario eligió no tener condiciones (PDF muestra
+    # solo metadata: moneda, vigencia).
+    terminos_condiciones: Optional[str] = None
 
 
 class OrdenVentaResponse(BaseModel):
@@ -89,4 +93,6 @@ class OrdenVentaResponse(BaseModel):
     detalles: List[DetalleOrdenResponse]
     version: int = 1
     cotizacion_origen_id: Optional[int] = None
+    observaciones: Optional[str] = None
+    terminos_condiciones: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)

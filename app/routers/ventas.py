@@ -52,6 +52,22 @@ def _resolve_tipo_linea(item, producto: "models.Producto | None") -> str:
 router = APIRouter(prefix="/api/ventas", tags=["Ventas y Cotizaciones"])
 
 
+# Defaults editables de "Condiciones Comerciales". Si una cotización se crea
+# sin terminos_condiciones, se persiste este texto y el usuario lo puede
+# editar/eliminar/agregar líneas desde el cotizador. Sincronizado con el
+# DEFAULTS_TERMINOS de cotizador.html (mantener en paralelo).
+_DEFAULT_TERMINOS = (
+    "Agregar el IVA correspondiente. Tiempo de entrega S.P.V.\n"
+    "Verificar que el material cotizado cumpla con sus requerimientos técnicos.\n"
+    "Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.\n"
+    "En caso de cancelación se cobrará el 25% del monto total.\n"
+    "Los precios indicados no incluyen flete.\n"
+    "Si se tiene el material en existencia y el cliente se encuentra ubicado en CDMX y/o área metropolitana se entregará en 2 a 3 días hábiles. En caso contrario el flete será cubierto por el cliente.\n"
+    "Para procesar su pedido es necesario colocar una orden de compra indicando el número de cotización y aceptación de estas condiciones comerciales (más anticipo cuando aplique).\n"
+    "La garantía de los productos es la que otorga cada fabricante."
+)
+
+
 def _iva_rate() -> Decimal:
     return Decimal(str(get_settings().iva_rate))
 
@@ -310,16 +326,27 @@ PDF_TEMPLATE_VENTA = """
   {% if es_cotizacion %}
   <div class="terms-title">CONDICIONES COMERCIALES:</div>
   <ul class="terms">
-    <li><strong>Agregar el IVA correspondiente.</strong> Tiempo de entrega S.P.V.</li>
-    <li><strong>Verificar que el material cotizado cumpla con sus requerimientos técnicos.</strong></li>
-    <li>Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.</li>
+    {# Metadata fija (depende del estado de la cotización, no editable) #}
     <li>Los precios están expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>{% if orden.moneda == "USD" %} — tipo de cambio referencia: {{ "{:,.4f}".format(orden.tipo_cambio) }} MXN/USD{% endif %}.</li>
     <li>Condiciones de pago: {{ orden.observaciones or "según acuerdo comercial" }}.</li>
-    <li>En caso de cancelación se cobrará el 25% del monto total.</li>
-    <li>Los precios indicados no incluyen flete.</li>
-    <li>Si se tiene el material en existencia y el cliente se encuentra ubicado en CDMX y/o área metropolitana se entregará en 2 a 3 días hábiles. En caso contrario el flete será cubierto por el cliente.</li>
-    <li>Para procesar su pedido es necesario colocar una orden de compra indicando el número de cotización y aceptación de estas condiciones comerciales (más anticipo cuando aplique).</li>
-    <li>La garantía de los productos es la que otorga cada fabricante.</li>
+
+    {# Bloque editable. orden.terminos_condiciones NULL → fallback hardcoded (legacy). #}
+    {% if orden.terminos_condiciones is not none %}
+      {% for linea in orden.terminos_condiciones.split('\n') %}
+        {% if linea.strip() %}<li>{{ linea.strip() }}</li>{% endif %}
+      {% endfor %}
+    {% else %}
+      <li><strong>Agregar el IVA correspondiente.</strong> Tiempo de entrega S.P.V.</li>
+      <li><strong>Verificar que el material cotizado cumpla con sus requerimientos técnicos.</strong></li>
+      <li>Todos los precios que incluyen instalación, servicios y capacitación están basados en nuestros horarios normales de trabajo (L-V 8:00-18:00 hrs) a menos de que sea estipulado de otra forma dentro de la cotización. Los cargos adicionales por horas trabajadas fuera de estos horarios u horas superiores a ocho (8) por día serán facturadas por separado.</li>
+      <li>En caso de cancelación se cobrará el 25% del monto total.</li>
+      <li>Los precios indicados no incluyen flete.</li>
+      <li>Si se tiene el material en existencia y el cliente se encuentra ubicado en CDMX y/o área metropolitana se entregará en 2 a 3 días hábiles. En caso contrario el flete será cubierto por el cliente.</li>
+      <li>Para procesar su pedido es necesario colocar una orden de compra indicando el número de cotización y aceptación de estas condiciones comerciales (más anticipo cuando aplique).</li>
+      <li>La garantía de los productos es la que otorga cada fabricante.</li>
+    {% endif %}
+
+    {# Metadata sistema #}
     <li>Vigencia de esta cotización: <strong>{{ vigencia_dias }} días a partir de la fecha de emisión.</strong></li>
   </ul>
   {% endif %}
@@ -362,6 +389,13 @@ def crear_orden(
     try:
         folio = _generar_folio(db, tipo_orden, current_user)
 
+        # Si el cliente no envió terminos_condiciones (None), aplicamos los
+        # defaults. Si envió cualquier string (incluso ""), respetamos su
+        # decisión (puede haber elegido vaciar el bloque editable).
+        terminos = orden_data.terminos_condiciones
+        if terminos is None:
+            terminos = _DEFAULT_TERMINOS
+
         nueva_orden = models.OrdenVenta(
             folio=folio,
             cliente_id=cliente.id,
@@ -372,6 +406,7 @@ def crear_orden(
             tipo_cambio=tipo_cambio,
             fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             total=0,
+            terminos_condiciones=terminos,
         )
         db.add(nueva_orden)
         db.flush()
@@ -529,6 +564,8 @@ def actualizar_orden(
         # Actualizar cabecera
         orden.cliente_id = orden_update.cliente_id
         orden.observaciones = orden_update.observaciones
+        if orden_update.terminos_condiciones is not None:
+            orden.terminos_condiciones = orden_update.terminos_condiciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
         orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
@@ -673,6 +710,7 @@ def recotizar(
         vendedor_id=current_user.id,
         estatus=models.EstatusOrden.COTIZACION,
         observaciones=origen.observaciones,
+        terminos_condiciones=origen.terminos_condiciones,
         moneda=origen.moneda,
         tipo_cambio=origen.tipo_cambio,
         total=origen.total,

@@ -72,6 +72,8 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_min INTEGER",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_max INTEGER",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS entrega_unidad VARCHAR(10)",
+    # 20260513_02: términos y condiciones editables por cotización
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS terminos_condiciones TEXT",
 ]
 
 

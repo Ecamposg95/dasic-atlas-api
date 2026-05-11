@@ -25,6 +25,10 @@ class OrdenVenta(Base):
     tipo_cambio = Column(DECIMAL(12, 6), nullable=False, default=1.0)
     total = Column(DECIMAL(12, 2), default=0.00)
     observaciones = Column(Text, nullable=True)
+    # Bloque editable de Condiciones Comerciales del PDF. Una línea = un <li>.
+    # NULL → el PDF usa el bloque hardcoded como fallback (compat con
+    # cotizaciones legacy creadas antes de esta feature).
+    terminos_condiciones = Column(Text, nullable=True)
 
     # Versionado de cotizaciones
     cotizacion_origen_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
