@@ -65,6 +65,9 @@ _BACKFILL_DDL = [
         actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     )""",
     "CREATE INDEX IF NOT EXISTS ix_marcas_abreviatura ON marcas (abreviatura)",
+    # 20260512_03: FK Producto.marca_id → marcas.id (SET NULL en delete)
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS marca_id INTEGER REFERENCES marcas(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_productos_marca_id ON productos (marca_id)",
 ]
 
 

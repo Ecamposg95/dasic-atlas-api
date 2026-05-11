@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import or_, text
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 import csv
@@ -58,6 +58,36 @@ def _normalize_sku(value: str) -> str:
     return value.strip().upper()
 
 
+def _resolve_marca(db: Session, *, marca_id: Optional[int], marca_texto: Optional[str]) -> tuple[Optional[int], Optional[str]]:
+    """Normaliza la entrada de marca a (marca_id_final, marca_texto_final).
+
+    Reglas:
+    - Si marca_id viene, debe existir → si no, 400.
+    - Si solo marca_texto viene y matchea case-insensitive una fila de `marcas`,
+      autocompleta marca_id.
+    - Si solo marca_texto viene y no matchea, marca_id=None y se preserva el
+      texto (compat con CSV legacy).
+    """
+    if marca_id is not None:
+        m = db.get(models.Marca, marca_id)
+        if not m:
+            raise HTTPException(status_code=400, detail=f"marca_id={marca_id} no existe")
+        return m.id, m.nombre
+
+    texto = _normalize_optional_text(marca_texto)
+    if not texto:
+        return None, None
+
+    m = (
+        db.query(models.Marca)
+        .filter(func.lower(models.Marca.nombre) == texto.lower())
+        .first()
+    )
+    if m:
+        return m.id, m.nombre
+    return None, texto
+
+
 def _validar_fk_proveedores(db: Session, *, principal_id, alterno_id) -> None:
     """Levanta 400 si algún proveedor_id viene no-None y no existe en la tabla.
 
@@ -72,33 +102,36 @@ def _validar_fk_proveedores(db: Session, *, principal_id, alterno_id) -> None:
             raise HTTPException(status_code=400, detail=f"{nombre}={pid} no existe")
 
 
-def _generate_internal_sku(db: Session, marca: str | None = None) -> str:
+def _generate_internal_sku(db: Session, marca: str | None = None, marca_id: int | None = None) -> str:
     """Genera SKU interno único.
 
-    Si `marca` coincide (case-insensitive) con una fila de la tabla `marcas`,
-    el SKU usa el formato consecutivo por abreviatura: `{ABREV}-{NNNN}`.
-    Toma advisory lock por abreviatura para serializar el cómputo del
-    consecutivo bajo concurrencia (igual patrón que folio de cotización).
+    Resuelve la marca primero por `marca_id` (FK directa), luego por `marca`
+    texto (match case-insensitive contra `marcas.nombre`). Si encuentra,
+    delega en `siguiente_sku_para` (consecutivo `{ABREV}-{NNNN}` con advisory
+    lock por abreviatura — serializa creadores concurrentes).
 
     Fallback: `DAS-YYMM-XXXX` (random hex) cuando no hay marca conocida.
     """
-    if marca:
-        nombre_norm = marca.strip()
+    marca_row = None
+    if marca_id is not None:
+        marca_row = db.get(models.Marca, marca_id)
+    elif marca:
         marca_row = (
             db.query(models.Marca)
-            .filter(func_lower_eq(models.Marca.nombre, nombre_norm))
+            .filter(func.lower(models.Marca.nombre) == marca.strip().lower())
             .first()
         )
-        if marca_row:
-            abrev = marca_row.abreviatura
-            # Advisory lock por abreviatura: serializa contra otros creadores.
-            db.execute(
-                text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
-                {"k": f"sku:{abrev}"},
-            )
-            # Re-scan con lock tomado para no perder un crecimiento concurrente.
-            from app.routers.catalogos import siguiente_sku_para  # evita import circular en módulo
-            return siguiente_sku_para(db, abrev)
+
+    if marca_row:
+        abrev = marca_row.abreviatura
+        # Advisory lock por abreviatura: serializa contra otros creadores.
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+            {"k": f"sku:{abrev}"},
+        )
+        # Import dentro de función para evitar ciclo módulo.
+        from app.routers.catalogos import siguiente_sku_para
+        return siguiente_sku_para(db, abrev)
 
     # Legacy fallback para productos sin marca registrada.
     for _ in range(10):
@@ -106,12 +139,6 @@ def _generate_internal_sku(db: Session, marca: str | None = None) -> str:
         if not db.query(models.Producto).filter(models.Producto.sku == candidate).first():
             return candidate
     raise HTTPException(500, "No se pudo generar SKU único, reintentar")
-
-
-def func_lower_eq(col, value: str):
-    """Helper: comparación case-insensitive sin ANY locale gotchas."""
-    from sqlalchemy import func
-    return func.lower(col) == value.lower()
 
 
 def _read_xlsx_rows(content: bytes) -> List[dict]:
@@ -331,8 +358,19 @@ def crear_producto(
         alterno_id=producto.proveedor_alterno_id,
     )
 
+    # Normaliza marca (texto + id → marca_id final + texto autocompletado).
+    marca_id_final, marca_texto_final = _resolve_marca(
+        db,
+        marca_id=producto.marca_id,
+        marca_texto=producto.marca,
+    )
+
     raw_sku = (producto.sku or "").strip()
-    sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db, marca=producto.marca)
+    sku = (
+        _normalize_sku(raw_sku)
+        if raw_sku
+        else _generate_internal_sku(db, marca=marca_texto_final, marca_id=marca_id_final)
+    )
 
     # Verificar si el SKU ya existe
     db_producto = db.query(models.Producto).filter(models.Producto.sku == sku).first()
@@ -344,7 +382,8 @@ def crear_producto(
     sku_comercial_norm = _normalize_optional_text(producto.sku_comercial)
     payload["sku_comercial"] = sku_comercial_norm or sku  # autocompleta con interno
     payload["moneda_compra"] = _normalize_currency(producto.moneda_compra)
-    payload["marca"] = _normalize_optional_text(producto.marca)
+    payload["marca"] = marca_texto_final
+    payload["marca_id"] = marca_id_final
     payload["unidad"] = _normalize_optional_text(producto.unidad) or DEFAULT_UNIDAD
     if payload.get("precio_publico") is None:
         payload.pop("precio_publico", None)
@@ -398,8 +437,17 @@ def actualizar_producto(
 
     if "sku_comercial" in update_data:
         update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
-    if "marca" in update_data:
-        update_data["marca"] = _normalize_optional_text(update_data["marca"])
+
+    # Si el body trajo marca y/o marca_id, normalizamos ambos juntos.
+    if "marca" in update_data or "marca_id" in update_data:
+        marca_id_in = update_data.get("marca_id", db_producto.marca_id)
+        marca_texto_in = update_data.get("marca", db_producto.marca)
+        marca_id_final, marca_texto_final = _resolve_marca(
+            db, marca_id=marca_id_in, marca_texto=marca_texto_in
+        )
+        update_data["marca_id"] = marca_id_final
+        update_data["marca"] = marca_texto_final
+
     if "unidad" in update_data:
         update_data["unidad"] = _normalize_optional_text(update_data["unidad"]) or DEFAULT_UNIDAD
     if "moneda_compra" in update_data:
@@ -568,9 +616,16 @@ async def cargar_inventario_csv(
             stock_actual = _read_int(row, "stock_actual", 0)
             stock_minimo = _read_int(row, "stock_minimo", 5)
 
+            # Resolver marca texto → (marca_id, texto normalizado) para
+            # autocompletar la FK cuando el texto del CSV matchea una marca
+            # registrada. Si no matchea, queda solo el texto (compat legacy).
+            marca_id_csv, marca_texto_csv = _resolve_marca(
+                db, marca_id=None, marca_texto=marca,
+            )
+
             if not sku:
                 # Autogenerar SKU interno si no viene en el archivo.
-                sku = _generate_internal_sku(db, marca=marca)
+                sku = _generate_internal_sku(db, marca=marca_texto_csv, marca_id=marca_id_csv)
             else:
                 sku = _normalize_sku(sku)
 
@@ -595,8 +650,12 @@ async def cargar_inventario_csv(
                 producto_existente.sku_comercial = sku_comercial or producto_existente.sku_comercial or sku
                 producto_existente.nombre = nombre or producto_existente.nombre
                 producto_existente.descripcion = descripcion or producto_existente.descripcion
-                if marca:
-                    producto_existente.marca = marca
+                if marca_texto_csv:
+                    producto_existente.marca = marca_texto_csv
+                if marca_id_csv is not None or marca_texto_csv is None:
+                    # Solo sobreescribimos marca_id si el CSV trae marca explícita
+                    # (id resolved o vacío). No tocamos si el CSV no traía marca.
+                    producto_existente.marca_id = marca_id_csv
                 if unidad:
                     producto_existente.unidad = unidad
                 producto_existente.stock_minimo = stock_minimo
@@ -631,7 +690,8 @@ async def cargar_inventario_csv(
                     sku_comercial=sku_comercial or sku,
                     nombre=nombre,
                     descripcion=descripcion,
-                    marca=marca,
+                    marca=marca_texto_csv,
+                    marca_id=marca_id_csv,
                     unidad=unidad,
                     precio_mayorista=precio_mayorista,
                     precio_distribuidor=precio_distribuidor,

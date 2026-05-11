@@ -15,7 +15,11 @@ class ProductoBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150)
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
+    # marca (texto) y marca_id (FK) coexisten. Si vienen ambos, marca_id gana.
+    # Si solo viene marca (texto) y matchea case-insensitive una fila de
+    # `marcas`, el backend autocompleta marca_id.
     marca: Optional[str] = Field(None, max_length=80)
+    marca_id: Optional[int] = None
     unidad: Optional[str] = Field("PZA", max_length=20)
     proveedor_principal_id: Optional[int] = None
     proveedor_alterno_id: Optional[int] = None
@@ -39,6 +43,7 @@ class ProductoUpdate(BaseModel):
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
     marca: Optional[str] = Field(None, max_length=80)
+    marca_id: Optional[int] = None
     unidad: Optional[str] = Field(None, max_length=20)
     proveedor_principal_id: Optional[int] = None
     proveedor_alterno_id: Optional[int] = None

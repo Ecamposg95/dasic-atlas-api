@@ -36,7 +36,12 @@ class Producto(Base):
     nombre = Column(String(150), index=True, nullable=False)
     descripcion = Column(Text, nullable=True)
     imagen_url = Column(String(255), nullable=True)
+    # `marca` (texto) se mantiene por compat con CSV legacy y consumidores
+    # antiguos. `marca_id` es la fuente canónica; cuando ambos vienen, gana
+    # marca_id. La response autocompleta `marca` desde marca_rel.nombre si
+    # hay FK, fallback al texto.
     marca = Column(String(80), index=True, nullable=True)
+    marca_id = Column(Integer, ForeignKey("marcas.id", ondelete="SET NULL"), nullable=True, index=True)
     unidad = Column(String(20), nullable=True, default="PZA")
 
     proveedor_principal_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True, index=True)
@@ -58,6 +63,7 @@ class Producto(Base):
     detalles_compra = relationship("DetalleCompra", back_populates="producto")
     proveedor_principal = relationship("Proveedor", foreign_keys=[proveedor_principal_id])
     proveedor_alterno = relationship("Proveedor", foreign_keys=[proveedor_alterno_id])
+    marca_rel = relationship("Marca", foreign_keys=[marca_id])
     # passive_deletes=True: la DB tiene ON DELETE RESTRICT sobre
     # movimientos_stock.producto_id (migración 20260512_02). El ORM no debe
     # cascadear borrados; el kardex es inmutable. Borrar un producto con
