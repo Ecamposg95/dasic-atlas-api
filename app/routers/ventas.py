@@ -167,82 +167,90 @@ PDF_TEMPLATE_VENTA = """
 <title>{{ tipo_doc }} {{ orden.folio }}</title>
 <style>
   @page { size: Letter; margin: 0; }
-  * { box-sizing: border-box; }
+  /* Forzar impresión de colores y backgrounds en TODOS los navegadores.
+     Sin esto, Chrome/Edge/Safari descartan fondos coloreados al imprimir. */
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   html, body { margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 12px; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 10.5px; line-height: 1.35; }
 
-  .page { width: 100%; min-height: 100vh; padding: 28px 38px 96px 38px; position: relative; }
+  /* Página compacta — padding-bottom reservado para el footer-bar */
+  .page { width: 100%; min-height: 100vh; padding: 18px 32px 52px 32px; position: relative; }
 
-  /* Header DASIC */
-  .brand-row { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 4px solid #0f3a66; }
-  .brand-logo { height: 56px; width: auto; object-fit: contain; }
-  .brand-name { font-size: 30px; font-weight: 900; color:#0f3a66; letter-spacing: 1px; }
-  .brand-tag { font-size: 11px; color:#475569; margin-top: 2px; letter-spacing: 0.5px; }
-  .brand-rule { height: 6px; background: linear-gradient(90deg,#0f3a66,#1d6fb8 60%,#cbd5e1); margin-bottom: 22px; }
+  /* Header DASIC — compacto y elegante */
+  .brand-row { display: flex; align-items: center; gap: 14px; padding-bottom: 6px; border-bottom: 3px solid #0f3a66; }
+  .brand-logo { height: 44px; width: auto; object-fit: contain; }
+  .brand-name { font-size: 24px; font-weight: 900; color:#0f3a66; letter-spacing: 1px; line-height: 1; }
+  .brand-tag { font-size: 9.5px; color:#475569; margin-top: 2px; letter-spacing: 0.4px; }
+  .brand-rule { height: 4px; background: linear-gradient(90deg,#0f3a66,#1d6fb8 55%,#cbd5e1); margin-bottom: 12px; }
 
   /* Encabezado documento */
-  .doc-head { display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
-  .doc-fecha { font-size: 13px; color:#0f172a; }
+  .doc-head { display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .doc-fecha { font-size: 11px; color:#0f172a; }
   .doc-fecha .lbl { font-weight: 700; }
   .doc-fecha .val { text-decoration: underline; font-weight: 600; }
-  .doc-title { color:#0f3a66; font-weight: 800; font-size: 26px; letter-spacing: 1px; }
-  .doc-folio { color:#0f172a; font-weight: 700; font-size: 16px; margin-left: 6px; }
+  .doc-title { color:#0f3a66; font-weight: 800; font-size: 20px; letter-spacing: 1px; }
+  .doc-folio { color:#0f172a; font-weight: 700; font-size: 14px; margin-left: 6px; }
 
-  /* Bloque cliente (alineado a la derecha como los PDFs reales) */
-  .cliente { text-align: right; margin-bottom: 14px; }
-  .cliente .row { font-size: 12.5px; color:#0f172a; line-height: 1.45; }
+  /* Bloque cliente */
+  .cliente { text-align: right; margin-bottom: 8px; }
+  .cliente .row { font-size: 10.5px; color:#0f172a; line-height: 1.3; }
   .cliente .lbl { font-weight: 700; }
   .cliente .name, .cliente .email a { color: #1d6fb8; font-weight: 700; }
 
-  /* Tabla */
-  table.items { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 8px; font-size: 11px; }
+  /* Tabla — compacta */
+  table.items { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 4px; font-size: 10px; }
   table.items thead th {
-    background:#0f3a66; color:#fff; padding: 8px 6px; font-weight: 700;
-    border-right: 1px solid #1d6fb8; text-transform: capitalize; font-size: 11px;
+    background:#0f3a66; color:#fff; padding: 6px 5px; font-weight: 700;
+    border-right: 1px solid #1d6fb8; text-transform: capitalize; font-size: 10px;
   }
   table.items thead th:last-child { border-right: none; }
-  table.items tbody td { background:#f1f5f9; padding: 10px 8px; border-bottom: 4px solid #fff; vertical-align: top; }
+  table.items tbody td { background:#f1f5f9; padding: 6px 6px; border-bottom: 2px solid #fff; vertical-align: top; line-height: 1.3; }
   table.items td.center { text-align: center; }
   table.items td.right { text-align: right; }
   .item-cat { font-weight: 700; color:#0f172a; }
   .item-desc { color:#0f172a; white-space: pre-line; }
-  .item-nota { font-size: 10px; color:#64748b; font-style: italic; margin-top: 4px; padding-left: 6px; border-left: 2px solid #cbd5e1; white-space: pre-line; }
-  .tespv-tag { display: inline-block; font-size: 9px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 1px 4px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
-  table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 9px 8px; border-bottom: 4px solid #fff; }
+  .item-nota { font-size: 9px; color:#64748b; font-style: italic; margin-top: 3px; padding-left: 5px; border-left: 2px solid #cbd5e1; white-space: pre-line; line-height: 1.3; }
+  .tespv-tag { display: inline-block; font-size: 8.5px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 0px 3px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
+  table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 6px 7px; border-bottom: 2px solid #fff; }
 
-  /* Condiciones */
-  .terms-title { font-weight: 800; color:#0f172a; margin-top: 22px; margin-bottom: 6px; font-size: 12px; }
-  ul.terms { padding-left: 18px; margin: 0; color:#1e293b; font-size: 11px; line-height: 1.55; }
-  ul.terms li { margin-bottom: 3px; }
+  /* Condiciones — compactas */
+  .terms-title { font-weight: 800; color:#0f172a; margin-top: 10px; margin-bottom: 3px; font-size: 11px; letter-spacing: 0.4px; }
+  ul.terms { padding-left: 16px; margin: 0; color:#1e293b; font-size: 8.5px; line-height: 1.35; }
+  ul.terms li { margin-bottom: 1.5px; }
   ul.terms strong { color:#0f172a; }
 
   /* Cierre: layout horizontal compacto (texto izq + QR der) para caber en 1 hoja */
   .cierre {
-    margin-top: 18px;
+    margin-top: 10px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
+    gap: 20px;
     page-break-inside: avoid;
   }
-  .cierre-left { flex: 1; font-size: 12px; color:#0f172a; }
-  .cierre-left .label { font-weight: 800; letter-spacing: 1px; }
-  .cierre-left .area { font-weight: 700; color:#0f3a66; margin-top: 2px; font-size: 13px; letter-spacing: 0.5px; }
-  .cierre-left .consultor-block { margin-top: 12px; }
-  .cierre-left .consultor-nombre { font-weight: 700; font-size: 11.5px; }
-  .cierre-left .consultor-titulo { font-style: italic; color:#475569; font-size: 10.5px; margin-top: 1px; }
-  .cierre-left .consultor-mail { font-size: 10.5px; margin-top: 1px; }
+  .cierre-left { flex: 1; font-size: 10.5px; color:#0f172a; }
+  .cierre-left .label { font-weight: 800; letter-spacing: 1px; font-size: 11px; }
+  .cierre-left .area { font-weight: 700; color:#0f3a66; margin-top: 2px; font-size: 11.5px; letter-spacing: 0.5px; }
+  .cierre-left .consultor-block { margin-top: 8px; }
+  .cierre-left .consultor-nombre { font-weight: 700; font-size: 10.5px; }
+  .cierre-left .consultor-titulo { font-style: italic; color:#475569; font-size: 9.5px; margin-top: 1px; }
+  .cierre-left .consultor-mail { font-size: 9.5px; margin-top: 1px; }
   .cierre-left .consultor-mail a { color:#1d6fb8; }
   .cierre-right { text-align: center; }
-  .cierre-right .qr { width: 90px; height: 90px; display: block; margin: 0 auto; }
-  .cierre-right .qr-label { font-size: 9px; color:#475569; margin-top: 3px; }
+  .cierre-right .qr { width: 78px; height: 78px; display: block; margin: 0 auto; }
+  .cierre-right .qr-label { font-size: 8px; color:#475569; margin-top: 2px; }
   .cierre-right .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
 
-  /* Footer */
+  /* Footer compacto */
   .footer-bar {
     position: absolute; left: 0; right: 0; bottom: 0;
     background: linear-gradient(180deg, #0f3a66 0%, #0a2949 100%);
-    color:#cbd5e1; font-size: 12px; text-align: center; padding: 14px 0; letter-spacing: 1px;
+    color:#cbd5e1; font-size: 10px; text-align: center; padding: 8px 0; letter-spacing: 1px;
   }
   .footer-bar .web { color:#fff; font-weight: 700; }
 
@@ -258,14 +266,24 @@ PDF_TEMPLATE_VENTA = """
   .print-btn:hover { background:#155a8d; transform: translateY(-1px); }
   .print-btn:active { transform: translateY(0); }
 
-  /* Garantizar 1 sola página al imprimir */
+  /* IMPRESIÓN: 1 sola página + colores intactos */
   @media print {
     .print-btn { display:none; }
     body { background:#fff; }
     html, body { height: auto; }
-    .page { page-break-after: avoid; page-break-inside: avoid; }
+    .page { page-break-after: avoid; page-break-inside: avoid; min-height: 0; }
     table.items { page-break-inside: auto; }
     table.items tr { page-break-inside: avoid; page-break-after: auto; }
+    /* Refuerzo color-adjust en los elementos con fondo */
+    table.items thead th,
+    table.items tbody td,
+    table.items tfoot td,
+    .brand-rule,
+    .footer-bar,
+    .tespv-tag {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
   }
 </style>
 </head>
