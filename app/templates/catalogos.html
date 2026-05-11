@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% block title %}Catálogos · Marcas{% endblock %}
+{% block page_title %}Catálogos{% endblock %}
+
+{% block header_actions %}
+  <button type="button" class="dax-btn-primary"
+          x-show="$store.user.can('editar_producto')" x-cloak
+          @click="abrirModalNueva()">
+    <i class="fas fa-plus text-xs"></i>
+    Nueva Marca
+  </button>
+{% endblock %}
+
+{% block content %}
+<div x-data="catalogos()" x-init="init()">
+
+  <!-- Sub-tabs (espacio para Categorías/Unidades en el futuro) -->
+  <div class="mb-6 flex items-center gap-2 border-b border-slate-800/60 pb-1">
+    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-700 text-white">
+      <i class="fas fa-tags text-[10px] mr-1"></i> Marcas
+    </button>
+    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 cursor-not-allowed" disabled
+            title="Próximamente">Categorías</button>
+    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 cursor-not-allowed" disabled
+            title="Próximamente">Unidades</button>
+  </div>
+
+  <!-- Mensajes flash -->
+  <div x-show="flash.text" x-cloak class="mb-4">
+    <div class="rounded-xl border px-4 py-3 text-sm"
+         :class="flash.type === 'error'
+           ? 'border-red-500/30 bg-red-500/10 text-red-200'
+           : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'">
+      <p x-text="flash.text"></p>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Marcas</p>
+        <p class="text-2xl font-bold text-slate-100" x-text="resumen.total_marcas ?? '—'"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20">
+        <i class="fas fa-tags"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Productos</p>
+        <p class="text-2xl font-bold text-slate-100" x-text="resumen.total_productos ?? '—'"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+        <i class="fas fa-cubes"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Con marca</p>
+        <p class="text-2xl font-bold text-cyan-400" x-text="resumen.productos_con_marca ?? '—'"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20">
+        <i class="fas fa-link"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Sin marca</p>
+        <p class="text-2xl font-bold text-amber-400" x-text="resumen.productos_sin_marca ?? '—'"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+        <i class="fas fa-link-slash"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="dax-card p-4 rounded-xl mb-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="relative flex-1 min-w-[240px] max-w-md">
+        <i class="fas fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+        <input type="text" x-model="filtros.q" @input.debounce.300ms="cargarMarcas()"
+               placeholder="Buscar por marca o abreviatura..."
+               class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg
+                      text-white text-xs outline-none focus:border-primary-500 transition placeholder-slate-600">
+      </div>
+      <div class="ml-auto text-[11px] text-slate-500">
+        <span x-text="marcas.length"></span> marca(s)
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de marcas -->
+  <div class="dax-card rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-900/80 text-slate-400 text-[10px] uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3 font-bold">Abreviatura</th>
+            <th class="px-4 py-3 font-bold">Marca</th>
+            <th class="px-4 py-3 font-bold">Categoría</th>
+            <th class="px-4 py-3 font-bold text-center w-24"># Productos</th>
+            <th class="px-4 py-3 font-bold">Siguiente SKU</th>
+            <th class="px-4 py-3 font-bold w-32 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/50 bg-slate-900/30">
+          <template x-if="cargando">
+            <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500 italic">
+              <i class="fas fa-spinner fa-spin mr-2"></i> Cargando marcas...
+            </td></tr>
+          </template>
+          <template x-if="!cargando && marcas.length === 0">
+            <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500 italic">
+              Sin marcas registradas. Crea la primera con el botón "Nueva Marca".
+            </td></tr>
+          </template>
+          <template x-for="m in marcas" :key="m.id">
+            <tr class="hover:bg-slate-800/50 transition group">
+              <td class="px-4 py-3">
+                <span class="text-[11px] font-mono font-bold bg-primary-500/10 text-primary-300
+                             border border-primary-500/20 px-2 py-0.5 rounded"
+                      x-text="m.abreviatura"></span>
+              </td>
+              <td class="px-4 py-3 font-bold text-white" x-text="m.nombre"></td>
+              <td class="px-4 py-3 text-xs text-slate-400" x-text="m.categoria || '—'"></td>
+              <td class="px-4 py-3 text-center">
+                <span class="text-xs font-bold"
+                      :class="m.n_productos > 0 ? 'text-emerald-400' : 'text-slate-500'"
+                      x-text="m.n_productos"></span>
+              </td>
+              <td class="px-4 py-3">
+                <span class="text-[11px] font-mono bg-slate-950 text-cyan-300 border border-slate-800
+                             px-2 py-0.5 rounded"
+                      x-text="m.siguiente_sku"></span>
+                <button @click="copiarSku(m.siguiente_sku)"
+                        class="ml-1 text-slate-500 hover:text-cyan-300 text-[10px]"
+                        title="Copiar al portapapeles">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="inline-flex items-center gap-1">
+                  <button x-show="$store.user.can('editar_producto')"
+                          @click="abrirModalEditar(m)"
+                          class="p-1.5 text-slate-400 hover:text-cyan-300 transition"
+                          title="Editar">
+                    <i class="fas fa-pen text-[11px]"></i>
+                  </button>
+                  <button x-show="$store.user.can('editar_producto')"
+                          @click="eliminarMarca(m)"
+                          :disabled="m.n_productos > 0"
+                          :class="m.n_productos > 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-red-400'"
+                          class="p-1.5 text-slate-400 transition"
+                          :title="m.n_productos > 0 ? `${m.n_productos} producto(s) usan esta marca — no se puede eliminar` : 'Eliminar marca'">
+                    <i class="fas fa-trash text-[11px]"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Nueva/Editar marca -->
+  <div x-show="modal.abierto" x-cloak
+       class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+       @keydown.escape.window="cerrarModal()">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md
+                border border-primary-500/30 overflow-hidden"
+         @click.outside="cerrarModal()">
+
+      <div class="px-6 py-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-black tracking-tight text-white uppercase"
+              x-text="modal.modo === 'crear' ? 'Nueva Marca' : 'Editar Marca'"></h3>
+          <p class="text-xs text-primary-300 font-bold mt-1">Taxonomía DASIC · Prefijo de SKU interno</p>
+        </div>
+        <button @click="cerrarModal()" class="text-slate-400 hover:text-white transition p-2 hover:bg-slate-800 rounded-full">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">
+            Abreviatura <span class="text-rose-400">*</span>
+          </label>
+          <input type="text" x-model="modal.form.abreviatura"
+                 :disabled="modal.modo === 'editar'"
+                 maxlength="20"
+                 @input="modal.form.abreviatura = (modal.form.abreviatura || '').toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                 placeholder="Ej. ABCS, SIE, ROCK"
+                 class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg
+                        text-white text-sm font-mono outline-none focus:border-primary-500 transition
+                        placeholder-slate-600 disabled:opacity-50 disabled:cursor-not-allowed uppercase">
+          <p class="text-[10px] text-slate-500 mt-1">
+            Solo A-Z y 0-9. Se usará como prefijo: <span class="font-mono text-cyan-300"
+              x-text="(modal.form.abreviatura || 'XXXX') + '-0001'"></span>
+          </p>
+        </div>
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">
+            Nombre de la marca <span class="text-rose-400">*</span>
+          </label>
+          <input type="text" x-model="modal.form.nombre" maxlength="150"
+                 placeholder="Ej. ALLEN BRADLEY, SIEMENS"
+                 class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg
+                        text-white text-sm outline-none focus:border-primary-500 transition placeholder-slate-600">
+        </div>
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5">
+            Categoría
+          </label>
+          <input type="text" x-model="modal.form.categoria" maxlength="150"
+                 placeholder="(opcional) ej. PLCs, Sensores, Variadores..."
+                 class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg
+                        text-white text-sm outline-none focus:border-primary-500 transition placeholder-slate-600">
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-800 bg-slate-800/30 flex justify-end gap-3">
+        <button @click="cerrarModal()"
+                class="px-4 py-2 text-slate-400 hover:bg-slate-700/50 hover:text-white
+                       rounded-xl text-xs font-bold uppercase tracking-wider transition">
+          Cancelar
+        </button>
+        <button @click="guardarMarca()" :disabled="modal.guardando"
+                class="px-6 py-2 bg-gradient-to-r from-primary-600 to-primary-500
+                       hover:from-primary-500 hover:to-primary-400 text-white
+                       rounded-xl text-xs font-black uppercase tracking-widest
+                       shadow-lg shadow-primary-500/20 transition-all
+                       hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fas fa-check mr-2" x-show="!modal.guardando"></i>
+          <i class="fas fa-spinner fa-spin mr-2" x-show="modal.guardando"></i>
+          <span x-text="modal.modo === 'crear' ? 'Crear marca' : 'Guardar cambios'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function catalogos() {
+  return {
+    cargando: true,
+    marcas: [],
+    resumen: {},
+    filtros: { q: '' },
+    flash: { type: 'success', text: '' },
+    modal: {
+      abierto: false,
+      modo: 'crear', // 'crear' | 'editar'
+      guardando: false,
+      form: { abreviatura: '', nombre: '', categoria: '' },
+    },
+
+    async init() {
+      await Promise.all([this.cargarMarcas(), this.cargarResumen()]);
+    },
+
+    async cargarMarcas() {
+      this.cargando = true;
+      try {
+        const url = '/api/catalogos/marcas' + (this.filtros.q ? `?q=${encodeURIComponent(this.filtros.q)}` : '');
+        const r = await fetch(url, { credentials: 'include' });
+        if (r.ok) this.marcas = await r.json();
+        else this.flashError('No se pudo cargar marcas');
+      } catch (_) { this.flashError('Error de red al cargar marcas'); }
+      this.cargando = false;
+    },
+
+    async cargarResumen() {
+      try {
+        const r = await fetch('/api/catalogos/resumen', { credentials: 'include' });
+        if (r.ok) this.resumen = await r.json();
+      } catch (_) {}
+    },
+
+    abrirModalNueva() {
+      this.modal.modo = 'crear';
+      this.modal.form = { abreviatura: '', nombre: '', categoria: '' };
+      this.modal.abierto = true;
+    },
+
+    abrirModalEditar(m) {
+      this.modal.modo = 'editar';
+      this.modal.form = {
+        abreviatura: m.abreviatura,
+        nombre: m.nombre,
+        categoria: m.categoria || '',
+      };
+      this.modal.abierto = true;
+    },
+
+    cerrarModal() {
+      this.modal.abierto = false;
+    },
+
+    async guardarMarca() {
+      const f = this.modal.form;
+      if (!f.abreviatura || f.abreviatura.length < 2) {
+        return this.flashError('Abreviatura debe tener al menos 2 caracteres');
+      }
+      if (!f.nombre || f.nombre.trim().length < 2) {
+        return this.flashError('Nombre de la marca requerido');
+      }
+
+      this.modal.guardando = true;
+      try {
+        const url = this.modal.modo === 'crear'
+          ? '/api/catalogos/marcas'
+          : `/api/catalogos/marcas/${encodeURIComponent(f.abreviatura)}`;
+        const method = this.modal.modo === 'crear' ? 'POST' : 'PUT';
+        const body = this.modal.modo === 'crear'
+          ? { abreviatura: f.abreviatura, nombre: f.nombre.trim(), categoria: f.categoria.trim() || null }
+          : { nombre: f.nombre.trim(), categoria: f.categoria.trim() || null };
+
+        const r = await fetch(url, {
+          method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (r.ok) {
+          this.flashOk(this.modal.modo === 'crear' ? 'Marca creada' : 'Marca actualizada');
+          this.cerrarModal();
+          await this.init();
+        } else {
+          const d = await r.json().catch(() => ({}));
+          this.flashError(d.detail || 'Error al guardar');
+        }
+      } catch (_) {
+        this.flashError('Error de red');
+      }
+      this.modal.guardando = false;
+    },
+
+    async eliminarMarca(m) {
+      if (m.n_productos > 0) {
+        return this.flashError(`No se puede eliminar: ${m.n_productos} producto(s) usan esta marca`);
+      }
+      if (!confirm(`¿Eliminar la marca "${m.nombre}" (${m.abreviatura})?\n\nLos productos no se borran. Solo se quita la abreviatura del catálogo.`)) return;
+
+      try {
+        const r = await fetch(`/api/catalogos/marcas/${encodeURIComponent(m.abreviatura)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (r.ok) {
+          this.flashOk('Marca eliminada');
+          await this.init();
+        } else {
+          const d = await r.json().catch(() => ({}));
+          this.flashError(d.detail || 'No se pudo eliminar');
+        }
+      } catch (_) {
+        this.flashError('Error de red');
+      }
+    },
+
+    async copiarSku(sku) {
+      try {
+        await navigator.clipboard.writeText(sku);
+        this.flashOk(`SKU "${sku}" copiado`);
+      } catch (_) {
+        this.flashError('No se pudo copiar al portapapeles');
+      }
+    },
+
+    flashOk(text) {
+      this.flash = { type: 'success', text };
+      setTimeout(() => { if (this.flash.text === text) this.flash.text = ''; }, 3500);
+    },
+    flashError(text) {
+      this.flash = { type: 'error', text };
+      setTimeout(() => { if (this.flash.text === text) this.flash.text = ''; }, 5000);
+    },
+  };
+}
+</script>
+{% endblock %}

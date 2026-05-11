@@ -29,6 +29,9 @@ from app.schemas.catalog import (  # noqa: F401
     PromocionBase,
     PromocionCreate,
     PromocionResponse,
+    MarcaCreate,
+    MarcaUpdate,
+    MarcaResponse,
 )
 
 from app.schemas.clients import (  # noqa: F401

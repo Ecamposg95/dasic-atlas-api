@@ -89,3 +89,27 @@ class PromocionCreate(PromocionBase):
 class PromocionResponse(PromocionBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------- Marcas (taxonomía DASIC para SKU interno) ----------
+
+class MarcaBase(BaseModel):
+    abreviatura: str = Field(..., min_length=2, max_length=20)
+    nombre: str = Field(..., min_length=2, max_length=150)
+    categoria: Optional[str] = Field(None, max_length=150)
+
+
+class MarcaCreate(MarcaBase):
+    pass
+
+
+class MarcaUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=2, max_length=150)
+    categoria: Optional[str] = Field(None, max_length=150)
+
+
+class MarcaResponse(MarcaBase):
+    id: int
+    n_productos: int = 0
+    siguiente_sku: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)

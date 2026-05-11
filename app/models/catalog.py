@@ -1,11 +1,30 @@
 """
-Catalog models: Producto, Promocion.
+Catalog models: Producto, Promocion, Marca.
 """
 
 from sqlalchemy import Boolean, Column, DateTime, DECIMAL, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db import Base
+
+
+class Marca(Base):
+    """Taxonomía de marcas para SKU interno y agrupación de catálogo.
+
+    La abreviatura se usa como prefijo del SKU interno: {ABREV}-{NNNN}.
+    Se seedea inicialmente desde app/data/marca_abreviaturas.json, pero
+    la tabla es la fuente de verdad runtime (CRUD vía /api/catalogos).
+    """
+
+    __tablename__ = "marcas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    abreviatura = Column(String(20), unique=True, index=True, nullable=False)
+    nombre = Column(String(150), nullable=False)
+    categoria = Column(String(150), nullable=True)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+    actualizado_en = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class Producto(Base):

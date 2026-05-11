@@ -215,22 +215,22 @@ CAPABILITY_FLAGS: dict[str, tuple[str, str]] = {
 MODULOS_VISIBLES_BY_ROL: dict[RolUsuario, list[str]] = {
     RolUsuario.ADMINISTRADOR: [
         "dashboard", "cotizador", "seguimiento", "inventario",
-        "clientes", "compras", "gastos", "reportes", "usuarios",
+        "clientes", "compras", "gastos", "reportes", "usuarios", "catalogos",
     ],
     RolUsuario.SUPERADMIN: [
         "dashboard", "cotizador", "seguimiento", "inventario",
-        "clientes", "compras", "gastos", "reportes", "usuarios",
+        "clientes", "compras", "gastos", "reportes", "usuarios", "catalogos",
     ],
     RolUsuario.GERENTE_COMERCIAL: [
         "dashboard", "cotizador", "seguimiento", "inventario",
-        "clientes", "compras", "gastos", "reportes",
+        "clientes", "compras", "gastos", "reportes", "catalogos",
     ],
     RolUsuario.VENTAS: [
         "dashboard", "cotizador", "seguimiento", "inventario",
-        "clientes", "compras", "reportes",
+        "clientes", "compras", "reportes", "catalogos",
     ],
     RolUsuario.OPERATIVO: [
-        "dashboard", "inventario", "compras",
+        "dashboard", "inventario", "compras", "catalogos",
     ],
 }
 

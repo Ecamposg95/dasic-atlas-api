@@ -6,7 +6,7 @@ Modelos organizados por dominio:
 
   enums.py      → RolUsuario, EstatusOrden, TipoMovimiento
   users.py      → Usuario
-  catalog.py    → Producto, Promocion
+  catalog.py    → Producto, Promocion, Marca
   clients.py    → Cliente, Proveedor
   finance.py    → TransaccionCliente, TransaccionProveedor
   sales.py      → OrdenVenta, DetalleOrden
@@ -24,7 +24,7 @@ from app.models.enums import (  # noqa: F401
     TipoMovimientoStock,
 )
 from app.models.users import Usuario  # noqa: F401
-from app.models.catalog import Producto, Promocion  # noqa: F401
+from app.models.catalog import Producto, Promocion, Marca  # noqa: F401
 from app.models.clients import Cliente, Proveedor  # noqa: F401
 from app.models.finance import (  # noqa: F401
     TransaccionCliente,
@@ -43,7 +43,7 @@ __all__ = [
     "RolUsuario", "EstatusOrden", "TipoMovimiento",
     "TipoLineaCotizacion", "TipoMovimientoStock",
     "Usuario",
-    "Producto", "Promocion",
+    "Producto", "Promocion", "Marca",
     "Cliente", "Proveedor",
     "TransaccionCliente", "TransaccionProveedor",
     "OrdenVenta", "DetalleOrden",

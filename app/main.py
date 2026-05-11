@@ -76,7 +76,7 @@ app.add_middleware(
 # Routers API
 # ---------------------------------------------------------------------------
 from app.routers import (  # noqa: E402
-    admin, auth, clientes, compras, dashboard, fx, gastos,
+    admin, auth, catalogos, clientes, compras, dashboard, fx, gastos,
     inventario, productos, reportes, usuarios, ventas,
 )
 
@@ -90,6 +90,7 @@ app.include_router(gastos.router)
 app.include_router(dashboard.router)
 app.include_router(fx.router)
 app.include_router(inventario.router)
+app.include_router(catalogos.router)
 app.include_router(admin.router)
 app.include_router(reportes.router)
 
@@ -159,6 +160,7 @@ _SSR_ROUTES = [
     ("/gastos",             "gastos.html"),
     ("/reportes",           "reportes.html"),
     ("/usuarios",           "usuarios.html"),
+    ("/catalogos",          "catalogos.html"),
 ]
 
 for _path, _tmpl in _SSR_ROUTES:

@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
 import csv
@@ -58,13 +58,46 @@ def _normalize_sku(value: str) -> str:
     return value.strip().upper()
 
 
-def _generate_internal_sku(db: Session) -> str:
-    """SKU interno autogenerado: DAS-YYMM-XXXX (XXXX random hex)."""
+def _generate_internal_sku(db: Session, marca: str | None = None) -> str:
+    """Genera SKU interno único.
+
+    Si `marca` coincide (case-insensitive) con una fila de la tabla `marcas`,
+    el SKU usa el formato consecutivo por abreviatura: `{ABREV}-{NNNN}`.
+    Toma advisory lock por abreviatura para serializar el cómputo del
+    consecutivo bajo concurrencia (igual patrón que folio de cotización).
+
+    Fallback: `DAS-YYMM-XXXX` (random hex) cuando no hay marca conocida.
+    """
+    if marca:
+        nombre_norm = marca.strip()
+        marca_row = (
+            db.query(models.Marca)
+            .filter(func_lower_eq(models.Marca.nombre, nombre_norm))
+            .first()
+        )
+        if marca_row:
+            abrev = marca_row.abreviatura
+            # Advisory lock por abreviatura: serializa contra otros creadores.
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+                {"k": f"sku:{abrev}"},
+            )
+            # Re-scan con lock tomado para no perder un crecimiento concurrente.
+            from app.routers.catalogos import siguiente_sku_para  # evita import circular en módulo
+            return siguiente_sku_para(db, abrev)
+
+    # Legacy fallback para productos sin marca registrada.
     for _ in range(10):
         candidate = f"DAS-{datetime.utcnow().strftime('%y%m')}-{secrets.token_hex(2).upper()}"
         if not db.query(models.Producto).filter(models.Producto.sku == candidate).first():
             return candidate
     raise HTTPException(500, "No se pudo generar SKU único, reintentar")
+
+
+def func_lower_eq(col, value: str):
+    """Helper: comparación case-insensitive sin ANY locale gotchas."""
+    from sqlalchemy import func
+    return func.lower(col) == value.lower()
 
 
 def _read_xlsx_rows(content: bytes) -> List[dict]:
@@ -278,7 +311,7 @@ def crear_producto(
     db: Session = Depends(get_db)
 ):
     raw_sku = (producto.sku or "").strip()
-    sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db)
+    sku = _normalize_sku(raw_sku) if raw_sku else _generate_internal_sku(db, marca=producto.marca)
 
     # Verificar si el SKU ya existe
     db_producto = db.query(models.Producto).filter(models.Producto.sku == sku).first()
@@ -439,7 +472,7 @@ async def cargar_inventario_csv(
                 continue  # Fila vacía
             if not sku:
                 # Autogenerar SKU interno si no viene en el archivo
-                sku = _generate_internal_sku(db)
+                sku = _generate_internal_sku(db, marca=marca)
             else:
                 sku = _normalize_sku(sku)
 

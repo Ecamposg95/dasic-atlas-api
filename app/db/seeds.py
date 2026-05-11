@@ -9,7 +9,9 @@ entre instancias en producción que arrancan sin correr `alembic upgrade head`
 fuente de verdad para entornos limpios.
 """
 
+import json
 import logging
+from pathlib import Path
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,6 +21,8 @@ from app.schemas import UsuarioCreate
 from app.services import UserService
 
 logger = logging.getLogger(__name__)
+
+MARCA_TAXONOMY_FILE = Path(__file__).resolve().parent.parent / "data" / "marca_abreviaturas.json"
 
 
 # DDL idempotente: cada sentencia debe ser segura de re-ejecutar.
@@ -51,6 +55,16 @@ _BACKFILL_DDL = [
         creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
     )""",
     "CREATE INDEX IF NOT EXISTS ix_plantillas_cotizacion_usuario_id ON plantillas_cotizacion (usuario_id)",
+    # 20260510_01: tabla de marcas (taxonomía DASIC + SKU prefix)
+    """CREATE TABLE IF NOT EXISTS marcas (
+        id SERIAL PRIMARY KEY,
+        abreviatura VARCHAR(20) NOT NULL UNIQUE,
+        nombre VARCHAR(150) NOT NULL,
+        categoria VARCHAR(150),
+        creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_marcas_abreviatura ON marcas (abreviatura)",
 ]
 
 
@@ -83,8 +97,43 @@ def seed_super_admin(db: Session) -> None:
     logger.info("Admin creado: admin@dasic.com / admin123")
 
 
+def seed_marcas(db: Session) -> None:
+    """Carga marca_abreviaturas.json en la tabla `marcas` si está vacía.
+
+    Idempotente: solo inserta lo que no existe (por `abreviatura`). En
+    re-arranques no toca filas existentes, así el CRUD desde la UI no se
+    pierde aunque el JSON cambie.
+    """
+    if not MARCA_TAXONOMY_FILE.exists():
+        return
+    try:
+        data = json.loads(MARCA_TAXONOMY_FILE.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("No se pudo leer marca_abreviaturas.json: %s", exc)
+        return
+
+    existentes = {m.abreviatura for m in db.query(models.Marca).all()}
+    nuevas = 0
+    for it in data.get("items", []):
+        abrev = (it.get("abreviatura") or "").strip().upper()
+        nombre = (it.get("marca") or "").strip()
+        if not abrev or not nombre or abrev in existentes:
+            continue
+        db.add(models.Marca(
+            abreviatura=abrev,
+            nombre=nombre,
+            categoria=(it.get("categoria") or "").strip() or None,
+        ))
+        existentes.add(abrev)
+        nuevas += 1
+    if nuevas:
+        db.commit()
+        logger.info("Sembradas %d marcas desde taxonomía DASIC.", nuevas)
+
+
 def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
     seed_super_admin(db)
+    seed_marcas(db)
     logger.info("Startup completado correctamente.")
