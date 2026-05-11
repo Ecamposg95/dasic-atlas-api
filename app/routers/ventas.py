@@ -216,11 +216,16 @@ PDF_TEMPLATE_VENTA = """
   ul.terms strong { color:#0f172a; }
 
   /* Firma */
-  .firma { margin-top: 32px; text-align: center; font-size: 12px; color:#0f172a; }
+  .firma { margin-top: 28px; text-align: center; font-size: 12px; color:#0f172a; }
   .firma .label { font-weight: 800; letter-spacing: 1px; }
-  .firma .line { width: 240px; border-top: 1px solid #0f172a; margin: 36px auto 4px; }
-  .firma .name { font-weight: 700; }
-  .firma .mail a { color:#1d6fb8; }
+  .firma .area { font-weight: 700; color:#0f3a66; margin-top: 4px; font-size: 13px; letter-spacing: 0.5px; }
+  .firma .qr { width: 120px; height: 120px; margin: 14px auto 6px; display: block; }
+  .firma .qr-label { font-size: 10px; color:#475569; }
+  .firma .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
+  .consultor { text-align: center; margin-top: 18px; font-size: 11px; color:#0f172a; }
+  .consultor-nombre { font-weight: 700; }
+  .consultor-titulo { font-style: italic; color:#475569; margin-top: 2px; }
+  .consultor-mail a { color:#1d6fb8; }
 
   /* Footer */
   .footer-bar {
@@ -358,9 +363,18 @@ PDF_TEMPLATE_VENTA = """
 
   <div class="firma">
     <div class="label">ATENTAMENTE</div>
-    <div class="line"></div>
-    <div class="name">{{ orden.vendedor.nombre if orden.vendedor else "Equipo DASIC" }}</div>
-    <div class="mail">{% if orden.vendedor and orden.vendedor.email %}<a href="mailto:{{ orden.vendedor.email }}">{{ orden.vendedor.email }}</a>{% endif %}</div>
+    <div class="area">ÁREA COMERCIAL · DASIC INDUSTRIAL</div>
+    {% if qr_data_uri %}
+      <img class="qr" src="{{ qr_data_uri }}" alt="QR folio {{ orden.folio }}">
+      <div class="qr-label">Folio: <span class="folio-text">{{ orden.folio }}</span></div>
+    {% endif %}
+  </div>
+  <div class="consultor">
+    <div class="consultor-nombre">{{ orden.vendedor.nombre if orden.vendedor else "Equipo DASIC" }}</div>
+    <div class="consultor-titulo">Consultor de Ventas Industrial</div>
+    {% if orden.vendedor and orden.vendedor.email %}
+      <div class="consultor-mail"><a href="mailto:{{ orden.vendedor.email }}">{{ orden.vendedor.email }}</a></div>
+    {% endif %}
   </div>
 
   <div class="footer-bar"><span class="web">www.dasic.mx</span></div>
@@ -970,6 +984,21 @@ def generar_pdf(
         else _quote_validity_days()
     )
 
+    # QR del folio embebido como data URI. Fallback silencioso si qrcode no
+    # está instalado o falla la generación: el PDF se renderiza sin QR.
+    qr_data_uri: str | None = None
+    try:
+        import base64
+        import io as _io
+        import qrcode  # type: ignore
+        qr_img = qrcode.make(orden.folio)
+        buf = _io.BytesIO()
+        qr_img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        qr_data_uri = f"data:image/png;base64,{qr_b64}"
+    except Exception:
+        qr_data_uri = None
+
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(
         orden=orden,
@@ -983,6 +1012,7 @@ def generar_pdf(
         vigencia_dias=vigencia_dias,
         fecha_str=fecha_str,
         iva_pct_label=_iva_pct_label(),
+        qr_data_uri=qr_data_uri,
     )
 
 
