@@ -237,8 +237,75 @@ def registrar_pago_cliente(
     except Exception as e:
         db.rollback()
         raise e
-    
-    
+
+
+# --- 4. RECONCILIACIÓN DE SALDO ---
+@router.get("/{cliente_id}/saldo-reconciliacion", dependencies=[Depends(allow_admin_asistente)])
+def saldo_reconciliacion(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+):
+    """Compara saldo_actual contra la suma neta de TransaccionCliente.
+
+    Útil para detectar drift por borrado manual de filas, rollback parcial
+    de transacciones, o cualquier escenario donde el campo cacheado en
+    Cliente quede desincronizado con la fuente de verdad (transacciones).
+    """
+    cliente = db.get(models.Cliente, cliente_id)
+    if not cliente:
+        raise HTTPException(404, "Cliente no encontrado")
+
+    saldo_cacheado = Decimal(cliente.saldo_actual or 0)
+    saldo_calculado = Decimal("0")
+    for t in cliente.transacciones:
+        if t.tipo == models.TipoMovimiento.CARGO:
+            saldo_calculado += Decimal(t.monto or 0)
+        elif t.tipo == models.TipoMovimiento.ABONO:
+            saldo_calculado -= Decimal(t.monto or 0)
+
+    diferencia = (saldo_cacheado - saldo_calculado).quantize(Decimal("0.01"))
+    return {
+        "cliente_id": cliente.id,
+        "nombre_empresa": cliente.nombre_empresa,
+        "saldo_cacheado": saldo_cacheado,
+        "saldo_calculado": saldo_calculado.quantize(Decimal("0.01")),
+        "diferencia": diferencia,
+        "en_sincronia": diferencia == 0,
+        "n_transacciones": len(cliente.transacciones),
+    }
+
+
+@router.post("/{cliente_id}/saldo-reconciliacion/aplicar", dependencies=[Depends(allow_admin_asistente)])
+def aplicar_reconciliacion(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+):
+    """Reescribe saldo_actual con el saldo calculado desde transacciones.
+
+    Acción destructiva; solo admin/gerente. Usar después de revisar el
+    reporte de /saldo-reconciliacion y aceptar el drift detectado.
+    """
+    cliente = db.get(models.Cliente, cliente_id)
+    if not cliente:
+        raise HTTPException(404, "Cliente no encontrado")
+
+    saldo_calculado = Decimal("0")
+    for t in cliente.transacciones:
+        if t.tipo == models.TipoMovimiento.CARGO:
+            saldo_calculado += Decimal(t.monto or 0)
+        elif t.tipo == models.TipoMovimiento.ABONO:
+            saldo_calculado -= Decimal(t.monto or 0)
+
+    saldo_anterior = cliente.saldo_actual
+    cliente.saldo_actual = saldo_calculado.quantize(Decimal("0.01"))
+    db.commit()
+    return {
+        "cliente_id": cliente.id,
+        "saldo_anterior": saldo_anterior,
+        "saldo_nuevo": cliente.saldo_actual,
+    }
+
+
     # Plantilla HTML para Estado de Cuenta
 PDF_TEMPLATE_EDO_CTA = """
 <!DOCTYPE html>

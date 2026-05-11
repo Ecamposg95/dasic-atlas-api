@@ -460,7 +460,7 @@ def crear_orden(
 
         # Deuda (Solo si es venta directa)
         if tipo_orden == models.EstatusOrden.PENDIENTE:
-            total_con_iva = total_orden * Decimal("1.16")
+            total_con_iva = (total_orden * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
             deuda = models.TransaccionCliente(
                 cliente_id=cliente.id,
                 tipo=models.TipoMovimiento.CARGO,
@@ -764,7 +764,7 @@ def convertir_cotizacion(
                 orden.folio = orden.folio.replace("COT-", "VTA-", 1)
         
         # Generar Deuda
-        total_con_iva = orden.total * Decimal("1.16")
+        total_con_iva = (orden.total * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
         db.add(models.TransaccionCliente(
             cliente_id=orden.cliente_id,
             tipo=models.TipoMovimiento.CARGO,
