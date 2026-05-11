@@ -9,7 +9,7 @@
 {% block header_actions %}
   <div class="flex items-center gap-2">
     <select x-data x-bind:value="$store.rep?.dias || 90" @change="$store.rep.setDias($event.target.value)"
-            class="bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
       <option value="30">30 días</option>
       <option value="60">60 días</option>
       <option value="90" selected>90 días</option>
@@ -29,7 +29,7 @@
   <!-- Tendencia ventas (12 meses) -->
   <div class="dax-card p-5">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-bold text-slate-200">Tendencia 12 meses</h2>
+      <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">Tendencia 12 meses</h2>
       <span class="text-[11px] text-slate-500">Ventas cerradas vs cotizaciones</span>
     </div>
     <div id="chart-tendencia" style="height: 300px;"></div>
@@ -39,7 +39,7 @@
     <!-- Top productos -->
     <div class="dax-card p-5">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-bold text-slate-200">Top productos cotizados</h2>
+        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">Top productos cotizados</h2>
         <span class="text-[11px] text-slate-500" x-text="`Últimos ${dias} días`"></span>
       </div>
       <div id="chart-top-productos" style="height: 320px;"></div>
@@ -48,7 +48,7 @@
     <!-- Top clientes -->
     <div class="dax-card p-5">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-bold text-slate-200">Top clientes (ventas)</h2>
+        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">Top clientes (ventas)</h2>
         <span class="text-[11px] text-slate-500" x-text="`Últimos ${dias} días`"></span>
       </div>
       <div class="space-y-2 overflow-y-auto" style="max-height: 320px;">
@@ -70,7 +70,7 @@
   <!-- Ranking vendedores (admin/gerente) -->
   <div class="dax-card p-5" x-show="$store.user.can('ver_dashboard_team')" x-cloak>
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-bold text-slate-200">Ranking de vendedores</h2>
+      <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">Ranking de vendedores</h2>
       <span class="text-[11px] text-slate-500" x-text="`Últimos ${dias} días`"></span>
     </div>
     <table class="dax-table">
@@ -87,7 +87,7 @@
           <tr>
             <td class="text-xs text-slate-500" x-text="i+1"></td>
             <td>
-              <p class="font-medium text-slate-200 text-xs" x-text="v.nombre"></p>
+              <p class="font-medium text-slate-800 dark:text-slate-200 text-xs" x-text="v.nombre"></p>
               <p class="text-[10px] text-slate-500" x-text="v.email"></p>
             </td>
             <td class="text-right font-mono text-xs" x-text="v.orden_count"></td>

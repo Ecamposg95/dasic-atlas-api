@@ -18,18 +18,18 @@
       <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
       <input type="search" x-model="q" @input.debounce.300ms="filtrar()"
              placeholder="Folio, cliente..."
-             class="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500
+             class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500
                     rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500 transition">
     </div>
     <select x-model="filtroEstatus" @change="filtrar()"
-            class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm
                    rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
       <option value="">Todos los estatus</option>
       <option value="cotizacion">Cotizaciones</option>
       <option value="venta">Ventas</option>
     </select>
     <select x-model="filtroVigencia" @change="filtrar()"
-            class="bg-slate-800 border border-slate-700 text-slate-300 text-sm
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm
                    rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
       <option value="">Toda vigencia</option>
       <option value="vencidas">Vencidas</option>
@@ -56,7 +56,7 @@
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
             <tr><td colspan="7">
-              <div class="h-8 bg-slate-700/40 animate-pulse rounded my-1"></div>
+              <div class="h-8 bg-slate-200 dark:bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
         </template>
@@ -74,7 +74,7 @@
                         x-text="seguimientoBadge(v)"></span>
                 </div>
               </td>
-              <td class="text-right font-mono text-xs font-bold text-slate-200"
+              <td class="text-right font-mono text-xs font-bold text-slate-800 dark:text-slate-200"
                   x-text="moneyLabel(v)"></td>
               <td>
                 <span class="dax-badge-amber" x-show="v.estatus==='cotizacion'">Cotización</span>
