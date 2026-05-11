@@ -178,8 +178,15 @@ PDF_TEMPLATE_VENTA = """
   html, body { margin: 0; padding: 0; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; font-size: 10.5px; line-height: 1.35; }
 
-  /* Página compacta — padding-bottom reservado para el footer-bar */
-  .page { width: 100%; min-height: 100vh; padding: 18px 32px 52px 32px; position: relative; }
+  /* Página flex column: el footer se empuja al final del contenido con
+     margin-top: auto. No queda gap vacío entre contenido y footer. */
+  .page {
+    width: 100%;
+    min-height: 100vh;
+    padding: 18px 32px 0 32px;
+    display: flex;
+    flex-direction: column;
+  }
 
   /* Header DASIC — compacto y elegante */
   .brand-row { display: flex; align-items: center; gap: 14px; padding-bottom: 6px; border-bottom: 3px solid #0f3a66; }
@@ -218,10 +225,10 @@ PDF_TEMPLATE_VENTA = """
   .tespv-tag { display: inline-block; font-size: 8.5px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 0px 3px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
   table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 6px 7px; border-bottom: 2px solid #fff; }
 
-  /* Condiciones — compactas */
-  .terms-title { font-weight: 800; color:#0f172a; margin-top: 10px; margin-bottom: 3px; font-size: 11px; letter-spacing: 0.4px; }
-  ul.terms { padding-left: 16px; margin: 0; color:#1e293b; font-size: 8.5px; line-height: 1.35; }
-  ul.terms li { margin-bottom: 1.5px; }
+  /* Condiciones — ultra-compactas para garantizar 1 hoja */
+  .terms-title { font-weight: 800; color:#0f172a; margin-top: 8px; margin-bottom: 2px; font-size: 10px; letter-spacing: 0.4px; }
+  ul.terms { padding-left: 14px; margin: 0; color:#1e293b; font-size: 7.5px; line-height: 1.25; }
+  ul.terms li { margin-bottom: 0.5px; }
   ul.terms strong { color:#0f172a; }
 
   /* Cierre: layout horizontal compacto (texto izq + QR der) para caber en 1 hoja */
@@ -246,9 +253,12 @@ PDF_TEMPLATE_VENTA = """
   .cierre-right .qr-label { font-size: 8px; color:#475569; margin-top: 2px; }
   .cierre-right .folio-text { font-family: monospace; font-weight: 700; color:#0f172a; }
 
-  /* Footer compacto */
+  /* Footer compacto — en flujo normal. margin-top: auto lo empuja al
+     final si hay espacio, o queda pegado al contenido si la cotización
+     llena la hoja. Margenes negativos compensan el padding del .page
+     para que el footer ocupe todo el ancho de la hoja. */
   .footer-bar {
-    position: absolute; left: 0; right: 0; bottom: 0;
+    margin: auto -32px 0 -32px;
     background: linear-gradient(180deg, #0f3a66 0%, #0a2949 100%);
     color:#cbd5e1; font-size: 10px; text-align: center; padding: 8px 0; letter-spacing: 1px;
   }
