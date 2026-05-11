@@ -33,6 +33,17 @@ def aplicar_movimiento(
     motivo: Optional[str] = None,
     usuario: Optional["models.Usuario"] = None,
 ) -> "models.MovimientoStock":
+    # SELECT ... FOR UPDATE: serializa mutaciones concurrentes sobre el mismo
+    # producto. Sin esto, dos transacciones paralelas leen el mismo stock_actual
+    # y producen lost-update silencioso.
+    producto = (
+        db.query(models.Producto)
+        .populate_existing()
+        .with_for_update()
+        .filter(models.Producto.id == producto.id)
+        .one()
+    )
+
     afecta_stock = tipo in (
         TipoMovimientoStock.ENTRADA.value,
         TipoMovimientoStock.SALIDA.value,

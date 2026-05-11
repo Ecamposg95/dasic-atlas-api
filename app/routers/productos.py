@@ -13,7 +13,9 @@ from pathlib import Path
 from app import models
 from app import schemas
 from app.db import get_db
-from app.security import allow_admin, allow_admin_asistente, allow_all_staff
+from app.models.enums import TipoMovimientoStock
+from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
+from app.services.stock_service import aplicar_movimiento
 
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
@@ -360,18 +362,36 @@ class AjusteStockIn(_PydBase):
 
 
 @router.post("/{id}/ajustar-stock", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
-def ajustar_stock(id: int, payload: AjusteStockIn, db: Session = Depends(get_db)):
-    """Suma `delta` al stock_actual (puede ser negativo). El stock no baja de 0."""
-    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+def ajustar_stock(
+    id: int,
+    payload: AjusteStockIn,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Suma `delta` al stock_actual (puede ser negativo). El stock no baja de 0.
+
+    Pasa por aplicar_movimiento para que la mutación quede auditada en
+    MovimientoStock (kardex). Antes mutaba stock_actual directamente.
+    """
+    producto = db.get(models.Producto, id)
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    nuevo = (producto.stock_actual or 0) + payload.delta
-    if nuevo < 0:
-        raise HTTPException(status_code=400, detail="El stock no puede quedar negativo")
-    producto.stock_actual = nuevo
-    db.commit()
-    db.refresh(producto)
-    return producto
+    try:
+        aplicar_movimiento(
+            db,
+            producto=producto,
+            tipo=TipoMovimientoStock.AJUSTE.value,
+            cantidad=payload.delta,
+            referencia_tipo="ajuste_manual",
+            motivo=payload.motivo or "ajuste manual vía /productos/ajustar-stock",
+            usuario=current_user,
+        )
+        db.commit()
+        db.refresh(producto)
+        return producto
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
 
 # --- 6. CARGA MASIVA CSV / XLSX (IMPORTAR) ---
 @router.post("/upload-csv", dependencies=[Depends(allow_admin_asistente)])
@@ -406,9 +426,10 @@ async def cargar_inventario_csv(
 
     registros_nuevos = 0
     registros_actualizados = 0
+    registros_omitidos = 0
     errores = []
 
-    for row in rows_iter:
+    for idx, row in enumerate(rows_iter, start=2):  # +1 por header, +1 base-1 humano
         try:
             row = _normalize_csv_row(row)
 
@@ -434,6 +455,19 @@ async def cargar_inventario_csv(
             precio_distribuidor = _read_decimal(row, "precio_distribuidor") or Decimal("0")
             stock_actual = _read_int(row, "stock_actual", 0)
             stock_minimo = _read_int(row, "stock_minimo", 5)
+
+            if stock_actual < 0:
+                raise ValueError(
+                    f"stock_actual no puede ser negativo (recibido: {stock_actual})"
+                )
+            if stock_minimo < 0:
+                raise ValueError(
+                    f"stock_minimo no puede ser negativo (recibido: {stock_minimo})"
+                )
+            if costo_compra < 0:
+                raise ValueError(
+                    f"costo_compra no puede ser negativo (recibido: {costo_compra})"
+                )
 
             # Buscar si existe para actualizar (Upsert)
             producto_existente = db.query(models.Producto).filter(models.Producto.sku == sku).first()
@@ -479,14 +513,17 @@ async def cargar_inventario_csv(
                 registros_nuevos += 1
 
         except Exception as e:
-            errores.append(f"Error en SKU {row.get('sku', '?')}: {str(e)}")
+            registros_omitidos += 1
+            sku_ref = (row.get('sku') or row.get('SKU') or '?') if isinstance(row, dict) else '?'
+            errores.append(f"Fila {idx} (SKU {sku_ref}): {str(e)}")
 
     db.commit()
     return {
         "mensaje": "Proceso completado",
         "creados": registros_nuevos,
         "actualizados": registros_actualizados,
-        "errores": errores
+        "omitidos": registros_omitidos,
+        "errores": errores,
     }
 
 # --- 6.5 QR DEL PRODUCTO (PNG) ---

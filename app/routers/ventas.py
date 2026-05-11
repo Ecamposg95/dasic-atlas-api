@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -67,6 +67,12 @@ def _generar_folio(
     es_cot = tipo_orden == models.EstatusOrden.COTIZACION
     prefijo = "C" if es_cot else "V"
     inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Advisory lock transaccional: serializa el cómputo del consecutivo por
+    # (prefijo, mes) entre llamadas concurrentes. Sin esto, count()+1 sufre
+    # race y dos cotizaciones del mismo minuto pueden colisionar en folio.
+    lock_key = f"folio:{prefijo}:{yymm}"
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": lock_key})
 
     q = db.query(models.OrdenVenta).filter(
         models.OrdenVenta.fecha_creacion >= inicio_mes,
