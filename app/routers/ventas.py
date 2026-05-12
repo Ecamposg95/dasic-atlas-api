@@ -132,11 +132,29 @@ def _normalize_currency(moneda: str | None) -> str:
 
 
 def _resolve_exchange_rate(moneda: str, tipo_cambio: Decimal | None) -> Decimal:
+    """Resuelve el TC operativo de una cotización.
+
+    Importante: el TC del payload se respeta SIEMPRE si viene > 0,
+    independientemente de la moneda de la cotización. Esto es necesario
+    porque una cotización en MXN puede tener productos en USD: el TC
+    operativo se usa para convertir cada línea por separado en
+    `_convert_cost_to_quote_currency`.
+
+    Bug previo: se forzaba a 1.0 cuando la moneda era MXN, lo que hacía
+    que productos USD dentro de cotizaciones MXN no se convirtieran y
+    quedaran con costo nominal en USD (precio_unitario y subtotal MUY
+    por debajo del valor real).
+
+    Reglas:
+    - Payload con tipo_cambio > 0 → se respeta (auditoría del TC usado).
+    - Payload sin TC y moneda MXN → 1.0 (no hay productos USD posibles).
+    - Payload sin TC y moneda USD → 400 (el TC es obligatorio).
+    """
+    if tipo_cambio is not None and tipo_cambio > 0:
+        return Decimal(tipo_cambio)
     if moneda == "MXN":
         return Decimal("1.0")
-    if tipo_cambio is None or tipo_cambio <= 0:
-        raise HTTPException(400, "Tipo de cambio inválido para cotizaciones en USD")
-    return Decimal(tipo_cambio)
+    raise HTTPException(400, "Tipo de cambio requerido para cotizaciones en USD")
 
 
 def _convert_cost_to_quote_currency(

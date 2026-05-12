@@ -1033,18 +1033,36 @@
 
   function cambiarMoneda() {
       state.moneda = document.getElementById('select-moneda').value;
-      const divTC = document.getElementById('div-tc');
-      if(state.moneda === 'USD') {
-          divTC.classList.remove('opacity-50', 'pointer-events-none');
-          state.tc = parseFloat(document.getElementById('input-tc').value) || 20;
-      } else {
-          divTC.classList.add('opacity-50', 'pointer-events-none');
-          state.tc = 1;
-      }
+      // El TC siempre se respeta del input (no se forza a 1 al cambiar a MXN).
+      // Una cotización MXN puede tener productos USD que sí requieren TC.
+      const tcInput = parseFloat(document.getElementById('input-tc').value) || 0;
+      state.tc = tcInput > 0 ? tcInput : (state.moneda === 'USD' ? 20 : 1);
+      actualizarVisibilidadTC();
       renderCart();
       filterProds(document.getElementById('buscador').value);
   }
-  function recalculer() { state.tc = parseFloat(document.getElementById('input-tc').value); renderCart(); }
+  function actualizarVisibilidadTC() {
+      const divTC = document.getElementById('div-tc');
+      if (!divTC) return;
+      // Atenuar visualmente cuando no se necesita TC (cotización MXN sin
+      // productos USD), pero NUNCA bloquear interacción — el usuario puede
+      // agregar productos USD en cualquier momento.
+      const hayLineasOtraMoneda = state.cart.some(i =>
+          i.productCurrency && i.productCurrency !== state.moneda
+      );
+      const necesitaTC = state.moneda === 'USD' || hayLineasOtraMoneda;
+      divTC.classList.remove('pointer-events-none');  // siempre editable
+      if (necesitaTC) {
+          divTC.classList.remove('opacity-50');
+      } else {
+          divTC.classList.add('opacity-50');
+      }
+  }
+  function recalculer() {
+      state.tc = parseFloat(document.getElementById('input-tc').value) || 1;
+      actualizarVisibilidadTC();
+      renderCart();
+  }
   function fmtMoney(amount) {
       return moneyForQuote(amount);
   }
@@ -1208,6 +1226,11 @@
   }
 
   function renderCart() {
+      // Re-evalúa la visibilidad del campo TC cada vez que el cart cambia
+      // (agregar/quitar/cambiar moneda de línea puede activar la necesidad
+      // de TC aunque la cotización sea MXN).
+      if (typeof actualizarVisibilidadTC === 'function') actualizarVisibilidadTC();
+
       const tb = document.getElementById('tabla-carrito');
       tb.innerHTML = '';
       let subtotal = 0;
@@ -1457,8 +1480,21 @@
       const cli = document.getElementById('select-cliente').value;
       if (!cli) return Swal.fire('Falta cliente', 'Selecciona un cliente antes de guardar.', 'warning');
       if (state.cart.length === 0) return Swal.fire('Carrito vacío', 'Agrega al menos un producto.', 'warning');
-      if (state.moneda === 'USD' && (!state.tc || state.tc <= 0)) {
-          return Swal.fire('Tipo de cambio inválido', 'Captura un T.C. mayor a 0 para cotizar en USD.', 'warning');
+      // Necesitamos TC válido si: (a) la cotización es USD, o (b) hay
+      // productos en una moneda distinta a la de la cotización (ej. MXN
+      // con productos USD). El TC se aplica por línea según moneda_origen.
+      const tieneLineasOtraMoneda = state.cart.some(i =>
+          i.productCurrency && i.productCurrency !== state.moneda
+      );
+      const necesitaTC = state.moneda === 'USD' || tieneLineasOtraMoneda;
+      if (necesitaTC && (!state.tc || state.tc <= 0)) {
+          return Swal.fire(
+              'Tipo de cambio inválido',
+              tieneLineasOtraMoneda
+                  ? 'Captura un T.C. mayor a 0. Hay productos en una moneda distinta a la cotización y se necesita el T.C. para convertir.'
+                  : 'Captura un T.C. mayor a 0 para cotizar en USD.',
+              'warning'
+          );
       }
 
       // D6: alerta margen <5%
@@ -1477,7 +1513,11 @@
       const payload = {
           cliente_id: parseInt(cli),
           moneda: state.moneda,
-          tipo_cambio: state.moneda === 'USD' ? state.tc : 1,
+          // Enviar siempre el TC operativo del cart, no condicionar a la
+          // moneda de la cotización. Una cotización MXN puede tener
+          // productos USD que requieren conversión. El backend usa este TC
+          // por línea según moneda_origen_linea vs moneda de la cotización.
+          tipo_cambio: state.tc || 1,
           detalles: state.cart.map(i => ({
               producto_id: i.id || null,
               cantidad: i.qty,
