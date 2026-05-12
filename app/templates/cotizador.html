@@ -79,9 +79,9 @@
       </details>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
-      <div class="w-full lg:w-1/3 bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col">
-        <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Catálogo</label>
+    <div class="flex flex-col lg:grid lg:grid-cols-[260px_minmax(0,1fr)_300px] gap-4 flex-1 overflow-hidden pb-20 lg:pb-0">
+      <section aria-labelledby="catalogo-title" class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col min-h-[260px] lg:min-h-0">
+        <label id="catalogo-title" class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Catálogo</label>
         <div class="relative">
           <input type="text" id="buscador" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 pl-8 mb-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Buscar SKU...">
           <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
@@ -106,7 +106,7 @@
             <i class="fas fa-ghost"></i> Fantasma
           </button>
         </div>
-      </div>
+      </section>
 
       <!-- Modal Servicio -->
       <div id="modal-servicio" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -199,9 +199,9 @@
         </div>
       </div>
 
-      <div class="w-full lg:w-2/3 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <section aria-labelledby="cart-title" class="bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden min-h-[400px]">
         <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center flex-none">
-          <span class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
+          <span id="cart-title" class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
           <span class="text-xs bg-blue-100 dark:bg-slate-600 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
         </div>
 
@@ -230,49 +230,188 @@
         <!-- Productos relacionados -->
         <div id="relacionados" class="hidden px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-violet-500/5"></div>
 
-        <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
-          <div class="flex flex-col md:flex-row justify-between items-end gap-4">
-            <div class="flex gap-2 flex-wrap">
-              <button onclick="guardar('cotizacion')" class="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 px-4 py-2 rounded-lg font-bold text-xs shadow-sm transition flex items-center">
-                <i class="fas fa-save mr-2 text-yellow-500"></i> Guardar
-              </button>
-              <button onclick="guardar('pendiente')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center">
-                <i class="fas fa-check-circle mr-2"></i> Vender
-              </button>
-              <button onclick="abrirSugerirOC()" id="btn-sugerir-oc"
-                      class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-md transition flex items-center disabled:opacity-40 disabled:cursor-not-allowed"
-                      disabled title="Guarda la cotización primero">
-                <i class="fas fa-truck mr-2"></i> Sugerir OC
-              </button>
-              <button onclick="abrirPlantillas()" type="button"
-                      class="dax-btn-ghost px-3 py-2 text-xs"
-                      title="Plantillas (P)">
-                <i class="fas fa-bookmark text-amber-400"></i>
-              </button>
-              <button onclick="exportarBorradorJSON()" type="button"
-                      class="dax-btn-ghost px-3 py-2 text-xs"
-                      title="Exportar borrador JSON">
-                <i class="fas fa-download text-cyan-400"></i>
-              </button>
-              <label class="dax-btn-ghost px-3 py-2 text-xs cursor-pointer" title="Importar borrador JSON">
-                <i class="fas fa-upload text-cyan-400"></i>
-                <input type="file" accept="application/json" class="hidden" onchange="importarBorradorJSON(event.target.files[0]); event.target.value=''">
-              </label>
-              <button onclick="undoCarrito()" type="button"
-                      class="dax-btn-ghost px-3 py-2 text-xs"
-                      title="Deshacer (Ctrl+Z)">
-                <i class="fas fa-rotate-left"></i>
-              </button>
-            </div>
+        <div class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex-none">
+          <div class="flex gap-1.5 flex-wrap items-center justify-end">
+            <!-- Acciones secundarias del cart (las primarias Guardar/Vender/PDF están en el summary) -->
+            <button onclick="abrirSugerirOC()" id="btn-sugerir-oc"
+                    class="bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md transition flex items-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled title="Guarda la cotización primero">
+              <i class="fas fa-truck mr-1.5"></i> Sugerir OC
+            </button>
+            <button onclick="abrirPlantillas()" type="button" aria-label="Plantillas"
+                    class="dax-btn-ghost px-2.5 py-1.5 text-xs"
+                    title="Plantillas (P)">
+              <i class="fas fa-bookmark text-amber-400"></i>
+            </button>
+            <button onclick="exportarBorradorJSON()" type="button" aria-label="Exportar borrador"
+                    class="dax-btn-ghost px-2.5 py-1.5 text-xs"
+                    title="Exportar borrador JSON">
+              <i class="fas fa-download text-cyan-400"></i>
+            </button>
+            <label class="dax-btn-ghost px-2.5 py-1.5 text-xs cursor-pointer" title="Importar borrador JSON">
+              <i class="fas fa-upload text-cyan-400"></i>
+              <input type="file" accept="application/json" class="hidden" onchange="importarBorradorJSON(event.target.files[0]); event.target.value=''">
+            </label>
+            <button onclick="undoCarrito()" type="button" aria-label="Deshacer"
+                    class="dax-btn-ghost px-2.5 py-1.5 text-xs"
+                    title="Deshacer (Ctrl+Z)">
+              <i class="fas fa-rotate-left"></i>
+            </button>
+          </div>
+        </div>
+      </section>
 
-            <div class="text-right text-xs text-slate-600 dark:text-slate-400 space-y-1 min-w-[200px]">
-              <div class="flex justify-between"><span>Subtotal:</span> <span id="lbl-sub" class="font-bold">$0.00</span></div>
-              <div class="flex justify-between"><span>IVA (<span id="lbl-iva-pct">16%</span>):</span> <span id="lbl-iva" class="font-bold">$0.00</span></div>
-              <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-1 mt-1 text-base text-blue-900 dark:text-cyan-400 font-bold">
-                <span>Total:</span> <span id="lbl-total">$0.00</span>
-              </div>
+      <!-- ═══════════════════════════════════════════════════════════
+           Summary sticky panel (desktop) + Bottom bar fija (móvil)
+           Antes los totales y botones primarios vivían en el footer
+           del cart. Ahora son siempre visibles a la derecha (lg+) o
+           pegados al fondo de la pantalla (móvil).
+      ═══════════════════════════════════════════════════════════ -->
+      <aside aria-labelledby="resumen-title" class="cot-summary lg:sticky lg:top-4 lg:self-start space-y-3">
+        <!-- Header del panel -->
+        <div class="flex items-center justify-between">
+          <h2 id="resumen-title" class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            <i class="fas fa-receipt text-cyan-500 mr-1"></i> Resumen de cotización
+          </h2>
+          <span id="sum-autosave" class="text-[9px] text-slate-400 dark:text-slate-500 italic" aria-live="polite">—</span>
+        </div>
+
+        <!-- Card principal: TOTAL grande -->
+        <div class="bg-gradient-to-br from-cyan-500 to-blue-600 dark:from-cyan-600 dark:to-blue-700 text-white rounded-xl p-4 shadow-lg">
+          <p class="text-[10px] uppercase tracking-widest font-bold opacity-80">Total</p>
+          <output id="sum-total" role="status" aria-live="polite" class="block text-3xl font-black tracking-tight mt-1">$0.00</output>
+          <div class="flex items-center justify-between mt-3 text-[10px] uppercase tracking-wider opacity-90">
+            <span><span id="sum-items">0</span> ítems</span>
+            <span id="sum-moneda-chip">MXN</span>
+          </div>
+        </div>
+
+        <!-- Card de desglose -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-200 dark:border-slate-700 space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400">Subtotal</span>
+            <span id="sum-subtotal" class="font-bold text-slate-800 dark:text-slate-100">$0.00</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400">IVA (<span id="sum-iva-pct">16%</span>)</span>
+            <span id="sum-iva" class="font-bold text-slate-800 dark:text-slate-100">$0.00</span>
+          </div>
+          <div id="sum-desc-row" class="hidden flex items-center justify-between text-xs">
+            <span class="text-amber-600 dark:text-amber-400">Descuentos</span>
+            <span id="sum-desc" class="font-bold text-amber-600 dark:text-amber-400">-$0.00</span>
+          </div>
+        </div>
+
+        <!-- Card de margen promedio con semáforo -->
+        <div id="sum-margen-card" class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Margen promedio</span>
+            <span id="sum-margen-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">—</span>
+          </div>
+          <output id="sum-margen" role="status" class="block text-2xl font-black mt-1 text-slate-700 dark:text-slate-200">—</output>
+          <p id="sum-margen-aviso" class="hidden text-[10px] text-rose-500 mt-1 font-semibold">
+            <i class="fas fa-exclamation-triangle mr-1"></i> Líneas con margen bajo
+          </p>
+        </div>
+
+        <!-- Chip de Tipo de Cambio (solo si se aplica conversión) -->
+        <div id="sum-tc-card" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-right-left text-amber-600 dark:text-amber-400 text-xs"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-300 font-bold">Tipo de cambio</p>
+              <p class="text-xs font-mono font-bold text-amber-900 dark:text-amber-100 mt-0.5">
+                <span id="sum-tc-text">— @ —</span>
+              </p>
             </div>
           </div>
+        </div>
+
+        <!-- Botones principales (apilados) -->
+        <div class="space-y-2 pt-1">
+          <button onclick="guardar('cotizacion')" type="button"
+                  class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black uppercase text-xs tracking-widest py-3 rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <i class="fas fa-save mr-2"></i> Guardar cotización
+          </button>
+          <button onclick="guardar('pendiente')" type="button"
+                  x-show="$store.user.can('convertir_a_venta')" x-cloak
+                  class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold uppercase text-xs tracking-wider py-2.5 rounded-xl shadow-md transition-all hover:scale-[1.01] active:scale-[0.99]">
+            <i class="fas fa-check-circle mr-1.5"></i> Guardar como venta
+          </button>
+          <button id="sum-btn-pdf" onclick="abrirUltimoPDF()" type="button" disabled
+                  class="w-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-bold uppercase text-[11px] tracking-wider py-2 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="fas fa-file-pdf mr-1.5"></i> Ver PDF
+          </button>
+        </div>
+
+        <!-- Atajos de teclado (solo desktop) -->
+        <div class="hidden lg:block pt-2 border-t border-slate-200 dark:border-slate-700">
+          <p class="text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Atajos</p>
+          <ul class="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
+            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Ctrl+S</kbd> Guardar</li>
+            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Ctrl+Z</kbd> Deshacer</li>
+            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">/</kbd> Buscar producto</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Bottom bar móvil: visible solo <lg. Total + botón Guardar
+       siempre presentes mientras se hace scroll en el cart.
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-2xl"
+       style="padding-bottom: env(safe-area-inset-bottom, 0)">
+    <div class="flex items-stretch gap-3 p-3">
+      <button onclick="abrirResumenMovil()" type="button"
+              class="flex-1 text-left flex items-center gap-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg px-3 py-2 transition">
+        <div class="flex-1 min-w-0">
+          <p class="text-[9px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">Total <span id="sum-items-mobile">0</span> ítems</p>
+          <p id="sum-total-mobile" class="text-lg font-black text-slate-900 dark:text-cyan-300 truncate">$0.00</p>
+        </div>
+        <i class="fas fa-chevron-up text-slate-400 text-xs"></i>
+      </button>
+      <button onclick="guardar('cotizacion')" type="button"
+              class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black uppercase text-xs tracking-wider px-5 rounded-lg shadow-lg shadow-cyan-500/30 transition active:scale-95 whitespace-nowrap">
+        <i class="fas fa-save mr-1"></i> Guardar
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal resumen móvil (se abre al tap en el bottom bar) -->
+  <div id="modal-resumen-movil" class="hidden lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center" onclick="if(event.target===this) cerrarResumenMovil()">
+    <div class="bg-white dark:bg-slate-800 rounded-t-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
+         style="padding-bottom: env(safe-area-inset-bottom, 0)">
+      <div class="sticky top-0 bg-white dark:bg-slate-800 px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Resumen</h3>
+        <button onclick="cerrarResumenMovil()" type="button" aria-label="Cerrar"
+                class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-xl p-4">
+          <p class="text-[10px] uppercase tracking-widest font-bold opacity-80">Total</p>
+          <output id="sum-total-modal" class="block text-3xl font-black tracking-tight mt-1">$0.00</output>
+          <p class="text-[10px] uppercase tracking-wider opacity-90 mt-2">
+            <span id="sum-items-modal">0</span> ítems · <span id="sum-moneda-modal">MXN</span>
+          </p>
+        </div>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span id="sum-subtotal-modal" class="font-bold">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">IVA</span><span id="sum-iva-modal" class="font-bold">$0.00</span></div>
+        </div>
+        <div class="pt-2 space-y-2">
+          <button onclick="guardar('cotizacion'); cerrarResumenMovil()" type="button"
+                  class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black uppercase text-xs tracking-widest py-3 rounded-xl shadow-lg">
+            <i class="fas fa-save mr-2"></i> Guardar cotización
+          </button>
+          <button onclick="guardar('pendiente'); cerrarResumenMovil()" type="button"
+                  x-show="$store.user.can('convertir_a_venta')" x-cloak
+                  class="w-full bg-emerald-500 text-white font-bold uppercase text-xs tracking-wider py-2.5 rounded-xl">
+            <i class="fas fa-check-circle mr-1.5"></i> Guardar como venta
+          </button>
         </div>
       </div>
     </div>
@@ -421,6 +560,7 @@
                   ts: Date.now(),
               };
               localStorage.setItem(state.DRAFT_KEY, JSON.stringify(payload));
+              if (typeof marcarAutosave === 'function') marcarAutosave();
           } catch(e) { console.warn('autosave fail:', e); }
       }, state.AUTOSAVE_DELAY);
   }
@@ -1456,11 +1596,168 @@
   });
 
   function updTotal(sub) {
-      const iva = sub * (Number(state.config.ivaRate) || 0.16);
-      document.getElementById('lbl-sub').innerText = fmtMoney(sub);
-      document.getElementById('lbl-iva').innerText = fmtMoney(iva);
-      document.getElementById('lbl-total').innerText = fmtMoney(sub + iva);
+      const ivaPct = Number(state.config.ivaRate) || 0.16;
+      const iva = sub * ivaPct;
+      const total = sub + iva;
+      // Compat: ids viejos pueden ya no existir (los borramos del footer del
+      // cart en Fase 1 UI/UX). Helper defensivo para no tronar si el DOM
+      // cambió.
+      const setText = (id, value) => {
+          const el = document.getElementById(id);
+          if (el) el.innerText = value;
+      };
+      // Footer viejo (compat por si quedan referencias en otras vistas)
+      setText('lbl-sub', fmtMoney(sub));
+      setText('lbl-iva', fmtMoney(iva));
+      setText('lbl-total', fmtMoney(total));
+      // Summary panel (Fase 1 UI/UX)
+      actualizarSummary(sub, iva, total);
   }
+
+  // Calcula y escribe los datos del summary panel + bottom bar + modal móvil.
+  function actualizarSummary(sub, iva, total) {
+      const items = state.cart.length;
+      const moneda = state.moneda || 'MXN';
+      const ivaPct = (Number(state.config.ivaRate) || 0.16) * 100;
+      const sym = moneda === 'USD' ? 'US$' : '$';
+      const totalFmt = sym + Number(total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const subFmt = sym + Number(sub).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const ivaFmt = sym + Number(iva).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+
+      set('sum-total', totalFmt);
+      set('sum-subtotal', subFmt);
+      set('sum-iva', ivaFmt);
+      set('sum-iva-pct', `${ivaPct.toFixed(0)}%`);
+      set('sum-items', items);
+      set('sum-moneda-chip', moneda);
+
+      // Bottom bar móvil
+      set('sum-total-mobile', totalFmt);
+      set('sum-items-mobile', items);
+
+      // Modal resumen móvil
+      set('sum-total-modal', totalFmt);
+      set('sum-subtotal-modal', subFmt);
+      set('sum-iva-modal', ivaFmt);
+      set('sum-items-modal', items);
+      set('sum-moneda-modal', moneda);
+
+      // Margen promedio + semáforo
+      const lineasConMargen = state.cart.filter(i => !i.ghost || i.servicio === false);
+      const margenes = state.cart
+          .filter(i => !i.ghost && typeof i.utilidad === 'number')
+          .map(i => Number(i.utilidad) || 0);
+      const margenCard = document.getElementById('sum-margen-card');
+      const margenAviso = document.getElementById('sum-margen-aviso');
+      if (margenes.length > 0) {
+          const avg = margenes.reduce((a, b) => a + b, 0) / margenes.length;
+          const conMargenBajo = margenes.filter(m => m < 5).length;
+          set('sum-margen', avg.toFixed(1) + '%');
+          const badge = document.getElementById('sum-margen-badge');
+          if (badge) {
+              if (avg < 5) {
+                  badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300';
+                  badge.textContent = 'Bajo';
+              } else if (avg < 15) {
+                  badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300';
+                  badge.textContent = 'Medio';
+              } else {
+                  badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300';
+                  badge.textContent = 'OK';
+              }
+          }
+          if (margenAviso) {
+              margenAviso.classList.toggle('hidden', conMargenBajo === 0);
+              if (conMargenBajo > 0) margenAviso.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i> ${conMargenBajo} línea(s) con margen <5%`;
+          }
+      } else {
+          set('sum-margen', '—');
+          const badge = document.getElementById('sum-margen-badge');
+          if (badge) {
+              badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500';
+              badge.textContent = '—';
+          }
+          if (margenAviso) margenAviso.classList.add('hidden');
+      }
+
+      // Descuentos: si hay descuentos en alguna línea, mostrarlos como fila
+      const descTotal = state.cart.reduce((acc, i) => {
+          const desc = Number(i.descuento) || 0;
+          if (desc <= 0) return acc;
+          // valor del descuento por línea: precioFinal * qty * desc/100
+          let costo = Number(i.cost) || 0;
+          if (i.productCurrency === 'USD' && state.moneda === 'MXN') costo *= state.tc;
+          if (i.productCurrency === 'MXN' && state.moneda === 'USD') costo /= state.tc;
+          const precioFinal = costo * (1 + (Number(i.utilidad) || 0) / 100);
+          const importeBruto = (Number(i.qty) || 0) * precioFinal;
+          return acc + (importeBruto * desc / 100);
+      }, 0);
+      const descRow = document.getElementById('sum-desc-row');
+      if (descRow) {
+          if (descTotal > 0) {
+              descRow.classList.remove('hidden');
+              descRow.classList.add('flex');
+              set('sum-desc', '-' + sym + Number(descTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          } else {
+              descRow.classList.add('hidden');
+              descRow.classList.remove('flex');
+          }
+      }
+
+      // Tipo de cambio: chip visible si alguna línea está en moneda distinta
+      // a la de la cotización, o si la cotización es USD.
+      const tcCard = document.getElementById('sum-tc-card');
+      if (tcCard) {
+          const hayConversion = state.cart.some(i => i.productCurrency && i.productCurrency !== state.moneda);
+          const necesitaTC = state.moneda === 'USD' || hayConversion;
+          if (necesitaTC && state.tc > 0) {
+              tcCard.classList.remove('hidden');
+              const tcFmt = Number(state.tc).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+              set('sum-tc-text', `MXN ↔ USD @ ${tcFmt}`);
+          } else {
+              tcCard.classList.add('hidden');
+          }
+      }
+
+      // PDF button: habilitar solo después de guardar (state.lastSavedId).
+      const btnPdf = document.getElementById('sum-btn-pdf');
+      if (btnPdf) {
+          btnPdf.disabled = !state.lastSavedId;
+      }
+  }
+
+  function abrirUltimoPDF() {
+      if (state.lastSavedId) window.open(`/api/ventas/${state.lastSavedId}/pdf`, '_blank');
+  }
+
+  function abrirResumenMovil() {
+      const m = document.getElementById('modal-resumen-movil');
+      if (m) m.classList.remove('hidden');
+  }
+  function cerrarResumenMovil() {
+      const m = document.getElementById('modal-resumen-movil');
+      if (m) m.classList.add('hidden');
+  }
+
+  // Indicador de "guardado hace X seg" en el summary panel.
+  // Se actualiza al autosave y cada 30s.
+  let _lastAutosaveTs = 0;
+  function marcarAutosave() {
+      _lastAutosaveTs = Date.now();
+      refreshAutosaveLabel();
+  }
+  function refreshAutosaveLabel() {
+      const el = document.getElementById('sum-autosave');
+      if (!el) return;
+      if (!_lastAutosaveTs) { el.textContent = ''; return; }
+      const seg = Math.round((Date.now() - _lastAutosaveTs) / 1000);
+      if (seg < 5) el.textContent = '✓ guardado';
+      else if (seg < 60) el.textContent = `guardado hace ${seg}s`;
+      else el.textContent = `guardado hace ${Math.round(seg/60)}m`;
+  }
+  setInterval(refreshAutosaveLabel, 30000);
 
   async function cargarConfig() {
       try {
@@ -1546,6 +1843,9 @@
               state.lastSavedId = d.id;
               const btnOC = document.getElementById('btn-sugerir-oc');
               if (btnOC) { btnOC.disabled = false; btnOC.title = ''; }
+              // Habilita el botón "Ver PDF" del summary panel.
+              const btnPdfSum = document.getElementById('sum-btn-pdf');
+              if (btnPdfSum) btnPdfSum.disabled = false;
               limpiarBorrador();
 
               // B3: auto-prompt OC si tipo cotización y hay líneas con stock<cant
