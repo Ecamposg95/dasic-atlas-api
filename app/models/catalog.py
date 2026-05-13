@@ -71,14 +71,11 @@ class Producto(Base):
     objeto_imp = Column(String(2), nullable=True)
     descripcion_fiscal = Column(Text, nullable=True)
 
-    # Clasificación interna
-    # - catalogo_fabricante: SKU del fabricante (lo que el cliente reconoce);
-    #   distinto de `sku` (interno DASIC) y de `sku_comercial`.
-    # - categoria: tipo del producto (relevadores, contactores, sensores, ...).
-    # - abreviatura: derivada de marca+categoria por abreviatura_service.
-    catalogo_fabricante = Column(String(80), nullable=True, index=True)
+    # Clasificación interna. NOTA: no hay `abreviatura` ni
+    # `catalogo_fabricante` como columnas separadas — el SKU interno
+    # (`sku`, formato ABCS-0001) ES la abreviatura, y el catálogo del
+    # fabricante vive en `sku_comercial`.
     categoria = Column(String(80), nullable=True, index=True)
-    abreviatura = Column(String(20), nullable=True, index=True)
 
     promociones = relationship("Promocion", back_populates="producto")
     detalles_orden = relationship("DetalleOrden", back_populates="producto")

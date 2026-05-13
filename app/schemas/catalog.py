@@ -35,10 +35,9 @@ class ProductoBase(BaseModel):
     clave_unidad_sat: Optional[str] = Field(None, max_length=10)
     objeto_imp: Optional[str] = Field(None, max_length=2)
     descripcion_fiscal: Optional[str] = None
-    # Clasificación interna
-    catalogo_fabricante: Optional[str] = Field(None, max_length=80)
+    # Clasificación interna. El SKU interno (`sku`) ya es la abreviatura
+    # y el catálogo del fabricante vive en `sku_comercial`.
     categoria: Optional[str] = Field(None, max_length=80)
-    abreviatura: Optional[str] = Field(None, max_length=20)
 
 
 class ProductoCreate(ProductoBase):
@@ -70,9 +69,7 @@ class ProductoUpdate(BaseModel):
     clave_unidad_sat: Optional[str] = Field(None, max_length=10)
     objeto_imp: Optional[str] = Field(None, max_length=2)
     descripcion_fiscal: Optional[str] = None
-    catalogo_fabricante: Optional[str] = Field(None, max_length=80)
     categoria: Optional[str] = Field(None, max_length=80)
-    abreviatura: Optional[str] = Field(None, max_length=20)
 
 
 class ProductoResponseVendedor(ProductoBase):

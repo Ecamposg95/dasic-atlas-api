@@ -16,7 +16,6 @@ from app.db import get_db
 from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
 from app.services.stock_service import aplicar_movimiento
-from app.services.abreviatura_service import generar as generar_abreviatura
 
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
@@ -389,24 +388,13 @@ def crear_producto(
     if payload.get("precio_publico") is None:
         payload.pop("precio_publico", None)
 
-    # Autogenerar abreviatura si no vino o vino vacía
-    abr_in = (payload.get("abreviatura") or "").strip()
-    if not abr_in:
-        payload["abreviatura"] = generar_abreviatura(
-            marca_texto_final, payload.get("categoria")
-        ) or None
-    else:
-        payload["abreviatura"] = abr_in.upper()
-
-    # Normaliza claves SAT (uppercase)
+    # Normaliza claves SAT (uppercase) y categoría
     if payload.get("clave_unidad_sat"):
         payload["clave_unidad_sat"] = payload["clave_unidad_sat"].strip().upper()
     if payload.get("clave_prod_serv"):
         payload["clave_prod_serv"] = payload["clave_prod_serv"].strip()
     if payload.get("categoria"):
         payload["categoria"] = payload["categoria"].strip()
-    if payload.get("catalogo_fabricante"):
-        payload["catalogo_fabricante"] = payload["catalogo_fabricante"].strip()
 
     # El stock inicial entra al producto vía aplicar_movimiento (ENTRADA auditable).
     # Nace con 0 y se ajusta abajo, garantizando kardex completo desde día 1.
@@ -473,18 +461,6 @@ def actualizar_producto(
     if "moneda_compra" in update_data:
         update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
 
-    # Normaliza/regenera abreviatura. Si el body la trae vacía, se autogenera
-    # de marca+categoria (usando el valor nuevo si se está actualizando o el
-    # existente como fallback). Si la trae con texto, se respeta uppercased.
-    if "abreviatura" in update_data:
-        abr_in = (update_data.get("abreviatura") or "").strip()
-        if abr_in:
-            update_data["abreviatura"] = abr_in.upper()
-        else:
-            marca_para_abr = update_data.get("marca", db_producto.marca)
-            cat_para_abr = update_data.get("categoria", db_producto.categoria)
-            update_data["abreviatura"] = generar_abreviatura(marca_para_abr, cat_para_abr) or None
-
     # Normalizaciones SAT + clasificación
     if "clave_unidad_sat" in update_data and update_data["clave_unidad_sat"]:
         update_data["clave_unidad_sat"] = update_data["clave_unidad_sat"].strip().upper()
@@ -492,8 +468,6 @@ def actualizar_producto(
         update_data["clave_prod_serv"] = update_data["clave_prod_serv"].strip()
     if "categoria" in update_data and update_data["categoria"]:
         update_data["categoria"] = update_data["categoria"].strip()
-    if "catalogo_fabricante" in update_data and update_data["catalogo_fabricante"]:
-        update_data["catalogo_fabricante"] = update_data["catalogo_fabricante"].strip()
 
     for key, value in update_data.items():
         setattr(db_producto, key, value)
@@ -901,10 +875,8 @@ def cardex_producto(id: int, db: Session = Depends(get_db)):
     return {
         "identificacion": {
             "id": p.id,
-            "sku": p.sku,
-            "sku_comercial": p.sku_comercial,
-            "abreviatura": p.abreviatura,
-            "catalogo_fabricante": p.catalogo_fabricante,
+            "sku": p.sku,                       # interno (= "abreviatura": ABCS-0001)
+            "sku_comercial": p.sku_comercial,   # catálogo del fabricante
             "nombre": p.nombre,
             "descripcion": p.descripcion,
             "imagen_url": p.imagen_url,

@@ -180,17 +180,16 @@ _BACKFILL_DDL = [
 
     # ====================================================================
     # Fase 2 — Producto: campos SAT + clasificación interna
+    # `abreviatura` y `catalogo_fabricante` fueron eliminados en
+    # 20260517_01 (duplicaban `sku` y `sku_comercial`). Los drops están
+    # más abajo en este array para que Railway los aplique.
     # ====================================================================
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS objeto_imp VARCHAR(2)",
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS descripcion_fiscal TEXT",
-    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS catalogo_fabricante VARCHAR(80)",
     "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS categoria VARCHAR(80)",
-    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS abreviatura VARCHAR(20)",
     "CREATE INDEX IF NOT EXISTS ix_productos_categoria ON productos (categoria)",
-    "CREATE INDEX IF NOT EXISTS ix_productos_catalogo_fabricante ON productos (catalogo_fabricante)",
-    "CREATE INDEX IF NOT EXISTS ix_productos_abreviatura ON productos (abreviatura)",
     "CREATE INDEX IF NOT EXISTS ix_productos_clave_prod_serv ON productos (clave_prod_serv)",
 
     # ====================================================================
@@ -250,6 +249,21 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS estatus_pago VARCHAR(20) NOT NULL DEFAULT 'pendiente'",
     "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) NOT NULL DEFAULT 0",
     "CREATE INDEX IF NOT EXISTS ix_tx_cli_estatus_pago ON transacciones_clientes (estatus_pago)",
+
+    # ====================================================================
+    # 20260517_01 — drop columnas redundantes (abreviatura, catalogo_fabricante)
+    # Idempotente: si ya no existen, no-op. Si existen con datos, primero
+    # copiamos a sku_comercial cuando aplica para no perder info del usuario.
+    # ====================================================================
+    """UPDATE productos
+          SET sku_comercial = catalogo_fabricante
+        WHERE catalogo_fabricante IS NOT NULL
+          AND catalogo_fabricante <> ''
+          AND (sku_comercial IS NULL OR sku_comercial = '')""",
+    "DROP INDEX IF EXISTS ix_productos_abreviatura",
+    "DROP INDEX IF EXISTS ix_productos_catalogo_fabricante",
+    "ALTER TABLE IF EXISTS productos DROP COLUMN IF EXISTS abreviatura",
+    "ALTER TABLE IF EXISTS productos DROP COLUMN IF EXISTS catalogo_fabricante",
 ]
 
 

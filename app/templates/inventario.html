@@ -138,11 +138,11 @@
     <table class="dax-table">
       <thead>
         <tr>
-          <th scope="col" class="font-mono">Abrev.</th>
-          <th scope="col" class="bg-cyan-500/5 text-cyan-700 dark:text-cyan-300">Catálogo (fab.)</th>
+          <th scope="col" class="font-mono">SKU interno</th>
+          <th scope="col" class="bg-cyan-500/5 text-cyan-700 dark:text-cyan-300">SKU comercial (catálogo fab.)</th>
           <th scope="col">Marca</th>
           <th scope="col">Categoría</th>
-          <th scope="col">Producto / SKU</th>
+          <th scope="col">Producto</th>
           <th scope="col" class="text-center">Unidad</th>
           <th scope="col" class="text-right">Físico</th>
           <th scope="col" class="text-right">Reservado</th>
@@ -164,14 +164,15 @@
         <template x-if="!loading">
           <template x-for="p in filtrados" :key="p.id">
             <tr class="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/30" @click="abrirSidePanel(p)">
-              <td class="font-mono text-[10px] text-slate-500" x-text="p.abreviatura || '—'"></td>
+              <td class="font-mono text-[10px] text-slate-500" x-text="p.sku || '—'"></td>
               <td class="font-mono text-xs text-cyan-700 dark:text-cyan-200 bg-cyan-500/5 font-semibold"
-                  x-text="p.catalogo_fabricante || '—'"></td>
+                  x-text="p.sku_comercial || '—'"></td>
               <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.marca||'—'"></td>
               <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.categoria||'—'"></td>
               <td>
                 <p class="font-medium text-slate-800 dark:text-slate-200 text-xs" x-text="p.nombre"></p>
-                <p class="text-[10px] text-slate-600 dark:text-slate-500 font-mono" x-text="displaySku(p)"></p>
+                <p x-show="p.descripcion" class="text-[10px] text-slate-500 truncate max-w-xs"
+                   x-text="(p.descripcion || '').slice(0, 60)"></p>
               </td>
               <td class="text-xs text-slate-600 dark:text-slate-400 text-center" x-text="p.unidad||'PZA'"></td>
               <td class="text-right font-mono font-bold text-xs"
@@ -239,10 +240,9 @@
       <div>
         <h3 class="text-sm font-bold text-slate-200" x-text="prod?.nombre || '—'"></h3>
         <p class="text-[10px] text-slate-600 dark:text-slate-500 font-mono">
-          <span x-text="prod?.abreviatura ? prod.abreviatura + ' · ' : ''"></span>
-          <span class="text-cyan-700 dark:text-cyan-300 font-semibold" x-text="prod?.catalogo_fabricante || ''"></span>
-          <span x-show="prod?.catalogo_fabricante && (prod?.sku_comercial || prod?.sku)"> · </span>
-          <span x-text="prod?.sku_comercial || prod?.sku || ''"></span>
+          <span x-show="prod?.sku" x-text="prod?.sku"></span>
+          <span x-show="prod?.sku_comercial"> · </span>
+          <span class="text-cyan-700 dark:text-cyan-300 font-semibold" x-text="prod?.sku_comercial || ''"></span>
         </p>
         <p class="text-[10px] text-slate-500" x-text="(prod?.marca||'')+(prod?.categoria ? ' · '+prod.categoria : '')"></p>
       </div>
@@ -430,31 +430,17 @@
         <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Identificación</legend>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU interno</label>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU interno (abreviatura)</label>
             <input x-model="form.sku" :disabled="saving"
-                   @blur="form.sku = (form.sku||'').toUpperCase().trim(); if(!form.sku_comercial) form.sku_comercial = form.sku"
-                   placeholder="Auto: DAS-YYMM-XXXX" class="dax-input font-mono">
-            <p class="text-[10px] text-slate-500 mt-1">Vacío → se autogenera. Se pasa a MAYÚSCULAS.</p>
+                   @blur="form.sku = (form.sku||'').toUpperCase().trim()"
+                   placeholder="Auto: ABCS-0001 (se genera con la marca)" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">Vacío → se autogenera <code>{ABREV}-NNNN</code> al guardar. Se pasa a MAYÚSCULAS.</p>
           </div>
           <div>
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU comercial</label>
+            <label class="block mb-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300 uppercase">SKU comercial (catálogo del fabricante)</label>
             <input x-model="form.sku_comercial" :disabled="saving"
-                   placeholder="P/N comercial visible al cliente" class="dax-input font-mono">
-            <p class="text-[10px] text-slate-500 mt-1">Aparece en el PDF de la cotización.</p>
-          </div>
-          <div>
-            <label class="block mb-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300 uppercase">Catálogo del fabricante</label>
-            <input x-model="form.catalogo_fabricante" :disabled="saving" maxlength="80"
-                   placeholder="P/N del fabricante (ej. LC1D09BL)"
-                   class="dax-input font-mono">
-            <p class="text-[10px] text-slate-500 mt-1">Código original que reconoce el cliente.</p>
-          </div>
-          <div>
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Abreviatura</label>
-            <input x-model="form.abreviatura" :disabled="saving" maxlength="20"
-                   placeholder="Se autogenera de marca+categoría"
-                   class="dax-input font-mono uppercase">
-            <p class="text-[10px] text-slate-500 mt-1" x-text="abreviaturaPreview()"></p>
+                   placeholder="P/N del fabricante (ej. LC1D09BL)" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">El que el cliente reconoce; aparece en el PDF de la cotización.</p>
           </div>
           <div class="md:col-span-2">
             <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre *</label>
@@ -477,7 +463,7 @@
             <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Marca</label>
             <div class="flex gap-2 items-stretch">
               <select x-model.number="form.marca_id" :disabled="saving"
-                      @change="sugerirPrefijoSku(); autoAbreviatura()" class="dax-input flex-1">
+                      @change="sugerirPrefijoSku()" class="dax-input flex-1">
                 <option :value="null">(sin marca)</option>
                 <template x-for="m in marcas" :key="m.id">
                   <option :value="m.id" x-text="m.nombre + ' (' + m.abreviatura + ')'"></option>
@@ -495,7 +481,7 @@
           </div>
           <div>
             <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Categoría</label>
-            <input x-model="form.categoria" @change="autoAbreviatura()" list="categorias-list"
+            <input x-model="form.categoria" list="categorias-list"
                    :disabled="saving" maxlength="80"
                    placeholder="Ej. Relevadores, Contactores…" class="dax-input">
             <datalist id="categorias-list">
@@ -910,9 +896,7 @@ function modalProducto() {
     precio_mayorista: null,
     precio_distribuidor: null,
     // Clasificación + SAT
-    catalogo_fabricante: '',
     categoria: '',
-    abreviatura: '',
     clave_prod_serv: '',
     clave_unidad_sat: '',
     objeto_imp: null,
@@ -992,9 +976,7 @@ function modalProducto() {
         precio_publico: p.precio_publico !== undefined && p.precio_publico !== null ? Number(p.precio_publico) : null,
         precio_mayorista: p.precio_mayorista !== undefined && p.precio_mayorista !== null ? Number(p.precio_mayorista) : null,
         precio_distribuidor: p.precio_distribuidor !== undefined && p.precio_distribuidor !== null ? Number(p.precio_distribuidor) : null,
-        catalogo_fabricante: p.catalogo_fabricante || '',
         categoria: p.categoria || '',
-        abreviatura: p.abreviatura || '',
         clave_prod_serv: p.clave_prod_serv || '',
         clave_unidad_sat: p.clave_unidad_sat || '',
         objeto_imp: p.objeto_imp || null,
@@ -1006,38 +988,6 @@ function modalProducto() {
       this.satUnidadSugs = []; this.satUnidadLabel = '';
       this.sugerirPrefijoSku();
       this.open = true;
-    },
-
-    // Vista previa de la abreviatura que se autogeneraría
-    abreviaturaPreview() {
-      if (this.form.abreviatura) return '';
-      const m = this._marcaNombreActual();
-      const c = (this.form.categoria || '').trim();
-      const abr = this._abrev(m, c);
-      return abr ? `Auto: ${abr} (cambialo si quieres)` : 'Captura marca y categoría para autogenerar.';
-    },
-
-    _marcaNombreActual() {
-      if (!this.form.marca_id) return '';
-      const m = this.marcas.find(x => x.id === this.form.marca_id);
-      return m ? (m.nombre || '') : '';
-    },
-
-    _abrev(marca, cat) {
-      const norm = (s) => (s || '')
-        .normalize('NFKD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^A-Za-z]/g, '').toUpperCase();
-      const m = norm(marca).slice(0, 3);
-      const c = norm(cat).slice(0, 3);
-      if (m && c) return `${m}-${c}`;
-      return m || c || '';
-    },
-
-    autoAbreviatura() {
-      // Solo autoregenera si el campo está vacío (no pisar lo que el usuario tipeó)
-      if (this.form.abreviatura) return;
-      const abr = this._abrev(this._marcaNombreActual(), this.form.categoria);
-      if (abr) this.form.abreviatura = abr;
     },
 
     // Typeahead ClaveProdServ
@@ -1128,9 +1078,7 @@ function modalProducto() {
         moneda_compra: f.moneda_compra || 'MXN',
         stock_actual: Number(f.stock_actual) || 0,
         stock_minimo: Number(f.stock_minimo) || 0,
-        catalogo_fabricante: (f.catalogo_fabricante || '').trim() || null,
         categoria: (f.categoria || '').trim() || null,
-        abreviatura: (f.abreviatura || '').trim() || null,
         clave_prod_serv: (f.clave_prod_serv || '').trim() || null,
         clave_unidad_sat: (f.clave_unidad_sat || '').trim() || null,
         objeto_imp: f.objeto_imp || null,
