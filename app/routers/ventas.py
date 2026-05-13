@@ -1652,11 +1652,12 @@ def productos_relacionados(
 
     Devuelve top N por frecuencia de aparición conjunta.
     """
-    # subquery: ids de órdenes que contienen el producto pivot
+    from sqlalchemy import select
+    # select() explícito (SQLAlchemy 2.x exige select() en lugar de Subquery
+    # cuando se pasa a .in_(); de lo contrario emite SAWarning de coerción).
     ordenes_pivot = (
-        db.query(models.DetalleOrden.orden_id)
-        .filter(models.DetalleOrden.producto_id == producto_id)
-        .subquery()
+        select(models.DetalleOrden.orden_id)
+        .where(models.DetalleOrden.producto_id == producto_id)
     )
     rows = (
         db.query(

@@ -1,21 +1,22 @@
-"""Catálogos: marcas con abreviatura para SKU interno.
+"""Diccionarios: marcas + categorías de productos/servicios + unidades.
 
-Todas las marcas tienen un prefijo único (abreviatura) que se usa para
-generar SKUs internos consecutivos: {ABREV}-{NNNN}. Ej: ABCS-0001,
-SIE-0001, etc.
+Antes llamado "Catálogos". Mantiene el prefix /api/catalogos por compatibilidad
+con el frontend existente y permisos `("read"|"manage", "catalogos")` en RBAC.
 
-Fuentes de SKU consultadas para `siguiente_sku`:
-- Productos cuya columna `sku` empieza con la abreviatura seguida de "-".
+Subdiccionarios:
+- Marcas: tabla `marcas` con abreviatura única (prefijo SKU). CRUD completo.
+- Categorías de productos: derivadas de `productos.categoria` distinct.
+- Categorías de servicios: enum + valores en uso de `servicios.categoria_servicio`.
+- Unidades comerciales: derivadas de `productos.unidad` distinct + lista sugerida.
 
-Permisos:
-- Listar y sugerir SKU: cualquier staff (allow_all_staff).
-- Crear/editar marcas: admin o gerente comercial (allow_admin_asistente).
-- Eliminar marca: admin/gerente, y solo si no hay productos usándola.
+Las "tablas-distinct" no son canónicas — se reciclan los valores capturados en
+productos/servicios. Renombrar un valor en su fuente actualiza el diccionario.
 """
 
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -27,19 +28,29 @@ from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff
 
 
-router = APIRouter(prefix="/api/catalogos", tags=["Catálogos"])
+router = APIRouter(prefix="/api/catalogos", tags=["Diccionarios"])
 
 _ALPHA_RE = re.compile(r"[^A-Z0-9]")
 
 
 def normalizar_abreviatura(raw: str) -> str:
-    """Mayúsculas, sin espacios ni símbolos. Máximo 20 chars."""
+    """Mayúsculas, sin acentos, sin espacios ni símbolos. Máximo 20 chars."""
     if not raw:
         raise HTTPException(400, "abreviatura requerida")
-    clean = _ALPHA_RE.sub("", raw.upper())[:20]
+    # Quita acentos: "Schneider" → "Schneider", "Eléctrico" → "Electrico".
+    no_acentos = unicodedata.normalize("NFKD", raw)
+    no_acentos = "".join(c for c in no_acentos if not unicodedata.combining(c))
+    clean = _ALPHA_RE.sub("", no_acentos.upper())[:20]
     if not clean or len(clean) < 2:
         raise HTTPException(400, "abreviatura debe tener al menos 2 caracteres alfanuméricos")
     return clean
+
+
+def _normalizar_nombre(raw: str | None) -> str:
+    """Trim + colapsa espacios múltiples. NO cambia caja."""
+    if not raw:
+        return ""
+    return re.sub(r"\s+", " ", raw.strip())
 
 
 def siguiente_sku_para(db: Session, abreviatura: str) -> str:
@@ -240,9 +251,174 @@ def resumen_catalogo(db: Session = Depends(get_db)):
         .filter(models.Producto.marca != "")
         .scalar() or 0
     )
+    # Categorías y unidades (distinct sobre productos)
+    n_categorias = (
+        db.query(func.count(func.distinct(models.Producto.categoria)))
+        .filter(models.Producto.categoria.is_not(None))
+        .filter(models.Producto.categoria != "")
+        .scalar() or 0
+    )
+    n_unidades = (
+        db.query(func.count(func.distinct(models.Producto.unidad)))
+        .filter(models.Producto.unidad.is_not(None))
+        .filter(models.Producto.unidad != "")
+        .scalar() or 0
+    )
+    try:
+        n_categorias_servicio = (
+            db.query(func.count(func.distinct(models.Servicio.categoria_servicio)))
+            .filter(models.Servicio.categoria_servicio.is_not(None))
+            .scalar() or 0
+        )
+    except Exception:
+        n_categorias_servicio = 0
     return {
         "total_marcas": total_marcas,
         "total_productos": total_productos,
         "productos_con_marca": productos_con_marca,
         "productos_sin_marca": total_productos - productos_con_marca,
+        "total_categorias_producto": int(n_categorias),
+        "total_unidades": int(n_unidades),
+        "total_categorias_servicio": int(n_categorias_servicio),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Categorías de productos (sin tabla; distinct sobre productos.categoria)
+# ---------------------------------------------------------------------------
+
+@router.get("/categorias-producto", dependencies=[Depends(allow_all_staff)])
+def listar_categorias_producto(db: Session = Depends(get_db)):
+    """Lista categorías distintas en uso + conteo de productos por categoría."""
+    rows = (
+        db.query(
+            models.Producto.categoria,
+            func.count(models.Producto.id).label("n"),
+        )
+        .filter(models.Producto.categoria.is_not(None))
+        .filter(models.Producto.categoria != "")
+        .group_by(models.Producto.categoria)
+        .order_by(models.Producto.categoria.asc())
+        .all()
+    )
+    return {
+        "items": [
+            {"categoria": c, "n_productos": int(n)}
+            for (c, n) in rows
+        ],
+    }
+
+
+@router.put("/categorias-producto/rename", dependencies=[Depends(allow_admin_asistente)])
+def renombrar_categoria_producto(payload: dict, db: Session = Depends(get_db)):
+    """Renombra una categoría en TODOS los productos que la usen.
+
+    Body: { "antiguo": "Relevadores", "nuevo": "Relés" }
+    """
+    antiguo = _normalizar_nombre(payload.get("antiguo"))
+    nuevo = _normalizar_nombre(payload.get("nuevo"))
+    if not antiguo or not nuevo:
+        raise HTTPException(400, "Se requieren 'antiguo' y 'nuevo'.")
+    if antiguo == nuevo:
+        return {"actualizados": 0, "nota": "Nombres iguales, nada que hacer."}
+
+    n = (
+        db.query(models.Producto)
+        .filter(models.Producto.categoria == antiguo)
+        .update({"categoria": nuevo}, synchronize_session=False)
+    )
+    db.commit()
+    return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+
+
+@router.delete("/categorias-producto/{nombre}", dependencies=[Depends(allow_admin_asistente)])
+def eliminar_categoria_producto(nombre: str, db: Session = Depends(get_db)):
+    """Pone a NULL la categoría en TODOS los productos que la usen.
+
+    No hay tabla canónica de categorías; "eliminar" significa desasignar.
+    """
+    nombre_lim = _normalizar_nombre(nombre)
+    if not nombre_lim:
+        raise HTTPException(400, "Nombre vacío.")
+    n = (
+        db.query(models.Producto)
+        .filter(models.Producto.categoria == nombre_lim)
+        .update({"categoria": None}, synchronize_session=False)
+    )
+    db.commit()
+    return {"desasignados": int(n), "categoria": nombre_lim}
+
+
+# ---------------------------------------------------------------------------
+# Unidades comerciales (distinct sobre productos.unidad + sugeridas)
+# ---------------------------------------------------------------------------
+
+UNIDADES_SUGERIDAS = ["PZA", "CAJA", "MTS", "KG", "JUEGO", "PAR", "ROLLO", "LITRO"]
+
+
+@router.get("/unidades", dependencies=[Depends(allow_all_staff)])
+def listar_unidades(db: Session = Depends(get_db)):
+    """Unidades en uso + lista sugerida."""
+    rows = (
+        db.query(
+            models.Producto.unidad,
+            func.count(models.Producto.id).label("n"),
+        )
+        .filter(models.Producto.unidad.is_not(None))
+        .filter(models.Producto.unidad != "")
+        .group_by(models.Producto.unidad)
+        .order_by(models.Producto.unidad.asc())
+        .all()
+    )
+    return {
+        "en_uso": [{"unidad": u, "n_productos": int(n)} for (u, n) in rows],
+        "sugeridas": UNIDADES_SUGERIDAS,
+    }
+
+
+@router.put("/unidades/rename", dependencies=[Depends(allow_admin_asistente)])
+def renombrar_unidad(payload: dict, db: Session = Depends(get_db)):
+    """Renombra una unidad en todos los productos que la usen."""
+    antiguo = (payload.get("antiguo") or "").strip().upper()
+    nuevo = (payload.get("nuevo") or "").strip().upper()
+    if not antiguo or not nuevo:
+        raise HTTPException(400, "Se requieren 'antiguo' y 'nuevo'.")
+    if antiguo == nuevo:
+        return {"actualizados": 0}
+    n = (
+        db.query(models.Producto)
+        .filter(models.Producto.unidad == antiguo)
+        .update({"unidad": nuevo}, synchronize_session=False)
+    )
+    db.commit()
+    return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+
+
+# ---------------------------------------------------------------------------
+# Categorías de servicios (enum sugerido + valores en uso)
+# ---------------------------------------------------------------------------
+
+CATEGORIAS_SERVICIO_SUGERIDAS = ["instalacion", "mantto", "asesoria", "otro"]
+
+
+@router.get("/categorias-servicio", dependencies=[Depends(allow_all_staff)])
+def listar_categorias_servicio(db: Session = Depends(get_db)):
+    """Categorías de servicios en uso (de la tabla `servicios`) + sugeridas."""
+    try:
+        rows = (
+            db.query(
+                models.Servicio.categoria_servicio,
+                func.count(models.Servicio.id).label("n"),
+            )
+            .filter(models.Servicio.categoria_servicio.is_not(None))
+            .group_by(models.Servicio.categoria_servicio)
+            .order_by(models.Servicio.categoria_servicio.asc())
+            .all()
+        )
+        en_uso = [{"categoria": c, "n_servicios": int(n)} for (c, n) in rows]
+    except Exception:
+        en_uso = []
+    return {
+        "en_uso": en_uso,
+        "sugeridas": CATEGORIAS_SERVICIO_SUGERIDAS,
     }

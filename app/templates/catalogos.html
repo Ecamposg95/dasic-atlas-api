@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Catálogos · Marcas{% endblock %}
-{% block page_title %}Catálogos{% endblock %}
+{% block title %}Diccionarios{% endblock %}
+{% block page_title %}Diccionarios{% endblock %}
 
 {% block header_actions %}
   <button type="button" class="dax-btn-primary"
-          x-show="!$store.user.loaded || $store.user.can('editar_producto')" x-cloak
+          x-show="(!$store.user.loaded || $store.user.can('editar_producto')) && tab === 'marcas'" x-cloak
           @click="abrirModalNueva()">
     <i class="fas fa-plus text-xs"></i>
     Nueva Marca
@@ -14,15 +14,28 @@
 {% block content %}
 <div x-data="catalogos()" x-init="init()">
 
-  <!-- Sub-tabs (espacio para Categorías/Unidades en el futuro) -->
-  <div class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/60 pb-1">
-    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white">
+  <!-- Sub-tabs -->
+  <div class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/60 pb-1 overflow-x-auto">
+    <button type="button" @click="cambiarTab('marcas')"
+            class="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition"
+            :class="tab === 'marcas' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'">
       <i class="fas fa-tags text-[10px] mr-1"></i> Marcas
     </button>
-    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 dark:text-slate-500 cursor-not-allowed" disabled
-            title="Próximamente">Categorías</button>
-    <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 dark:text-slate-500 cursor-not-allowed" disabled
-            title="Próximamente">Unidades</button>
+    <button type="button" @click="cambiarTab('categorias')"
+            class="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition"
+            :class="tab === 'categorias' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'">
+      <i class="fas fa-layer-group text-[10px] mr-1"></i> Categorías de producto
+    </button>
+    <button type="button" @click="cambiarTab('unidades')"
+            class="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition"
+            :class="tab === 'unidades' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'">
+      <i class="fas fa-ruler-combined text-[10px] mr-1"></i> Unidades
+    </button>
+    <button type="button" @click="cambiarTab('servicios')"
+            class="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition"
+            :class="tab === 'servicios' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-300'">
+      <i class="fas fa-wrench text-[10px] mr-1"></i> Categorías de servicio
+    </button>
   </div>
 
   <!-- Mensajes flash -->
@@ -57,23 +70,26 @@
     </div>
     <div class="kpi-card">
       <div>
-        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Con marca</p>
-        <p class="text-2xl font-bold text-cyan-400" x-text="resumen.productos_con_marca ?? '—'"></p>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Categorías</p>
+        <p class="text-2xl font-bold text-cyan-400" x-text="resumen.total_categorias_producto ?? '—'"></p>
       </div>
       <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20">
-        <i class="fas fa-link"></i>
+        <i class="fas fa-layer-group"></i>
       </div>
     </div>
     <div class="kpi-card">
       <div>
-        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Sin marca</p>
-        <p class="text-2xl font-bold text-amber-400" x-text="resumen.productos_sin_marca ?? '—'"></p>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Unidades</p>
+        <p class="text-2xl font-bold text-amber-400" x-text="resumen.total_unidades ?? '—'"></p>
       </div>
       <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
-        <i class="fas fa-link-slash"></i>
+        <i class="fas fa-ruler-combined"></i>
       </div>
     </div>
   </div>
+
+  <!-- ============ TAB MARCAS ============ -->
+  <div x-show="tab === 'marcas'">
 
   <!-- Filtros -->
   <div class="dax-card p-4 rounded-xl mb-4">
@@ -165,6 +181,183 @@
     </div>
   </div>
 
+  </div><!-- /tab marcas -->
+
+  <!-- ============ TAB CATEGORÍAS DE PRODUCTO ============ -->
+  <div x-show="tab === 'categorias'" x-cloak>
+    <div class="dax-card p-5 rounded-xl">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">
+        <i class="fas fa-layer-group text-cyan-400 mr-1"></i>
+        Categorías de producto
+      </h3>
+      <p class="text-xs text-slate-500 mb-4">
+        Lista derivada de los productos. Renombrar acá actualiza todos los productos que la usen.
+        Eliminar pone el campo a NULL en los productos.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-[10px] uppercase tracking-wider text-slate-500">
+            <tr>
+              <th class="px-4 py-2 text-left">Categoría</th>
+              <th class="px-4 py-2 text-center w-32"># Productos</th>
+              <th class="px-4 py-2 text-right w-32">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-800/40">
+            <template x-if="cargandoCats">
+              <tr><td colspan="3" class="text-center py-6 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando…</td></tr>
+            </template>
+            <template x-if="!cargandoCats && categoriasProducto.length === 0">
+              <tr><td colspan="3" class="dax-empty-state">
+                <i class="fas fa-layer-group dax-empty-icon"></i>
+                <p class="dax-empty-title">Sin categorías capturadas</p>
+                <p class="dax-empty-hint">Captura una categoría desde la edición de un producto en "Catálogo de productos".</p>
+              </td></tr>
+            </template>
+            <template x-for="c in categoriasProducto" :key="c.categoria">
+              <tr>
+                <td class="px-4 py-2 text-slate-800 dark:text-slate-200" x-text="c.categoria"></td>
+                <td class="px-4 py-2 text-center font-mono text-xs"
+                    :class="c.n_productos > 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'"
+                    x-text="c.n_productos"></td>
+                <td class="px-4 py-2 text-right">
+                  <button x-show="!$store.user.loaded || $store.user.can('editar_producto')"
+                          @click="renombrarCategoria(c)"
+                          class="dax-btn-ghost text-xs py-1 px-2 hover:text-cyan-300" title="Renombrar">
+                    <i class="fas fa-pen text-[11px]"></i>
+                  </button>
+                  <button x-show="!$store.user.loaded || $store.user.can('editar_producto')"
+                          @click="eliminarCategoria(c)"
+                          class="dax-btn-ghost text-xs py-1 px-2 hover:text-rose-300" title="Desasignar de los productos">
+                    <i class="fas fa-trash text-[11px]"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAB UNIDADES ============ -->
+  <div x-show="tab === 'unidades'" x-cloak>
+    <div class="dax-card p-5 rounded-xl">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">
+        <i class="fas fa-ruler-combined text-cyan-400 mr-1"></i>
+        Unidades comerciales
+      </h3>
+      <p class="text-xs text-slate-500 mb-4">
+        Distintas de las claves SAT (esas viven en su catálogo CFDI). Aquí son las unidades
+        operativas usadas en cotizaciones (PZA, CAJA, MTS…).
+      </p>
+
+      <div class="mb-4">
+        <p class="text-[10px] uppercase font-bold text-slate-500 mb-2">Sugeridas</p>
+        <div class="flex flex-wrap gap-2">
+          <template x-for="u in (unidades.sugeridas || [])" :key="u">
+            <span class="text-[11px] font-mono bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-2 py-1 rounded"
+                  x-text="u"></span>
+          </template>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-[10px] uppercase tracking-wider text-slate-500">
+            <tr>
+              <th class="px-4 py-2 text-left">Unidad</th>
+              <th class="px-4 py-2 text-center w-32"># Productos</th>
+              <th class="px-4 py-2 text-right w-32">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-800/40">
+            <template x-if="cargandoUnidades">
+              <tr><td colspan="3" class="text-center py-6 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando…</td></tr>
+            </template>
+            <template x-if="!cargandoUnidades && (unidades.en_uso || []).length === 0">
+              <tr><td colspan="3" class="dax-empty-state">
+                <i class="fas fa-ruler-combined dax-empty-icon"></i>
+                <p class="dax-empty-title">Sin unidades capturadas</p>
+                <p class="dax-empty-hint">Cada producto guarda su unidad en su ficha (PZA, CAJA…).</p>
+              </td></tr>
+            </template>
+            <template x-for="u in (unidades.en_uso || [])" :key="u.unidad">
+              <tr>
+                <td class="px-4 py-2 font-mono text-cyan-700 dark:text-cyan-300" x-text="u.unidad"></td>
+                <td class="px-4 py-2 text-center font-mono text-xs"
+                    :class="u.n_productos > 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500'"
+                    x-text="u.n_productos"></td>
+                <td class="px-4 py-2 text-right">
+                  <button x-show="!$store.user.loaded || $store.user.can('editar_producto')"
+                          @click="renombrarUnidad(u)"
+                          class="dax-btn-ghost text-xs py-1 px-2 hover:text-cyan-300" title="Renombrar">
+                    <i class="fas fa-pen text-[11px]"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAB CATEGORÍAS DE SERVICIO ============ -->
+  <div x-show="tab === 'servicios'" x-cloak>
+    <div class="dax-card p-5 rounded-xl">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">
+        <i class="fas fa-wrench text-cyan-400 mr-1"></i>
+        Categorías de servicio
+      </h3>
+      <p class="text-xs text-slate-500 mb-4">
+        Tipos de servicio del catálogo (instalación, mantto, asesoría, etc.). Solo lectura;
+        cada servicio se edita en su módulo "Servicios".
+      </p>
+
+      <div class="mb-4">
+        <p class="text-[10px] uppercase font-bold text-slate-500 mb-2">Categorías sugeridas (enum)</p>
+        <div class="flex flex-wrap gap-2">
+          <template x-for="c in (categoriasServicio.sugeridas || [])" :key="c">
+            <span class="text-[11px] font-mono bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300
+                         border border-emerald-200 dark:border-emerald-500/20 px-2 py-1 rounded"
+                  x-text="c"></span>
+          </template>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-[10px] uppercase tracking-wider text-slate-500">
+            <tr>
+              <th class="px-4 py-2 text-left">Categoría</th>
+              <th class="px-4 py-2 text-center w-32"># Servicios</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-800/40">
+            <template x-if="cargandoCatsServ">
+              <tr><td colspan="2" class="text-center py-6 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando…</td></tr>
+            </template>
+            <template x-if="!cargandoCatsServ && (categoriasServicio.en_uso || []).length === 0">
+              <tr><td colspan="2" class="dax-empty-state">
+                <i class="fas fa-wrench dax-empty-icon"></i>
+                <p class="dax-empty-title">Sin servicios capturados</p>
+                <p class="dax-empty-hint">Crea uno desde el módulo "Servicios".</p>
+              </td></tr>
+            </template>
+            <template x-for="c in (categoriasServicio.en_uso || [])" :key="c.categoria">
+              <tr>
+                <td class="px-4 py-2 text-slate-800 dark:text-slate-200" x-text="c.categoria"></td>
+                <td class="px-4 py-2 text-center font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                    x-text="c.n_servicios"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Nueva/Editar marca -->
   <div x-show="modal.abierto" x-cloak
        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
@@ -248,6 +441,7 @@
 <script>
 function catalogos() {
   return {
+    tab: 'marcas',  // 'marcas' | 'categorias' | 'unidades' | 'servicios'
     cargando: true,
     marcas: [],
     resumen: {},
@@ -259,9 +453,115 @@ function catalogos() {
       guardando: false,
       form: { abreviatura: '', nombre: '', categoria: '' },
     },
+    // Otros diccionarios
+    categoriasProducto: [],
+    cargandoCats: false,
+    unidades: { en_uso: [], sugeridas: [] },
+    cargandoUnidades: false,
+    categoriasServicio: { en_uso: [], sugeridas: [] },
+    cargandoCatsServ: false,
 
     async init() {
       await Promise.all([this.cargarMarcas(), this.cargarResumen()]);
+    },
+
+    async cambiarTab(t) {
+      this.tab = t;
+      if (t === 'categorias' && this.categoriasProducto.length === 0) await this.cargarCategorias();
+      if (t === 'unidades' && (this.unidades.en_uso || []).length === 0) await this.cargarUnidades();
+      if (t === 'servicios' && (this.categoriasServicio.en_uso || []).length === 0) await this.cargarCategoriasServicio();
+    },
+
+    async cargarCategorias() {
+      this.cargandoCats = true;
+      try {
+        const r = await fetch('/api/catalogos/categorias-producto', { credentials: 'include' });
+        if (r.ok) {
+          const data = await r.json();
+          this.categoriasProducto = data.items || [];
+        } else {
+          window.toast(await window.parseApiError(r, 'No se pudieron cargar las categorías.'), 'error');
+        }
+      } catch (_) { window.toast('Error de red.', 'error'); }
+      this.cargandoCats = false;
+    },
+
+    async renombrarCategoria(c) {
+      const nuevo = prompt(`Renombrar "${c.categoria}" a:`, c.categoria);
+      if (!nuevo || nuevo.trim() === c.categoria) return;
+      try {
+        const r = await fetch('/api/catalogos/categorias-producto/rename', {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ antiguo: c.categoria, nuevo: nuevo.trim() }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          window.toast(`Actualizados ${d.actualizados} producto(s).`, 'success');
+          await this.cargarCategorias();
+          await this.cargarResumen();
+        } else {
+          window.toast(await window.parseApiError(r, 'No se pudo renombrar.'), 'error');
+        }
+      } catch (_) { window.toast('Error de red.', 'error'); }
+    },
+
+    async eliminarCategoria(c) {
+      if (!confirm(`¿Desasignar la categoría "${c.categoria}" de los ${c.n_productos} producto(s) que la usan?\n\nLos productos quedan sin categoría (no se borran).`)) return;
+      try {
+        const r = await fetch(`/api/catalogos/categorias-producto/${encodeURIComponent(c.categoria)}`, {
+          method: 'DELETE', credentials: 'include',
+        });
+        if (r.ok) {
+          const d = await r.json();
+          window.toast(`Desasignada de ${d.desasignados} producto(s).`, 'success');
+          await this.cargarCategorias();
+          await this.cargarResumen();
+        } else {
+          window.toast(await window.parseApiError(r, 'No se pudo desasignar.'), 'error');
+        }
+      } catch (_) { window.toast('Error de red.', 'error'); }
+    },
+
+    async cargarUnidades() {
+      this.cargandoUnidades = true;
+      try {
+        const r = await fetch('/api/catalogos/unidades', { credentials: 'include' });
+        if (r.ok) this.unidades = await r.json();
+        else window.toast(await window.parseApiError(r, 'No se pudieron cargar unidades.'), 'error');
+      } catch (_) { window.toast('Error de red.', 'error'); }
+      this.cargandoUnidades = false;
+    },
+
+    async renombrarUnidad(u) {
+      const nuevo = prompt(`Renombrar unidad "${u.unidad}" a:`, u.unidad);
+      if (!nuevo || nuevo.trim().toUpperCase() === u.unidad) return;
+      try {
+        const r = await fetch('/api/catalogos/unidades/rename', {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ antiguo: u.unidad, nuevo: nuevo.trim() }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          window.toast(`Actualizados ${d.actualizados} producto(s).`, 'success');
+          await this.cargarUnidades();
+        } else {
+          window.toast(await window.parseApiError(r, 'No se pudo renombrar.'), 'error');
+        }
+      } catch (_) { window.toast('Error de red.', 'error'); }
+    },
+
+    async cargarCategoriasServicio() {
+      this.cargandoCatsServ = true;
+      try {
+        const r = await fetch('/api/catalogos/categorias-servicio', { credentials: 'include' });
+        if (r.ok) this.categoriasServicio = await r.json();
+        else window.toast(await window.parseApiError(r, 'No se pudieron cargar categorías de servicio.'), 'error');
+      } catch (_) { window.toast('Error de red.', 'error'); }
+      this.cargandoCatsServ = false;
     },
 
     async cargarMarcas() {
