@@ -128,12 +128,21 @@
                   <button @click="abrirEdicion(c)"
                           class="dax-btn-ghost py-1 px-2"
                           x-show="puedeEditar(c)" x-cloak
+                          aria-label="Editar"
                           title="Editar">
                     <i class="fas fa-pen-to-square text-[10px]"></i>
+                  </button>
+                  <button @click="abrirPago(c)"
+                          class="dax-btn-ghost py-1 px-2 hover:text-emerald-400"
+                          x-show="$store.user.can('registrar_pago') && Number(c.saldo_actual) > 0" x-cloak
+                          aria-label="Registrar pago"
+                          title="Registrar pago">
+                    <i class="fas fa-money-bill-wave text-[10px]"></i>
                   </button>
                   <button @click="eliminar(c)"
                           class="dax-btn-ghost py-1 px-2 hover:text-rose-400"
                           x-show="$store.user.can('gestionar_usuarios')" x-cloak
+                          aria-label="Eliminar"
                           title="Eliminar (admin)">
                     <i class="fas fa-trash text-[10px]"></i>
                   </button>
@@ -308,6 +317,72 @@
     </form>
   </div>
 </div>
+
+<!-- ============================================================ -->
+<!-- Modal Registrar Pago (CxC)                                    -->
+<!-- ============================================================ -->
+<div id="modal-pago"
+     x-data="modalPago()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @pago-modal-open.window="openPay($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-md max-h-[92vh] overflow-y-auto custom-scroll p-6"
+       @click.outside="close()">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Registrar pago</h2>
+        <p class="text-xs text-slate-500 mt-0.5" x-text="cliente.nombre_empresa || ''"></p>
+      </div>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving" aria-label="Cerrar">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="flex items-center justify-between rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 mb-4">
+      <span class="text-[10px] uppercase tracking-wider text-amber-300 font-bold">Saldo actual</span>
+      <span class="font-mono font-bold text-amber-300" x-text="fmtMoney(cliente.saldo_actual || 0)"></span>
+    </div>
+
+    <form @submit.prevent="submit()" class="space-y-4">
+      <div>
+        <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Monto recibido *</label>
+        <input type="number" min="0.01" step="0.01" required
+               x-model.number="form.monto" :disabled="saving"
+               placeholder="0.00" class="dax-input text-right font-mono">
+      </div>
+      <div>
+        <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Concepto / referencia</label>
+        <input type="text" x-model="form.descripcion" :disabled="saving" maxlength="120"
+               placeholder="Transferencia SPEI, OXXO #..." class="dax-input">
+      </div>
+      <p class="text-[10px] text-slate-500">
+        El pago se aplicará en orden FIFO sobre los cargos abiertos del cliente y se registrará un abono histórico.
+      </p>
+
+      <div x-show="error" x-cloak
+           class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+           x-text="error"></div>
+
+      <div class="flex justify-end gap-3 pt-1">
+        <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+        <button type="submit" class="dax-btn-primary" :disabled="saving">
+          <template x-if="!saving">
+            <span class="flex items-center gap-2">
+              <i class="fas fa-money-bill-wave text-xs"></i> Registrar
+            </span>
+          </template>
+          <template x-if="saving">
+            <span class="flex items-center gap-2">
+              <i class="fas fa-circle-notch fa-spin text-xs"></i> Procesando…
+            </span>
+          </template>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -374,6 +449,10 @@ function clientes() {
 
     abrirEdicion(c) {
       window.dispatchEvent(new CustomEvent('cliente-modal-edit', { detail: c }));
+    },
+
+    abrirPago(c) {
+      window.dispatchEvent(new CustomEvent('pago-modal-open', { detail: c }));
     },
 
     async eliminar(c) {
@@ -536,6 +615,79 @@ function modalCliente() {
         }
       } catch(e) {
         this.error = 'Error de red al eliminar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  }
+}
+
+function modalPago() {
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    cliente: {},
+    form: { monto: 0, descripcion: '' },
+
+    fmtMoney,
+
+    openPay(c) {
+      this.cliente = c || {};
+      this.form = { monto: 0, descripcion: '' };
+      this.error = '';
+      this.open = true;
+      this.$nextTick(() => {
+        const el = this.$root.querySelector('input[type="number"]');
+        if (el) el.focus();
+      });
+    },
+
+    close() {
+      if (this.saving) return;
+      this.open = false;
+      this.error = '';
+    },
+
+    async submit() {
+      if (this.saving) return;
+      this.error = '';
+      const monto = Number(this.form.monto || 0);
+      if (!(monto > 0)) {
+        this.error = 'El monto debe ser mayor a 0.';
+        return;
+      }
+      this.saving = true;
+      try {
+        const r = await fetch(`/api/clientes/${this.cliente.id}/pago-distribuido`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            monto,
+            descripcion: (this.form.descripcion || '').trim() || null,
+          }),
+        });
+        if (!r.ok) {
+          let msg = 'No se pudo registrar el pago.';
+          try {
+            const d = await r.json();
+            if (typeof d.detail === 'string') msg = d.detail;
+          } catch(_) {}
+          this.error = msg;
+          return;
+        }
+        const data = await r.json();
+        const aplicado = Number(data.monto_aplicado || 0);
+        const excedente = Number(data.monto_excedente || 0);
+        const partes = [`Pago registrado: ${fmtMoney(monto)}`];
+        if (aplicado < monto) partes.push(`Aplicado a CxC: ${fmtMoney(aplicado)}`);
+        if (excedente > 0) partes.push(`Excedente: ${fmtMoney(excedente)}`);
+        window.toast(partes.join(' · '), 'success');
+        this.open = false;
+        window.dispatchEvent(new CustomEvent('cliente-saved'));
+      } catch(e) {
+        this.error = 'Error de red al registrar el pago.';
       } finally {
         this.saving = false;
       }

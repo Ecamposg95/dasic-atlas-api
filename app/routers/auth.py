@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,6 +12,8 @@ from app import schemas
 from app.services import UserService
 from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
 from app.security.permissions import capabilities_for
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Autenticación"])
 settings = get_settings()
@@ -52,7 +56,16 @@ def login_for_access_token(
 
 @router.get("/me")
 def me(current_user=Depends(get_current_user)):
-    """User logueado + capabilities (consumido por el frontend para esconder UI)."""
+    """User logueado + capabilities (consumido por el frontend para esconder UI).
+
+    Si el admin desactiva al usuario (`activo=False`), el token sigue válido
+    hasta expirar; este check bloquea el acceso aunque el JWT no haya caducado.
+    """
+    if not current_user.activo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario desactivado",
+        )
     caps = capabilities_for(current_user)
     return {
         "id": current_user.id,

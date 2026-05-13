@@ -367,7 +367,12 @@ def crear_oc_desde_cotizacion(
     if quote.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Sólo cotizaciones generan OC")
 
-    proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == payload.proveedor_id).first()
+    # Lock pesimista solo si se va a mutar saldo_actual del proveedor; en
+    # borrador no toca el saldo y no necesita serializar.
+    proveedor_q = db.query(models.Proveedor).filter(models.Proveedor.id == payload.proveedor_id)
+    if payload.afecta_stock:
+        proveedor_q = proveedor_q.with_for_update()
+    proveedor = proveedor_q.first()
     if not proveedor:
         raise HTTPException(404, "Proveedor no encontrado")
 
@@ -465,7 +470,13 @@ def registrar_compra(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    proveedor = db.query(models.Proveedor).filter(models.Proveedor.id == compra.proveedor_id).first()
+    # Lock pesimista: registrar_compra siempre muta saldo_actual al final.
+    proveedor = (
+        db.query(models.Proveedor)
+        .filter(models.Proveedor.id == compra.proveedor_id)
+        .with_for_update()
+        .first()
+    )
     if not proveedor: raise HTTPException(404, "Proveedor no encontrado")
 
     try:
@@ -520,9 +531,16 @@ def pagar_proveedor(
     ref: str = "Pago",
     db: Session = Depends(get_db),
 ):
-    prov = db.query(models.Proveedor).filter(models.Proveedor.id == proveedor_id).first()
+    # Lock pesimista para serializar pagos concurrentes (evita lost-update
+    # en saldo_actual cuando dos pagos llegan al mismo proveedor).
+    prov = (
+        db.query(models.Proveedor)
+        .filter(models.Proveedor.id == proveedor_id)
+        .with_for_update()
+        .first()
+    )
     if not prov: raise HTTPException(404, "Proveedor no encontrado")
-    
+
     db.add(models.TransaccionProveedor(
         proveedor_id=prov.id,
         tipo=models.TipoMovimiento.ABONO,
