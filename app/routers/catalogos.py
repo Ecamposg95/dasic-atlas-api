@@ -15,6 +15,8 @@ productos/servicios. Renombrar un valor en su fuente actualiza el diccionario.
 
 from __future__ import annotations
 
+import logging
+
 import re
 import unicodedata
 from typing import List, Optional
@@ -26,6 +28,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/catalogos", tags=["Diccionarios"])
@@ -271,6 +275,7 @@ def resumen_catalogo(db: Session = Depends(get_db)):
             .scalar() or 0
         )
     except Exception:
+        logger.warning("catalogos.resumen: tabla servicios no disponible, fallback a 0", exc_info=True)
         n_categorias_servicio = 0
     return {
         "total_marcas": total_marcas,
@@ -417,6 +422,7 @@ def listar_categorias_servicio(db: Session = Depends(get_db)):
         )
         en_uso = [{"categoria": c, "n_servicios": int(n)} for (c, n) in rows]
     except Exception:
+        logger.warning("catalogos.categorias_servicios: fallback a lista vacía", exc_info=True)
         en_uso = []
     return {
         "en_uso": en_uso,

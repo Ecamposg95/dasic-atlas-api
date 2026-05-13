@@ -98,7 +98,8 @@
                   <button title="Eventos" class="dax-btn-ghost text-xs py-1 px-2" @click="verEventos(v)">
                     <i class="fas fa-clock-rotate-left"></i>
                   </button>
-                  <button x-show="v.estatus==='cotizacion'" title="Editar cotización"
+                  <button x-show="v.estatus==='cotizacion' && $store.user.can('editar_cotizacion')" x-cloak
+                          title="Editar cotización"
                           class="dax-btn-ghost text-xs py-1 px-2 hover:text-cyan-300"
                           @click="editarCotizacion(v)">
                     <i class="fas fa-pen-to-square text-cyan-400"></i>
@@ -115,7 +116,8 @@
                   <button x-show="v.estatus==='cotizacion'" title="Convertir a venta" class="dax-btn-ghost text-xs py-1 px-2 hover:text-emerald-300" @click="convertir(v)">
                     <i class="fas fa-check-circle text-emerald-400"></i>
                   </button>
-                  <button x-show="v.estatus==='cotizacion'" title="Cancelar cotización" class="dax-btn-ghost text-xs py-1 px-2 hover:text-rose-300" @click="cancelar(v)">
+                  <button x-show="v.estatus==='cotizacion' && $store.user.can('cancelar_cotizacion')" x-cloak
+                          title="Cancelar cotización" class="dax-btn-ghost text-xs py-1 px-2 hover:text-rose-300" @click="cancelar(v)">
                     <i class="fas fa-ban text-rose-400"></i>
                   </button>
                 </div>

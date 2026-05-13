@@ -46,6 +46,8 @@ class ServicioUpdate(BaseModel):
 
 class ServicioResponse(ServicioBase):
     id: int
+    creado_por_id: Optional[int] = None
+    organization_id: Optional[str] = None
     creado_en: Optional[datetime] = None
     actualizado_en: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

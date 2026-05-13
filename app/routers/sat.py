@@ -18,6 +18,7 @@ Los catálogos SAT son canon del SAT — no se editan desde la app. Todos los
 endpoints requieren staff autenticado.
 """
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -27,6 +28,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sat", tags=["Catálogos SAT"])
 

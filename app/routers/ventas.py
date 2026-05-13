@@ -1,9 +1,10 @@
 import logging
+from pathlib import Path as _P
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, text
+from sqlalchemy import desc, select, text
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -13,16 +14,17 @@ from pydantic import BaseModel, EmailStr, Field
 from app import models
 from app import schemas
 from app.core.config import get_settings
-
-logger = logging.getLogger(__name__)
 from app.db import get_db, SessionLocal
 from app.security import allow_all_staff, get_current_user
+from app.security.permissions import _normalize_role, is_owner_scoped, require
 from app.services.email_service import (
     EmailDeliveryError,
     send_quote_email,
     smtp_configured,
 )
 from app.services.ai_service import sugerir_proximo_paso
+from app.services.auto_oc_service import generar_ocs, previsualizar_ocs
+from app.services.cuentas_por_cobrar import crear_cargo_por_venta
 from app.models.enums import TipoMovimientoStock
 from app.services.stock_service import (
     aplicar_movimiento,
@@ -32,10 +34,11 @@ from app.services.stock_service import (
     reservas_activas,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _check_owner_or_403(orden: "models.OrdenVenta", current_user: "models.Usuario", action: str = "read") -> None:
     """Bloquea acciones de VENTAS sobre cotizaciones que no son suyas. Admin/Gerente pasan."""
-    from app.security.permissions import is_owner_scoped
     if is_owner_scoped(current_user, action, "cotizacion"):
         if orden.vendedor_id != current_user.id:
             raise HTTPException(status_code=404, detail="Cotización no encontrada")
@@ -504,7 +507,6 @@ def crear_orden(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
-    from app.security.permissions import require
     require(current_user, "create", "cotizacion")  # operativo: 403
     cliente = (
         db.query(models.Cliente)
@@ -676,7 +678,6 @@ def crear_orden(
 
         # Deuda (Solo si es venta directa) — usa CxC formal con vencimiento.
         if tipo_orden == models.EstatusOrden.PENDIENTE:
-            from app.services.cuentas_por_cobrar import crear_cargo_por_venta
             total_con_iva = (total_orden * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
             crear_cargo_por_venta(
                 db,
@@ -1037,7 +1038,6 @@ def convertir_cotizacion(
                 orden.folio = orden.folio.replace("COT-", "VTA-", 1)
         
         # Generar Deuda — usando servicio CxC formal (vence en cliente.dias_credito)
-        from app.services.cuentas_por_cobrar import crear_cargo_por_venta
         total_con_iva = (orden.total * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
         crear_cargo_por_venta(
             db,
@@ -1063,7 +1063,6 @@ def listar_historial(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    from app.security.permissions import is_owner_scoped, require
     require(current_user, "read", "cotizacion")  # operativo: 403
     query = db.query(models.OrdenVenta)
     if is_owner_scoped(current_user, "read", "cotizacion"):
@@ -1514,7 +1513,6 @@ def cancelar_cotizacion(
 # --- 8. AUTO-OC: sugerir + generar ---
 @router.post("/{id}/sugerir-oc", dependencies=[Depends(allow_all_staff)])
 def sugerir_oc(id: int, db: Session = Depends(get_db)):
-    from app.services.auto_oc_service import previsualizar_ocs
     orden = (
         db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
     )
@@ -1529,7 +1527,6 @@ def generar_oc_endpoint(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    from app.services.auto_oc_service import generar_ocs
     orden = (
         db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
     )
@@ -1666,7 +1663,6 @@ def eliminar_plantilla(
     if not p:
         raise HTTPException(404, "Plantilla no encontrada")
     # Solo el dueño o admin puede borrar
-    from app.security.permissions import _normalize_role
     rol = _normalize_role(getattr(current_user, "rol", None))
     is_admin = rol in (models.RolUsuario.ADMINISTRADOR, models.RolUsuario.SUPERADMIN)
     if not is_admin and p.usuario_id != current_user.id:
@@ -1686,7 +1682,6 @@ def productos_relacionados(
 
     Devuelve top N por frecuencia de aparición conjunta.
     """
-    from sqlalchemy import select
     # select() explícito (SQLAlchemy 2.x exige select() en lugar de Subquery
     # cuando se pasa a .in_(); de lo contrario emite SAWarning de coerción).
     ordenes_pivot = (
@@ -1733,7 +1728,6 @@ def ultima_cotizacion_cliente(
     current_user: models.Usuario = Depends(get_current_user),
 ):
     """Para mostrar widget "última cotización de este cliente"."""
-    from app.security.permissions import is_owner_scoped
 
     q = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
     if is_owner_scoped(current_user, "read", "cotizacion"):
@@ -1757,7 +1751,6 @@ def ultima_cotizacion_cliente(
 @router.get("/sinonimos", dependencies=[Depends(allow_all_staff)])
 def sinonimos_industriales():
     """Diccionario para búsqueda semántica en el cotizador."""
-    from pathlib import Path as _P
     p = _P(__file__).resolve().parent.parent / "data" / "sinonimos.json"
     if not p.exists():
         return {"entradas": []}

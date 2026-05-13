@@ -9,6 +9,7 @@ Reportes disponibles:
   - GET /api/reportes/ventas-mes/csv             → CSV export
 """
 
+import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
@@ -24,6 +25,8 @@ from app import models
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff, get_current_user
 from app.security.permissions import is_owner_scoped
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/reportes", tags=["Reportes"])
 

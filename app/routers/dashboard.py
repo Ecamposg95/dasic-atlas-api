@@ -14,6 +14,7 @@ Endpoints:
   GET /api/dashboard/kpis       — legacy (mantengo por compat)
 """
 
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -26,6 +27,8 @@ from sqlalchemy.orm import Session
 from app import models
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
