@@ -75,6 +75,11 @@
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
       ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 
+      /* Alpine [x-cloak] — esencial: oculta elementos con x-show=false hasta que
+         Alpine inicializa (evita FOUC: el drawer y modales NO se ven hasta que
+         Alpine procesa el estado, no antes). */
+      [x-cloak] { display: none !important; }
+
       .dax-card {
         @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50
                shadow-sm dark:shadow-lg;
@@ -184,7 +189,9 @@
         body[data-sidebar="hidden"]   [data-drawer-catalogo] { left: 0 !important; }
       }
 
-      /* Modo rail: oculta labels, centra iconos, achica logo. Solo en lg+. */
+      /* Modo rail: oculta labels, centra iconos, oculta el logo de marca
+         para que el botón de toggle no se traslape (56px no caben logo + botón).
+         Solo en lg+. */
       @media (min-width: 1024px) {
         body[data-sidebar="rail"] aside.sidebar-shell {
           width: var(--sidebar-rail-width) !important;
@@ -197,11 +204,16 @@
         body[data-sidebar="rail"] .sidebar-item > span:not(.sidebar-item-icon) {
           display: none;
         }
-        body[data-sidebar="rail"] .sidebar-brand-text {
+        body[data-sidebar="rail"] .sidebar-brand-text,
+        body[data-sidebar="rail"] .sidebar-brand-logo {
           display: none;
         }
-        body[data-sidebar="rail"] .sidebar-brand-logo {
-          margin: 0 auto;
+        body[data-sidebar="rail"] .sidebar-brand {
+          display: none;
+        }
+        /* Botón de toggle queda centrado y solo en el header */
+        body[data-sidebar="rail"] .sidebar-header {
+          justify-content: center;
         }
       }
     </style>
@@ -278,8 +290,8 @@
          style="width: var(--sidebar-width)">
 
     <!-- Header marca -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-2 border-b" style="border-color: var(--sidebar-rule)">
-      <div class="flex items-center gap-3 min-w-0">
+    <div class="sidebar-header flex h-16 shrink-0 items-center justify-between px-2 border-b" style="border-color: var(--sidebar-rule)">
+      <div class="sidebar-brand flex items-center gap-3 min-w-0">
         <img src="/static/img/Logo_main.png" alt="DASIC"
              class="sidebar-brand-logo h-9 w-auto object-contain shrink-0 drop-shadow"
              style="max-width: 36px">
