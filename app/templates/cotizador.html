@@ -50,33 +50,24 @@
                 title="Click para recargar TC del día"></span>
         </div>
       </div>
-      <input type="text" id="observaciones" class="w-full mt-2 border-b border-slate-300 dark:border-slate-600 bg-transparent text-sm py-1 focus:outline-none focus:border-cyan-500 placeholder-slate-400" placeholder="+ Agregar notas u observaciones (se usa como 'Condiciones de pago' en el PDF)...">
       <div id="ultima-cot-cliente" class="hidden mt-2 text-[11px] text-slate-400"></div>
-
-      <!-- Términos y condiciones editables por cotización -->
-      <details class="mt-3 group" id="terminos-block">
-        <summary class="cursor-pointer flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider py-1 hover:text-cyan-500 transition">
-          <span><i class="fas fa-file-contract text-[11px] mr-1"></i> Términos y Condiciones del PDF</span>
-          <span class="text-[10px] font-normal text-slate-400" id="terminos-count">— 8 líneas</span>
-        </summary>
-        <div class="mt-2 space-y-1">
-          <textarea id="terminos" rows="8"
-                    class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs p-2 rounded font-mono focus:outline-none focus:border-cyan-500 dark:text-slate-200"
-                    placeholder="Una línea = una condición. Si dejas vacío, el PDF solo mostrará metadata (moneda, vigencia)."
-                    oninput="actualizarContadorTerminos(); autosaveBorrador()"></textarea>
-          <div class="flex items-center gap-2 text-[11px]">
-            <button type="button" onclick="restaurarTerminosDefault()"
-                    class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
-              <i class="fas fa-rotate-left text-[10px] mr-1"></i> Restaurar defaults
-            </button>
-            <button type="button" onclick="vaciarTerminos()"
-                    class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-700 dark:text-slate-200 hover:text-rose-700 transition">
-              <i class="fas fa-eraser text-[10px] mr-1"></i> Vaciar
-            </button>
-            <span class="text-slate-400 ml-auto">Una línea = un punto en el PDF</span>
-          </div>
-        </div>
-      </details>
+      <div class="flex items-center gap-2 mt-2">
+        <button type="button" onclick="abrirModalObs()"
+                class="dax-btn-ghost text-xs flex items-center gap-1.5">
+          <i class="fas fa-pen-to-square text-[10px]"></i>
+          Observaciones
+          <span id="obs-dot" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+        </button>
+        <button type="button" onclick="abrirModalTerminos()"
+                class="dax-btn-ghost text-xs flex items-center gap-1.5">
+          <i class="fas fa-file-lines text-[10px]"></i>
+          Términos
+          <span id="terminos-dot" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+        </button>
+      </div>
+      <!-- Hidden inputs para preservar valor sin renderizar el textarea grande -->
+      <input id="observaciones" type="hidden">
+      <textarea id="terminos" class="hidden"></textarea>
     </div>
 
     <div class="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_320px] gap-4 flex-1 overflow-hidden pb-20 lg:pb-0">
@@ -145,12 +136,12 @@
                   class="bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/40 border border-dashed border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
             <i class="fas fa-box"></i> Producto
           </button>
-          <button type="button" onclick="abrirModalServicio()"
+          <button type="button" onclick="abrirModalLineaCustom('servicio')"
                   class="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 border border-dashed border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1"
                   title="Servicio ad-hoc (no se guarda en catálogo)">
             <i class="fas fa-wrench"></i> Ad-hoc
           </button>
-          <button type="button" onclick="abrirModalFantasma()"
+          <button type="button" onclick="abrirModalLineaCustom('fantasma')"
                   class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
             <i class="fas fa-ghost"></i> Fantasma
           </button>
@@ -158,91 +149,63 @@
       </section>
       </div><!-- /drawer-catalogo -->
 
-      <!-- Modal Servicio -->
-      <div id="modal-servicio" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-300 dark:border-emerald-700 overflow-hidden">
-          <div class="px-6 py-4 bg-emerald-50 dark:bg-emerald-900/30 border-b border-emerald-200 dark:border-emerald-800 flex justify-between items-center">
-            <div>
-              <h3 class="text-base font-black text-emerald-700 dark:text-emerald-300 uppercase">Servicio</h3>
-              <p class="text-xs text-emerald-600 dark:text-emerald-400">Programación, instalación, capacitación, etc.</p>
-            </div>
-            <button onclick="cerrarModalServicio()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+      <!-- Modal Línea Custom: Servicio o Producto Fantasma (fusionado) -->
+      <div id="modal-linea-custom" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-300 dark:border-emerald-700 overflow-hidden"
+             onclick="event.stopPropagation()">
+          <div class="px-6 py-4 bg-slate-100 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+            <h3 class="text-base font-black text-slate-800 dark:text-slate-200 uppercase">Agregar línea custom</h3>
+            <button onclick="cerrarModalLineaCustom()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
           </div>
-          <div class="p-5 space-y-3">
-            <div>
-              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
-              <input id="servicio-desc" type="text" placeholder="Ej. Programación PLC y HMI 8 hrs" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Tarifa *</label>
-                <input id="servicio-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-              </div>
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
-                <select id="servicio-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant./Hrs</label>
-                <input id="servicio-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-              </div>
-            </div>
-          </div>
-          <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-            <button onclick="cerrarModalServicio()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-            <button onclick="agregarServicio()" class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
-              <i class="fas fa-plus mr-1"></i> Agregar
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div id="modal-fantasma" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-amber-300 dark:border-amber-700 overflow-hidden">
-          <div class="px-6 py-4 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex justify-between items-center">
-            <div>
-              <h3 class="text-base font-black text-amber-700 dark:text-amber-300 uppercase">Producto Fantasma</h3>
-              <p class="text-xs text-amber-600 dark:text-amber-400">Cotizar sin afectar inventario</p>
+          <div class="px-5 pt-4">
+            <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 p-1 mb-3 text-xs">
+              <button id="lc-tab-srv" type="button" onclick="setTipoLineaCustom('servicio')"
+                      class="px-3 py-1 rounded bg-emerald-500 text-white font-bold">
+                <i class="fas fa-wrench mr-1"></i> Servicio
+              </button>
+              <button id="lc-tab-fan" type="button" onclick="setTipoLineaCustom('fantasma')"
+                      class="px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold">
+                <i class="fas fa-ghost mr-1"></i> Producto fantasma
+              </button>
             </div>
-            <button onclick="cerrarModalFantasma()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
           </div>
-          <div class="p-5 space-y-3">
-            <div>
+
+          <div class="px-5 pb-3 space-y-3">
+            <div id="lc-row-sku" class="hidden">
               <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
-              <input id="fantasma-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+              <input id="lc-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
             </div>
             <div>
               <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
-              <input id="fantasma-desc" type="text" placeholder="Ej. Válvula especial bajo pedido" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+              <input id="lc-desc" type="text" placeholder="Programación PLC 8 hrs / Válvula especial..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
             </div>
             <div class="grid grid-cols-3 gap-2">
               <div>
                 <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
-                <input id="fantasma-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                <input id="lc-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
               </div>
               <div>
                 <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
-                <select id="fantasma-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                <select id="lc-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
                   <option value="MXN">MXN</option>
                   <option value="USD">USD</option>
                 </select>
               </div>
               <div>
                 <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
-                <input id="fantasma-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                <input id="lc-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
               </div>
             </div>
-            <div>
+            <div id="lc-row-util" class="hidden">
               <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
-              <input id="fantasma-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
+              <input id="lc-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
             </div>
           </div>
+
           <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-            <button onclick="cerrarModalFantasma()" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-            <button onclick="agregarFantasma()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black uppercase tracking-wider rounded-lg shadow-md">
+            <button onclick="cerrarModalLineaCustom()" class="dax-btn-ghost">Cancelar</button>
+            <button onclick="agregarLineaCustom()" class="dax-btn-primary">
               <i class="fas fa-plus mr-1"></i> Agregar
             </button>
           </div>
@@ -559,6 +522,65 @@
     </div>
   </div>
 
+  <!-- Modal Observaciones -->
+  <div id="modal-obs" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 bg-slate-100 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Observaciones de la cotización</h3>
+        <button onclick="cerrarModalObs()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-5">
+        <textarea id="obs-modal-text" rows="5"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-3 text-sm"
+                  placeholder="Aparece bajo el cuerpo de la cotización en el PDF (condiciones de pago, anotaciones, etc.)"></textarea>
+      </div>
+      <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+        <button onclick="cerrarModalObs()" class="dax-btn-ghost">Cancelar</button>
+        <button onclick="guardarObs()" class="dax-btn-primary">
+          <i class="fas fa-check mr-1"></i> Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Términos -->
+  <div id="modal-terminos" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 bg-slate-100 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">
+          Términos y condiciones
+          <span id="terminos-modal-count" class="text-xs text-slate-500 font-normal ml-2"></span>
+        </h3>
+        <button onclick="cerrarModalTerminos()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-5 flex-1 overflow-y-auto">
+        <textarea id="terminos-modal-text" rows="14"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-3 text-xs font-mono"
+                  oninput="actualizarContadorTerminosModal()"></textarea>
+      </div>
+      <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-between gap-2">
+        <div class="flex gap-2">
+          <button onclick="restaurarTerminosDefault(); cargarTerminosEnModal()" class="dax-btn-ghost text-xs">
+            Restaurar default
+          </button>
+          <button onclick="vaciarTerminos(); cargarTerminosEnModal()" class="dax-btn-ghost text-xs">
+            Vaciar
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="cerrarModalTerminos()" class="dax-btn-ghost">Cancelar</button>
+          <button onclick="guardarTerminos()" class="dax-btn-primary">
+            <i class="fas fa-check mr-1"></i> Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -592,6 +614,54 @@
     const lineas = v.split('\n').filter(l => l.trim().length > 0).length;
     const lbl = document.getElementById('terminos-count');
     if (lbl) lbl.textContent = `— ${lineas} ${lineas === 1 ? 'línea' : 'líneas'}`;
+  }
+
+  function abrirModalObs() {
+      const v = document.getElementById('observaciones').value || '';
+      document.getElementById('obs-modal-text').value = v;
+      document.getElementById('modal-obs').classList.remove('hidden');
+      document.getElementById('modal-obs').classList.add('flex');
+      setTimeout(() => document.getElementById('obs-modal-text').focus(), 50);
+  }
+  function cerrarModalObs() {
+      const m = document.getElementById('modal-obs');
+      m.classList.add('hidden'); m.classList.remove('flex');
+  }
+  function guardarObs() {
+      const v = document.getElementById('obs-modal-text').value || '';
+      document.getElementById('observaciones').value = v;
+      document.getElementById('obs-dot').classList.toggle('hidden', !v.trim());
+      autosaveBorrador();
+      cerrarModalObs();
+  }
+
+  function abrirModalTerminos() {
+      cargarTerminosEnModal();
+      document.getElementById('modal-terminos').classList.remove('hidden');
+      document.getElementById('modal-terminos').classList.add('flex');
+  }
+  function cerrarModalTerminos() {
+      const m = document.getElementById('modal-terminos');
+      m.classList.add('hidden'); m.classList.remove('flex');
+  }
+  function cargarTerminosEnModal() {
+      const v = document.getElementById('terminos').value || '';
+      document.getElementById('terminos-modal-text').value = v;
+      actualizarContadorTerminosModal();
+  }
+  function actualizarContadorTerminosModal() {
+      const v = document.getElementById('terminos-modal-text').value || '';
+      const lineas = v.split('\n').filter(l => l.trim().length > 0).length;
+      const lbl = document.getElementById('terminos-modal-count');
+      if (lbl) lbl.textContent = `— ${lineas} ${lineas === 1 ? 'línea' : 'líneas'}`;
+  }
+  function guardarTerminos() {
+      const v = document.getElementById('terminos-modal-text').value || '';
+      document.getElementById('terminos').value = v;
+      actualizarContadorTerminos();
+      document.getElementById('terminos-dot').classList.toggle('hidden', !v.trim());
+      autosaveBorrador();
+      cerrarModalTerminos();
   }
 
   let state = {
@@ -813,9 +883,7 @@
           state.tc = v;
           renderCart();
       });
-      // observaciones autosave
-      const obs = document.getElementById('observaciones');
-      if (obs) obs.addEventListener('input', autosaveBorrador);
+      // observaciones autosave is handled by guardarObs() directly (input is now hidden)
       // cliente change → cargar última cot del cliente
       const selCli = document.getElementById('select-cliente');
       if (selCli) selCli.addEventListener('change', () => { cargarUltimaCotCliente(); autosaveBorrador(); });
@@ -846,8 +914,8 @@
               if (i && i.offsetParent !== null) i.focus();
             }, 100);
           }
-          if (e.key === 'n') { e.preventDefault(); abrirModalServicio(); }
-          if (e.key === 'f') { e.preventDefault(); abrirModalFantasma(); }
+          if (e.key === 'n') { e.preventDefault(); abrirModalLineaCustom('servicio'); }
+          if (e.key === 'f') { e.preventDefault(); abrirModalLineaCustom('fantasma'); }
           if (e.key === 'p') { e.preventDefault(); abrirPlantillas(); }
       });
 
@@ -899,6 +967,16 @@
               limpiarBorrador();
           }
       }, 600);
+
+      // Marcar dots iniciales si los textareas hidden ya tienen contenido (modo edición)
+      setTimeout(() => {
+          const obsEl = document.getElementById('observaciones');
+          const trmEl = document.getElementById('terminos');
+          const obsDot = document.getElementById('obs-dot');
+          const trmDot = document.getElementById('terminos-dot');
+          if (obsEl && obsDot && (obsEl.value || '').trim()) obsDot.classList.remove('hidden');
+          if (trmEl && trmDot && (trmEl.value || '').trim()) trmDot.classList.remove('hidden');
+      }, 700);
   });
 
   // ============ CARGAR COTIZACIÓN PARA EDITAR ============
@@ -1352,47 +1430,75 @@
       Swal.fire({toast:true, position:'top-end', icon:'success', title:`${s.codigo} agregado`, timer:1200, showConfirmButton:false});
   }
 
-  function abrirModalServicio() {
-      document.getElementById('modal-servicio').classList.remove('hidden');
-      document.getElementById('modal-servicio').classList.add('flex');
-      document.getElementById('servicio-desc').focus();
+  let _lcTipo = 'servicio';
+  function abrirModalLineaCustom(tipo) {
+      _lcTipo = (tipo === 'fantasma') ? 'fantasma' : 'servicio';
+      setTipoLineaCustom(_lcTipo);
+      document.getElementById('lc-sku').value = '';
+      document.getElementById('lc-desc').value = '';
+      document.getElementById('lc-cost').value = '0';
+      document.getElementById('lc-qty').value = '1';
+      document.getElementById('lc-util').value = '30';
+      document.getElementById('lc-mon').value = state.moneda || 'MXN';
+      const m = document.getElementById('modal-linea-custom');
+      m.classList.remove('hidden'); m.classList.add('flex');
+      setTimeout(() => document.getElementById('lc-desc').focus(), 50);
   }
-  function cerrarModalServicio() {
-      const m = document.getElementById('modal-servicio');
+
+  function cerrarModalLineaCustom() {
+      const m = document.getElementById('modal-linea-custom');
       m.classList.add('hidden'); m.classList.remove('flex');
   }
-  function agregarServicio() {
-      const desc = document.getElementById('servicio-desc').value.trim();
-      const cost = parseFloat(document.getElementById('servicio-cost').value);
-      const qty = parseInt(document.getElementById('servicio-qty').value) || 1;
-      if (!desc || !Number.isFinite(cost) || cost < 0) {
-          Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción/tarifa', timer:1500, showConfirmButton:false});
-          return;
+
+  function setTipoLineaCustom(tipo) {
+      _lcTipo = tipo;
+      const isFan = tipo === 'fantasma';
+      document.getElementById('lc-row-sku').classList.toggle('hidden', !isFan);
+      document.getElementById('lc-row-util').classList.toggle('hidden', !isFan);
+      const tabSrv = document.getElementById('lc-tab-srv');
+      const tabFan = document.getElementById('lc-tab-fan');
+      tabSrv.className = isFan
+          ? 'px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold'
+          : 'px-3 py-1 rounded bg-emerald-500 text-white font-bold';
+      tabFan.className = isFan
+          ? 'px-3 py-1 rounded bg-amber-500 text-white font-bold'
+          : 'px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold';
+  }
+
+  function agregarLineaCustom() {
+      const desc = document.getElementById('lc-desc').value.trim();
+      const cost = parseFloat(document.getElementById('lc-cost').value);
+      const qty = parseInt(document.getElementById('lc-qty').value) || 1;
+      const mon = document.getElementById('lc-mon').value || 'MXN';
+      if (!desc) { window.toast('Falta descripción', 'warning'); return; }
+      if (!Number.isFinite(cost) || cost < 0) { window.toast('Costo inválido', 'warning'); return; }
+      if (_lcTipo === 'fantasma') {
+          const util = parseFloat(document.getElementById('lc-util').value) || 0;
+          const sku = document.getElementById('lc-sku').value.trim();
+          state.cart.push({
+              id: null, ghost: true, servicio: false,
+              sku: sku || '— FANTASMA',
+              nom: desc, cost, productCurrency: mon, qty, max: 9999,
+              utilidad: util, descuento: 0,
+              tipo_linea: 'producto_fantasma',
+              entrega_min: null, entrega_max: null, entrega_unidad: null,
+              observaciones_linea: '',
+          });
+      } else {
+          state.cart.push({
+              id: null, ghost: true, servicio: true,
+              sku: '— SERVICIO',
+              nom: desc, cost, productCurrency: mon, qty, max: 9999,
+              utilidad: 0, descuento: 0,
+              tipo_linea: 'servicio',
+              entrega_min: null, entrega_max: null, entrega_unidad: null,
+              observaciones_linea: '',
+          });
       }
-      state.cart.push({
-          id: null,
-          ghost: true,
-          servicio: true,
-          sku: '— SERVICIO',
-          nom: desc,
-          cost: cost,
-          productCurrency: document.getElementById('servicio-mon').value,
-          qty: qty,
-          max: 9999,
-          utilidad: 0,
-          descuento: 0,
-          entrega_min: null,
-          entrega_max: null,
-          entrega_unidad: null,
-          observaciones_linea: null,
-          tipoLinea: 'servicio',
-      });
-      state._newlyAdded = state.cart.length - 1;
-      cerrarModalServicio();
-      document.getElementById('servicio-desc').value = '';
-      document.getElementById('servicio-cost').value = '0';
-      document.getElementById('servicio-qty').value = '1';
       renderCart();
+      autosaveBorrador();
+      cerrarModalLineaCustom();
+      window.toast(`${_lcTipo === 'fantasma' ? 'Fantasma' : 'Servicio'} agregado`, 'success');
   }
 
   function cambiarTab(tab) {
@@ -1537,7 +1643,7 @@
           // Sugerencia: ofrecer agregar como fantasma
           list.innerHTML = `<div class="p-4 text-center text-xs text-slate-600 dark:text-slate-400">
               Sin resultados para <b class="text-slate-300">${txt}</b>.
-              <br><button onclick="abrirModalFantasma()" class="mt-2 text-amber-400 underline">Agregar como producto fantasma</button>
+              <br><button onclick="abrirModalLineaCustom('fantasma')" class="mt-2 text-amber-400 underline">Agregar como producto fantasma</button>
           </div>`;
           return;
       }
@@ -1604,47 +1710,6 @@
       filterProds(q);
   }
 
-  function abrirModalFantasma() {
-      document.getElementById('modal-fantasma').classList.remove('hidden');
-      document.getElementById('modal-fantasma').classList.add('flex');
-      document.getElementById('fantasma-desc').focus();
-  }
-  function cerrarModalFantasma() {
-      const m = document.getElementById('modal-fantasma');
-      m.classList.add('hidden'); m.classList.remove('flex');
-  }
-  function agregarFantasma() {
-      const desc = document.getElementById('fantasma-desc').value.trim();
-      const cost = parseFloat(document.getElementById('fantasma-cost').value);
-      const qty = parseInt(document.getElementById('fantasma-qty').value) || 1;
-      if (!desc || !cost || cost <= 0) {
-          Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Falta descripción y costo', showConfirmButton:false, timer:1500});
-          return;
-      }
-      state.cart.push({
-          id: null,
-          ghost: true,
-          sku: document.getElementById('fantasma-sku').value.trim() || '— FANTASMA',
-          nom: desc,
-          cost: cost,
-          productCurrency: document.getElementById('fantasma-mon').value,
-          qty: qty,
-          max: 9999,
-          utilidad: parseInt(document.getElementById('fantasma-util').value) || 30,
-          descuento: 0,
-          entrega_min: null,
-          entrega_max: null,
-          entrega_unidad: null,
-          observaciones_linea: null,
-      });
-      state._newlyAdded = state.cart.length - 1;
-      cerrarModalFantasma();
-      ['fantasma-sku','fantasma-desc'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('fantasma-cost').value = '0';
-      document.getElementById('fantasma-qty').value = '1';
-      document.getElementById('fantasma-util').value = '30';
-      renderCart();
-  }
 
   async function addCart(p) {
       if(p.stock_actual <= 0) Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Sin Stock', showConfirmButton:false, timer:1500});
@@ -2034,11 +2099,17 @@
       if (ta) ta.addEventListener('input', () => {
           document.getElementById('nota-linea-count').textContent = ta.value.length;
       });
-      // Esc cierra el modal
+      // Esc cierra modales (cascada por prioridad: el último abierto cierra primero)
       window.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && !document.getElementById('modal-nota-linea').classList.contains('hidden')) {
-              cerrarNotaLinea();
-          }
+          if (e.key !== 'Escape') return;
+          const lineaCustom = document.getElementById('modal-linea-custom');
+          if (lineaCustom && !lineaCustom.classList.contains('hidden')) { cerrarModalLineaCustom(); return; }
+          const obs = document.getElementById('modal-obs');
+          if (obs && !obs.classList.contains('hidden')) { cerrarModalObs(); return; }
+          const trm = document.getElementById('modal-terminos');
+          if (trm && !trm.classList.contains('hidden')) { cerrarModalTerminos(); return; }
+          const nota = document.getElementById('modal-nota-linea');
+          if (nota && !nota.classList.contains('hidden')) { cerrarNotaLinea(); return; }
       });
   });
 
@@ -2340,6 +2411,11 @@
                   const trm = document.getElementById('terminos');
                   if (trm) trm.value = DEFAULTS_TERMINOS;
                   actualizarContadorTerminos();
+                  // Sincroniza dots: obs vacío → hidden; terminos con default → visible
+                  const obsDot = document.getElementById('obs-dot');
+                  const trmDot = document.getElementById('terminos-dot');
+                  if (obsDot) obsDot.classList.add('hidden');
+                  if (trmDot && trm) trmDot.classList.toggle('hidden', !(trm.value || '').trim());
               }
           } else {
               let detail = 'No se pudo guardar.';
