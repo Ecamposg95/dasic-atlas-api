@@ -90,3 +90,100 @@
 .dax-btn-primary, .dax-btn-ghost {
   transition: all 150ms ease;
 }
+
+/* ── Botones pill (toggleables coloreados) ─────────────────────────── */
+.dax-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem; /* gap-1.5 */
+  padding: 0.5rem 0.75rem; /* py-2 px-3 */
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 0.5rem; /* rounded-lg */
+  border: 1px dashed;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+
+/* Pill variants */
+.dax-btn-pill.pill-success {
+  background-color: rgb(236 253 245); /* emerald-50 */
+  border-color: rgb(110 231 183); /* emerald-300 */
+  color: rgb(4 120 87); /* emerald-700 */
+}
+.dax-btn-pill.pill-success:hover {
+  background-color: rgb(209 250 229); /* emerald-100 */
+}
+.dark .dax-btn-pill.pill-success {
+  background-color: rgb(6 95 70 / 0.20); /* emerald-900/20 */
+  border-color: rgb(4 120 87 / 0.70); /* emerald-700/70 */
+  color: rgb(110 231 183); /* emerald-300 */
+}
+.dark .dax-btn-pill.pill-success:hover {
+  background-color: rgb(6 95 70 / 0.40);
+}
+
+.dax-btn-pill.pill-warning {
+  background-color: rgb(255 251 235); /* amber-50 */
+  border-color: rgb(252 211 77); /* amber-300 */
+  color: rgb(180 83 9); /* amber-700 */
+}
+.dax-btn-pill.pill-warning:hover {
+  background-color: rgb(254 243 199); /* amber-100 */
+}
+.dark .dax-btn-pill.pill-warning {
+  background-color: rgb(120 53 15 / 0.20); /* amber-900/20 */
+  border-color: rgb(180 83 9 / 0.70); /* amber-700/70 */
+  color: rgb(252 211 77); /* amber-300 */
+}
+.dark .dax-btn-pill.pill-warning:hover {
+  background-color: rgb(120 53 15 / 0.40);
+}
+
+.dax-btn-pill.pill-danger {
+  background-color: rgb(255 241 242); /* rose-50 */
+  border-color: rgb(253 164 175); /* rose-300 */
+  color: rgb(190 18 60); /* rose-700 */
+}
+.dax-btn-pill.pill-danger:hover {
+  background-color: rgb(255 228 230); /* rose-100 */
+}
+.dark .dax-btn-pill.pill-danger {
+  background-color: rgb(136 19 55 / 0.20); /* rose-900/20 */
+  border-color: rgb(190 18 60 / 0.70);
+  color: rgb(253 164 175);
+}
+.dark .dax-btn-pill.pill-danger:hover {
+  background-color: rgb(136 19 55 / 0.40);
+}
+
+/* ── Card compacta (p-3 en vez de p-4) ─────────────────────────────── */
+.dax-card-sm {
+  background-color: rgb(255 255 255);
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+  border-radius: 0.75rem; /* rounded-xl */
+  padding: 0.75rem; /* p-3 */
+}
+.dark .dax-card-sm {
+  background-color: rgb(30 41 59); /* slate-800 */
+  border-color: rgb(51 65 85 / 0.50); /* slate-700/50 */
+}
+
+/* ── Utilidad: kbd visual para popover de atajos ───────────────────── */
+kbd.dax-kbd {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.6875rem; /* text-[11px] aprox */
+  background-color: rgb(241 245 249); /* slate-100 */
+  border: 1px solid rgb(203 213 225); /* slate-300 */
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  color: rgb(51 65 85); /* slate-700 */
+}
+.dark kbd.dax-kbd {
+  background-color: rgb(30 41 59); /* slate-800 */
+  border-color: rgb(71 85 105); /* slate-600 */
+  color: rgb(203 213 225); /* slate-300 */
+}
