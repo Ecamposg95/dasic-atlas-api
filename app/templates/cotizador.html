@@ -282,76 +282,69 @@
            del cart. Ahora son siempre visibles a la derecha (lg+) o
            pegados al fondo de la pantalla (móvil).
       ═══════════════════════════════════════════════════════════ -->
-      <aside aria-labelledby="resumen-title" class="cot-summary lg:sticky lg:top-4 lg:self-start space-y-3">
-        <!-- Header del panel -->
+      <aside id="resumen-panel" aria-labelledby="resumen-title" class="cot-summary lg:sticky lg:top-4 lg:self-start space-y-3">
+        <!-- Header slim -->
         <div class="flex items-center justify-between">
-          <h2 id="resumen-title" class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            <i class="fas fa-receipt text-cyan-500 mr-1"></i> Resumen de cotización
-          </h2>
-          <span id="sum-autosave" class="text-[9px] text-slate-400 dark:text-slate-500 italic" aria-live="polite">—</span>
+          <h2 id="resumen-title" class="text-xs font-bold uppercase tracking-wider text-slate-500">Resumen</h2>
+          <span id="sum-autosave" class="text-[10px] text-emerald-500 hidden" aria-live="polite">● guardado</span>
         </div>
 
-        <!-- Card principal: TOTAL grande -->
-        <div class="bg-gradient-to-br from-cyan-500 to-blue-600 dark:from-cyan-600 dark:to-blue-700 text-white rounded-xl p-4 shadow-lg">
-          <p class="text-[10px] uppercase tracking-widest font-bold opacity-80">Total</p>
-          <output id="sum-total" role="status" aria-live="polite" class="block text-3xl font-black tracking-tight mt-1">$0.00</output>
-          <div class="flex items-center justify-between mt-3 text-[10px] uppercase tracking-wider opacity-90">
-            <span><span id="sum-items">0</span> ítems</span>
-            <span id="sum-moneda-chip">MXN</span>
+        <!-- Card unificada: Total + Desglose + Métricas -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <!-- Total hero (gradiente cyan→blue) -->
+          <div class="p-4 bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
+            <p class="text-xs uppercase font-bold opacity-80">Total con IVA</p>
+            <output id="sum-total" role="status" aria-live="polite" class="block text-2xl font-black tabular-nums mt-1">$0.00</output>
+            <p class="text-xs opacity-80">
+              <span id="sum-items">0</span> ítems ·
+              <span id="sum-moneda-chip">MXN</span>
+            </p>
           </div>
-        </div>
-
-        <!-- Card de desglose -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-200 dark:border-slate-700 space-y-1.5">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-500 dark:text-slate-400">Subtotal</span>
-            <span id="sum-subtotal" class="font-bold text-slate-800 dark:text-slate-100">$0.00</span>
+          <!-- Desglose -->
+          <div class="p-3 text-xs space-y-1 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Subtotal</span>
+              <span class="tabular-nums font-mono font-bold" id="sum-subtotal">$0.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">IVA <span id="sum-iva-pct">16%</span></span>
+              <span class="tabular-nums font-mono font-bold" id="sum-iva">$0.00</span>
+            </div>
+            <div id="sum-desc-row" class="hidden flex justify-between">
+              <span class="text-slate-500">Descuentos</span>
+              <span class="tabular-nums font-mono text-rose-500 font-bold" id="sum-desc">-$0.00</span>
+            </div>
           </div>
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-500 dark:text-slate-400">IVA (<span id="sum-iva-pct">16%</span>)</span>
-            <span id="sum-iva" class="font-bold text-slate-800 dark:text-slate-100">$0.00</span>
-          </div>
-          <div id="sum-desc-row" class="hidden flex items-center justify-between text-xs">
-            <span class="text-amber-600 dark:text-amber-400">Descuentos</span>
-            <span id="sum-desc" class="font-bold text-amber-600 dark:text-amber-400">-$0.00</span>
-          </div>
-        </div>
-
-        <!-- Card de margen promedio con semáforo -->
-        <div id="sum-margen-card" class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-200 dark:border-slate-700">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Margen promedio</span>
-            <span id="sum-margen-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">—</span>
-          </div>
-          <output id="sum-margen" role="status" class="block text-2xl font-black mt-1 text-slate-700 dark:text-slate-200">—</output>
-          <p id="sum-margen-aviso" class="hidden text-[10px] text-rose-500 mt-1 font-semibold">
-            <i class="fas fa-exclamation-triangle mr-1"></i> Líneas con margen bajo
-          </p>
-        </div>
-
-        <!-- Chip de Tipo de Cambio (solo si se aplica conversión) -->
-        <div id="sum-tc-card" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-right-left text-amber-600 dark:text-amber-400 text-xs"></i>
-            <div class="flex-1 min-w-0">
-              <p class="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-300 font-bold">Tipo de cambio</p>
-              <p class="text-xs font-mono font-bold text-amber-900 dark:text-amber-100 mt-0.5">
-                <span id="sum-tc-text">— @ —</span>
-              </p>
+          <!-- Métricas (margen + TC inline) -->
+          <div id="sum-margen-card" class="p-3 text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-500">Margen prom</span>
+              <span id="sum-margen-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Margen</span>
+              <output id="sum-margen" role="status" class="font-bold text-slate-700 dark:text-slate-200">—</output>
+            </div>
+            <p id="sum-margen-aviso" class="hidden text-[10px] text-rose-500 font-semibold">
+              <i class="fas fa-exclamation-triangle mr-1"></i> Líneas con margen bajo
+            </p>
+            <div id="sum-tc-card" class="hidden flex justify-between pt-1 border-t border-slate-100 dark:border-slate-700">
+              <span class="text-slate-500">TC USD/MXN</span>
+              <span class="tabular-nums font-mono" id="sum-tc-text">— @ —</span>
             </div>
           </div>
         </div>
 
-        <!-- Botones principales (apilados) -->
-        <div class="space-y-2 pt-1">
+        <!-- Botones primary actions -->
+        <div class="space-y-2">
           <button onclick="guardar('cotizacion')" type="button"
                   class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black uppercase text-xs tracking-widest py-3 rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
             <i class="fas fa-save mr-2"></i> Guardar cotización
           </button>
           <button onclick="guardar('pendiente')" type="button"
                   x-show="$store.user.can('convertir_a_venta')" x-cloak
-                  class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold uppercase text-xs tracking-wider py-2.5 rounded-xl shadow-md transition-all hover:scale-[1.01] active:scale-[0.99]">
-            <i class="fas fa-check-circle mr-1.5"></i> Guardar como venta
+                  class="dax-btn-pill pill-success w-full justify-center">
+            <i class="fas fa-check-circle mr-2"></i>Guardar como venta
           </button>
           <button id="sum-btn-pdf" onclick="abrirUltimoPDF()" type="button" disabled
                   class="w-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 font-bold uppercase text-[11px] tracking-wider py-2 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed">
@@ -359,15 +352,12 @@
           </button>
         </div>
 
-        <!-- Atajos de teclado (solo desktop) -->
-        <div class="hidden lg:block pt-2 border-t border-slate-200 dark:border-slate-700">
-          <p class="text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">Atajos</p>
-          <ul class="text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
-            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Ctrl+S</kbd> Guardar</li>
-            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Ctrl+Z</kbd> Deshacer</li>
-            <li><kbd class="font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">/</kbd> Buscar producto</li>
-          </ul>
-        </div>
+        <!-- Atajos (botón → popover) -->
+        <button type="button" onclick="abrirPopoverAtajos()"
+                class="text-xs text-slate-400 hover:text-cyan-500 flex items-center gap-1 mt-2 transition-colors">
+          <i class="fas fa-keyboard text-[10px]"></i>
+          Atajos de teclado
+        </button>
       </aside>
     </div>
   </div>
@@ -569,6 +559,27 @@
     </div>
   </div>
 
+  <!-- Popover de atajos de teclado -->
+  <div id="popover-atajos" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+       onclick="cerrarPopoverAtajos()">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 max-w-xs w-full" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Atajos de teclado</h3>
+        <button onclick="cerrarPopoverAtajos()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 transition-colors">
+          <i class="fas fa-times text-xs"></i>
+        </button>
+      </div>
+      <ul class="text-xs space-y-2 text-slate-700 dark:text-slate-300">
+        <li class="flex justify-between"><span>Buscar producto</span><kbd class="dax-kbd">/</kbd></li>
+        <li class="flex justify-between"><span>Nuevo servicio</span><kbd class="dax-kbd">n</kbd></li>
+        <li class="flex justify-between"><span>Nuevo fantasma</span><kbd class="dax-kbd">f</kbd></li>
+        <li class="flex justify-between"><span>Plantillas</span><kbd class="dax-kbd">p</kbd></li>
+        <li class="flex justify-between"><span>Guardar</span><kbd class="dax-kbd">Ctrl+S</kbd></li>
+        <li class="flex justify-between"><span>Deshacer</span><kbd class="dax-kbd">Ctrl+Z</kbd></li>
+      </ul>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -602,6 +613,17 @@
     const lineas = v.split('\n').filter(l => l.trim().length > 0).length;
     const lbl = document.getElementById('terminos-count');
     if (lbl) lbl.textContent = `— ${lineas} ${lineas === 1 ? 'línea' : 'líneas'}`;
+  }
+
+  function abrirPopoverAtajos() {
+      const m = document.getElementById('popover-atajos');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+  }
+  function cerrarPopoverAtajos() {
+      const m = document.getElementById('popover-atajos');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
   }
 
   function abrirModalObs() {
@@ -2095,6 +2117,8 @@
           if (trm && !trm.classList.contains('hidden')) { cerrarModalTerminos(); return; }
           const nota = document.getElementById('modal-nota-linea');
           if (nota && !nota.classList.contains('hidden')) { cerrarNotaLinea(); return; }
+          const popAtajos = document.getElementById('popover-atajos');
+          if (popAtajos && !popAtajos.classList.contains('hidden')) { cerrarPopoverAtajos(); return; }
       });
   });
 
