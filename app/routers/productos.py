@@ -1,5 +1,5 @@
 from decimal import Decimal, InvalidOperation
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
@@ -246,8 +246,8 @@ def _normalize_csv_row(row: dict) -> dict:
 # --- 1. OBTENER PRODUCTOS (LISTADO INTELIGENTE) ---
 @router.get("/", response_model=Union[List[schemas.ProductoResponseAdmin], List[schemas.ProductoResponseVendedor]])
 def listar_productos(
-    skip: int = 0,
-    limit: int = 500,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(500, ge=1, le=2000),
     q: Optional[str] = None,
     marca: Optional[str] = None,
     db: Session = Depends(get_db),

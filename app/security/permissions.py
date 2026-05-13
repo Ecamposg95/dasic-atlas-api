@@ -57,6 +57,7 @@ PERMISSIONS: dict[RolUsuario, set[tuple[str, str]]] = {
         ("read", "venta"),
         # clientes
         ("read", "cliente"), ("write", "cliente"), ("create", "cliente"),
+        ("pago", "cliente"),  # registrar pagos / CxC
         # productos: lectura completa con costo
         ("read", "producto"), ("write", "producto"), ("read", "costo"),
         # OCs: ver y gestionar
@@ -207,6 +208,7 @@ CAPABILITY_FLAGS: dict[str, tuple[str, str]] = {
     "ver_reportes": ("read", "reportes"),
     "exportar_reportes": ("export", "reportes"),
     "ver_gastos": ("read", "gasto"),
+    "registrar_pago": ("pago", "cliente"),
     "gestionar_usuarios": ("manage", "usuario"),
     "ver_fx": ("read", "fx"),
 }

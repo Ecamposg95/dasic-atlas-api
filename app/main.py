@@ -192,6 +192,9 @@ async def health_check() -> JSONResponse:
     try:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
+        # Probe tabla crítica: si ordenes_venta no es accesible (drift schema
+        # tras migración rota), no devolvemos 200 al monitoring.
+        db.execute(text("SELECT 1 FROM ordenes_venta LIMIT 1"))
         db.close()
         db_ok = True
     except Exception:

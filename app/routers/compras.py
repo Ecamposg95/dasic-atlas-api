@@ -1,5 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, text
 from typing import List
@@ -180,25 +184,26 @@ class CompraInput(BaseModel):
 
 
 # --- SCHEMAS para editor de OC (Fase 5) ---
-from typing import Optional  # noqa: E402
+from typing import Literal, Optional  # noqa: E402
+from pydantic import Field  # noqa: E402
 
 
 class OCLineaIn(BaseModel):
     """Línea editable de OC. Producto del catálogo o fantasma."""
     producto_id: Optional[int] = None
-    sku_libre: Optional[str] = None
-    descripcion_libre: Optional[str] = None
-    cantidad: int
-    costo_unitario: Decimal
-    moneda_origen: Optional[str] = None
+    sku_libre: Optional[str] = Field(None, max_length=80)
+    descripcion_libre: Optional[str] = Field(None, max_length=255)
+    cantidad: int = Field(..., gt=0)
+    costo_unitario: Decimal = Field(..., ge=0)
+    moneda_origen: Optional[Literal["MXN", "USD"]] = None
 
 
 class OCEditorIn(BaseModel):
-    proveedor_id: int
+    proveedor_id: int = Field(..., gt=0)
     cotizacion_id: Optional[int] = None
-    moneda: str = "MXN"
-    tipo_cambio: Decimal = Decimal("1")
-    detalles: List[OCLineaIn]
+    moneda: Literal["MXN", "USD"] = "MXN"
+    tipo_cambio: Decimal = Field(default=Decimal("1"), gt=0)
+    detalles: List[OCLineaIn] = Field(..., min_length=1)
 
 
 class OCDesdeCotizacionInput(BaseModel):
@@ -236,8 +241,18 @@ def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None" = None) -> 
 # --- ENDPOINTS ---
 
 @router.get("/proveedores", response_model=List[schemas.ProveedorResponse])
-def listar_proveedores(db: Session = Depends(get_db)):
-    return db.query(models.Proveedor).all()
+def listar_proveedores(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(models.Proveedor)
+        .order_by(models.Proveedor.nombre_empresa.asc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 @router.post("/proveedores", response_model=schemas.ProveedorResponse)
 def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(get_db)):
@@ -435,9 +450,13 @@ def crear_oc_desde_cotizacion(
             "cotizacion_id": oc.cotizacion_id,
             "afecta_stock": payload.afecta_stock,
         }
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise e
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("compras.crear_oc_desde_cotizacion falló (quote_id=%s)", quote_id)
+        raise
 
 
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
@@ -486,9 +505,13 @@ def registrar_compra(
         proveedor.saldo_actual += total
         db.commit()
         return {"mensaje": "Ok", "id": nueva_orden.id}
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise e
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("compras.registrar_compra falló")
+        raise
 
 @router.post("/registrar-pago", dependencies=[Depends(allow_admin_asistente)])
 def pagar_proveedor(
@@ -706,6 +729,7 @@ def crear_oc_editor(
         raise
     except Exception:
         db.rollback()
+        logger.exception("compras.crear_oc_editor falló")
         raise
 
 
@@ -781,4 +805,5 @@ def actualizar_oc_editor(
         raise
     except Exception:
         db.rollback()
+        logger.exception("compras.actualizar_oc_editor falló (id=%s)", id)
         raise

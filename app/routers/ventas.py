@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
@@ -11,6 +13,8 @@ from pydantic import BaseModel, EmailStr, Field
 from app import models
 from app import schemas
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.services.email_service import (
@@ -541,6 +545,20 @@ def crear_orden(
 
         total_orden = Decimal(0)
 
+        # Precarga de productos y servicios para evitar N+1 dentro del loop.
+        _prod_ids = {it.producto_id for it in orden_data.detalles if it.producto_id}
+        _serv_ids = {getattr(it, "servicio_id", None) for it in orden_data.detalles if getattr(it, "servicio_id", None)}
+        _productos_by_id = {}
+        _servicios_by_id = {}
+        if _prod_ids:
+            _productos_by_id = {
+                p.id: p for p in db.query(models.Producto).filter(models.Producto.id.in_(_prod_ids)).all()
+            }
+        if _serv_ids:
+            _servicios_by_id = {
+                s.id: s for s in db.query(models.Servicio).filter(models.Servicio.id.in_(_serv_ids)).all()
+            }
+
         for item in orden_data.detalles:
             producto = None
             servicio = None
@@ -550,11 +568,7 @@ def crear_orden(
             descripcion_libre = (item.descripcion_libre or "").strip() or None
 
             if getattr(item, "servicio_id", None):
-                servicio = (
-                    db.query(models.Servicio)
-                    .filter(models.Servicio.id == item.servicio_id)
-                    .first()
-                )
+                servicio = _servicios_by_id.get(item.servicio_id)
                 if not servicio:
                     raise HTTPException(404, f"Servicio {item.servicio_id} no existe")
                 # Snapshot del servicio en la línea (preserva nombre/costo aunque
@@ -567,11 +581,7 @@ def crear_orden(
                     item.moneda_origen or servicio.moneda or "MXN"
                 ).upper()
             elif item.producto_id:
-                producto = (
-                    db.query(models.Producto)
-                    .filter(models.Producto.id == item.producto_id)
-                    .first()
-                )
+                producto = _productos_by_id.get(item.producto_id)
                 if not producto:
                     raise HTTPException(404, f"Producto {item.producto_id} no existe")
 
@@ -679,9 +689,13 @@ def crear_orden(
         db.refresh(nueva_orden)
         return nueva_orden
 
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise e
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("ventas.crear_orden falló")
+        raise
 
 # --- 2. EDITAR COTIZACIÓN (PUT) ---
 @router.put("/{id}", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
@@ -734,6 +748,20 @@ def actualizar_orden(
 
         total_orden = Decimal(0)
 
+        # Precarga para evitar N+1 en el loop.
+        _prod_ids_upd = {it.producto_id for it in orden_update.detalles if it.producto_id}
+        _serv_ids_upd = {getattr(it, "servicio_id", None) for it in orden_update.detalles if getattr(it, "servicio_id", None)}
+        _productos_by_id_upd = {}
+        _servicios_by_id_upd = {}
+        if _prod_ids_upd:
+            _productos_by_id_upd = {
+                p.id: p for p in db.query(models.Producto).filter(models.Producto.id.in_(_prod_ids_upd)).all()
+            }
+        if _serv_ids_upd:
+            _servicios_by_id_upd = {
+                s.id: s for s in db.query(models.Servicio).filter(models.Servicio.id.in_(_serv_ids_upd)).all()
+            }
+
         # Insertar nuevos
         for item in orden_update.detalles:
             producto = None
@@ -744,11 +772,7 @@ def actualizar_orden(
             descripcion_libre = (item.descripcion_libre or "").strip() or None
 
             if getattr(item, "servicio_id", None):
-                servicio = (
-                    db.query(models.Servicio)
-                    .filter(models.Servicio.id == item.servicio_id)
-                    .first()
-                )
+                servicio = _servicios_by_id_upd.get(item.servicio_id)
                 if not servicio:
                     raise HTTPException(404, f"Servicio {item.servicio_id} no existe")
                 sku_libre = sku_libre or servicio.codigo
@@ -759,11 +783,7 @@ def actualizar_orden(
                     item.moneda_origen or servicio.moneda or "MXN"
                 ).upper()
             elif item.producto_id:
-                producto = (
-                    db.query(models.Producto)
-                    .filter(models.Producto.id == item.producto_id)
-                    .first()
-                )
+                producto = _productos_by_id_upd.get(item.producto_id)
                 if not producto:
                     raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
                 moneda_origen_linea = (
@@ -832,9 +852,13 @@ def actualizar_orden(
         db.refresh(orden)
         return orden
 
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise e
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("ventas.actualizar_orden falló (id=%s)", id)
+        raise
 
 # --- 2.5 RECOTIZAR (CREAR NUEVA VERSIÓN) ---
 @router.post("/{id}/recotizar", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
@@ -1024,9 +1048,13 @@ def convertir_cotizacion(
         
         db.commit()
         return {"mensaje": "Convertido exitosamente", "nuevo_folio": orden.folio}
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise e
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("ventas.convertir_cotizacion falló (id=%s)", id)
+        raise
 
 # --- 4. LISTAR HISTORIAL ---
 @router.get("/historial", dependencies=[Depends(allow_all_staff)])

@@ -129,6 +129,23 @@ def eliminar_cliente(
             detail="Cliente referenciado en cotizaciones/ventas. No se puede eliminar.",
         )
 
+    # Preserva historial financiero: si hay transacciones (cargos/abonos),
+    # no permitir hard-delete. La política conservadora es bloquear; un soft
+    # delete (campo `deletado_en`) queda como trabajo futuro.
+    tiene_tx = (
+        db.query(models.TransaccionCliente.id)
+        .filter(models.TransaccionCliente.cliente_id == cliente_id)
+        .first()
+    )
+    if tiene_tx:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cliente con historial de pagos/cargos. No se puede eliminar para "
+                "preservar la trazabilidad contable."
+            ),
+        )
+
     db.delete(cliente)
     db.commit()
     return {"mensaje": "Cliente eliminado", "id": cliente_id}

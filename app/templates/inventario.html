@@ -130,6 +130,10 @@
   </div>
 
   <!-- Tabla -->
+  <div x-show="loadingDisp" x-cloak class="mb-2 text-[10px] text-cyan-700 dark:text-cyan-300 flex items-center gap-1">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    Cargando reservas/disponibilidad…
+  </div>
   <div class="dax-card overflow-hidden">
     <table class="dax-table">
       <thead>
@@ -687,6 +691,7 @@ async function formatApiError(res, fallback) {
 function inventario() {
   return {
     loading: true,
+    loadingDisp: false,  // chunks de disponibilidad cargando en background
     todos: [], filtrados: [],
     disp: {},  // {producto_id: {stock_actual, reservado, disponible, en_oc_pendiente}}
     q: '', filtroEstatus: '', filtroMarca: '',
@@ -711,15 +716,23 @@ function inventario() {
     },
 
     async cargarDisponibilidades() {
-      // Limita a productos no-servicio con id; pequeño paralelismo manual
+      // Limita a productos no-servicio con id; pequeño paralelismo manual.
+      // Marca `loadingDisp=true` para que la UI pueda mostrar un overlay
+      // sutil mientras chunks llegan (evita confusión: la tabla aparece
+      // antes de que las cifras de reservado/disponible estén poblados).
+      this.loadingDisp = true;
       const ids = this.todos.filter(p => !p.es_servicio).map(p => p.id);
       const chunkSize = 8;
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        const results = await Promise.all(chunk.map(id =>
-          fetch(`/api/inventario/disponibilidad/${id}`, {credentials:'include'}).then(r => r.ok ? r.json() : null).catch(() => null)
-        ));
-        results.forEach((d, j) => { if (d) this.disp[chunk[j]] = d; });
+      try {
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          const results = await Promise.all(chunk.map(id =>
+            fetch(`/api/inventario/disponibilidad/${id}`, {credentials:'include'}).then(r => r.ok ? r.json() : null).catch(() => null)
+          ));
+          results.forEach((d, j) => { if (d) this.disp[chunk[j]] = d; });
+        }
+      } finally {
+        this.loadingDisp = false;
       }
     },
 

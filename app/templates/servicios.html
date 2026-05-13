@@ -365,8 +365,15 @@ function servicios() {
         if (this.filtroActivo === 'activos') params.set('activo', 'true');
         else if (this.filtroActivo === 'inactivos') params.set('activo', 'false');
         const res = await fetch('/api/servicios/?' + params.toString(), { credentials:'include' });
-        if (res.ok) this.todos = await res.json();
-      } catch(e) { console.warn(e); }
+        if (!res.ok) {
+          this.msg = { text: await fmtErr(res, 'No se pudo cargar el catálogo de servicios.'), type: 'error' };
+        } else {
+          this.todos = await res.json();
+        }
+      } catch(e) {
+        console.warn(e);
+        this.msg = { text: 'Error de red al cargar servicios.', type: 'error' };
+      }
       finally {
         this.loading = false;
         this.calcKpi();
