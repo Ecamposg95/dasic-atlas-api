@@ -76,6 +76,180 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS terminos_condiciones TEXT",
     # 20260515_01: nota libre por línea (productos similares manuales)
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS observaciones_linea TEXT",
+
+    # ====================================================================
+    # Fase 1 — Catálogos SAT chicos (10 tablas; las masivas viven aparte).
+    # Producción: create_all() ya las crea desde el metadata. Estas líneas
+    # son redundantes pero garantizan idempotencia si create_all falla.
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS sat_forma_pago (
+        codigo VARCHAR(3) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        vigencia_desde DATE,
+        vigencia_hasta DATE,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_metodo_pago (
+        codigo VARCHAR(3) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        vigencia_desde DATE,
+        vigencia_hasta DATE,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_uso_cfdi (
+        codigo VARCHAR(5) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        vigencia_desde DATE,
+        vigencia_hasta DATE,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_regimen_fiscal (
+        codigo VARCHAR(3) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        aplica_persona_fisica BOOLEAN NOT NULL DEFAULT false,
+        aplica_persona_moral BOOLEAN NOT NULL DEFAULT false,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        vigencia_desde DATE,
+        vigencia_hasta DATE,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_objeto_imp (
+        codigo VARCHAR(2) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_impuesto (
+        codigo VARCHAR(3) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        aplica_traslado BOOLEAN NOT NULL DEFAULT false,
+        aplica_retencion BOOLEAN NOT NULL DEFAULT false,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_tipo_factor (
+        codigo VARCHAR(10) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_tasa_o_cuota (
+        id_local VARCHAR(30) PRIMARY KEY,
+        impuesto VARCHAR(3) NOT NULL,
+        tipo_factor VARCHAR(10) NOT NULL,
+        valor NUMERIC(7,6) NOT NULL,
+        descripcion TEXT NOT NULL,
+        es_retencion BOOLEAN NOT NULL DEFAULT false,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_moneda (
+        codigo VARCHAR(3) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        decimales VARCHAR(2) NOT NULL DEFAULT '2',
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_tipo_comprobante (
+        codigo VARCHAR(2) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_clave_prodserv (
+        codigo VARCHAR(8) PRIMARY KEY,
+        descripcion TEXT NOT NULL,
+        palabras_clave TEXT,
+        incluir_iva_basico BOOLEAN NOT NULL DEFAULT true,
+        vigencia_desde DATE,
+        vigencia_hasta DATE,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    """CREATE TABLE IF NOT EXISTS sat_clave_unidad (
+        codigo VARCHAR(3) PRIMARY KEY,
+        nombre VARCHAR(150) NOT NULL,
+        descripcion TEXT,
+        simbolo VARCHAR(20),
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+
+    # ====================================================================
+    # Fase 2 — Producto: campos SAT + clasificación interna
+    # ====================================================================
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS objeto_imp VARCHAR(2)",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS descripcion_fiscal TEXT",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS catalogo_fabricante VARCHAR(80)",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS categoria VARCHAR(80)",
+    "ALTER TABLE IF EXISTS productos ADD COLUMN IF NOT EXISTS abreviatura VARCHAR(20)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_categoria ON productos (categoria)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_catalogo_fabricante ON productos (catalogo_fabricante)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_abreviatura ON productos (abreviatura)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_clave_prod_serv ON productos (clave_prod_serv)",
+
+    # ====================================================================
+    # Fase 3 — Servicios (catálogo)
+    # create_all() debería crear la tabla; este DDL la garantiza.
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS servicios (
+        id SERIAL PRIMARY KEY,
+        organization_id VARCHAR(36),
+        codigo VARCHAR(30) NOT NULL,
+        nombre VARCHAR(150) NOT NULL,
+        descripcion TEXT,
+        categoria_servicio VARCHAR(40),
+        costo NUMERIC(12,2) NOT NULL DEFAULT 0,
+        moneda VARCHAR(3) NOT NULL DEFAULT 'MXN',
+        tiempo_estimado NUMERIC(8,2),
+        unidad_tiempo VARCHAR(10),
+        clave_prod_serv VARCHAR(8) NOT NULL DEFAULT '81111500',
+        clave_unidad_sat VARCHAR(10) NOT NULL DEFAULT 'E48',
+        objeto_imp VARCHAR(2) DEFAULT '02',
+        descripcion_fiscal TEXT,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        creado_por_id INTEGER REFERENCES usuarios(id),
+        creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )""",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_servicios_org_codigo ON servicios (organization_id, codigo)",
+    "CREATE INDEX IF NOT EXISTS ix_servicios_activo ON servicios (activo)",
+    "CREATE INDEX IF NOT EXISTS ix_servicios_categoria ON servicios (categoria_servicio)",
+    "CREATE INDEX IF NOT EXISTS ix_servicios_nombre ON servicios (nombre)",
+
+    # ====================================================================
+    # Fase 4 — DetalleOrden.servicio_id FK
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS servicio_id INTEGER REFERENCES servicios(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_detalles_orden_servicio_id ON detalles_orden (servicio_id)",
+
+    # ====================================================================
+    # Fase 5 — DetalleCompra: producto_id nullable + fantasma + moneda
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_compra ALTER COLUMN producto_id DROP NOT NULL",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS sku_libre VARCHAR(80)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS descripcion_libre VARCHAR(255)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS moneda_origen_linea VARCHAR(3)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS costo_base_linea NUMERIC(12,2)",
+
+    # ====================================================================
+    # Fase 6 — CRM: créditos en Cliente + CxC formal en TransaccionCliente
+    # ====================================================================
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS limite_credito NUMERIC(12,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS dias_credito INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS dia_corte INTEGER",
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS moneda_credito VARCHAR(3) NOT NULL DEFAULT 'MXN'",
+    "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS orden_venta_id INTEGER REFERENCES ordenes_venta(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_tx_cli_orden_venta ON transacciones_clientes (orden_venta_id)",
+    "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS fecha_vencimiento DATE",
+    "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS estatus_pago VARCHAR(20) NOT NULL DEFAULT 'pendiente'",
+    "ALTER TABLE IF EXISTS transacciones_clientes ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) NOT NULL DEFAULT 0",
+    "CREATE INDEX IF NOT EXISTS ix_tx_cli_estatus_pago ON transacciones_clientes (estatus_pago)",
 ]
 
 
