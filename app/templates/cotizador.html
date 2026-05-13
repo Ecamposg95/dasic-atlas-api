@@ -2020,7 +2020,15 @@
           if (i.entrega_min != null && i.entrega_max != null && i.entrega_unidad) {
               const unidadFmt = i.entrega_unidad === 'dias' ? 'días' : 'sem';
               const rango = i.entrega_min === i.entrega_max ? `${i.entrega_min}` : `${i.entrega_min}–${i.entrega_max}`;
-              chips.push(`<span class="text-[9px] font-semibold bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded" title="T.E.S.P.V. — sufijo automático en PDF"><i class="fas fa-truck-fast text-[8px] mr-0.5"></i>${rango} ${unidadFmt}</span>`);
+              chips.push(`<button type="button" onclick="expandirYScroll(${idx}, 'entrega_min', event)"
+                  class="text-[9px] font-semibold bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded hover:bg-sky-100 dark:hover:bg-sky-900/40 transition"
+                  title="T.E.S.P.V. — click para editar"><i class="fas fa-truck-fast text-[8px] mr-0.5"></i>${rango} ${unidadFmt}</button>`);
+          } else {
+              // Chip placeholder visible: el usuario antes podía marcar días/semanas y
+              // la UI vivía oculta tras el toggle de la fila. Ahora el chip da affordance.
+              chips.push(`<button type="button" onclick="expandirYScroll(${idx}, 'entrega_min', event)"
+                  class="text-[9px] font-semibold border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 hover:border-sky-400 px-1.5 py-0.5 rounded transition"
+                  title="Establecer tiempo de entrega (días o semanas)"><i class="fas fa-truck-fast text-[8px] mr-0.5"></i>+ Entrega</button>`);
           }
           if (i.observaciones_linea) {
               chips.push(`<span class="text-[9px] font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded" title="Nota de línea"><i class="fas fa-sticky-note text-[8px] mr-0.5"></i>Nota</span>`);
@@ -2098,7 +2106,11 @@
 
           // Popover de acciones (⋮)
           const actionsPop = actionsOpen ? `
-              <div class="cot-actions-pop absolute right-1 top-8 z-30 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[160px]" onclick="event.stopPropagation()">
+              <div class="cot-actions-pop absolute right-1 top-8 z-30 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px]" onclick="event.stopPropagation()">
+                  <button onclick="expandirYScroll(${idx}, 'entrega_min'); cerrarAcciones()" type="button"
+                          class="w-full text-left text-xs px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+                      <i class="fas fa-truck-fast mr-2 w-3"></i> Entrega y descuento
+                  </button>
                   <button onclick="abrirNotaLinea(${idx}); cerrarAcciones()" type="button"
                           class="w-full text-left text-xs px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 ${i.observaciones_linea ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}">
                       <i class="fas fa-sticky-note mr-2 w-3"></i> ${i.observaciones_linea ? 'Editar nota' : 'Agregar nota'}
@@ -2174,6 +2186,36 @@
       // Cerrar el menú de acciones si estaba abierto
       state.expandedActions = null;
       renderCart();
+  }
+
+  // Abre el panel inline de la fila y enfoca el input solicitado. Usado por
+  // el chip "+ Entrega" y el menú de acciones; resuelve el problema de que
+  // la edición de tiempo de entrega era invisible si el usuario no clickeaba
+  // sobre la fila.
+  function expandirYScroll(idx, focusField, ev) {
+      if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+      state.expandedRow = idx;
+      state.expandedActions = null;
+      renderCart();
+      setTimeout(() => {
+          const sel = `input[onchange*="'${focusField}'"]`;
+          const allRows = document.querySelectorAll('tbody tr');
+          // La fila expandida es la siguiente a la principal (offset 1 dentro
+          // del orden de DOM por idx).
+          for (const r of allRows) {
+              if (r.matches('.cot-expand-down, td.cot-expand-down') || r.querySelector('.cot-expand-down')) {
+                  const target = r.querySelector(sel);
+                  if (target) {
+                      target.focus();
+                      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      return;
+                  }
+              }
+          }
+          // Fallback: cualquier match en el documento.
+          const fallback = document.querySelector(sel);
+          if (fallback) { fallback.focus(); fallback.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      }, 50);
   }
   function cerrarExpansion() {
       state.expandedRow = null;
