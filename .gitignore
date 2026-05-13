@@ -32,3 +32,13 @@ htmlcov/
 
 # Node deps (frontend tooling)
 node_modules/
+
+# Workflow local de Claude Code (cache del plugin superpowers y planes
+# borrador que no son artefactos de producto).
+.superpowers/
+docs/superpowers/
+
+# Capturas de pantalla pegadas como contexto en conversaciones —
+# útiles temporales, no parte del producto.
+context/Screenshot*.png
+context/screenshot*.png
