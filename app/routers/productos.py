@@ -913,7 +913,6 @@ def cardex_producto(id: int, db: Session = Depends(get_db)):
                 "id": m.id,
                 "tipo": m.tipo,
                 "cantidad": m.cantidad,
-                "stock_anterior": m.stock_anterior,
                 "stock_resultante": m.stock_resultante,
                 "referencia_tipo": m.referencia_tipo,
                 "referencia_id": m.referencia_id,
