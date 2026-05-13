@@ -8,7 +8,7 @@
 --   1. Crear todas las tablas vía Base.metadata.create_all()
 --   2. Aplicar _BACKFILL_DDL (idempotente)
 --   3. Sembrar la organización "DASIC Industrial" + branch HQ
---   4. Crear admin@dasic.com / admin123 (porque no habrá usuarios)
+--   4. Crear admin@dasic.mx (password en seeds.py) (porque no habrá usuarios)
 --
 -- ⚠️ IRREVERSIBLE. Sin backup previo. Solo ejecutar cuando estés seguro de
 --    que los datos actuales no importan.
@@ -25,7 +25,7 @@
 -- TRAS EJECUTAR:
 --   1. Railway redeploy (push a main, o `railway up`, o reinicio manual)
 --   2. Esperar ~30s a que el lifespan corra
---   3. Login con admin@dasic.com / admin123 y cambiar contraseña
+--   3. Login con admin@dasic.mx (password en seeds.py) y cambiar contraseña
 -- ============================================================================
 
 DROP SCHEMA IF EXISTS public CASCADE;

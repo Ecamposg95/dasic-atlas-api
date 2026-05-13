@@ -287,13 +287,13 @@ def seed_super_admin(db: Session) -> None:
     logger.info("Inicializando sistema DASIC ERP — creando administrador...")
     admin = UsuarioCreate(
         nombre="Administrador Principal",
-        email="admin@dasic.com",
-        password="admin123",
+        email="admin@dasic.mx",
+        password="784512",
         rol=models.RolUsuario.ADMIN,
         activo=True,
     )
     UserService.create_user(db, admin)
-    logger.info("Admin creado: admin@dasic.com / admin123")
+    logger.info("Admin creado: admin@dasic.mx")
 
 
 def seed_marcas(db: Session) -> None:
