@@ -134,63 +134,80 @@
 
       </section>
 
-      <!-- Modal Línea Custom: Servicio o Producto Fantasma (fusionado) -->
+      <!-- Modal Línea Custom: 3 vistas (buscar servicio, ad-hoc servicio, fantasma) -->
       <div id="modal-linea-custom" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-300 dark:border-emerald-700 overflow-hidden"
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-300 dark:border-emerald-700 overflow-hidden flex flex-col max-h-[90vh]"
              onclick="event.stopPropagation()">
           <div class="px-6 py-4 bg-slate-100 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-            <h3 class="text-base font-black text-slate-800 dark:text-slate-200 uppercase">Agregar línea custom</h3>
-            <button onclick="cerrarModalLineaCustom()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
+            <h3 id="lc-titulo" class="text-base font-black text-slate-800 dark:text-slate-200 uppercase">Agregar servicio</h3>
+            <button onclick="cerrarModalLineaCustom()" aria-label="Cerrar" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1"><i class="fas fa-times"></i></button>
           </div>
 
-          <div class="px-5 pt-4">
-            <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 p-1 mb-3 text-xs">
-              <button id="lc-tab-srv" type="button" onclick="setTipoLineaCustom('servicio')"
-                      class="px-3 py-1 rounded bg-emerald-500 text-white font-bold">
-                <i class="fas fa-wrench mr-1"></i> Servicio
+          <!-- ░░ VISTA 1: BUSCAR SERVICIO EN CATÁLOGO ░░ -->
+          <div id="lc-vista-buscar" class="hidden flex flex-col flex-1 min-h-0">
+            <div class="px-5 pt-4 pb-2">
+              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Buscar en catálogo /servicios</label>
+              <div class="relative">
+                <input id="lc-buscar-input" type="text" oninput="lcBuscarFiltrar(this.value)"
+                       placeholder="Código, nombre o categoría..."
+                       class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 pl-8 text-sm">
+                <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+              </div>
+            </div>
+            <div id="lc-buscar-lista" class="flex-1 overflow-y-auto custom-scroll px-2 pb-2 min-h-[120px]">
+              <!-- Renderizado por lcRenderBuscarResultados() -->
+            </div>
+            <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
+              <p class="text-[11px] text-slate-500 mb-2">¿No encuentras el servicio que necesitas?</p>
+              <button onclick="lcCambiarVista('adhoc-srv')" class="dax-btn-ghost text-emerald-500 hover:text-emerald-400 text-xs font-bold w-full">
+                <i class="fas fa-plus mr-1"></i> Crear servicio ad-hoc
               </button>
-              <button id="lc-tab-fan" type="button" onclick="setTipoLineaCustom('fantasma')"
-                      class="px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold">
-                <i class="fas fa-ghost mr-1"></i> Producto fantasma
+            </div>
+          </div>
+
+          <!-- ░░ VISTA 2/3: FORM (servicio ad-hoc o fantasma) ░░ -->
+          <div id="lc-vista-form" class="hidden flex flex-col">
+            <div id="lc-form-back" class="hidden px-5 pt-3">
+              <button onclick="lcCambiarVista('buscar-srv')" class="text-xs text-slate-500 hover:text-cyan-500">
+                <i class="fas fa-arrow-left mr-1"></i> Volver a buscar en catálogo
               </button>
             </div>
+            <div class="px-5 pt-4 pb-3 space-y-3">
+              <div id="lc-row-sku" class="hidden">
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
+                <input id="lc-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
+                <input id="lc-desc" type="text" placeholder="Programación PLC 8 hrs / Válvula especial..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
+                  <input id="lc-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
+                  <select id="lc-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
+                    <option value="MXN">MXN</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
+                  <input id="lc-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
+                </div>
+              </div>
+              <div id="lc-row-util" class="hidden">
+                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
+                <input id="lc-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
+              </div>
+            </div>
           </div>
 
-          <div class="px-5 pb-3 space-y-3">
-            <div id="lc-row-sku" class="hidden">
-              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">SKU / Catálogo (opcional)</label>
-              <input id="lc-sku" type="text" placeholder="P/N FAB-XYZ" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
-            </div>
-            <div>
-              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Descripción *</label>
-              <input id="lc-desc" type="text" placeholder="Programación PLC 8 hrs / Válvula especial..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm">
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Costo *</label>
-                <input id="lc-cost" type="number" min="0" step="0.01" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-              </div>
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Mon.</label>
-                <select id="lc-mon" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
-                  <option value="MXN">MXN</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Cant.</label>
-                <input id="lc-qty" type="number" min="1" value="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-              </div>
-            </div>
-            <div id="lc-row-util" class="hidden">
-              <label class="block text-[10px] font-black uppercase text-slate-500 mb-1 tracking-wider">Utilidad %</label>
-              <input id="lc-util" type="number" min="0" max="99" value="30" class="w-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded p-2 text-sm text-right text-emerald-700 dark:text-emerald-300 font-bold">
-            </div>
-          </div>
-
-          <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+          <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2 flex-none">
             <button onclick="cerrarModalLineaCustom()" class="dax-btn-ghost">Cancelar</button>
-            <button onclick="agregarLineaCustom()" class="dax-btn-primary">
+            <button id="lc-btn-agregar" onclick="agregarLineaCustom()" class="dax-btn-primary hidden">
               <i class="fas fa-plus mr-1"></i> Agregar
             </button>
           </div>
@@ -208,13 +225,12 @@
                          px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="hidden md:inline text-[10px] uppercase tracking-wider text-slate-500 font-bold mr-1">+ Línea custom</span>
             <button type="button" onclick="abrirModalLineaCustom('servicio')"
-                    title="Servicio ad-hoc: línea de servicio que NO queda en el catálogo /servicios (atajo: n)"
-                    aria-label="Agregar servicio ad-hoc"
+                    title="Agregar servicio: busca en catálogo /servicios o crea uno ad-hoc (atajo: n)"
+                    aria-label="Agregar servicio"
                     class="dax-btn-pill pill-success">
               <i class="fas fa-wrench text-[10px]"></i>
-              <span class="hidden sm:inline">Servicio ad-hoc</span>
+              <span class="hidden sm:inline">Servicio</span>
             </button>
             <button type="button" onclick="abrirModalLineaCustom('fantasma')"
                     title="Producto fantasma: producto que no existe en el catálogo, se cotiza por descripción libre (atajo: f)"
@@ -1461,19 +1477,36 @@
       Swal.fire({toast:true, position:'top-end', icon:'success', title:`${s.codigo} agregado`, timer:1200, showConfirmButton:false});
   }
 
+  // _lcTipo: 'servicio' (ad-hoc) | 'fantasma' — controla qué crea agregarLineaCustom
+  // _lcModo: 'buscar-srv' | 'adhoc-srv' | 'fantasma' — controla qué vista del modal se muestra
   let _lcTipo = 'servicio';
+  let _lcModo = 'buscar-srv';
+
   function abrirModalLineaCustom(tipo) {
+      // tipo='servicio' → modo BUSCAR primero (opción C: unificado);
+      // tipo='fantasma' → directo al form fantasma.
       _lcTipo = (tipo === 'fantasma') ? 'fantasma' : 'servicio';
-      setTipoLineaCustom(_lcTipo);
       document.getElementById('lc-sku').value = '';
       document.getElementById('lc-desc').value = '';
       document.getElementById('lc-cost').value = '0';
       document.getElementById('lc-qty').value = '1';
       document.getElementById('lc-util').value = '30';
       document.getElementById('lc-mon').value = state.moneda || 'MXN';
+      const buscarInput = document.getElementById('lc-buscar-input');
+      if (buscarInput) buscarInput.value = '';
+
       const m = document.getElementById('modal-linea-custom');
       m.classList.remove('hidden'); m.classList.add('flex');
-      setTimeout(() => document.getElementById('lc-desc').focus(), 50);
+
+      if (_lcTipo === 'fantasma') {
+          lcCambiarVista('fantasma');
+      } else {
+          // Asegura catálogo cargado al abrir buscar-servicio.
+          if (!state.servicios || state.servicios.length === 0) {
+              cargarServiciosCatalogo().then(() => lcRenderBuscarResultados(state.servicios || []));
+          }
+          lcCambiarVista('buscar-srv');
+      }
   }
 
   function cerrarModalLineaCustom() {
@@ -1481,19 +1514,90 @@
       m.classList.add('hidden'); m.classList.remove('flex');
   }
 
-  function setTipoLineaCustom(tipo) {
-      _lcTipo = tipo;
-      const isFan = tipo === 'fantasma';
-      document.getElementById('lc-row-sku').classList.toggle('hidden', !isFan);
-      document.getElementById('lc-row-util').classList.toggle('hidden', !isFan);
-      const tabSrv = document.getElementById('lc-tab-srv');
-      const tabFan = document.getElementById('lc-tab-fan');
-      tabSrv.className = isFan
-          ? 'px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold'
-          : 'px-3 py-1 rounded bg-emerald-500 text-white font-bold';
-      tabFan.className = isFan
-          ? 'px-3 py-1 rounded bg-amber-500 text-white font-bold'
-          : 'px-3 py-1 rounded text-slate-600 dark:text-slate-400 font-bold';
+  function lcCambiarVista(modo) {
+      _lcModo = modo;
+      const vistaBuscar = document.getElementById('lc-vista-buscar');
+      const vistaForm = document.getElementById('lc-vista-form');
+      const titulo = document.getElementById('lc-titulo');
+      const btnAgregar = document.getElementById('lc-btn-agregar');
+      const back = document.getElementById('lc-form-back');
+
+      if (modo === 'buscar-srv') {
+          vistaBuscar.classList.remove('hidden');
+          vistaForm.classList.add('hidden');
+          titulo.textContent = 'Agregar servicio';
+          btnAgregar.classList.add('hidden');
+          // Render inicial con el catálogo completo (o filtrado si ya había query).
+          const q = document.getElementById('lc-buscar-input')?.value || '';
+          lcBuscarFiltrar(q);
+          setTimeout(() => document.getElementById('lc-buscar-input')?.focus(), 50);
+      } else {
+          // 'adhoc-srv' o 'fantasma' — ambos usan el form
+          vistaBuscar.classList.add('hidden');
+          vistaForm.classList.remove('hidden');
+          const isFan = modo === 'fantasma';
+          _lcTipo = isFan ? 'fantasma' : 'servicio';
+          document.getElementById('lc-row-sku').classList.toggle('hidden', !isFan);
+          document.getElementById('lc-row-util').classList.toggle('hidden', !isFan);
+          titulo.textContent = isFan ? 'Agregar producto fantasma' : 'Crear servicio ad-hoc';
+          btnAgregar.classList.remove('hidden');
+          // En modo ad-hoc-srv, mostrar botón "← Volver a buscar".
+          back.classList.toggle('hidden', isFan);
+          // Si veníamos de buscar-srv con texto escrito, precargar como descripción.
+          if (!isFan) {
+              const q = document.getElementById('lc-buscar-input')?.value?.trim();
+              if (q && !document.getElementById('lc-desc').value) {
+                  document.getElementById('lc-desc').value = q;
+              }
+          }
+          setTimeout(() => document.getElementById('lc-desc').focus(), 50);
+      }
+  }
+
+  function lcBuscarFiltrar(q) {
+      const needle = (q || '').trim().toLowerCase();
+      const todos = state.servicios || [];
+      if (!needle) return lcRenderBuscarResultados(todos);
+      const matches = todos.filter(s =>
+          (s.codigo || '').toLowerCase().includes(needle) ||
+          (s.nombre || '').toLowerCase().includes(needle) ||
+          (s.descripcion || '').toLowerCase().includes(needle) ||
+          (s.categoria_servicio || '').toLowerCase().includes(needle)
+      );
+      lcRenderBuscarResultados(matches);
+  }
+
+  function lcRenderBuscarResultados(items) {
+      const lista = document.getElementById('lc-buscar-lista');
+      if (!lista) return;
+      if (!items || items.length === 0) {
+          const hasCatalogo = (state.servicios || []).length > 0;
+          lista.innerHTML = `
+              <div class="p-4 text-center text-xs text-slate-500">
+                  ${hasCatalogo ? 'Sin coincidencias en el catálogo.' : 'Tu catálogo de servicios está vacío.'}
+                  <br><a href="/servicios" target="_blank" class="underline text-emerald-400 mt-2 inline-block">Administrar en /servicios →</a>
+              </div>`;
+          return;
+      }
+      lista.innerHTML = items.slice(0, 30).map(s => `
+          <button type="button"
+                  onclick="lcSeleccionarServicio(${s.id})"
+                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition cursor-pointer mb-1 border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+              <div class="flex justify-between items-start gap-2">
+                  <div class="min-w-0 flex-1">
+                      <div class="font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-300">${escapeHtml(s.codigo || '')}</div>
+                      <div class="text-xs text-slate-700 dark:text-slate-200 line-clamp-2 leading-snug">${escapeHtml(s.nombre || '')}</div>
+                      ${s.categoria_servicio ? `<div class="text-[10px] text-slate-500 mt-0.5">${escapeHtml(s.categoria_servicio)}</div>` : ''}
+                  </div>
+                  <div class="text-[10px] font-mono text-slate-500 whitespace-nowrap tabular-nums">${escapeHtml(s.moneda || 'MXN')} $${Number(s.costo||0).toFixed(2)}</div>
+              </div>
+          </button>
+      `).join('');
+  }
+
+  function lcSeleccionarServicio(sid) {
+      agregarServicioCatalogo(sid);
+      cerrarModalLineaCustom();
   }
 
   function agregarLineaCustom() {
