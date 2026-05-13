@@ -177,6 +177,13 @@
         body[data-sidebar="hidden"]   .main-shell { margin-left: 0; }
       }
 
+      /* Drawer del catálogo (cotizador): respeta el ancho del sidebar. */
+      @media (min-width: 1024px) {
+        body[data-sidebar="expanded"] [data-drawer-catalogo] { left: var(--sidebar-width) !important; }
+        body[data-sidebar="rail"]     [data-drawer-catalogo] { left: var(--sidebar-rail-width) !important; }
+        body[data-sidebar="hidden"]   [data-drawer-catalogo] { left: 0 !important; }
+      }
+
       /* Modo rail: oculta labels, centra iconos, achica logo. Solo en lg+. */
       @media (min-width: 1024px) {
         body[data-sidebar="rail"] aside.sidebar-shell {
