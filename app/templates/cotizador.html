@@ -81,7 +81,7 @@
     </div>
     <div id="ultima-cot-cliente" class="hidden text-xs text-slate-400 mt-1 mb-2"></div>
 
-    <div class="flex flex-col lg:grid lg:grid-cols-[260px_minmax(0,1fr)_320px] gap-4 flex-1 overflow-hidden pb-20 lg:pb-0">
+    <div class="flex flex-col lg:grid lg:grid-cols-[240px_minmax(0,1fr)_280px] gap-4 flex-1 overflow-hidden pb-20 lg:pb-0">
       <!-- Catálogo (columna izquierda inline; antes era drawer y resultaba intrusivo) -->
       <section aria-labelledby="catalogo-title" class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col min-h-[260px] lg:min-h-0">
         <div class="flex items-center justify-between mb-2">
@@ -109,8 +109,10 @@
         </div>
 
         <div id="lista-resultados" class="flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-700 hidden custom-scroll"></div>
-        <div id="empty-search" class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
-          <i class="fas fa-barcode text-4xl"></i>
+        <div id="empty-search" class="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 py-6">
+          <i class="fas fa-barcode text-3xl mb-2"></i>
+          <p class="text-xs text-center">Busca un producto por SKU o nombre.</p>
+          <p class="text-[10px] mt-1 opacity-70">Atajo: <kbd class="dax-kbd">/</kbd></p>
         </div>
 
         <!-- Panel: Servicios del catálogo -->
@@ -122,21 +124,6 @@
         </div>
         <div id="lista-servicios" class="hidden flex-1 overflow-y-auto border-t border-slate-200 dark:border-slate-700 custom-scroll"></div>
 
-        <div class="grid grid-cols-3 gap-1 mt-2">
-          <button type="button" onclick="setPanelTab('productos'); document.getElementById('buscador').focus()"
-                  class="bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-900/20 dark:hover:bg-cyan-900/40 border border-dashed border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
-            <i class="fas fa-box"></i> Producto
-          </button>
-          <button type="button" onclick="abrirModalLineaCustom('servicio')"
-                  class="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 border border-dashed border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1"
-                  title="Servicio ad-hoc (no se guarda en catálogo)">
-            <i class="fas fa-wrench"></i> Ad-hoc
-          </button>
-          <button type="button" onclick="abrirModalLineaCustom('fantasma')"
-                  class="bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded-lg py-1.5 transition flex items-center justify-center gap-1">
-            <i class="fas fa-ghost"></i> Fantasma
-          </button>
-        </div>
       </section>
 
       <!-- Modal Línea Custom: Servicio o Producto Fantasma (fusionado) -->
