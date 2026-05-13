@@ -449,7 +449,7 @@ PDF_TEMPLATE_VENTA = """
   <div class="terms-title">CONDICIONES COMERCIALES:</div>
   <ul class="terms">
     {# Metadata fija (depende del estado de la cotización, no editable) #}
-    <li>Los precios están expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>{% if orden.moneda == "USD" %} — tipo de cambio referencia: {{ "{:,.4f}".format(orden.tipo_cambio) }} MXN/USD{% endif %}.</li>
+    <li>Los precios están expresados en <strong>{{ etiqueta_moneda }} ({{ orden.moneda }})</strong>.</li>
     <li>Condiciones de pago: {{ orden.observaciones or "según acuerdo comercial" }}.</li>
 
     {# Bloque editable. orden.terminos_condiciones NULL → fallback hardcoded (legacy). #}
