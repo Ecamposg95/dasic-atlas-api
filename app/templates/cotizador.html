@@ -52,9 +52,9 @@
         <label class="text-xs text-slate-500">TC</label>
         <input id="input-tc" type="number" step="0.0001" min="0.0001" value="20.00" onchange="recalculer()"
                class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 w-24 text-right font-mono text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
-        <span id="fx-badge" onclick="recargarTC()"
-              class="hidden text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 cursor-pointer"
-              title="Click para recargar TC del día"></span>
+        <span id="fx-badge" onclick="recargarTC()" role="button" tabindex="0"
+              class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 cursor-pointer hover:bg-cyan-500/20 transition whitespace-nowrap"
+              title="TC del día (click para refrescar)"></span>
       </div>
 
       <!-- Acciones: obs + términos como dax-btn-ghost compactos -->
@@ -93,13 +93,13 @@
                     class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200">Servicios</button>
           </div>
         </div>
-        <div class="flex gap-2 mb-2">
-          <select id="filtro-marca" class="flex-1 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-xs"
-                  onchange="filtrarCatalogo()">
+        <div class="grid grid-cols-1 gap-1.5 mb-2">
+          <select id="filtro-marca" class="w-full min-w-0 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-xs"
+                  onchange="filtrarCatalogo()" aria-label="Filtrar por marca">
             <option value="">Todas las marcas</option>
           </select>
-          <select id="filtro-categoria" class="flex-1 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-xs"
-                  onchange="filtrarCatalogo()">
+          <select id="filtro-categoria" class="w-full min-w-0 bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-xs"
+                  onchange="filtrarCatalogo()" aria-label="Filtrar por categoría">
             <option value="">Todas las categorías</option>
           </select>
         </div>
@@ -315,14 +315,15 @@
               <span class="tabular-nums font-mono text-rose-500 font-bold" id="sum-desc">-$0.00</span>
             </div>
           </div>
-          <!-- Métricas (margen + TC inline) -->
-          <div id="sum-margen-card" class="p-3 text-xs space-y-1">
+          <!-- Métricas (margen + TC inline). Oculto mientras el carrito esté
+               vacío para no mostrar "—" duplicado; aparece cuando hay líneas. -->
+          <div id="sum-margen-card" class="hidden p-3 text-xs space-y-1">
             <div class="flex justify-between items-center">
-              <span class="text-slate-500">Margen prom</span>
+              <span class="text-slate-500">Margen promedio</span>
               <span id="sum-margen-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500">—</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-500">Margen</span>
+              <span class="text-slate-500">Utilidad</span>
               <output id="sum-margen" role="status" class="font-bold text-slate-700 dark:text-slate-200">—</output>
             </div>
             <p id="sum-margen-aviso" class="hidden text-[10px] text-rose-500 font-semibold">
@@ -1258,7 +1259,11 @@
           if (tcInput) tcInput.value = state.tc.toFixed(4);
           const badge = document.getElementById('fx-badge');
           if (badge) {
-              badge.textContent = `${d.fuente} · ${d.fecha} · ${state.tc.toFixed(2)}`;
+              // Solo fecha "YYYY-MM-DD" (sin hora ni nombre de proveedor): el TC
+              // está al lado y la fuente va al tooltip para no saturar la barra.
+              const fechaCorta = (d.fecha || '').slice(0, 10);
+              badge.textContent = fechaCorta;
+              badge.title = `Fuente: ${d.fuente || 'desconocida'} · TC ${state.tc.toFixed(4)} · click para refrescar`;
               badge.classList.remove('hidden');
           }
       } catch (e) { console.warn('FX:', e); }
@@ -2178,6 +2183,7 @@
           .map(i => Number(i.utilidad) || 0);
       const margenCard = document.getElementById('sum-margen-card');
       const margenAviso = document.getElementById('sum-margen-aviso');
+      if (margenCard) margenCard.classList.toggle('hidden', state.cart.length === 0);
       if (margenes.length > 0) {
           const avg = margenes.reduce((a, b) => a + b, 0) / margenes.length;
           const conMargenBajo = margenes.filter(m => m < 5).length;

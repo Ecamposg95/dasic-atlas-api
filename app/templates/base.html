@@ -271,15 +271,20 @@
        @click="sidebarMobile = false"
        class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
-  <!-- Botón flotante para reabrir cuando está oculto (lg+) -->
+  <!-- Botón flotante para reabrir cuando está oculto (lg+). Más visible:
+       borde acentuado, label visible y leve animación al hover para que el
+       usuario que ocultó el sidebar pueda volver fácilmente. -->
   <button x-show="mode === 'hidden'"
           x-cloak
           @click="show()"
-          class="hidden lg:flex fixed top-3 left-3 z-[60] h-10 w-10 items-center justify-center
-                 rounded-xl bg-slate-800 border border-slate-600 text-slate-300
-                 hover:text-white hover:border-cyan-400 shadow-lg transition"
-          title="Mostrar sidebar (Ctrl+\)">
+          class="hidden lg:flex fixed top-3 left-3 z-[60] h-10 items-center gap-2 pl-3 pr-4
+                 rounded-xl bg-slate-800 border border-cyan-500/60 text-slate-100
+                 hover:bg-slate-700 hover:border-cyan-400 hover:scale-[1.03]
+                 shadow-lg shadow-cyan-500/10 transition-all"
+          title="Mostrar menú lateral (Ctrl+\)"
+          aria-label="Mostrar menú lateral">
     <i class="fas fa-bars-staggered text-sm"></i>
+    <span class="text-xs font-bold uppercase tracking-wider">Menú</span>
   </button>
 
   <!-- ══════════════════════════════════════════════════════
@@ -539,7 +544,11 @@
 
       <span class="hidden md:block text-[11px] font-mono text-slate-500 tracking-wider shrink-0"
             x-data="{ t: '' }"
-            x-init="setInterval(()=>{ t=new Date().toLocaleTimeString('es-MX') }, 1000); t=new Date().toLocaleTimeString('es-MX')"
+            x-init="
+              const fmt = () => new Date().toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
+              t = fmt();
+              setInterval(() => { t = fmt() }, 30000)
+            "
             x-text="t"></span>
     </header>
 
