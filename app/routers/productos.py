@@ -611,7 +611,21 @@ async def cargar_inventario_csv(
     mismo archivo no duplica stock.
     """
     filename = (file.filename or "").lower()
+
+    # Límite de tamaño 25 MB. CSV/XLSX de inventario reales pesan KB-MB; 25 MB
+    # cubre catálogos enormes (~100k filas). Más allá = DoS por memoria.
+    MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+    if file.size is not None and file.size > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Archivo demasiado grande ({file.size} bytes). Máximo {MAX_UPLOAD_BYTES} bytes (25 MB).",
+        )
     content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Archivo demasiado grande ({len(content)} bytes). Máximo {MAX_UPLOAD_BYTES} bytes (25 MB).",
+        )
 
     if filename.endswith(".xls"):
         raise HTTPException(

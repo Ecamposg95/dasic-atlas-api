@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 from typing import List
 from decimal import Decimal
 from datetime import datetime
@@ -207,10 +207,21 @@ class OCDesdeCotizacionInput(BaseModel):
 
 
 def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None" = None) -> str:
-    """Folio OC formato DASIC: OC-YYMM<seq> (consecutivo global por mes)."""
+    """Folio OC formato DASIC: OC-YYMM<seq> (consecutivo global por mes).
+
+    Usa advisory_xact_lock para serializar el cómputo del consecutivo y
+    evitar colisión entre OCs creadas concurrentemente en el mismo mes.
+    Mismo patrón que `ventas._generar_folio`.
+    """
     ahora = datetime.utcnow()
     yymm = ahora.strftime("%y%m")
     inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+        {"k": f"folio:OC:{yymm}"},
+    )
+
     consecutivo = (
         db.query(models.OrdenCompra)
         .filter(

@@ -63,7 +63,14 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 # CORS
 # ---------------------------------------------------------------------------
 _raw = os.getenv("ALLOWED_ORIGINS", "")
-origins = [o for o in _raw.split(",") if o] or ["*"]
+origins = [o.strip() for o in _raw.split(",") if o.strip()]
+if not origins:
+    # NUNCA mezclar "*" con allow_credentials=True (riesgo de XSS/CSRF).
+    # Si no hay orígenes configurados, listamos vacío y log warning.
+    logger.warning(
+        "ALLOWED_ORIGINS vacío. CORS bloquea TODOS los orígenes. "
+        "Configura la variable de entorno con orígenes explícitos para producción."
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

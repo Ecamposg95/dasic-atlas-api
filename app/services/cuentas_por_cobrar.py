@@ -121,6 +121,18 @@ def aplicar_pago(
     if monto_total <= 0:
         raise ValueError("Monto debe ser > 0")
 
+    # Lock pesimista sobre el cliente para serializar pagos concurrentes y
+    # evitar lost-update en saldo_actual. Recarga la fila bloqueada.
+    cliente_locked = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.id == cliente.id)
+        .with_for_update()
+        .first()
+    )
+    if cliente_locked is None:
+        raise ValueError("Cliente no encontrado")
+    cliente = cliente_locked
+
     if orden_venta_ids:
         explicit = list(orden_venta_ids)
         rows_q = (

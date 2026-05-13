@@ -1,8 +1,11 @@
+import logging
 import os
 from dataclasses import dataclass
 from functools import lru_cache
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_database_url(url: str) -> str:
@@ -49,10 +52,24 @@ def get_settings() -> Settings:
     secret_key = os.getenv("SECRET_KEY", "").strip()
     if not secret_key:
         raise RuntimeError("SECRET_KEY no está configurada.")
+    if len(secret_key) < 32:
+        raise RuntimeError(
+            "SECRET_KEY debe tener al menos 32 caracteres (HS256). "
+            f"Actual: {len(secret_key)} chars. Genera con `openssl rand -hex 32`."
+        )
 
     access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "720"))
     token_cookie_name = os.getenv("TOKEN_COOKIE_NAME", "access_token").strip() or "access_token"
     cookie_secure = _as_bool(os.getenv("COOKIE_SECURE", "false"), default=False)
+
+    # Aviso temprano en producción si la cookie no es Secure.
+    # ENV puede ser "production" en Railway/Render; si no, asumimos dev.
+    _env = os.getenv("ENV", "").strip().lower() or os.getenv("ENVIRONMENT", "").strip().lower()
+    if _env in {"production", "prod"} and not cookie_secure:
+        logger.error(
+            "COOKIE_SECURE=false en producción. La cookie de auth viaja por HTTP "
+            "y puede ser interceptada. Setea COOKIE_SECURE=true."
+        )
 
     smtp_user = os.getenv("SMTP_USER", "").strip()
 

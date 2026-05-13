@@ -699,7 +699,10 @@ def actualizar_orden(
         .first()
     )
     if not orden: raise HTTPException(404, "Orden no encontrada")
-    
+
+    # Ownership: VENTAS sólo edita las propias; admin/gerente pasan.
+    _check_owner_or_403(orden, current_user, action="write")
+
     if orden.estatus != models.EstatusOrden.COTIZACION:
         raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
 
@@ -967,7 +970,19 @@ def convertir_cotizacion(
         raise HTTPException(400, "Orden no válida para conversión")
     _check_owner_or_403(orden, current_user, action="convert")
 
+    # Advisory lock por cotización: si dos convert simultáneos llegan al
+    # mismo id, el segundo espera para no doble-decrementar stock.
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+        {"k": f"convert:{orden.id}"},
+    )
+
     try:
+        # Re-verificar estatus tras el lock (otra request pudo convertir).
+        db.refresh(orden)
+        if orden.estatus != models.EstatusOrden.COTIZACION:
+            raise HTTPException(409, "La cotización ya fue convertida o cancelada.")
+
         # Verificar disponible considerando reservas de OTRAS cotizaciones.
         # Para cada línea de catálogo: stock_actual - reservas_de_otras_cotizaciones >= cantidad.
         for det in orden.detalles:

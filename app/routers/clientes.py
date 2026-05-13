@@ -198,11 +198,14 @@ def registrar_pago_cliente(
     Registra un pago del cliente (ABONO).
     Esto reduce la deuda en 'saldo_actual' y crea un registro histórico.
     """
+    # Lock pesimista para serializar pagos concurrentes (evita lost-update
+    # en saldo_actual cuando dos pagos llegan al mismo cliente).
     cliente = (
         db.query(models.Cliente)
         .filter(
             models.Cliente.id == cliente_id,
         )
+        .with_for_update()
         .first()
     )
     if not cliente:
