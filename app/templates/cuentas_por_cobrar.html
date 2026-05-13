@@ -129,9 +129,10 @@
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="9" class="text-center text-slate-500 py-12 text-sm">
-              <i class="fas fa-circle-check text-2xl mb-2 block opacity-30"></i>
-              Sin cuentas por cobrar en este rango.
+            <td colspan="9" class="dax-empty-state">
+              <i class="fas fa-circle-check dax-empty-icon text-emerald-400"></i>
+              <p class="dax-empty-title text-slate-800 dark:text-slate-200">¡Todo al día!</p>
+              <p class="dax-empty-hint">No hay cuentas por cobrar en este rango. Ajusta el filtro de días para ver más.</p>
             </td>
           </tr>
         </template>

@@ -107,7 +107,8 @@
               <td>
                 <div class="flex items-center gap-3">
                   <div class="h-8 w-8 shrink-0 flex items-center justify-center
-                              rounded-lg bg-violet-500/15 text-violet-400 text-xs font-bold">
+                              rounded-lg text-xs font-bold"
+                       :class="avatarColor(c.nombre_empresa)">
                     <span x-text="(c.nombre_empresa || '?')[0].toUpperCase()"></span>
                   </div>
                   <div>
@@ -141,9 +142,12 @@
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="6" class="text-center text-slate-500 py-12 text-sm">
-              <i class="fas fa-users text-2xl mb-2 block opacity-30"></i>
-              <span x-text="todos.length === 0 ? 'Sin clientes registrados' : 'Sin resultados con ese filtro'"></span>
+            <td colspan="6" class="dax-empty-state">
+              <i class="fas fa-users dax-empty-icon"></i>
+              <p class="dax-empty-title text-slate-800 dark:text-slate-200"
+                 x-text="todos.length === 0 ? 'Sin clientes registrados' : 'Sin resultados'"></p>
+              <p class="dax-empty-hint"
+                 x-text="todos.length === 0 ? 'Crea el primero con el botón “Nuevo Cliente” arriba a la derecha.' : 'Prueba ajustar los filtros.'"></p>
             </td>
           </tr>
         </template>
@@ -325,6 +329,22 @@ function clientes() {
 
     saldoTotal() {
       return this.todos.reduce((acc, c) => acc + (Number(c.saldo_actual) || 0), 0);
+    },
+
+    // Color de avatar derivado del nombre — variedad visual sin overhead.
+    avatarColor(nombre) {
+      const palette = [
+        'bg-blue-500/15 text-blue-400',
+        'bg-cyan-500/15 text-cyan-400',
+        'bg-violet-500/15 text-violet-400',
+        'bg-emerald-500/15 text-emerald-400',
+        'bg-rose-500/15 text-rose-400',
+        'bg-amber-500/15 text-amber-400',
+      ];
+      const s = (nombre || '?').trim();
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return palette[h % palette.length];
     },
 
     puedeEditar(c) {

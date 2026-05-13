@@ -159,9 +159,10 @@
               </tr>
             </template>
             <tr x-show="filtrados.length===0">
-              <td colspan="7" class="text-center text-slate-500 py-12 text-sm">
-                <i class="fas fa-truck text-2xl mb-2 block opacity-30"></i>
-                Sin órdenes de compra
+              <td colspan="7" class="dax-empty-state">
+                <i class="fas fa-truck dax-empty-icon"></i>
+                <p class="dax-empty-title text-slate-800 dark:text-slate-200">Sin órdenes de compra</p>
+                <p class="dax-empty-hint">Crea una desde el botón “Nueva OC” o genéralas desde una cotización en Seguimiento.</p>
               </td>
             </tr>
           </template>
