@@ -480,23 +480,6 @@
         <i x-show="$store.theme.current === 'auto'" class="fas fa-circle-half-stroke text-base"></i>
       </button>
 
-      <!-- Inbox -->
-      <button type="button"
-              class="relative h-9 w-9 flex items-center justify-center rounded-md
-                     text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100
-                     hover:bg-slate-100 dark:hover:bg-slate-700/60 transition"
-              title="Inbox" aria-label="Inbox">
-        <i class="fas fa-inbox text-base"></i>
-      </button>
-
-      <!-- Notifications -->
-      <button type="button"
-              class="relative h-9 w-9 flex items-center justify-center rounded-md
-                     text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition"
-              title="Notifications" aria-label="Notifications">
-        <i class="fas fa-bell text-base"></i>
-      </button>
-
       {% block header_actions %}{% endblock %}
 
       <span class="hidden md:block text-[11px] font-mono text-slate-500 tracking-wider shrink-0"
