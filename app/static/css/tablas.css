@@ -1,0 +1,45 @@
+/* Estilos globales para tablas .dax-table — zebra-stripe + transiciones */
+
+/* Zebra-stripe en modo claro */
+.dax-table tbody tr:nth-child(even) {
+  background-color: rgb(248 250 252 / 0.65); /* slate-50 */
+}
+
+/* Zebra-stripe en modo oscuro */
+.dark .dax-table tbody tr:nth-child(even) {
+  background-color: rgb(15 23 42 / 0.30); /* slate-900 sutil */
+}
+
+/* Hover sutilmente más fuerte que el zebra */
+.dax-table tbody tr:hover {
+  background-color: rgb(207 250 254 / 0.40); /* cyan-100 */
+  transition: background-color 120ms ease;
+}
+.dark .dax-table tbody tr:hover {
+  background-color: rgb(14 116 144 / 0.10); /* cyan-700 sutil */
+}
+
+/* Botones icon-only en tablas: hit area mínima 36x36 + transition suave */
+.dax-table button {
+  transition: all 150ms ease;
+}
+
+/* Empty-state amigable */
+.dax-empty-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+.dax-empty-state .dax-empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.25;
+  margin-bottom: 0.75rem;
+}
+.dax-empty-state .dax-empty-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.dax-empty-state .dax-empty-hint {
+  font-size: 0.75rem;
+  color: rgb(100 116 139); /* slate-500 */
+}

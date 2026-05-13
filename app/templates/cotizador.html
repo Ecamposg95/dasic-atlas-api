@@ -844,10 +844,10 @@
   async function cargarParaEditar(id) {
       try {
           const r = await fetch(`/api/ventas/${id}/detalle-json`, { credentials:'include' });
-          if (!r.ok) { alert('No se pudo cargar la cotización para editar.'); return; }
+          if (!r.ok) { window.toast('No se pudo cargar la cotización para editar.', 'error'); return; }
           const data = await r.json();
           if ((data.estatus || '').toLowerCase() !== 'cotizacion') {
-              alert('Solo se pueden editar cotizaciones, no ventas convertidas o canceladas.');
+              window.toast('Solo se pueden editar cotizaciones, no ventas convertidas o canceladas.', 'warning');
               return;
           }
           state.editingId = data.id;
@@ -899,7 +899,7 @@
           renderBannerEdicion();
       } catch(e) {
           console.warn(e);
-          alert('Error de red al cargar cotización.');
+          window.toast('Error de red al cargar cotización.', 'error');
       }
   }
 
@@ -1006,7 +1006,7 @@
       const choice = prompt(`Plantillas disponibles:\n\n${opciones || '(ninguna)'}\n\nID a cargar (cancel para crear una nueva del carrito actual):`, '');
       if (choice === null) {
           // crear nueva
-          if (!state.cart.length) { alert('Carrito vacío.'); return; }
+          if (!state.cart.length) { window.toast('Carrito vacío.', 'warning'); return; }
           const nombre = prompt('Nombre de la plantilla:', '');
           if (!nombre) return;
           const desc = prompt('Descripción (opcional):', '') || '';
@@ -1028,14 +1028,14 @@
           }));
           try {
               const r = await fetch('/api/ventas/plantillas', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ nombre, descripcion: desc, lineas })});
-              if (r.ok) { alert('Plantilla guardada.'); await cargarPlantillas(); }
-              else { const e = await r.json(); alert('Error: ' + (e.detail || 'no se pudo')); }
-          } catch(_) { alert('Error de red.'); }
+              if (r.ok) { window.toast('Plantilla guardada.', 'success'); await cargarPlantillas(); }
+              else { const e = await r.json(); window.toast('Error: ' + (e.detail || 'no se pudo'), 'error'); }
+          } catch(_) { window.toast('Error de red.', 'error'); }
           return;
       }
       const id = parseInt(choice);
       const p = state.plantillas.find(x => x.id === id);
-      if (!p) { alert('No encontrada.'); return; }
+      if (!p) { window.toast('No encontrada.', 'error'); return; }
       if (state.cart.length && !confirm(`Carrito tiene ${state.cart.length} línea(s). ¿Reemplazar con la plantilla "${p.nombre}"?`)) return;
       snapshotHistorial();
       state.cart = (p.lineas || []).map(l => ({
@@ -1090,7 +1090,7 @@
       reader.onload = e => {
           try {
               const d = JSON.parse(e.target.result);
-              if (!d.cart || !Array.isArray(d.cart)) return alert('JSON inválido');
+              if (!d.cart || !Array.isArray(d.cart)) return window.toast('JSON inválido', 'error');
               snapshotHistorial();
               state.cart = d.cart;
               state.moneda = d.moneda || 'MXN';
@@ -1098,7 +1098,7 @@
               if (d.observaciones) document.getElementById('observaciones').value = d.observaciones;
               renderCart();
               autosaveBorrador();
-          } catch(_) { alert('Error al leer archivo'); }
+          } catch(_) { window.toast('Error al leer archivo', 'error'); }
       };
       reader.readAsText(file);
   }

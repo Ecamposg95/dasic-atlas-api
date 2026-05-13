@@ -134,7 +134,7 @@
     <i class="fas fa-circle-notch fa-spin"></i>
     Cargando reservas/disponibilidad…
   </div>
-  <div class="dax-card overflow-hidden">
+  <div class="dax-card overflow-x-auto">
     <table class="dax-table">
       <thead>
         <tr>
@@ -263,26 +263,42 @@
 
     <!-- Tab Resumen -->
     <div x-show="tab==='resumen'" class="space-y-3">
-      <div class="grid grid-cols-3 gap-2 text-center">
-        <div class="rounded bg-slate-100 dark:bg-slate-800 p-2">
-          <p class="text-[9px] uppercase text-slate-500">Físico</p>
-          <p class="text-lg font-bold text-slate-200" x-text="d.stock_actual"></p>
+      <!-- Skeleton mientras carga el cardex -->
+      <template x-if="cardex === null">
+        <div class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="h-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+            <div class="h-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+            <div class="h-14 rounded bg-slate-200 dark:bg-slate-800 animate-pulse"></div>
+          </div>
+          <div class="h-3 rounded bg-slate-200 dark:bg-slate-800 animate-pulse w-3/4"></div>
+          <div class="h-3 rounded bg-slate-200 dark:bg-slate-800 animate-pulse w-2/3"></div>
         </div>
-        <div class="rounded bg-amber-500/10 p-2">
-          <p class="text-[9px] uppercase text-amber-300">Reservado</p>
-          <p class="text-lg font-bold text-amber-200" x-text="d.reservado"></p>
+      </template>
+      <template x-if="cardex !== null">
+        <div>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="rounded bg-slate-100 dark:bg-slate-800 p-2">
+              <p class="text-[9px] uppercase text-slate-500">Físico</p>
+              <p class="text-lg font-bold text-slate-200" x-text="d.stock_actual"></p>
+            </div>
+            <div class="rounded bg-amber-500/10 p-2">
+              <p class="text-[9px] uppercase text-amber-300">Reservado</p>
+              <p class="text-lg font-bold text-amber-200" x-text="d.reservado"></p>
+            </div>
+            <div class="rounded bg-cyan-500/10 p-2">
+              <p class="text-[9px] uppercase text-cyan-300">Disponible</p>
+              <p class="text-lg font-bold text-cyan-200" x-text="d.disponible"></p>
+            </div>
+          </div>
+          <dl class="text-[11px] grid grid-cols-2 gap-y-1 text-slate-400 mt-3">
+            <dt>Mínimo</dt><dd class="font-mono text-right" x-text="cardex?.inventario?.stock_minimo ?? '—'"></dd>
+            <dt>Costo</dt><dd class="font-mono text-right" x-text="(cardex?.inventario?.moneda_compra||'MXN')+' '+(cardex?.inventario?.costo_compra?.toFixed?.(2) ?? '—')"></dd>
+            <dt>Unidad</dt><dd class="text-right" x-text="cardex?.clasificacion?.unidad || '—'"></dd>
+            <dt>Proveedor principal</dt><dd class="text-right" x-text="proveedorTexto(cardex?.inventario?.proveedor_principal_id)"></dd>
+          </dl>
         </div>
-        <div class="rounded bg-cyan-500/10 p-2">
-          <p class="text-[9px] uppercase text-cyan-300">Disponible</p>
-          <p class="text-lg font-bold text-cyan-200" x-text="d.disponible"></p>
-        </div>
-      </div>
-      <dl class="text-[11px] grid grid-cols-2 gap-y-1 text-slate-400">
-        <dt>Mínimo</dt><dd class="font-mono text-right" x-text="cardex?.inventario?.stock_minimo ?? '—'"></dd>
-        <dt>Costo</dt><dd class="font-mono text-right" x-text="(cardex?.inventario?.moneda_compra||'MXN')+' '+(cardex?.inventario?.costo_compra?.toFixed?.(2) ?? '—')"></dd>
-        <dt>Unidad</dt><dd class="text-right" x-text="cardex?.clasificacion?.unidad || '—'"></dd>
-        <dt>Proveedor principal</dt><dd class="text-right" x-text="proveedorTexto(cardex?.inventario?.proveedor_principal_id)"></dd>
-      </dl>
+      </template>
     </div>
 
     <!-- Tab Fiscales SAT -->

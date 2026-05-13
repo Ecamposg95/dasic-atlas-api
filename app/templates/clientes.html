@@ -76,7 +76,7 @@
   </div>
 
   <!-- Tabla -->
-  <div class="dax-card overflow-hidden">
+  <div class="dax-card overflow-x-auto">
     <table class="dax-table">
       <thead>
         <tr>
@@ -263,7 +263,7 @@
           <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Saldo actual</p>
           <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Se actualiza con ventas y pagos.
-            <a x-show="form.id" :href="`/cuentas-por-cobrar`" target="_blank"
+            <a x-show="form.id" :href="`/cuentas-por-cobrar`" target="_blank" rel="noopener noreferrer"
                class="underline text-cyan-400 ml-1">Ver dashboard</a>
           </p>
         </div>
@@ -364,7 +364,7 @@ function clientes() {
           await this.init();
         } else {
           const e = await r.json().catch(()=>({}));
-          alert(e.detail || 'No se pudo eliminar');
+          window.toast(e.detail || 'No se pudo eliminar', 'error');
         }
       } catch(e) { console.warn(e); }
     },

@@ -97,7 +97,7 @@
   </div>
 
   <!-- Tabla -->
-  <div class="dax-card overflow-hidden">
+  <div class="dax-card overflow-x-auto">
     <table class="dax-table">
       <thead>
         <tr>
@@ -141,13 +141,15 @@
               </td>
               <td class="text-right">
                 <div class="inline-flex items-center gap-1">
-                  <button @click="abrirEdicion(s)" class="dax-btn-ghost py-1 px-2"
-                          title="Editar">
-                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  <button @click="abrirEdicion(s)" class="dax-btn-ghost py-2 px-3"
+                          title="Editar servicio"
+                          :aria-label="`Editar ${s.codigo}`">
+                    <i class="fas fa-pen-to-square text-[11px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="eliminar(s)" class="dax-btn-ghost py-1 px-2 hover:text-red-400"
-                          title="Eliminar">
-                    <i class="fas fa-trash text-[10px]"></i>
+                  <button @click="eliminar(s)" class="dax-btn-ghost py-2 px-3 hover:text-red-400"
+                          title="Eliminar servicio"
+                          :aria-label="`Eliminar ${s.codigo}`">
+                    <i class="fas fa-trash text-[11px]" aria-hidden="true"></i>
                   </button>
                 </div>
               </td>
@@ -428,12 +430,12 @@ function servicios() {
       try {
         const r = await fetch(`/api/servicios/${s.id}`, { method:'DELETE', credentials:'include' });
         if (r.ok) {
-          this.msg = { text: 'Servicio eliminado.', type: 'success' };
+          window.toast('Servicio eliminado.', 'success');
           await this.init();
         } else {
-          this.msg = { text: await fmtErr(r, 'No se pudo eliminar.'), type: 'error' };
+          window.toast(await fmtErr(r, 'No se pudo eliminar.'), 'error');
         }
-      } catch(e) { console.warn(e); }
+      } catch(e) { console.warn(e); window.toast('Error de red.', 'error'); }
     },
   };
 }

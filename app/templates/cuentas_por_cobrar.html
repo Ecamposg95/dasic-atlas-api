@@ -16,7 +16,17 @@
 
   <!-- KPI strip -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="kpi-card">
+    <!-- Skeleton mientras carga el resumen -->
+    <template x-for="i in 4" :key="'sk-'+i">
+      <div class="kpi-card animate-pulse" x-show="loadingResumen">
+        <div class="flex-1 space-y-2">
+          <div class="h-3 w-24 rounded bg-slate-200 dark:bg-slate-700"></div>
+          <div class="h-6 w-20 rounded bg-slate-200 dark:bg-slate-700"></div>
+        </div>
+        <div class="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-700"></div>
+      </div>
+    </template>
+    <div class="kpi-card" x-show="!loadingResumen">
       <div>
         <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Total por cobrar</p>
         <p class="text-2xl font-bold text-slate-900 dark:text-slate-100" x-text="fmt(resumen.total_pendiente)"></p>
@@ -25,7 +35,8 @@
         <i class="fas fa-coins"></i>
       </div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" x-show="!loadingResumen"
+         :class="resumen.total_vencido > 0 ? 'ring-1 ring-rose-500/30 bg-rose-500/5' : ''">
       <div>
         <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Vencido</p>
         <p class="text-2xl font-bold text-rose-400" x-text="fmt(resumen.total_vencido)"></p>
@@ -34,7 +45,7 @@
         <i class="fas fa-triangle-exclamation"></i>
       </div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" x-show="!loadingResumen">
       <div>
         <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Vence 7 días</p>
         <p class="text-2xl font-bold text-amber-400" x-text="fmt(resumen.por_vencer_7d)"></p>
@@ -43,7 +54,7 @@
         <i class="fas fa-clock"></i>
       </div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" x-show="!loadingResumen">
       <div>
         <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Vence 30 días</p>
         <p class="text-2xl font-bold text-cyan-400" x-text="fmt(resumen.por_vencer_30d)"></p>
@@ -135,6 +146,7 @@
 function cuentasPorCobrar() {
   return {
     loading: true,
+    loadingResumen: true,
     items: [],
     filtrados: [],
     resumen: { total_pendiente: 0, total_vencido: 0, por_vencer_7d: 0, por_vencer_30d: 0 },
@@ -158,10 +170,15 @@ function cuentasPorCobrar() {
     },
 
     async cargarResumen() {
+      this.loadingResumen = true;
       try {
         const r = await fetch('/api/cuentas-por-cobrar/resumen', { credentials:'include' });
         if (r.ok) this.resumen = await r.json();
-      } catch(e) { console.warn(e); }
+      } catch(e) {
+        console.warn(e);
+      } finally {
+        this.loadingResumen = false;
+      }
     },
 
     async cargar() {
@@ -195,12 +212,12 @@ function cuentasPorCobrar() {
         });
         if (r.ok) {
           const d = await r.json();
-          alert(`Actualizados: ${d.actualizados} cargo(s).`);
+          window.toast(`Actualizados: ${d.actualizados} cargo(s).`, 'success');
           await this.init();
         } else {
-          alert('No se pudo actualizar.');
+          window.toast('No se pudo actualizar.', 'error');
         }
-      } catch(e) { console.warn(e); alert('Error de red.'); }
+      } catch(e) { console.warn(e); window.toast('Error de red.', 'error'); }
     },
   };
 }

@@ -176,6 +176,13 @@
       }
     </style>
 
+    <!-- CSS global de tablas (zebra + transiciones + empty states) -->
+    <link rel="stylesheet" href="/static/css/tablas.css">
+
+    <!-- Helpers globales: window.toast, window.parseApiError, window.fmtMoney -->
+    <script defer src="/static/js/utils.js"></script>
+    <script defer src="/static/js/toast.js"></script>
+
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -604,6 +611,41 @@
       Alpine.store('user').load();
     });
   </script>
+
+  <!-- ══════════════════════════════════════════════════════
+       Toast viewer global. Llamar con `window.toast(msg, type)`.
+  ═══════════════════════════════════════════════════════ -->
+  <div x-data x-cloak
+       class="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] sm:w-auto pointer-events-none">
+    <template x-for="t in $store.toasts ? $store.toasts.items : []" :key="t.id">
+      <div x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 translate-x-4"
+           x-transition:enter-end="opacity-100 translate-x-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"
+           class="rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur-sm pointer-events-auto flex items-start gap-2"
+           :class="{
+             'border-emerald-400/40 bg-emerald-500/10 text-emerald-100': t.type === 'success',
+             'border-rose-400/40 bg-rose-500/10 text-rose-100':         t.type === 'error',
+             'border-amber-400/40 bg-amber-500/10 text-amber-100':      t.type === 'warning',
+             'border-cyan-400/40 bg-cyan-500/10 text-cyan-100':         t.type === 'info'
+           }">
+        <i class="fas mt-0.5"
+           :class="{
+             'fa-circle-check text-emerald-300':         t.type === 'success',
+             'fa-circle-xmark text-rose-300':            t.type === 'error',
+             'fa-triangle-exclamation text-amber-300':   t.type === 'warning',
+             'fa-circle-info text-cyan-300':             t.type === 'info'
+           }"></i>
+        <span x-text="t.msg" class="flex-1"></span>
+        <button @click="$store.toasts.items.splice($store.toasts.items.findIndex(x=>x.id===t.id), 1)"
+                class="text-slate-300 hover:text-white" aria-label="Cerrar">
+          <i class="fas fa-xmark text-xs"></i>
+        </button>
+      </div>
+    </template>
+  </div>
 
   {% block extra_scripts %}{% endblock %}
 </body>

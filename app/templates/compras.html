@@ -103,7 +103,7 @@
       </select>
     </div>
 
-    <div class="dax-card overflow-hidden">
+    <div class="dax-card overflow-x-auto">
       <table class="dax-table">
         <thead>
           <tr>
@@ -182,7 +182,7 @@
       </div>
     </div>
 
-    <div class="dax-card overflow-hidden">
+    <div class="dax-card overflow-x-auto">
       <table class="dax-table">
         <thead>
           <tr>
@@ -484,19 +484,19 @@ function compras() {
       try {
         const r = await fetch(`/api/compras/${c.id}/recibir`, { method: 'POST', credentials: 'include' });
         const d = await r.json();
-        if (!r.ok) return alert(d.detail || 'No se pudo recibir');
-        alert(`Recibida ${folio}: ${d.productos_ingresados} producto(s) ingresados al stock.`);
+        if (!r.ok) return window.toast(d.detail || 'No se pudo recibir', 'error');
+        window.toast(`Recibida ${folio}: ${d.productos_ingresados} producto(s) ingresados al stock.`, 'success', 5000);
         window.dispatchEvent(new CustomEvent('oc-recibida'));
-      } catch(e) { console.warn(e); alert('Error de red'); }
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
 
     async editarOC(id) {
       try {
         const r = await fetch(`/api/compras/${id}/json`, { credentials: 'include' });
-        if (!r.ok) { alert('No se pudo cargar la OC.'); return; }
+        if (!r.ok) { window.toast('No se pudo cargar la OC.', 'error'); return; }
         const data = await r.json();
         window.dispatchEvent(new CustomEvent('oc-editor-open', { detail: data }));
-      } catch(e) { console.warn(e); alert('Error de red'); }
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
   }
 }

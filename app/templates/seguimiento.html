@@ -39,7 +39,7 @@
   </div>
 
   <!-- Tabla de órdenes -->
-  <div class="dax-card overflow-hidden">
+  <div class="dax-card overflow-x-auto">
     <table class="dax-table">
       <thead>
         <tr>
@@ -197,7 +197,7 @@ function seguimiento() {
         const res = await fetch(`/api/compras/cotizacion/${v.id}/borrador`, { credentials:'include' });
         if (!res.ok) {
           const err = await res.json();
-          return alert(err.detail || 'No se pudo generar el borrador');
+          return window.toast(err.detail || 'No se pudo generar el borrador', 'error');
         }
         const data = await res.json();
         const lineas = data.detalles.map(item =>
@@ -209,7 +209,7 @@ function seguimiento() {
       }
     },
 
-    verDetalle(v) { alert('Detalle: ' + v.folio); },
+    verDetalle(v) { window.toast('Detalle: ' + v.folio, 'info'); },
 
     async abrirCorreo(v) {
       const to = prompt(`Enviar cotización ${v.folio} a (correo):`);
@@ -223,11 +223,11 @@ function seguimiento() {
           body: JSON.stringify({ to, mensaje })
         });
         const data = await res.json();
-        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
+        if (!res.ok) return window.toast(`Error: ${data.detail || 'desconocido'}`, 'error');
         if (data.estatus === 'DRY_RUN') {
-          alert('SMTP no configurado en el servidor. El evento quedó registrado en la bitácora (DRY_RUN).');
+          window.toast('SMTP no configurado. Evento quedó registrado en la bitácora.', 'warning', 5000);
         } else {
-          alert(`Correo ${data.estatus}. Evento #${data.evento_id} registrado.`);
+          window.toast(`Correo ${data.estatus}. Evento #${data.evento_id}.`, 'success');
         }
       } catch(e) { console.warn(e); }
     },
@@ -245,8 +245,8 @@ function seguimiento() {
           body: JSON.stringify({ direccion, destinatario, mensaje })
         });
         const data = await res.json();
-        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
-        alert(`WhatsApp registrado. Evento #${data.evento_id}`);
+        if (!res.ok) return window.toast(`Error: ${data.detail || 'desconocido'}`, 'error');
+        window.toast(`WhatsApp registrado. Evento #${data.evento_id}.`, 'success');
       } catch(e) { console.warn(e); }
     },
 
@@ -263,9 +263,9 @@ function seguimiento() {
       try {
         const r = await fetch(`/api/ventas/${v.id}/sugerir-oc`, { method:'POST', credentials:'include' });
         const d = await r.json();
-        if (!r.ok) return alert(d.detail?.mensaje || d.detail || 'Error');
+        if (!r.ok) return window.toast(d.detail?.mensaje || d.detail || 'Error', 'error');
         if (!d.por_proveedor?.length && !d.sin_proveedor?.length) {
-          return alert(`${v.folio}: sin faltantes, no se requiere OC.`);
+          return window.toast(`${v.folio}: sin faltantes, no se requiere OC.`, 'info');
         }
         let txt = `Sugerencia para ${v.folio}:\n\n`;
         d.por_proveedor.forEach(p => {
@@ -278,16 +278,16 @@ function seguimiento() {
         if (!confirm(txt + '\n\n¿Generar las OCs ahora?')) return;
         const g = await fetch(`/api/ventas/${v.id}/generar-oc`, { method:'POST', credentials:'include' });
         const gd = await g.json();
-        if (!g.ok) return alert(gd.detail?.mensaje || gd.detail || 'Error');
-        alert('OCs generadas: ' + (gd.ocs || []).map(o => o.folio).join(', '));
-      } catch(e) { console.warn(e); alert('Error de red'); }
+        if (!g.ok) return window.toast(gd.detail?.mensaje || gd.detail || 'Error', 'error');
+        window.toast('OCs generadas: ' + (gd.ocs || []).map(o => o.folio).join(', '), 'success', 5000);
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
 
     editarCotizacion(v) {
       // Editar in-situ: misma cotización, mismo folio. Solo aplica si estatus
       // == 'cotizacion'. Para versionar usar "Recotizar".
       if (v.estatus !== 'cotizacion') {
-        alert('Solo se pueden editar cotizaciones (no ventas ni canceladas).');
+        window.toast('Solo se pueden editar cotizaciones (no ventas ni canceladas).', 'warning');
         return;
       }
       window.location.href = '/ventas/cotizador?edit=' + v.id;
@@ -298,10 +298,10 @@ function seguimiento() {
       try {
         const r = await fetch(`/api/ventas/${v.id}/recotizar`, { method:'POST', credentials:'include' });
         const d = await r.json();
-        if (!r.ok) return alert(d.detail || 'Error al recotizar');
-        alert(`Versión creada: ${d.folio}`);
+        if (!r.ok) return window.toast(d.detail || 'Error al recotizar', 'error');
+        window.toast(`Versión creada: ${d.folio}`, 'success');
         await this.init();
-      } catch(e) { console.warn(e); alert('Error de red'); }
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
 
     async convertir(v) {
@@ -309,10 +309,10 @@ function seguimiento() {
       try {
         const r = await fetch(`/api/ventas/${v.id}/convertir`, { method:'POST', credentials:'include' });
         const d = await r.json();
-        if (!r.ok) return alert(d.detail || 'Error al convertir');
-        alert(`Convertido: ${d.nuevo_folio}`);
+        if (!r.ok) return window.toast(d.detail || 'Error al convertir', 'error');
+        window.toast(`Convertido: ${d.nuevo_folio}`, 'success');
         await this.init();
-      } catch(e) { console.warn(e); alert('Error de red'); }
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
 
     async cancelar(v) {
@@ -320,18 +320,18 @@ function seguimiento() {
       try {
         const r = await fetch(`/api/ventas/${v.id}/cancelar`, { method:'POST', credentials:'include' });
         const d = await r.json();
-        if (!r.ok) return alert(d.detail || 'Error al cancelar');
-        alert(`Cancelada: ${d.folio} (${d.productos_liberados} productos liberados)`);
+        if (!r.ok) return window.toast(d.detail || 'Error al cancelar', 'error');
+        window.toast(`Cancelada: ${d.folio} (${d.productos_liberados} productos liberados)`, 'success');
         await this.init();
-      } catch(e) { console.warn(e); alert('Error de red'); }
+      } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
     },
 
     async verEventos(v) {
       try {
         const res = await fetch(`/api/ventas/${v.id}/eventos`, { credentials:'include' });
         const data = await res.json();
-        if (!res.ok) return alert(`Error: ${data.detail || 'desconocido'}`);
-        if (!data.length) return alert('Sin eventos registrados.');
+        if (!res.ok) return window.toast(`Error: ${data.detail || 'desconocido'}`, 'error');
+        if (!data.length) return window.toast('Sin eventos registrados.', 'info');
         const lines = data.slice(0, 20).map(e => {
           const when = new Date(e.creado_en).toLocaleString('es-MX');
           const head = `[${e.canal}/${e.estatus || '-'}] ${when} ${e.creado_por ? '· '+e.creado_por : ''}`;
