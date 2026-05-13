@@ -159,11 +159,12 @@
         <template x-if="!loading">
           <template x-for="p in filtrados" :key="p.id">
             <tr class="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/30" @click="abrirSidePanel(p)">
-              <!-- Producto: nombre + SKU comercial -->
+              <!-- Producto: SKU comercial protagonista + nombre secundario -->
               <td>
-                <p class="font-medium text-slate-800 dark:text-slate-200 text-xs truncate" x-text="p.nombre"></p>
-                <p class="text-[10px] text-cyan-700 dark:text-cyan-300 font-mono truncate"
+                <p class="font-bold font-mono text-xs text-cyan-700 dark:text-cyan-300 truncate"
                    x-text="p.sku_comercial || p.sku || '—'"></p>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5"
+                   x-text="p.nombre"></p>
               </td>
               <!-- Marca -->
               <td class="text-xs text-slate-600 dark:text-slate-400 truncate" x-text="p.marca || '—'"></td>
