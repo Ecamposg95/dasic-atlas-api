@@ -138,25 +138,20 @@
     <table class="dax-table">
       <thead>
         <tr>
-          <th scope="col" class="font-mono">SKU interno</th>
-          <th scope="col" class="bg-cyan-500/5 text-cyan-700 dark:text-cyan-300">SKU comercial (catálogo fab.)</th>
-          <th scope="col">Marca</th>
-          <th scope="col">Categoría</th>
           <th scope="col">Producto</th>
-          <th scope="col" class="text-center">Unidad</th>
-          <th scope="col" class="text-right">Físico</th>
-          <th scope="col" class="text-right">Reservado</th>
-          <th scope="col" class="text-right">Disponible</th>
-          <th scope="col" class="text-right">Mínimo</th>
-          <th scope="col" class="text-right" x-show="$store.user.can('ver_costos')" x-cloak>Costo</th>
-          <th scope="col">Estatus</th>
-          <th scope="col" class="text-right">Acciones</th>
+          <th scope="col" style="width: 110px">Marca</th>
+          <th scope="col" style="width: 110px">Categoría</th>
+          <th scope="col" class="text-right" style="width: 100px">Stock</th>
+          <th scope="col" class="text-right" style="width: 100px" x-show="$store.user.can('ver_costos')" x-cloak>Costo</th>
+          <th scope="col" style="width: 100px">Estatus</th>
+          <th scope="col" class="text-center" style="width: 60px">Unid.</th>
+          <th scope="col" class="text-right" style="width: 130px">Acciones</th>
         </tr>
       </thead>
       <tbody>
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
-            <tr><td colspan="13">
+            <tr><td colspan="8">
               <div class="h-8 bg-slate-200 dark:bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
@@ -164,50 +159,63 @@
         <template x-if="!loading">
           <template x-for="p in filtrados" :key="p.id">
             <tr class="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/30" @click="abrirSidePanel(p)">
-              <td class="font-mono text-[10px] text-slate-500" x-text="p.sku || '—'"></td>
-              <td class="font-mono text-xs text-cyan-700 dark:text-cyan-200 bg-cyan-500/5 font-semibold"
-                  x-text="p.sku_comercial || '—'"></td>
-              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.marca||'—'"></td>
-              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.categoria||'—'"></td>
+              <!-- Producto: nombre + SKU comercial -->
               <td>
-                <p class="font-medium text-slate-800 dark:text-slate-200 text-xs" x-text="p.nombre"></p>
-                <p x-show="p.descripcion" class="text-[10px] text-slate-500 truncate max-w-xs"
-                   x-text="(p.descripcion || '').slice(0, 60)"></p>
+                <p class="font-medium text-slate-800 dark:text-slate-200 text-xs truncate" x-text="p.nombre"></p>
+                <p class="text-[10px] text-cyan-700 dark:text-cyan-300 font-mono truncate"
+                   x-text="p.sku_comercial || p.sku || '—'"></p>
               </td>
-              <td class="text-xs text-slate-600 dark:text-slate-400 text-center" x-text="p.unidad||'PZA'"></td>
-              <td class="text-right font-mono font-bold text-xs"
-                  :class="p.stock_actual<=0 ? 'text-red-400' : p.stock_actual<=p.stock_minimo ? 'text-amber-400' : 'text-slate-200'"
-                  x-text="p.stock_actual"></td>
-              <td class="text-right font-mono text-xs text-amber-400" x-text="(disp[p.id]?.reservado || 0)"></td>
-              <td class="text-right font-mono font-bold text-xs"
-                  :class="(disp[p.id]?.disponible ?? p.stock_actual) <= 0 ? 'text-rose-400' : 'text-cyan-300'"
-                  x-text="(disp[p.id]?.disponible ?? p.stock_actual)"></td>
-              <td class="text-right font-mono text-xs text-slate-500" x-text="p.stock_minimo"></td>
+              <!-- Marca -->
+              <td class="text-xs text-slate-600 dark:text-slate-400 truncate" x-text="p.marca || '—'"></td>
+              <!-- Categoría -->
+              <td class="text-xs text-slate-600 dark:text-slate-400 truncate" x-text="p.categoria || '—'"></td>
+              <!-- Stock pill: físico / disponible -->
+              <td class="text-right">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-xs font-bold"
+                      :class="p.stock_actual<=0
+                        ? 'bg-rose-500/10 text-rose-400'
+                        : p.stock_actual<=p.stock_minimo
+                          ? 'bg-amber-500/10 text-amber-400'
+                          : 'bg-emerald-500/10 text-emerald-400'">
+                  <span x-text="p.stock_actual"></span>
+                  <span class="opacity-60">/</span>
+                  <span class="opacity-80" x-text="(disp[p.id]?.disponible ?? p.stock_actual)"></span>
+                </span>
+              </td>
+              <!-- Costo -->
               <td class="text-right font-mono text-xs text-slate-300"
                   x-show="$store.user.can('ver_costos')" x-cloak
                   x-text="displayCosto(p)"></td>
+              <!-- Estatus -->
               <td>
-                <span class="dax-badge-red" x-show="p.stock_actual<=0">Sin Stock</span>
+                <span class="dax-badge-red"   x-show="p.stock_actual<=0">Sin Stock</span>
                 <span class="dax-badge-amber" x-show="p.stock_actual>0 && p.stock_actual<=p.stock_minimo">Crítico</span>
                 <span class="dax-badge-green" x-show="p.stock_actual>p.stock_minimo">OK</span>
               </td>
+              <!-- Unidad -->
+              <td class="text-xs text-slate-600 dark:text-slate-400 text-center" x-text="p.unidad || 'PZA'"></td>
+              <!-- Acciones -->
               <td class="text-right" @click.stop>
                 <div class="inline-flex items-center gap-1">
                   <button @click="ajustarStock(p, -1)" :disabled="p.stock_actual<=0"
-                          class="dax-btn-ghost py-1 px-2 disabled:opacity-30"
-                          title="Restar 1 al stock" :aria-label="`Restar 1 al stock de ${p.nombre || p.sku}`">
+                          class="dax-btn-ghost py-2 px-2 disabled:opacity-30"
+                          :title="`Restar 1 al stock de ${p.nombre || p.sku}`"
+                          :aria-label="`Restar 1 al stock de ${p.nombre || p.sku}`">
                     <i class="fas fa-minus text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="ajustarStock(p, +1)" class="dax-btn-ghost py-1 px-2"
-                          title="Sumar 1 al stock" :aria-label="`Sumar 1 al stock de ${p.nombre || p.sku}`">
+                  <button @click="ajustarStock(p, +1)" class="dax-btn-ghost py-2 px-2"
+                          :title="`Sumar 1 al stock de ${p.nombre || p.sku}`"
+                          :aria-label="`Sumar 1 al stock de ${p.nombre || p.sku}`">
                     <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="abrirEdicion(p)" class="dax-btn-ghost py-1 px-2"
-                          title="Editar" :aria-label="`Editar producto ${p.nombre || p.sku}`">
+                  <button @click="abrirEdicion(p)" class="dax-btn-ghost py-2 px-2"
+                          :title="`Editar ${p.nombre || p.sku}`"
+                          :aria-label="`Editar ${p.nombre || p.sku}`">
                     <i class="fas fa-pen-to-square text-[10px]" aria-hidden="true"></i>
                   </button>
-                  <button @click="eliminar(p)" class="dax-btn-ghost py-1 px-2 hover:text-red-400"
-                          title="Eliminar" :aria-label="`Eliminar producto ${p.nombre || p.sku}`">
+                  <button @click="eliminar(p)" class="dax-btn-ghost py-2 px-2 hover:text-red-400"
+                          :title="`Eliminar ${p.nombre || p.sku}`"
+                          :aria-label="`Eliminar ${p.nombre || p.sku}`">
                     <i class="fas fa-trash text-[10px]" aria-hidden="true"></i>
                   </button>
                 </div>
@@ -215,7 +223,7 @@
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="13" class="text-center text-slate-500 py-12 text-sm">
+            <td colspan="8" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-boxes-stacked text-2xl mb-2 block opacity-30"></i>
               Sin productos encontrados
             </td>
