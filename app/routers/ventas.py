@@ -15,7 +15,7 @@ from app import schemas
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
-from app.db import get_db
+from app.db import get_db, SessionLocal
 from app.security import allow_all_staff, get_current_user
 from app.services.email_service import (
     EmailDeliveryError,
@@ -1297,6 +1297,29 @@ def enviar_correo(
             "Cualquier duda quedamos atentos.\n\n— Equipo DASIC"
         )
 
+    # Capturar datos necesarios en variables locales antes de cerrar la sesión
+    orden_id = orden.id
+    current_user_id = current_user.id
+
+    # Crear evento con estatus inicial pendiente y commit ANTES del SMTP
+    evento = models.QuoteEvent(
+        orden_id=orden_id,
+        canal="EMAIL",
+        direccion="OUTBOUND",
+        estatus="PENDING",
+        asunto=asunto,
+        cuerpo=cuerpo,
+        destinatario=str(payload.to),
+        creado_por_id=current_user_id,
+    )
+    db.add(evento)
+    db.commit()
+    db.refresh(evento)
+    evento_id = evento.id
+
+    # Cerrar sesión DB para liberar la conexión del pool ANTES del SMTP (~20s)
+    db.close()
+
     estatus = "DRY_RUN"
     error_detail: Optional[str] = None
     try:
@@ -1313,25 +1336,21 @@ def enviar_correo(
         estatus = "FAILED"
         error_detail = str(exc)
 
-    evento = models.QuoteEvent(
-        orden_id=orden.id,
-        canal="EMAIL",
-        direccion="OUTBOUND",
-        estatus=estatus,
-        asunto=asunto,
-        cuerpo=cuerpo,
-        destinatario=str(payload.to),
-        creado_por_id=current_user.id,
-    )
-    db.add(evento)
-    db.commit()
-    db.refresh(evento)
+    # Abrir nueva sesión para actualizar el estatus del evento tras el SMTP
+    db2 = SessionLocal()
+    try:
+        ev = db2.query(models.QuoteEvent).filter(models.QuoteEvent.id == evento_id).first()
+        if ev:
+            ev.estatus = estatus
+            db2.commit()
+    finally:
+        db2.close()
 
     if estatus == "FAILED":
         raise HTTPException(502, detail=f"SMTP falló: {error_detail}")
 
     return {
-        "evento_id": evento.id,
+        "evento_id": evento_id,
         "estatus": estatus,
         "smtp_configurado": smtp_configured(),
     }
@@ -1385,23 +1404,38 @@ def ia_resumen(
     if not orden:
         raise HTTPException(404, "Cotización no encontrada")
 
+    # Capturar todos los datos necesarios antes de cerrar la sesión
+    orden_id = orden.id
+    folio = orden.folio
+    current_user_id = current_user.id
     summary = _quote_summary(orden)
+
+    # Cerrar sesión DB para liberar la conexión del pool ANTES de la llamada a Anthropic (~2-5s)
+    db.close()
+
     resultado = sugerir_proximo_paso(summary)
 
-    evento = models.QuoteEvent(
-        orden_id=orden.id,
-        canal="IA",
-        direccion="INTERNAL",
-        estatus=resultado.get("modo", "HEURISTICO"),
-        asunto=f"IA - próximo paso {orden.folio}",
-        cuerpo=resultado.get("resumen", ""),
-        creado_por_id=current_user.id,
-    )
-    db.add(evento)
-    db.commit()
-    db.refresh(evento)
+    # Abrir nueva sesión para persistir el evento IA
+    db2 = SessionLocal()
+    try:
+        evento = models.QuoteEvent(
+            orden_id=orden_id,
+            canal="IA",
+            direccion="INTERNAL",
+            estatus=resultado.get("modo", "HEURISTICO"),
+            asunto=f"IA - próximo paso {folio}",
+            cuerpo=resultado.get("resumen", ""),
+            creado_por_id=current_user_id,
+        )
+        db2.add(evento)
+        db2.commit()
+        db2.refresh(evento)
+        evento_id = evento.id
+    finally:
+        db2.close()
+
     return {
-        "evento_id": evento.id,
+        "evento_id": evento_id,
         "modo": resultado.get("modo"),
         "model": resultado.get("model"),
         "resumen": resultado.get("resumen"),
