@@ -190,23 +190,25 @@
       </div>
 
       <section aria-labelledby="cart-title" class="bg-white dark:bg-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden min-h-[400px]">
-        <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 flex flex-wrap justify-between items-center gap-2 flex-none">
+        <div class="p-3 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600
+                    flex flex-wrap justify-between items-center gap-2 flex-none">
           <div class="flex items-center gap-2">
-            <span id="cart-title" class="font-bold text-sm text-blue-900 dark:text-cyan-400">Detalle de Partidas</span>
-            <span class="text-xs bg-blue-100 dark:bg-slate-600 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
+            <span id="cart-title" class="font-bold text-sm text-cyan-700 dark:text-cyan-300">
+              Detalle de Partidas
+            </span>
+            <span class="text-xs bg-cyan-100 dark:bg-slate-600 text-cyan-800 dark:text-cyan-200
+                         px-2 py-1 rounded-full font-bold" id="items-count">0 Ítems</span>
           </div>
           <div class="flex items-center gap-2">
-            <button type="button"
-                    onclick="abrirModalLineaCustom('servicio')"
+            <button type="button" onclick="abrirModalLineaCustom('servicio')"
                     title="Servicio ad-hoc (atajo: n)"
-                    class="px-3 py-2 text-xs font-bold rounded-lg border border-dashed border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 transition flex items-center gap-1.5">
+                    class="dax-btn-pill pill-success">
               <i class="fas fa-wrench text-[10px]"></i>
               <span class="hidden sm:inline">Servicio</span>
             </button>
-            <button type="button"
-                    onclick="abrirModalLineaCustom('fantasma')"
+            <button type="button" onclick="abrirModalLineaCustom('fantasma')"
                     title="Producto fantasma (atajo: f)"
-                    class="px-3 py-2 text-xs font-bold rounded-lg border border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 transition flex items-center gap-1.5">
+                    class="dax-btn-pill pill-warning">
               <i class="fas fa-ghost text-[10px]"></i>
               <span class="hidden sm:inline">Fantasma</span>
             </button>
