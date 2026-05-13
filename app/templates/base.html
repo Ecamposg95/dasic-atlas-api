@@ -55,6 +55,7 @@
     <style type="text/tailwindcss">
       :root {
         --sidebar-width: 268px;
+        --sidebar-rail-width: 56px;
         --sidebar-bg: #0a1429;
         --sidebar-bg-bottom: #050a1a;
         --sidebar-text: #cbd5e1;
@@ -115,7 +116,7 @@
       /* ── SIDEBAR ─────────────────────────────────────────── */
       .sidebar-shell {
         background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-bottom) 100%);
-        transition: transform 0.25s ease;
+        transition: transform 0.25s ease, width 0.22s ease;
         font-feature-settings: "tnum", "ss01";
       }
 
@@ -172,7 +173,29 @@
       .main-shell { margin-left: 0; transition: margin-left 0.22s ease; }
       @media (min-width: 1024px) {
         body[data-sidebar="expanded"] .main-shell { margin-left: var(--sidebar-width); }
+        body[data-sidebar="rail"]     .main-shell { margin-left: var(--sidebar-rail-width); }
         body[data-sidebar="hidden"]   .main-shell { margin-left: 0; }
+      }
+
+      /* Modo rail: oculta labels, centra iconos, achica logo. Solo en lg+. */
+      @media (min-width: 1024px) {
+        body[data-sidebar="rail"] aside.sidebar-shell {
+          width: var(--sidebar-rail-width) !important;
+        }
+        body[data-sidebar="rail"] .sidebar-item {
+          padding-left: 0.5rem;
+          padding-right: 0.5rem;
+          justify-content: center;
+        }
+        body[data-sidebar="rail"] .sidebar-item > span:not(.sidebar-item-icon) {
+          display: none;
+        }
+        body[data-sidebar="rail"] .sidebar-brand-text {
+          display: none;
+        }
+        body[data-sidebar="rail"] .sidebar-brand-logo {
+          margin: 0 auto;
+        }
       }
     </style>
 
@@ -193,16 +216,32 @@
       x-data="{
         searchOpen: false,
         sidebarMobile: false,
-        mode: (function(){ const s = localStorage.getItem('dasic_sidebar_mode'); return s === 'collapsed' ? 'expanded' : (s || 'expanded'); })(),
+        mode: (function(){
+          const s = localStorage.getItem('dasic_sidebar_mode');
+          // Normaliza valores válidos: 'expanded' | 'rail' | 'hidden'.
+          // 'collapsed' legacy → 'rail' (mejor UX que devolver a expandido).
+          if (s === 'collapsed') return 'rail';
+          if (s === 'rail' || s === 'hidden' || s === 'expanded') return s;
+          return 'expanded';
+        })(),
         setMode(m) { this.mode = m; localStorage.setItem('dasic_sidebar_mode', m); document.body.dataset.sidebar = m; },
         hide() { this.setMode('hidden'); },
-        show() { this.setMode('expanded'); }
+        show() { this.setMode('expanded'); },
+        cycleSidebar() {
+          // Ctrl+\ cicla 3 estados: expanded → rail → hidden → expanded
+          const next = { expanded: 'rail', rail: 'hidden', hidden: 'expanded' };
+          this.setMode(next[this.mode] || 'expanded');
+        },
+        toggleRail() {
+          // Botón interno del sidebar cicla solo entre expanded ⇄ rail
+          this.setMode(this.mode === 'rail' ? 'expanded' : 'rail');
+        }
       }"
       x-init="document.body.dataset.sidebar = mode"
       :data-sidebar="mode"
       @keydown.meta.k.window.prevent="searchOpen = true"
       @keydown.ctrl.k.window.prevent="searchOpen = true"
-      @keydown.window="if ($event.key === '\\' && ($event.metaKey || $event.ctrlKey)) { $event.preventDefault(); mode === 'hidden' ? show() : hide(); }">
+      @keydown.window="if ($event.key === '\\' && ($event.metaKey || $event.ctrlKey)) { $event.preventDefault(); cycleSidebar(); }">
 
   <!-- Backdrop móvil -->
   <div x-show="sidebarMobile" x-cloak
@@ -232,12 +271,12 @@
          style="width: var(--sidebar-width)">
 
     <!-- Header marca -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-4 border-b" style="border-color: var(--sidebar-rule)">
+    <div class="flex h-16 shrink-0 items-center justify-between px-2 border-b" style="border-color: var(--sidebar-rule)">
       <div class="flex items-center gap-3 min-w-0">
         <img src="/static/img/Logo_main.png" alt="DASIC"
-             class="h-9 w-auto object-contain shrink-0 drop-shadow"
+             class="sidebar-brand-logo h-9 w-auto object-contain shrink-0 drop-shadow"
              style="max-width: 36px">
-        <div class="min-w-0">
+        <div class="sidebar-brand-text min-w-0">
           <div class="flex items-center gap-2">
             <p class="text-[14px] font-bold tracking-[0.06em] text-white leading-none truncate">DASIC</p>
             <span class="relative flex h-1.5 w-1.5 shrink-0" title="Operational">
@@ -254,11 +293,11 @@
               title="Cerrar">
         <i class="fas fa-xmark text-sm"></i>
       </button>
-      <button @click="hide()"
+      <button @click="toggleRail()"
               class="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg
                      text-slate-400 hover:text-white hover:bg-white/5 transition"
-              title="Ocultar sidebar (Ctrl+\)">
-        <i class="fas fa-angles-left text-sm"></i>
+              :title="mode === 'rail' ? 'Expandir sidebar (Ctrl+\\)' : 'Colapsar a iconos (Ctrl+\\)'">
+        <i class="fas" :class="mode === 'rail' ? 'fa-angles-right' : 'fa-angles-left'" style="font-size: 0.875rem;"></i>
       </button>
     </div>
 
