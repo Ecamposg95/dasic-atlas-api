@@ -28,47 +28,58 @@
 
   <div id="view-nuevo" class="flex-1 flex flex-col gap-4 overflow-hidden">
 
-    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border-l-4 border-cyan-500 flex-none">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div class="md:col-span-2">
-          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Cliente</label>
-          <select id="select-cliente" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none"></select>
-        </div>
-        <div>
-          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Moneda</label>
-          <select id="select-moneda" onchange="cambiarMoneda()" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm font-bold">
-            <option value="MXN" selected>🇲🇽 MXN</option>
-            <option value="USD">🇺🇸 USD</option>
-          </select>
-        </div>
-        <div id="div-tc" class="opacity-50 pointer-events-none">
-          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">T.C.</label>
-          <input type="number" id="input-tc" step="0.0001" min="0.0001" value="20.00" onchange="recalculer()"
-                 class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm text-right">
-          <span id="fx-badge" onclick="recargarTC()"
-                class="hidden mt-1 inline-block text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 cursor-pointer"
-                title="Click para recargar TC del día"></span>
-        </div>
+    <!-- Toolbar cliente/moneda/TC/obs/términos (~48px alto) -->
+    <div class="border-l-4 border-cyan-500 bg-white dark:bg-slate-800 rounded-r-lg shadow-sm p-3
+                flex flex-wrap items-center gap-3 mb-3 flex-none">
+      <!-- Cliente flex-1 -->
+      <div class="flex-1 min-w-[200px] flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500 uppercase shrink-0">Cliente</label>
+        <select id="select-cliente" class="dax-input flex-1 max-w-md text-sm bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 focus:ring-2 focus:ring-cyan-500 outline-none"></select>
       </div>
-      <div id="ultima-cot-cliente" class="hidden mt-2 text-[11px] text-slate-400"></div>
-      <div class="flex items-center gap-2 mt-2">
+
+      <!-- Moneda -->
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-slate-500">Mon</label>
+        <select id="select-moneda" onchange="cambiarMoneda()"
+                class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 w-20 text-sm font-bold focus:ring-2 focus:ring-cyan-500 outline-none">
+          <option value="MXN" selected>🇲🇽 MXN</option>
+          <option value="USD">🇺🇸 USD</option>
+        </select>
+      </div>
+
+      <!-- TC -->
+      <div id="div-tc" class="flex items-center gap-1.5 opacity-50 pointer-events-none">
+        <label class="text-xs text-slate-500">TC</label>
+        <input id="input-tc" type="number" step="0.0001" min="0.0001" value="20.00" onchange="recalculer()"
+               class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 w-24 text-right font-mono text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
+        <span id="fx-badge" onclick="recargarTC()"
+              class="hidden text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 cursor-pointer"
+              title="Click para recargar TC del día"></span>
+      </div>
+
+      <!-- Acciones: obs + términos como dax-btn-ghost compactos -->
+      <div class="flex items-center gap-1.5">
         <button type="button" onclick="abrirModalObs()"
-                class="dax-btn-ghost text-xs flex items-center gap-1.5">
+                class="dax-btn-ghost text-xs flex items-center gap-1.5"
+                title="Observaciones de la cotización">
           <i class="fas fa-pen-to-square text-[10px]"></i>
-          Observaciones
+          <span class="hidden sm:inline">Obs</span>
           <span id="obs-dot" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
         </button>
         <button type="button" onclick="abrirModalTerminos()"
-                class="dax-btn-ghost text-xs flex items-center gap-1.5">
+                class="dax-btn-ghost text-xs flex items-center gap-1.5"
+                title="Términos y condiciones">
           <i class="fas fa-file-lines text-[10px]"></i>
-          Términos
+          <span class="hidden sm:inline">T&amp;C</span>
           <span id="terminos-dot" class="hidden w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
         </button>
       </div>
-      <!-- Hidden inputs para preservar valor sin renderizar el textarea grande -->
+
+      <!-- Hidden inputs preservan valores para el flujo guardar -->
       <input id="observaciones" type="hidden">
       <textarea id="terminos" class="hidden"></textarea>
     </div>
+    <div id="ultima-cot-cliente" class="hidden text-xs text-slate-400 mt-1 mb-2"></div>
 
     <div class="flex flex-col lg:grid lg:grid-cols-[260px_minmax(0,1fr)_320px] gap-4 flex-1 overflow-hidden pb-20 lg:pb-0">
       <!-- Catálogo (columna izquierda inline; antes era drawer y resultaba intrusivo) -->
