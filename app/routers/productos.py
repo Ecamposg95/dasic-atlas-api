@@ -16,6 +16,7 @@ from app.db import get_db
 from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
 from app.services.stock_service import aplicar_movimiento
+from app.services.abreviatura_service import generar as generar_abreviatura
 
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
@@ -388,6 +389,25 @@ def crear_producto(
     if payload.get("precio_publico") is None:
         payload.pop("precio_publico", None)
 
+    # Autogenerar abreviatura si no vino o vino vacía
+    abr_in = (payload.get("abreviatura") or "").strip()
+    if not abr_in:
+        payload["abreviatura"] = generar_abreviatura(
+            marca_texto_final, payload.get("categoria")
+        ) or None
+    else:
+        payload["abreviatura"] = abr_in.upper()
+
+    # Normaliza claves SAT (uppercase)
+    if payload.get("clave_unidad_sat"):
+        payload["clave_unidad_sat"] = payload["clave_unidad_sat"].strip().upper()
+    if payload.get("clave_prod_serv"):
+        payload["clave_prod_serv"] = payload["clave_prod_serv"].strip()
+    if payload.get("categoria"):
+        payload["categoria"] = payload["categoria"].strip()
+    if payload.get("catalogo_fabricante"):
+        payload["catalogo_fabricante"] = payload["catalogo_fabricante"].strip()
+
     # El stock inicial entra al producto vía aplicar_movimiento (ENTRADA auditable).
     # Nace con 0 y se ajusta abajo, garantizando kardex completo desde día 1.
     stock_inicial = int(payload.pop("stock_actual", 0) or 0)
@@ -452,6 +472,29 @@ def actualizar_producto(
         update_data["unidad"] = _normalize_optional_text(update_data["unidad"]) or DEFAULT_UNIDAD
     if "moneda_compra" in update_data:
         update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
+
+    # Normaliza/regenera abreviatura. Si el body la trae vacía, se autogenera
+    # de marca+categoria (usando el valor nuevo si se está actualizando o el
+    # existente como fallback). Si la trae con texto, se respeta uppercased.
+    if "abreviatura" in update_data:
+        abr_in = (update_data.get("abreviatura") or "").strip()
+        if abr_in:
+            update_data["abreviatura"] = abr_in.upper()
+        else:
+            marca_para_abr = update_data.get("marca", db_producto.marca)
+            cat_para_abr = update_data.get("categoria", db_producto.categoria)
+            update_data["abreviatura"] = generar_abreviatura(marca_para_abr, cat_para_abr) or None
+
+    # Normalizaciones SAT + clasificación
+    if "clave_unidad_sat" in update_data and update_data["clave_unidad_sat"]:
+        update_data["clave_unidad_sat"] = update_data["clave_unidad_sat"].strip().upper()
+    if "clave_prod_serv" in update_data and update_data["clave_prod_serv"]:
+        update_data["clave_prod_serv"] = update_data["clave_prod_serv"].strip()
+    if "categoria" in update_data and update_data["categoria"]:
+        update_data["categoria"] = update_data["categoria"].strip()
+    if "catalogo_fabricante" in update_data and update_data["catalogo_fabricante"]:
+        update_data["catalogo_fabricante"] = update_data["catalogo_fabricante"].strip()
+
     for key, value in update_data.items():
         setattr(db_producto, key, value)
 
@@ -781,8 +824,116 @@ def exportar_productos_csv(db: Session = Depends(get_db)):
         ])
     
     output.seek(0)
-    
+
     # StreamingResponse permite descargar el archivo al vuelo
     response = StreamingResponse(iter([output.getvalue()]), media_type="text/csv")
     response.headers["Content-Disposition"] = "attachment; filename=inventario_dasic.csv"
     return response
+
+
+# --- 8. CATEGORÍAS (distinct para autocomplete del modal) ---
+@router.get("/utils/categorias", dependencies=[Depends(allow_all_staff)])
+def listar_categorias(db: Session = Depends(get_db)):
+    """Devuelve categorías distintas en uso + conteo. Para datalist del modal."""
+    rows = (
+        db.query(models.Producto.categoria, func.count(models.Producto.id).label("n"))
+        .filter(models.Producto.categoria.is_not(None))
+        .filter(models.Producto.categoria != "")
+        .group_by(models.Producto.categoria)
+        .order_by(models.Producto.categoria)
+        .all()
+    )
+    return {"items": [{"categoria": c, "n_productos": int(n)} for (c, n) in rows]}
+
+
+# --- 9. CARDEX (detalle completo: identificación + fiscales + movimientos + métricas) ---
+@router.get("/{id}/cardex", dependencies=[Depends(allow_all_staff)])
+def cardex_producto(id: int, db: Session = Depends(get_db)):
+    """Vista expandida del producto: datos generales, datos fiscales SAT,
+    últimos movimientos y métricas de uso (fechas, conteos). Usado por el
+    side-panel de /inventario."""
+    p = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not p:
+        raise HTTPException(404, "Producto no encontrado")
+
+    # Últimos 90 días de movimientos (capeado a 100 filas para no inflar payload)
+    movs = (
+        db.query(models.MovimientoStock)
+        .filter(models.MovimientoStock.producto_id == id)
+        .order_by(models.MovimientoStock.creado_en.desc())
+        .limit(100)
+        .all()
+    )
+
+    # Métricas históricas
+    primer_mov = (
+        db.query(func.min(models.MovimientoStock.creado_en))
+        .filter(models.MovimientoStock.producto_id == id).scalar()
+    )
+    ultimo_mov = (
+        db.query(func.max(models.MovimientoStock.creado_en))
+        .filter(models.MovimientoStock.producto_id == id).scalar()
+    )
+    n_movs = (
+        db.query(func.count(models.MovimientoStock.id))
+        .filter(models.MovimientoStock.producto_id == id).scalar() or 0
+    )
+    ultimo_uso_cot = (
+        db.query(func.max(models.OrdenVenta.fecha_creacion))
+        .join(models.DetalleOrden, models.DetalleOrden.orden_id == models.OrdenVenta.id)
+        .filter(models.DetalleOrden.producto_id == id).scalar()
+    )
+
+    return {
+        "identificacion": {
+            "id": p.id,
+            "sku": p.sku,
+            "sku_comercial": p.sku_comercial,
+            "abreviatura": p.abreviatura,
+            "catalogo_fabricante": p.catalogo_fabricante,
+            "nombre": p.nombre,
+            "descripcion": p.descripcion,
+            "imagen_url": p.imagen_url,
+            "es_servicio": bool(p.es_servicio),
+        },
+        "clasificacion": {
+            "marca": p.marca,
+            "marca_id": p.marca_id,
+            "categoria": p.categoria,
+            "unidad": p.unidad,
+        },
+        "fiscales": {
+            "clave_prod_serv": p.clave_prod_serv,
+            "clave_unidad_sat": p.clave_unidad_sat,
+            "objeto_imp": p.objeto_imp,
+            "descripcion_fiscal": p.descripcion_fiscal,
+        },
+        "inventario": {
+            "stock_actual": int(p.stock_actual or 0),
+            "stock_minimo": int(p.stock_minimo or 0),
+            "moneda_compra": p.moneda_compra,
+            "costo_compra": float(p.costo_compra or 0),
+            "proveedor_principal_id": p.proveedor_principal_id,
+            "proveedor_alterno_id": p.proveedor_alterno_id,
+        },
+        "historico": {
+            "primer_movimiento": primer_mov.isoformat() if primer_mov else None,
+            "ultimo_movimiento": ultimo_mov.isoformat() if ultimo_mov else None,
+            "total_movimientos": int(n_movs),
+            "ultimo_uso_en_cotizacion": ultimo_uso_cot.isoformat() if ultimo_uso_cot else None,
+        },
+        "movimientos": [
+            {
+                "id": m.id,
+                "tipo": m.tipo,
+                "cantidad": m.cantidad,
+                "stock_anterior": m.stock_anterior,
+                "stock_resultante": m.stock_resultante,
+                "referencia_tipo": m.referencia_tipo,
+                "referencia_id": m.referencia_id,
+                "motivo": m.motivo,
+                "creado_en": m.creado_en.isoformat() if m.creado_en else None,
+            }
+            for m in movs
+        ],
+    }

@@ -37,6 +37,28 @@ from app.models.inventory import MovimientoStock  # noqa: F401
 from app.models.fx import TipoCambioDia  # noqa: F401
 from app.models.expenses import Gasto  # noqa: F401
 from app.models.plantillas import PlantillaCotizacion  # noqa: F401
+from app.models.sat import (  # noqa: F401
+    SatFormaPago,
+    SatMetodoPago,
+    SatUsoCfdi,
+    SatRegimenFiscal,
+    SatObjetoImp,
+    SatImpuesto,
+    SatTipoFactor,
+    SatTasaOCuota,
+    SatMoneda,
+    SatTipoDeComprobante,
+    SatClaveProdServ,
+    SatClaveUnidad,
+)
+from app.models.services import (  # noqa: F401
+    Servicio,
+    CategoriaServicio,
+    UnidadTiempoServicio,
+    SERVICIO_SAT_DEFAULT_PROD_SERV,
+    SERVICIO_SAT_DEFAULT_UNIDAD,
+    SERVICIO_SAT_DEFAULT_OBJETO_IMP,
+)
 
 __all__ = [
     "Base",
@@ -53,4 +75,11 @@ __all__ = [
     "TipoCambioDia",
     "Gasto",
     "PlantillaCotizacion",
+    "SatFormaPago", "SatMetodoPago", "SatUsoCfdi", "SatRegimenFiscal",
+    "SatObjetoImp", "SatImpuesto", "SatTipoFactor", "SatTasaOCuota",
+    "SatMoneda", "SatTipoDeComprobante",
+    "SatClaveProdServ", "SatClaveUnidad",
+    "Servicio", "CategoriaServicio", "UnidadTiempoServicio",
+    "SERVICIO_SAT_DEFAULT_PROD_SERV", "SERVICIO_SAT_DEFAULT_UNIDAD",
+    "SERVICIO_SAT_DEFAULT_OBJETO_IMP",
 ]

@@ -38,11 +38,22 @@ def _check_owner_or_403(orden: "models.OrdenVenta", current_user: "models.Usuari
 
 
 def _resolve_tipo_linea(item, producto: "models.Producto | None") -> str:
-    """Determina tipo_linea efectivo. Producto del catálogo marcado es_servicio
-    fuerza 'servicio'. Si no hay producto y hay descripcion_libre, default fantasma."""
+    """Determina tipo_linea efectivo.
+
+    Reglas:
+      - Si item.servicio_id viene → servicio_catalogo
+      - Si producto.es_servicio → servicio (legacy/ad-hoc)
+      - tipo_linea=servicio explícito → servicio
+      - Sin producto + descripcion_libre → producto_fantasma
+      - Default → producto_catalogo
+    """
     raw = (getattr(item, "tipo_linea", None) or "").lower().strip() or "producto_catalogo"
+    if getattr(item, "servicio_id", None):
+        return "servicio_catalogo"
     if producto and producto.es_servicio:
         return "servicio"
+    if raw in ("servicio_catalogo",):
+        return "servicio_catalogo"
     if raw == "servicio":
         return "servicio"
     if not producto and getattr(item, "descripcion_libre", None):
@@ -532,12 +543,30 @@ def crear_orden(
 
         for item in orden_data.detalles:
             producto = None
+            servicio = None
             costo_origen = Decimal(item.costo_unitario or 0)
             moneda_origen_linea = (item.moneda_origen or "MXN").upper()
             sku_libre = (item.sku_libre or "").strip() or None
             descripcion_libre = (item.descripcion_libre or "").strip() or None
 
-            if item.producto_id:
+            if getattr(item, "servicio_id", None):
+                servicio = (
+                    db.query(models.Servicio)
+                    .filter(models.Servicio.id == item.servicio_id)
+                    .first()
+                )
+                if not servicio:
+                    raise HTTPException(404, f"Servicio {item.servicio_id} no existe")
+                # Snapshot del servicio en la línea (preserva nombre/costo aunque
+                # el catálogo cambie después).
+                sku_libre = sku_libre or servicio.codigo
+                descripcion_libre = descripcion_libre or servicio.nombre
+                if costo_origen <= 0:
+                    costo_origen = Decimal(servicio.costo or 0)
+                moneda_origen_linea = (
+                    item.moneda_origen or servicio.moneda or "MXN"
+                ).upper()
+            elif item.producto_id:
                 producto = (
                     db.query(models.Producto)
                     .filter(models.Producto.id == item.producto_id)
@@ -599,6 +628,7 @@ def crear_orden(
             db.add(models.DetalleOrden(
                 orden_id=nueva_orden.id,
                 producto_id=producto.id if producto else None,
+                servicio_id=servicio.id if servicio else None,
                 sku_libre=sku_libre,
                 descripcion_libre=descripcion_libre,
                 moneda_origen_linea=moneda_origen_linea,
@@ -634,18 +664,16 @@ def crear_orden(
 
         nueva_orden.total = total_orden.quantize(Decimal("0.01"))
 
-        # Deuda (Solo si es venta directa)
+        # Deuda (Solo si es venta directa) — usa CxC formal con vencimiento.
         if tipo_orden == models.EstatusOrden.PENDIENTE:
+            from app.services.cuentas_por_cobrar import crear_cargo_por_venta
             total_con_iva = (total_orden * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
-            deuda = models.TransaccionCliente(
-                cliente_id=cliente.id,
-                tipo=models.TipoMovimiento.CARGO,
+            crear_cargo_por_venta(
+                db,
+                orden_venta=nueva_orden,
                 monto=total_con_iva,
                 descripcion=f"Venta {folio}",
-                referencia_id=nueva_orden.id
             )
-            db.add(deuda)
-            cliente.saldo_actual += total_con_iva
 
         db.commit()
         db.refresh(nueva_orden)
@@ -706,12 +734,28 @@ def actualizar_orden(
         # Insertar nuevos
         for item in orden_update.detalles:
             producto = None
+            servicio = None
             costo_origen = Decimal(item.costo_unitario or 0)
             moneda_origen_linea = (item.moneda_origen or "MXN").upper()
             sku_libre = (item.sku_libre or "").strip() or None
             descripcion_libre = (item.descripcion_libre or "").strip() or None
 
-            if item.producto_id:
+            if getattr(item, "servicio_id", None):
+                servicio = (
+                    db.query(models.Servicio)
+                    .filter(models.Servicio.id == item.servicio_id)
+                    .first()
+                )
+                if not servicio:
+                    raise HTTPException(404, f"Servicio {item.servicio_id} no existe")
+                sku_libre = sku_libre or servicio.codigo
+                descripcion_libre = descripcion_libre or servicio.nombre
+                if costo_origen <= 0:
+                    costo_origen = Decimal(servicio.costo or 0)
+                moneda_origen_linea = (
+                    item.moneda_origen or servicio.moneda or "MXN"
+                ).upper()
+            elif item.producto_id:
                 producto = (
                     db.query(models.Producto)
                     .filter(models.Producto.id == item.producto_id)
@@ -749,6 +793,7 @@ def actualizar_orden(
             db.add(models.DetalleOrden(
                 orden_id=orden.id,
                 producto_id=producto.id if producto else None,
+                servicio_id=servicio.id if servicio else None,
                 sku_libre=sku_libre,
                 descripcion_libre=descripcion_libre,
                 moneda_origen_linea=moneda_origen_linea,
@@ -952,16 +997,15 @@ def convertir_cotizacion(
             elif orden.folio.startswith("COT-"):
                 orden.folio = orden.folio.replace("COT-", "VTA-", 1)
         
-        # Generar Deuda
+        # Generar Deuda — usando servicio CxC formal (vence en cliente.dias_credito)
+        from app.services.cuentas_por_cobrar import crear_cargo_por_venta
         total_con_iva = (orden.total * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
-        db.add(models.TransaccionCliente(
-            cliente_id=orden.cliente_id,
-            tipo=models.TipoMovimiento.CARGO,
+        crear_cargo_por_venta(
+            db,
+            orden_venta=orden,
             monto=total_con_iva,
             descripcion=f"Venta {orden.folio} (Desde Cotización)",
-            referencia_id=orden.id
-        ))
-        orden.cliente.saldo_actual += total_con_iva
+        )
         
         db.commit()
         return {"mensaje": "Convertido exitosamente", "nuevo_folio": orden.folio}
@@ -1008,6 +1052,8 @@ def obtener_detalle_orden(
     id: int,
     db: Session = Depends(get_db),
 ):
+    """Devuelve la cotización completa serializada para precargar el cotizador
+    en modo edición. Tolera líneas con producto/servicio/fantasma/ad-hoc."""
     orden = (
         db.query(models.OrdenVenta)
         .filter(
@@ -1015,36 +1061,64 @@ def obtener_detalle_orden(
         )
         .first()
     )
-    if not orden: raise HTTPException(404)
+    if not orden:
+        raise HTTPException(404)
 
     detalles = []
     for d in orden.detalles:
-        detalles.append({
-            "producto": {
+        prod = None
+        if d.producto is not None:
+            prod = {
                 "id": d.producto.id,
-                "sku": d.producto.sku_comercial or "—",
+                "sku": d.producto.sku_comercial or d.producto.sku or "—",
                 "sku_interno": d.producto.sku,
                 "nombre": d.producto.nombre,
-            },
+                "moneda_compra": d.producto.moneda_compra,
+                "costo_compra": float(d.producto.costo_compra or 0),
+            }
+        servicio = None
+        if d.servicio is not None:
+            servicio = {
+                "id": d.servicio.id,
+                "codigo": d.servicio.codigo,
+                "nombre": d.servicio.nombre,
+                "moneda": d.servicio.moneda,
+                "costo": float(d.servicio.costo or 0),
+                "clave_prod_serv": d.servicio.clave_prod_serv,
+                "clave_unidad_sat": d.servicio.clave_unidad_sat,
+            }
+        detalles.append({
+            "producto": prod,
+            "producto_id": d.producto_id,
+            "servicio": servicio,
+            "servicio_id": d.servicio_id,
+            "sku_libre": d.sku_libre,
+            "descripcion_libre": d.descripcion_libre,
+            "moneda_origen_linea": d.moneda_origen_linea,
+            "costo_base_linea": float(d.costo_base_linea or 0),
             "cantidad": d.cantidad,
-            "precio_unitario": d.precio_unitario,
-            "utilidad_aplicada": d.utilidad_aplicada,
-            "descuento_aplicado": d.descuento_aplicado,
-            "subtotal": d.subtotal,
+            "precio_unitario": float(d.precio_unitario or 0),
+            "utilidad_aplicada": float(d.utilidad_aplicada or 0),
+            "descuento_aplicado": float(d.descuento_aplicado or 0),
+            "subtotal": float(d.subtotal or 0),
+            "tipo_linea": d.tipo_linea,
             "entrega_min": d.entrega_min,
             "entrega_max": d.entrega_max,
             "entrega_unidad": d.entrega_unidad,
             "observaciones_linea": d.observaciones_linea,
         })
-        
+
     return {
         "id": orden.id,
         "folio": orden.folio,
         "cliente_id": orden.cliente_id,
         "observaciones": orden.observaciones,
         "moneda": orden.moneda,
-        "tipo_cambio": orden.tipo_cambio,
-        "detalles": detalles
+        "tipo_cambio": float(orden.tipo_cambio or 1),
+        "terminos_condiciones": orden.terminos_condiciones,
+        "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
+        "version": orden.version or 1,
+        "detalles": detalles,
     }
 
 # --- 6. GENERAR PDF ---

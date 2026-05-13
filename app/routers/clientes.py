@@ -416,3 +416,91 @@ def generar_pdf_estado_cuenta(
         movimientos=movimientos,
         fecha_hoy=datetime.now().strftime('%d/%m/%Y %H:%M')
     )
+
+
+# --- CRM CxC: cargos abiertos + pago distribuido (Fase 6) ---
+
+@router.get("/{cliente_id}/cuentas-por-cobrar", dependencies=[Depends(allow_all_staff)])
+def cuentas_por_cobrar_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+):
+    """Lista los cargos (CxC) del cliente con estatus_pago + saldo pendiente."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Cliente no encontrado")
+    rows = (
+        db.query(models.TransaccionCliente)
+        .filter(models.TransaccionCliente.cliente_id == cliente_id)
+        .filter(models.TransaccionCliente.tipo == models.TipoMovimiento.CARGO)
+        .order_by(models.TransaccionCliente.fecha.desc())
+        .all()
+    )
+    from decimal import Decimal
+    from datetime import datetime as _dt
+    hoy = _dt.utcnow().date()
+
+    def _saldo(r):
+        return float(Decimal(r.monto or 0) - Decimal(r.monto_pagado or 0))
+
+    return {
+        "cliente": {
+            "id": cliente.id,
+            "nombre_empresa": cliente.nombre_empresa,
+            "saldo_actual": float(cliente.saldo_actual or 0),
+            "limite_credito": float(cliente.limite_credito or 0),
+            "dias_credito": int(cliente.dias_credito or 0),
+            "moneda_credito": cliente.moneda_credito,
+        },
+        "cargos": [
+            {
+                "id": r.id,
+                "orden_venta_id": r.orden_venta_id,
+                "folio": (r.orden_venta.folio if r.orden_venta else None),
+                "fecha": r.fecha.isoformat() if r.fecha else None,
+                "fecha_vencimiento": r.fecha_vencimiento.isoformat() if r.fecha_vencimiento else None,
+                "descripcion": r.descripcion,
+                "monto": float(r.monto or 0),
+                "monto_pagado": float(r.monto_pagado or 0),
+                "saldo_pendiente": _saldo(r),
+                "estatus_pago": r.estatus_pago,
+                "dias_atraso": (hoy - r.fecha_vencimiento).days if r.fecha_vencimiento and r.fecha_vencimiento < hoy and (r.estatus_pago != "pagado") else 0,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.post("/{cliente_id}/pago-distribuido", dependencies=[Depends(allow_admin_asistente)])
+def registrar_pago_distribuido(
+    cliente_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+):
+    """Registra un pago aplicándolo a CxC (FIFO por defecto o explícito).
+
+    Body:
+      {
+        "monto": 5000.00,
+        "descripcion": "Transferencia OXXO 12345" (opcional),
+        "orden_venta_ids": [12, 15]  (opcional; sin esto = FIFO)
+      }
+    """
+    from app.services.cuentas_por_cobrar import aplicar_pago
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Cliente no encontrado")
+    try:
+        from decimal import Decimal
+        monto = Decimal(str(payload.get("monto", 0)))
+        result = aplicar_pago(
+            db,
+            cliente=cliente,
+            monto=monto,
+            descripcion=payload.get("descripcion"),
+            orden_venta_ids=payload.get("orden_venta_ids"),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    db.commit()
+    return {"ok": True, **result}

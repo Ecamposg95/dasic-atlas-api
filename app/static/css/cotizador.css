@@ -24,3 +24,27 @@ input[type="number"]::-webkit-outer-spin-button {
 .dark .custom-scroll::-webkit-scrollbar-thumb {
   background: #475569;
 }
+
+/* ─── Animaciones de filas del cart (Fase 2 UI/UX) ─── */
+@keyframes cot-row-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cot-row-in { animation: cot-row-in 200ms ease-out; }
+
+@keyframes cot-expand-down {
+  from { opacity: 0; max-height: 0; }
+  to   { opacity: 1; max-height: 400px; }
+}
+.cot-expand-down { animation: cot-expand-down 220ms ease-out; overflow: hidden; }
+
+/* ─── Semáforo de fila por margen ─── */
+.cot-row-margen-bajo  { background-color: rgb(254 242 242 / 0.6); }
+.cot-row-margen-medio { background-color: rgb(255 251 235 / 0.5); }
+.dark .cot-row-margen-bajo  { background-color: rgb(225 29 72 / 0.07); }
+.dark .cot-row-margen-medio { background-color: rgb(245 158 11 / 0.06); }
+
+/* ─── Popover de acciones (⋮) ─── */
+.cot-actions-pop {
+  animation: cot-row-in 120ms ease-out;
+}

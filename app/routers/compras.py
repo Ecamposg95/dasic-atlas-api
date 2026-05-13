@@ -179,6 +179,28 @@ class CompraInput(BaseModel):
     folio_factura: str = "PENDIENTE"
 
 
+# --- SCHEMAS para editor de OC (Fase 5) ---
+from typing import Optional  # noqa: E402
+
+
+class OCLineaIn(BaseModel):
+    """Línea editable de OC. Producto del catálogo o fantasma."""
+    producto_id: Optional[int] = None
+    sku_libre: Optional[str] = None
+    descripcion_libre: Optional[str] = None
+    cantidad: int
+    costo_unitario: Decimal
+    moneda_origen: Optional[str] = None
+
+
+class OCEditorIn(BaseModel):
+    proveedor_id: int
+    cotizacion_id: Optional[int] = None
+    moneda: str = "MXN"
+    tipo_cambio: Decimal = Decimal("1")
+    detalles: List[OCLineaIn]
+
+
 class OCDesdeCotizacionInput(BaseModel):
     proveedor_id: int
     afecta_stock: bool = False  # default: solo persiste OC, no toca stock
@@ -543,3 +565,209 @@ def recibir_oc(
         "folio": orden.folio,
         "productos_ingresados": procesados,
     }
+
+
+# --- EDITOR DE OC (Fase 5) ---
+
+def _convertir_costo_compra(costo: Decimal, moneda_origen: str, moneda_oc: str, tc: Decimal) -> Decimal:
+    """Convierte costo entre monedas usando el TC de la OC. TC = MXN por USD."""
+    o = (moneda_origen or "MXN").upper()
+    d = (moneda_oc or "MXN").upper()
+    if o == d:
+        return costo
+    if o == "USD" and d == "MXN":
+        return costo * (tc or Decimal("1"))
+    if o == "MXN" and d == "USD":
+        return costo / (tc or Decimal("1"))
+    return costo
+
+
+def _serializar_oc(oc: models.OrdenCompra) -> dict:
+    return {
+        "id": oc.id,
+        "folio": oc.folio,
+        "fecha": oc.fecha.isoformat() if oc.fecha else None,
+        "estatus": oc.estatus,
+        "proveedor_id": oc.proveedor_id,
+        "proveedor": oc.proveedor.nombre_empresa if oc.proveedor else None,
+        "cotizacion_id": oc.cotizacion_id,
+        "moneda": oc.moneda,
+        "tipo_cambio": float(oc.tipo_cambio or 1),
+        "total": float(oc.total or 0),
+        "detalles": [
+            {
+                "id": d.id,
+                "producto_id": d.producto_id,
+                "producto": (
+                    {"id": d.producto.id, "sku": d.producto.sku_comercial or d.producto.sku, "nombre": d.producto.nombre}
+                    if d.producto else None
+                ),
+                "sku_libre": d.sku_libre,
+                "descripcion_libre": d.descripcion_libre,
+                "moneda_origen_linea": d.moneda_origen_linea,
+                "costo_base_linea": float(d.costo_base_linea or 0),
+                "cantidad": d.cantidad,
+                "costo_unitario": float(d.costo_unitario or 0),
+            }
+            for d in oc.detalles
+        ],
+    }
+
+
+@router.get("/{id}/json", dependencies=[Depends(allow_admin_asistente)])
+def obtener_oc_json(id: int, db: Session = Depends(get_db)):
+    oc = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    if not oc:
+        raise HTTPException(404, "OC no encontrada")
+    return _serializar_oc(oc)
+
+
+@router.post("/", dependencies=[Depends(allow_admin_asistente)])
+def crear_oc_editor(
+    payload: OCEditorIn,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Crea OC en estatus 'borrador' desde el editor (sin cotización origen
+    obligatoria). Sin impacto en stock ni cuentas por pagar."""
+    proveedor = db.query(models.Proveedor).filter(
+        models.Proveedor.id == payload.proveedor_id
+    ).first()
+    if not proveedor:
+        raise HTTPException(404, "Proveedor no encontrado")
+    if not payload.detalles:
+        raise HTTPException(400, "Debe haber al menos un renglón.")
+
+    moneda = (payload.moneda or "MXN").upper()
+    tc = Decimal(payload.tipo_cambio or 1)
+    folio = _generar_folio_oc(db, current_user)
+
+    try:
+        oc = models.OrdenCompra(
+            proveedor_id=proveedor.id,
+            fecha=datetime.utcnow(),
+            total=Decimal("0"),
+            estatus="borrador",
+            folio=folio,
+            moneda=moneda,
+            tipo_cambio=tc,
+            cotizacion_id=payload.cotizacion_id,
+        )
+        db.add(oc)
+        db.flush()
+
+        total = Decimal("0")
+        for det in payload.detalles:
+            if det.producto_id:
+                producto = db.query(models.Producto).filter(
+                    models.Producto.id == det.producto_id
+                ).first()
+                if not producto:
+                    raise HTTPException(404, f"Producto {det.producto_id} no existe")
+                origen = (det.moneda_origen or producto.moneda_compra or "MXN").upper()
+            else:
+                if not (det.descripcion_libre or "").strip():
+                    raise HTTPException(400, "Producto fantasma requiere descripción.")
+                origen = (det.moneda_origen or "MXN").upper()
+
+            costo_origen = Decimal(det.costo_unitario)
+            costo_oc = _convertir_costo_compra(costo_origen, origen, moneda, tc).quantize(Decimal("0.01"))
+            importe = (costo_oc * det.cantidad).quantize(Decimal("0.01"))
+            total += importe
+
+            db.add(models.DetalleCompra(
+                orden_compra_id=oc.id,
+                producto_id=det.producto_id,
+                sku_libre=det.sku_libre,
+                descripcion_libre=det.descripcion_libre,
+                moneda_origen_linea=origen,
+                costo_base_linea=costo_origen.quantize(Decimal("0.01")),
+                cantidad=det.cantidad,
+                costo_unitario=costo_oc,
+            ))
+
+        oc.total = total.quantize(Decimal("0.01"))
+        db.commit()
+        db.refresh(oc)
+        return _serializar_oc(oc)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+
+@router.put("/{id}", dependencies=[Depends(allow_admin_asistente)])
+def actualizar_oc_editor(
+    id: int,
+    payload: OCEditorIn,
+    db: Session = Depends(get_db),
+):
+    """Edita una OC en estatus 'borrador'. Si está confirmada/recibida, rechaza."""
+    oc = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    if not oc:
+        raise HTTPException(404, "OC no encontrada")
+    if oc.estatus and oc.estatus.lower() not in ("borrador", "draft"):
+        raise HTTPException(400, "Solo se pueden editar OCs en borrador.")
+
+    proveedor = db.query(models.Proveedor).filter(
+        models.Proveedor.id == payload.proveedor_id
+    ).first()
+    if not proveedor:
+        raise HTTPException(404, "Proveedor no encontrado")
+
+    moneda = (payload.moneda or "MXN").upper()
+    tc = Decimal(payload.tipo_cambio or 1)
+
+    try:
+        oc.proveedor_id = proveedor.id
+        oc.moneda = moneda
+        oc.tipo_cambio = tc
+        oc.cotizacion_id = payload.cotizacion_id
+
+        # Reemplaza líneas (cascade del back_populates ya borra)
+        db.query(models.DetalleCompra).filter(
+            models.DetalleCompra.orden_compra_id == oc.id
+        ).delete()
+
+        total = Decimal("0")
+        for det in payload.detalles:
+            if det.producto_id:
+                producto = db.query(models.Producto).filter(
+                    models.Producto.id == det.producto_id
+                ).first()
+                if not producto:
+                    raise HTTPException(404, f"Producto {det.producto_id} no existe")
+                origen = (det.moneda_origen or producto.moneda_compra or "MXN").upper()
+            else:
+                if not (det.descripcion_libre or "").strip():
+                    raise HTTPException(400, "Producto fantasma requiere descripción.")
+                origen = (det.moneda_origen or "MXN").upper()
+
+            costo_origen = Decimal(det.costo_unitario)
+            costo_oc = _convertir_costo_compra(costo_origen, origen, moneda, tc).quantize(Decimal("0.01"))
+            importe = (costo_oc * det.cantidad).quantize(Decimal("0.01"))
+            total += importe
+
+            db.add(models.DetalleCompra(
+                orden_compra_id=oc.id,
+                producto_id=det.producto_id,
+                sku_libre=det.sku_libre,
+                descripcion_libre=det.descripcion_libre,
+                moneda_origen_linea=origen,
+                costo_base_linea=costo_origen.quantize(Decimal("0.01")),
+                cantidad=det.cantidad,
+                costo_unitario=costo_oc,
+            ))
+
+        oc.total = total.quantize(Decimal("0.01"))
+        db.commit()
+        db.refresh(oc)
+        return _serializar_oc(oc)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise

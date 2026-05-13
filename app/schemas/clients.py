@@ -15,6 +15,11 @@ class ClienteBase(BaseModel):
     email: Optional[str] = None  # EmailStr omitido para evitar error en Windows
     telefono: Optional[str] = None
     direccion: Optional[str] = None
+    # CRM crédito
+    limite_credito: Optional[Decimal] = Decimal("0")
+    dias_credito: Optional[int] = 0
+    dia_corte: Optional[int] = None
+    moneda_credito: Optional[str] = "MXN"
 
 
 class ClienteCreate(ClienteBase):
@@ -28,6 +33,10 @@ class ClienteUpdate(BaseModel):
     email: Optional[str] = None
     telefono: Optional[str] = None
     direccion: Optional[str] = None
+    limite_credito: Optional[Decimal] = None
+    dias_credito: Optional[int] = None
+    dia_corte: Optional[int] = None
+    moneda_credito: Optional[str] = None
 
 
 class ClienteResponse(ClienteBase):

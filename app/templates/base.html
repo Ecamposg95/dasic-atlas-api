@@ -256,6 +256,11 @@
         <span class="sidebar-item-icon"><i class="fas fa-chart-line text-[12px]"></i></span>
         <span>Dashboard</span>
       </a>
+      <a href="/cuentas-por-cobrar" class="sidebar-item {% if _path == '/cuentas-por-cobrar' %}is-active{% endif %}"
+         x-show="$store.user.canVer('clientes')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-coins text-[12px]"></i></span>
+        <span>Cuentas por cobrar</span>
+      </a>
       <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}"
          x-show="$store.user.canVer('clientes')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-users text-[12px]"></i></span>
@@ -275,6 +280,11 @@
          x-show="$store.user.canVer('inventario')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-boxes-stacked text-[12px]"></i></span>
         <span>Inventario</span>
+      </a>
+      <a href="/servicios" class="sidebar-item {% if _path == '/servicios' %}is-active{% endif %}"
+         x-show="$store.user.canVer('inventario')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-wrench text-[12px]"></i></span>
+        <span>Servicios</span>
       </a>
       <a href="/catalogos" class="sidebar-item {% if _path == '/catalogos' %}is-active{% endif %}"
          x-show="$store.user.canVer('catalogos')" x-cloak>

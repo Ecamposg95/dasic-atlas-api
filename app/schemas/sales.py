@@ -15,15 +15,19 @@ from app.schemas.catalog import ProductoInfo
 
 class DetalleOrdenCreate(BaseModel):
     producto_id: Optional[int] = None
+    # Servicio del catálogo (tabla servicios). Cuando viene, tipo_linea debe
+    # ser "servicio_catalogo".
+    servicio_id: Optional[int] = None
     cantidad: int = Field(..., gt=0)
     utilidad: Decimal = Field(default=Decimal("0"), ge=0, lt=100)
     descuento: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     moneda_origen: Optional[str] = Field(default=None, min_length=3, max_length=3)
-    # Productos fantasma / servicios
+    # Productos fantasma / servicios ad-hoc
     sku_libre: Optional[str] = Field(default=None, max_length=80)
     descripcion_libre: Optional[str] = Field(default=None, max_length=255)
     costo_unitario: Optional[Decimal] = Field(default=None, ge=0)
-    # Tipo de línea: producto_catalogo / producto_fantasma / servicio
+    # Tipo de línea: producto_catalogo / producto_fantasma / servicio (ad-hoc) /
+    # servicio_catalogo (vinculado a Servicio).
     tipo_linea: Optional[str] = Field(default="producto_catalogo", max_length=20)
     proveedor_sugerido_id: Optional[int] = None
     # Tiempo de entrega por línea (rango + unidad). Los 3 viajan juntos o
@@ -56,6 +60,7 @@ class DetalleOrdenCreate(BaseModel):
 
 class DetalleOrdenResponse(BaseModel):
     producto: Optional[ProductoInfo] = None
+    servicio_id: Optional[int] = None
     sku_libre: Optional[str] = None
     descripcion_libre: Optional[str] = None
     moneda_origen_linea: Optional[str] = None

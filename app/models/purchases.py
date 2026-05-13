@@ -36,7 +36,14 @@ class DetalleCompra(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     orden_compra_id = Column(Integer, ForeignKey("ordenes_compra.id"))
-    producto_id = Column(Integer, ForeignKey("productos.id"))
+    producto_id = Column(Integer, ForeignKey("productos.id"), nullable=True)
+
+    # Fantasmas: producto fuera del catálogo (sin Producto), usar sku_libre +
+    # descripcion_libre.
+    sku_libre = Column(String(80), nullable=True)
+    descripcion_libre = Column(String(255), nullable=True)
+    moneda_origen_linea = Column(String(3), nullable=True)
+    costo_base_linea = Column(DECIMAL(12, 2), nullable=True)
 
     cantidad = Column(Integer, nullable=False)
     costo_unitario = Column(DECIMAL(10, 2), nullable=False)

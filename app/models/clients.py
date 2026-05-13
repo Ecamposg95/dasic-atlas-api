@@ -20,6 +20,12 @@ class Cliente(Base):
     direccion = Column(Text)
 
     saldo_actual = Column(DECIMAL(12, 2), default=0.00)
+    # CRM: crédito y plazo
+    limite_credito = Column(DECIMAL(12, 2), nullable=False, default=0)
+    dias_credito = Column(Integer, nullable=False, default=0)
+    dia_corte = Column(Integer, nullable=True)  # 1-28 si aplica
+    moneda_credito = Column(String(3), nullable=False, default="MXN")
+
     creado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, index=True)
 
     ordenes = relationship("OrdenVenta", back_populates="cliente")

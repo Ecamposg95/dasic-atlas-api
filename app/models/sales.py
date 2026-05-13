@@ -54,8 +54,12 @@ class DetalleOrden(Base):
     id = Column(Integer, primary_key=True, index=True)
     orden_id = Column(Integer, ForeignKey("ordenes_venta.id"))
     producto_id = Column(Integer, ForeignKey("productos.id"), nullable=True)
+    # Vínculo con catálogo de servicios persistibles (Servicio).
+    # Cuando es no-null, tipo_linea = 'servicio_catalogo'.
+    servicio_id = Column(Integer, ForeignKey("servicios.id"), nullable=True, index=True)
 
-    # Productos fantasma: si producto_id es null, usar estos campos
+    # Productos fantasma o servicios ad-hoc: si producto_id y servicio_id
+    # son ambos NULL, usar estos campos.
     sku_libre = Column(String(80), nullable=True)
     descripcion_libre = Column(String(255), nullable=True)
     moneda_origen_linea = Column(String(3), nullable=True)
@@ -85,4 +89,5 @@ class DetalleOrden(Base):
 
     orden = relationship("OrdenVenta", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles_orden")
+    servicio = relationship("Servicio", foreign_keys=[servicio_id])
     proveedor_sugerido = relationship("Proveedor", foreign_keys=[proveedor_sugerido_id])

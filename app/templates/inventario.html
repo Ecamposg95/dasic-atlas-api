@@ -134,8 +134,11 @@
     <table class="dax-table">
       <thead>
         <tr>
-          <th scope="col">Producto / SKU</th>
+          <th scope="col" class="font-mono">Abrev.</th>
+          <th scope="col" class="bg-cyan-500/5 text-cyan-700 dark:text-cyan-300">Catálogo (fab.)</th>
           <th scope="col">Marca</th>
+          <th scope="col">Categoría</th>
+          <th scope="col">Producto / SKU</th>
           <th scope="col" class="text-center">Unidad</th>
           <th scope="col" class="text-right">Físico</th>
           <th scope="col" class="text-right">Reservado</th>
@@ -149,7 +152,7 @@
       <tbody>
         <template x-if="loading">
           <template x-for="i in 8" :key="i">
-            <tr><td colspan="10">
+            <tr><td colspan="13">
               <div class="h-8 bg-slate-200 dark:bg-slate-700/40 animate-pulse rounded my-1"></div>
             </td></tr>
           </template>
@@ -157,11 +160,15 @@
         <template x-if="!loading">
           <template x-for="p in filtrados" :key="p.id">
             <tr class="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/30" @click="abrirSidePanel(p)">
+              <td class="font-mono text-[10px] text-slate-500" x-text="p.abreviatura || '—'"></td>
+              <td class="font-mono text-xs text-cyan-700 dark:text-cyan-200 bg-cyan-500/5 font-semibold"
+                  x-text="p.catalogo_fabricante || '—'"></td>
+              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.marca||'—'"></td>
+              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.categoria||'—'"></td>
               <td>
                 <p class="font-medium text-slate-800 dark:text-slate-200 text-xs" x-text="p.nombre"></p>
                 <p class="text-[10px] text-slate-600 dark:text-slate-500 font-mono" x-text="displaySku(p)"></p>
               </td>
-              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="p.marca||'—'"></td>
               <td class="text-xs text-slate-600 dark:text-slate-400 text-center" x-text="p.unidad||'PZA'"></td>
               <td class="text-right font-mono font-bold text-xs"
                   :class="p.stock_actual<=0 ? 'text-red-400' : p.stock_actual<=p.stock_minimo ? 'text-amber-400' : 'text-slate-200'"
@@ -203,7 +210,7 @@
             </tr>
           </template>
           <tr x-show="filtrados.length===0">
-            <td colspan="10" class="text-center text-slate-500 py-12 text-sm">
+            <td colspan="13" class="text-center text-slate-500 py-12 text-sm">
               <i class="fas fa-boxes-stacked text-2xl mb-2 block opacity-30"></i>
               Sin productos encontrados
             </td>
@@ -227,33 +234,71 @@
     <div class="flex justify-between items-start">
       <div>
         <h3 class="text-sm font-bold text-slate-200" x-text="prod?.nombre || '—'"></h3>
-        <p class="text-[10px] text-slate-600 dark:text-slate-500 font-mono" x-text="prod?.sku_comercial || prod?.sku || ''"></p>
-        <p class="text-[10px] text-slate-500" x-text="prod?.marca ? ('Marca: '+prod.marca) : ''"></p>
+        <p class="text-[10px] text-slate-600 dark:text-slate-500 font-mono">
+          <span x-text="prod?.abreviatura ? prod.abreviatura + ' · ' : ''"></span>
+          <span class="text-cyan-700 dark:text-cyan-300 font-semibold" x-text="prod?.catalogo_fabricante || ''"></span>
+          <span x-show="prod?.catalogo_fabricante && (prod?.sku_comercial || prod?.sku)"> · </span>
+          <span x-text="prod?.sku_comercial || prod?.sku || ''"></span>
+        </p>
+        <p class="text-[10px] text-slate-500" x-text="(prod?.marca||'')+(prod?.categoria ? ' · '+prod.categoria : '')"></p>
       </div>
       <button @click="$store.invSide.open = false" class="dax-btn-ghost p-1"><i class="fas fa-xmark"></i></button>
     </div>
 
-    <div class="grid grid-cols-3 gap-2 text-center">
-      <div class="rounded bg-slate-100 dark:bg-slate-800 p-2">
-        <p class="text-[9px] uppercase text-slate-500">Físico</p>
-        <p class="text-lg font-bold text-slate-200" x-text="d.stock_actual"></p>
-      </div>
-      <div class="rounded bg-amber-500/10 p-2">
-        <p class="text-[9px] uppercase text-amber-300">Reservado</p>
-        <p class="text-lg font-bold text-amber-200" x-text="d.reservado"></p>
-      </div>
-      <div class="rounded bg-cyan-500/10 p-2">
-        <p class="text-[9px] uppercase text-cyan-300">Disponible</p>
-        <p class="text-lg font-bold text-cyan-200" x-text="d.disponible"></p>
-      </div>
+    <!-- Tabs -->
+    <div class="flex border-b border-slate-300 dark:border-slate-700 text-[10px] uppercase font-bold">
+      <button @click="tab='resumen'" :class="tab==='resumen' ? 'text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'text-slate-500 border-transparent'"
+              class="flex-1 py-1.5 border-b-2">Resumen</button>
+      <button @click="tab='fiscales'" :class="tab==='fiscales' ? 'text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'text-slate-500 border-transparent'"
+              class="flex-1 py-1.5 border-b-2">Fiscales</button>
+      <button @click="tab='movs'" :class="tab==='movs' ? 'text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'text-slate-500 border-transparent'"
+              class="flex-1 py-1.5 border-b-2">Movimientos</button>
+      <button @click="tab='historico'" :class="tab==='historico' ? 'text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'text-slate-500 border-transparent'"
+              class="flex-1 py-1.5 border-b-2">Histórico</button>
     </div>
 
-    <div class="text-[11px] text-slate-400">
-      Proveedor principal: <span class="text-slate-200" x-text="proveedorTexto(prod?.proveedor_principal_id)"></span>
+    <!-- Tab Resumen -->
+    <div x-show="tab==='resumen'" class="space-y-3">
+      <div class="grid grid-cols-3 gap-2 text-center">
+        <div class="rounded bg-slate-100 dark:bg-slate-800 p-2">
+          <p class="text-[9px] uppercase text-slate-500">Físico</p>
+          <p class="text-lg font-bold text-slate-200" x-text="d.stock_actual"></p>
+        </div>
+        <div class="rounded bg-amber-500/10 p-2">
+          <p class="text-[9px] uppercase text-amber-300">Reservado</p>
+          <p class="text-lg font-bold text-amber-200" x-text="d.reservado"></p>
+        </div>
+        <div class="rounded bg-cyan-500/10 p-2">
+          <p class="text-[9px] uppercase text-cyan-300">Disponible</p>
+          <p class="text-lg font-bold text-cyan-200" x-text="d.disponible"></p>
+        </div>
+      </div>
+      <dl class="text-[11px] grid grid-cols-2 gap-y-1 text-slate-400">
+        <dt>Mínimo</dt><dd class="font-mono text-right" x-text="cardex?.inventario?.stock_minimo ?? '—'"></dd>
+        <dt>Costo</dt><dd class="font-mono text-right" x-text="(cardex?.inventario?.moneda_compra||'MXN')+' '+(cardex?.inventario?.costo_compra?.toFixed?.(2) ?? '—')"></dd>
+        <dt>Unidad</dt><dd class="text-right" x-text="cardex?.clasificacion?.unidad || '—'"></dd>
+        <dt>Proveedor principal</dt><dd class="text-right" x-text="proveedorTexto(cardex?.inventario?.proveedor_principal_id)"></dd>
+      </dl>
     </div>
 
-    <div>
-      <p class="text-[10px] uppercase text-slate-500 font-bold mb-2">Movimientos (30 días)</p>
+    <!-- Tab Fiscales SAT -->
+    <div x-show="tab==='fiscales'" class="space-y-2" x-cloak>
+      <dl class="text-[11px] grid grid-cols-2 gap-y-1 text-slate-400">
+        <dt>Clave ProdServ</dt><dd class="font-mono text-right text-cyan-300" x-text="cardex?.fiscales?.clave_prod_serv || '— sin asignar —'"></dd>
+        <dt>Clave Unidad SAT</dt><dd class="font-mono text-right text-cyan-300" x-text="cardex?.fiscales?.clave_unidad_sat || '— sin asignar —'"></dd>
+        <dt>Objeto Imp.</dt><dd class="font-mono text-right" x-text="cardex?.fiscales?.objeto_imp || '—'"></dd>
+        <dt class="col-span-2 text-slate-500 pt-2">Descripción fiscal</dt>
+        <dd class="col-span-2 text-slate-300" x-text="cardex?.fiscales?.descripcion_fiscal || cardex?.identificacion?.nombre || '—'"></dd>
+      </dl>
+      <p class="text-[10px] text-slate-500 italic"
+         x-show="!cardex?.fiscales?.clave_prod_serv || !cardex?.fiscales?.clave_unidad_sat">
+        Captura los datos faltantes desde "Editar ficha" para poder facturar.
+      </p>
+    </div>
+
+    <!-- Tab Movimientos -->
+    <div x-show="tab==='movs'" x-cloak>
+      <p class="text-[10px] uppercase text-slate-500 font-bold mb-2">Últimos movimientos</p>
       <div class="space-y-1.5 text-[11px]">
         <template x-for="m in movs" :key="m.id">
           <div class="flex justify-between items-center rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -268,11 +313,25 @@
             </div>
           </div>
         </template>
-        <p x-show="!movs.length" class="text-slate-500 text-center py-3">Sin movimientos en 30 días.</p>
+        <p x-show="!movs.length" class="text-slate-500 text-center py-3">Sin movimientos.</p>
       </div>
     </div>
 
-    <div class="pt-2 border-t border-slate-700 flex gap-2">
+    <!-- Tab Histórico -->
+    <div x-show="tab==='historico'" x-cloak>
+      <dl class="text-[11px] grid grid-cols-2 gap-y-1 text-slate-400">
+        <dt>Primer movimiento</dt>
+        <dd class="text-right text-slate-300" x-text="fmtFecha(cardex?.historico?.primer_movimiento)"></dd>
+        <dt>Último movimiento</dt>
+        <dd class="text-right text-slate-300" x-text="fmtFecha(cardex?.historico?.ultimo_movimiento)"></dd>
+        <dt>Total movimientos</dt>
+        <dd class="text-right font-mono text-slate-300" x-text="cardex?.historico?.total_movimientos ?? 0"></dd>
+        <dt>Última cotización</dt>
+        <dd class="text-right text-slate-300" x-text="fmtFecha(cardex?.historico?.ultimo_uso_en_cotizacion)"></dd>
+      </dl>
+    </div>
+
+    <div class="pt-2 border-t border-slate-300 dark:border-slate-700 flex gap-2">
       <button @click="dispararAjuste()" class="dax-btn-ghost text-xs flex-1">
         <i class="fas fa-pen-to-square mr-1"></i> Ajuste manual
       </button>
@@ -358,21 +417,47 @@
             <p class="text-[10px] text-slate-500 mt-1">Vacío → se autogenera. Se pasa a MAYÚSCULAS.</p>
           </div>
           <div>
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU comercial / Catálogo</label>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">SKU comercial</label>
             <input x-model="form.sku_comercial" :disabled="saving"
-                   placeholder="P/N visible al cliente" class="dax-input font-mono">
-            <p class="text-[10px] text-slate-500 mt-1">El que aparece en el PDF de la cotización.</p>
+                   placeholder="P/N comercial visible al cliente" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">Aparece en el PDF de la cotización.</p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300 uppercase">Catálogo del fabricante</label>
+            <input x-model="form.catalogo_fabricante" :disabled="saving" maxlength="80"
+                   placeholder="P/N del fabricante (ej. LC1D09BL)"
+                   class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">Código original que reconoce el cliente.</p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Abreviatura</label>
+            <input x-model="form.abreviatura" :disabled="saving" maxlength="20"
+                   placeholder="Se autogenera de marca+categoría"
+                   class="dax-input font-mono uppercase">
+            <p class="text-[10px] text-slate-500 mt-1" x-text="abreviaturaPreview()"></p>
           </div>
           <div class="md:col-span-2">
             <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre *</label>
             <input x-model="form.nombre" :disabled="saving" required minlength="2" maxlength="150"
                    placeholder="Ej. RELEVADOR TIPO CLEMA 24V" class="dax-input">
           </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción</label>
+            <textarea x-model="form.descripcion" :disabled="saving" rows="2"
+                      placeholder="Detalles técnicos, modelo, etc." class="dax-input"></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SECCIÓN: clasificación -->
+      <fieldset class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Clasificación</legend>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Marca</label>
             <div class="flex gap-2 items-stretch">
               <select x-model.number="form.marca_id" :disabled="saving"
-                      @change="sugerirPrefijoSku()" class="dax-input flex-1">
+                      @change="sugerirPrefijoSku(); autoAbreviatura()" class="dax-input flex-1">
                 <option :value="null">(sin marca)</option>
                 <template x-for="m in marcas" :key="m.id">
                   <option :value="m.id" x-text="m.nombre + ' (' + m.abreviatura + ')'"></option>
@@ -385,14 +470,22 @@
               </a>
             </div>
             <p class="text-[10px] text-slate-500 mt-1" x-show="prefijoSugerido">
-              SKU se generará como: <code x-text="prefijoSugerido + '-####'"></code>
-            </p>
-            <p class="text-[10px] text-slate-500 mt-1" x-show="!form.marca_id && !form.sku">
-              Sin marca → SKU fallback: <code>DAS-YYMM-XXXX</code>
+              SKU prefijo: <code x-text="prefijoSugerido + '-####'"></code>
             </p>
           </div>
           <div>
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Unidad</label>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Categoría</label>
+            <input x-model="form.categoria" @change="autoAbreviatura()" list="categorias-list"
+                   :disabled="saving" maxlength="80"
+                   placeholder="Ej. Relevadores, Contactores…" class="dax-input">
+            <datalist id="categorias-list">
+              <template x-for="c in categorias" :key="c">
+                <option :value="c"></option>
+              </template>
+            </datalist>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Unidad comercial</label>
             <input x-model="form.unidad" list="unidades-list" :disabled="saving" maxlength="20"
                    placeholder="PZA, CAJA, MTS…" class="dax-input">
             <datalist id="unidades-list">
@@ -401,13 +494,72 @@
               </template>
             </datalist>
           </div>
-          <div class="md:col-span-2">
-            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción</label>
-            <textarea x-model="form.descripcion" :disabled="saving" rows="2"
-                      placeholder="Detalles técnicos, modelo, etc." class="dax-input"></textarea>
-          </div>
         </div>
       </fieldset>
+
+      <!-- SECCIÓN: Datos fiscales SAT (CFDI 4.0) -->
+      <details class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4" :open="hasSatData">
+        <summary class="text-[10px] uppercase tracking-wider text-slate-500 font-bold cursor-pointer">
+          Datos fiscales SAT (CFDI 4.0)
+        </summary>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Clave ProdServ SAT</label>
+            <div class="flex gap-1">
+              <input x-model="form.clave_prod_serv" @input="buscarClaveProdServ($event.target.value)"
+                     :disabled="saving" maxlength="8" pattern="\d{8}"
+                     placeholder="8 dígitos (ej. 39121500)"
+                     class="dax-input font-mono">
+            </div>
+            <p class="text-[10px] text-slate-500 mt-1" x-text="satProdServLabel || 'c_ClaveProdServ — typeahead'"></p>
+            <ul x-show="satProdServSugs.length" x-cloak
+                class="border border-slate-300 dark:border-slate-700 rounded mt-1 max-h-32 overflow-auto bg-white dark:bg-slate-800">
+              <template x-for="s in satProdServSugs" :key="s.codigo">
+                <li class="px-2 py-1 text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                    @click="elegirClaveProdServ(s)">
+                  <span class="font-mono text-cyan-700 dark:text-cyan-300" x-text="s.codigo"></span>
+                  <span class="text-slate-600 dark:text-slate-400 ml-2" x-text="s.descripcion"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Clave Unidad SAT</label>
+            <input x-model="form.clave_unidad_sat" @input="buscarClaveUnidad($event.target.value)"
+                   :disabled="saving" maxlength="10"
+                   placeholder="Alfanum (H87, KGM, E48…)"
+                   class="dax-input font-mono uppercase">
+            <p class="text-[10px] text-slate-500 mt-1" x-text="satUnidadLabel || 'c_ClaveUnidad — typeahead'"></p>
+            <ul x-show="satUnidadSugs.length" x-cloak
+                class="border border-slate-300 dark:border-slate-700 rounded mt-1 max-h-32 overflow-auto bg-white dark:bg-slate-800">
+              <template x-for="s in satUnidadSugs" :key="s.codigo">
+                <li class="px-2 py-1 text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                    @click="elegirClaveUnidad(s)">
+                  <span class="font-mono text-cyan-700 dark:text-cyan-300" x-text="s.codigo"></span>
+                  <span class="text-slate-600 dark:text-slate-400 ml-2" x-text="s.nombre"></span>
+                </li>
+              </template>
+            </ul>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Objeto del impuesto</label>
+            <select x-model="form.objeto_imp" :disabled="saving" class="dax-input">
+              <option :value="null">(sin definir)</option>
+              <option value="01">01 — No objeto de impuesto</option>
+              <option value="02">02 — Sí objeto de impuesto</option>
+              <option value="03">03 — Sí objeto, no obligado al desglose</option>
+              <option value="04">04 — Sí objeto, no causa impuesto</option>
+              <option value="05">05 — Sí objeto, IVA crédito PODEBI</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción fiscal</label>
+            <input x-model="form.descripcion_fiscal" :disabled="saving"
+                   placeholder="Si vacío → usa el nombre del producto"
+                   class="dax-input">
+          </div>
+        </div>
+      </details>
 
       <!-- SECCIÓN: costo + moneda -->
       <fieldset class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4">
@@ -728,6 +880,14 @@ function modalProducto() {
     precio_publico: null,
     precio_mayorista: null,
     precio_distribuidor: null,
+    // Clasificación + SAT
+    catalogo_fabricante: '',
+    categoria: '',
+    abreviatura: '',
+    clave_prod_serv: '',
+    clave_unidad_sat: '',
+    objeto_imp: null,
+    descripcion_fiscal: '',
   });
   return {
     open: false,
@@ -735,9 +895,21 @@ function modalProducto() {
     error: '',
     form: blank(),
     marcas: [],
+    categorias: [],
     unidades: ['PZA','CAJA','MTS','KG','JUEGO','SERVICIO','PAR'],
     monedas: ['MXN','USD'],
     prefijoSugerido: '',
+    satProdServSugs: [],
+    satProdServLabel: '',
+    satUnidadSugs: [],
+    satUnidadLabel: '',
+    _satProdServTimer: null,
+    _satUnidadTimer: null,
+
+    get hasSatData() {
+      const f = this.form;
+      return !!(f.clave_prod_serv || f.clave_unidad_sat || f.objeto_imp || f.descripcion_fiscal);
+    },
 
     async init() {
       // Fuente única: tabla `marcas` desde el módulo Catálogos.
@@ -745,12 +917,22 @@ function modalProducto() {
         const res = await fetch('/api/catalogos/marcas', { credentials:'include' });
         if (res.ok) this.marcas = await res.json();
       } catch(_) {}
+      // Categorías distintas en uso, para autocomplete.
+      try {
+        const res = await fetch('/api/productos/utils/categorias', { credentials:'include' });
+        if (res.ok) {
+          const data = await res.json();
+          this.categorias = (data.items || []).map(it => it.categoria);
+        }
+      } catch(_) {}
     },
 
     openCreate() {
       this.form = blank();
       this.error = '';
       this.prefijoSugerido = '';
+      this.satProdServSugs = []; this.satProdServLabel = '';
+      this.satUnidadSugs = []; this.satUnidadLabel = '';
       this.open = true;
       this.$nextTick(() => {
         const el = this.$root.querySelector('input[x-model="form.sku"]');
@@ -781,11 +963,103 @@ function modalProducto() {
         precio_publico: p.precio_publico !== undefined && p.precio_publico !== null ? Number(p.precio_publico) : null,
         precio_mayorista: p.precio_mayorista !== undefined && p.precio_mayorista !== null ? Number(p.precio_mayorista) : null,
         precio_distribuidor: p.precio_distribuidor !== undefined && p.precio_distribuidor !== null ? Number(p.precio_distribuidor) : null,
+        catalogo_fabricante: p.catalogo_fabricante || '',
+        categoria: p.categoria || '',
+        abreviatura: p.abreviatura || '',
+        clave_prod_serv: p.clave_prod_serv || '',
+        clave_unidad_sat: p.clave_unidad_sat || '',
+        objeto_imp: p.objeto_imp || null,
+        descripcion_fiscal: p.descripcion_fiscal || '',
       };
       this.error = '';
       this.prefijoSugerido = '';
+      this.satProdServSugs = []; this.satProdServLabel = '';
+      this.satUnidadSugs = []; this.satUnidadLabel = '';
       this.sugerirPrefijoSku();
       this.open = true;
+    },
+
+    // Vista previa de la abreviatura que se autogeneraría
+    abreviaturaPreview() {
+      if (this.form.abreviatura) return '';
+      const m = this._marcaNombreActual();
+      const c = (this.form.categoria || '').trim();
+      const abr = this._abrev(m, c);
+      return abr ? `Auto: ${abr} (cambialo si quieres)` : 'Captura marca y categoría para autogenerar.';
+    },
+
+    _marcaNombreActual() {
+      if (!this.form.marca_id) return '';
+      const m = this.marcas.find(x => x.id === this.form.marca_id);
+      return m ? (m.nombre || '') : '';
+    },
+
+    _abrev(marca, cat) {
+      const norm = (s) => (s || '')
+        .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^A-Za-z]/g, '').toUpperCase();
+      const m = norm(marca).slice(0, 3);
+      const c = norm(cat).slice(0, 3);
+      if (m && c) return `${m}-${c}`;
+      return m || c || '';
+    },
+
+    autoAbreviatura() {
+      // Solo autoregenera si el campo está vacío (no pisar lo que el usuario tipeó)
+      if (this.form.abreviatura) return;
+      const abr = this._abrev(this._marcaNombreActual(), this.form.categoria);
+      if (abr) this.form.abreviatura = abr;
+    },
+
+    // Typeahead ClaveProdServ
+    buscarClaveProdServ(q) {
+      clearTimeout(this._satProdServTimer);
+      const needle = (q || '').trim();
+      this.satProdServSugs = [];
+      this.satProdServLabel = '';
+      if (needle.length < 2) return;
+      this._satProdServTimer = setTimeout(async () => {
+        try {
+          const r = await fetch(`/api/sat/clave-prod-serv?q=${encodeURIComponent(needle)}&limit=10`,
+                                { credentials:'include' });
+          if (!r.ok) return;
+          this.satProdServSugs = await r.json();
+          if (!this.satProdServSugs.length) {
+            this.satProdServLabel = 'Sin coincidencias (el catálogo masivo SAT puede no estar cargado todavía).';
+          }
+        } catch(_) {}
+      }, 250);
+    },
+
+    elegirClaveProdServ(s) {
+      this.form.clave_prod_serv = s.codigo;
+      this.satProdServLabel = s.descripcion;
+      this.satProdServSugs = [];
+    },
+
+    buscarClaveUnidad(q) {
+      clearTimeout(this._satUnidadTimer);
+      const needle = (q || '').trim();
+      this.satUnidadSugs = [];
+      this.satUnidadLabel = '';
+      if (needle.length < 1) return;
+      this._satUnidadTimer = setTimeout(async () => {
+        try {
+          const r = await fetch(`/api/sat/clave-unidad?q=${encodeURIComponent(needle)}&limit=10`,
+                                { credentials:'include' });
+          if (!r.ok) return;
+          this.satUnidadSugs = await r.json();
+          if (!this.satUnidadSugs.length) {
+            this.satUnidadLabel = 'Sin coincidencias (catálogo masivo puede no estar cargado).';
+          }
+        } catch(_) {}
+      }, 250);
+    },
+
+    elegirClaveUnidad(s) {
+      this.form.clave_unidad_sat = s.codigo;
+      this.satUnidadLabel = s.nombre;
+      this.satUnidadSugs = [];
     },
 
     close() {
@@ -825,6 +1099,13 @@ function modalProducto() {
         moneda_compra: f.moneda_compra || 'MXN',
         stock_actual: Number(f.stock_actual) || 0,
         stock_minimo: Number(f.stock_minimo) || 0,
+        catalogo_fabricante: (f.catalogo_fabricante || '').trim() || null,
+        categoria: (f.categoria || '').trim() || null,
+        abreviatura: (f.abreviatura || '').trim() || null,
+        clave_prod_serv: (f.clave_prod_serv || '').trim() || null,
+        clave_unidad_sat: (f.clave_unidad_sat || '').trim() || null,
+        objeto_imp: f.objeto_imp || null,
+        descripcion_fiscal: (f.descripcion_fiscal || '').trim() || null,
       };
       if (f.precio_publico !== null && f.precio_publico !== '' && !Number.isNaN(Number(f.precio_publico))) body.precio_publico = Number(f.precio_publico);
       if (f.precio_mayorista !== null && f.precio_mayorista !== '' && !Number.isNaN(Number(f.precio_mayorista))) body.precio_mayorista = Number(f.precio_mayorista);
@@ -878,29 +1159,41 @@ function modalProducto() {
 function sidePanel() {
   return {
     prod: null,
+    cardex: null,
+    tab: 'resumen',
     d: { stock_actual: 0, reservado: 0, disponible: 0, en_oc_pendiente: 0 },
     movs: [],
     proveedores: {},
     init() {
-      // Cache liviano de proveedores para mostrar nombre
-      fetch('/api/clientes/?limit=1', { credentials:'include' }).catch(()=>null);
       // Nota: si tuviéramos /api/proveedores cargaríamos aquí. Por ahora muestra ID.
     },
     proveedorTexto(id) { return id ? `#${id}` : '— sin asignar —'; },
     movClass(tipo) {
       return ({entrada:'text-emerald-300', salida:'text-rose-300', ajuste:'text-amber-300', reserva:'text-cyan-300', liberacion:'text-slate-300'})[tipo] || 'text-slate-300';
     },
+    fmtFecha(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleDateString('es-MX', { year:'numeric', month:'short', day:'numeric' });
+      } catch(_) { return iso; }
+    },
     async onOpen(p) {
       this.prod = p;
+      this.tab = 'resumen';
+      this.cardex = null;
       this.d = { stock_actual: p.stock_actual || 0, reservado: 0, disponible: p.stock_actual || 0, en_oc_pendiente: 0 };
       this.movs = [];
       try {
-        const [d, m] = await Promise.all([
+        const [d, cardex] = await Promise.all([
           fetch(`/api/inventario/disponibilidad/${p.id}`, {credentials:'include'}).then(r => r.ok ? r.json() : null),
-          fetch(`/api/inventario/movimientos?producto_id=${p.id}&dias=30`, {credentials:'include'}).then(r => r.ok ? r.json() : []),
+          fetch(`/api/productos/${p.id}/cardex`, {credentials:'include'}).then(r => r.ok ? r.json() : null),
         ]);
         if (d) this.d = d;
-        this.movs = m || [];
+        if (cardex) {
+          this.cardex = cardex;
+          this.movs = cardex.movimientos || [];
+        }
       } catch(e) { console.warn(e); }
     },
     dispararAjuste() {

@@ -2,7 +2,7 @@
 Finance models: TransaccionCliente, TransaccionProveedor.
 """
 
-from sqlalchemy import Column, DateTime, DECIMAL, Enum, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, DECIMAL, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -20,8 +20,16 @@ class TransaccionCliente(Base):
     fecha = Column(DateTime(timezone=True), server_default=func.now())
     descripcion = Column(String(200))
     referencia_id = Column(Integer, nullable=True)
+    # CxC formal (FASE 6): vínculo explícito con la venta que origina el cargo.
+    # referencia_id se mantiene para compatibilidad con filas legacy.
+    orden_venta_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
+    fecha_vencimiento = Column(Date, nullable=True)
+    # 'pendiente' | 'parcial' | 'pagado' | 'vencido'
+    estatus_pago = Column(String(20), nullable=False, default="pendiente", index=True)
+    monto_pagado = Column(DECIMAL(12, 2), nullable=False, default=0)
 
     cliente = relationship("Cliente", back_populates="transacciones")
+    orden_venta = relationship("OrdenVenta", foreign_keys=[orden_venta_id])
 
 
 class TransaccionProveedor(Base):

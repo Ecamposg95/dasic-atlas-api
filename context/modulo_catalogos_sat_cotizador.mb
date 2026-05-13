@@ -1,0 +1,1285 @@
+# Módulo de Catálogos SAT para Plataforma de Cotizaciones
+
+## 1. Contexto general
+
+Se está desarrollando una plataforma tipo cotizador / ERP / POS. La plataforma permite crear cotizaciones de productos y servicios con información comercial como producto, descripción, cantidad, precio unitario, descuento, subtotal, IVA y total.
+
+Ahora se requiere implementar un módulo fiscal para consultar, administrar y utilizar los catálogos del SAT dentro del flujo de cotización, con el objetivo de que cada cotización pueda estar fiscalmente preparada para convertirse posteriormente en una factura CFDI 4.0.
+
+El SAT utiliza catálogos oficiales para estandarizar la información fiscal del CFDI, como claves de productos y servicios, claves de unidad, formas de pago, métodos de pago, uso CFDI, régimen fiscal, objeto de impuesto, tipo de comprobante, monedas, impuestos y tasas. Estos catálogos forman parte del Anexo 20 de CFDI 4.0.
+
+La idea central es que la cotización siga siendo un documento comercial, pero ahora tenga una capa fiscal estructurada, validable y reutilizable.
+
+---
+
+## 2. Objetivo principal
+
+Diseñar e implementar un módulo llamado **Catálogos SAT** o **Configuración Fiscal SAT** que permita visualizar, buscar, filtrar y seleccionar claves SAT, y que además permita que las cotizaciones usen esos códigos correctamente en cada concepto y en los datos generales del documento.
+
+El módulo debe preparar la plataforma para una futura integración con un PAC de timbrado CFDI, sin implementar todavía el timbrado real.
+
+---
+
+## 3. Objetivos funcionales
+
+1. Crear un módulo de consulta de catálogos SAT.
+2. Permitir buscar códigos SAT por clave, descripción, categoría o palabras clave.
+3. Asociar claves SAT a productos y servicios del catálogo interno.
+4. Asociar claves SAT a conceptos dentro de una cotización.
+5. Permitir definir valores fiscales por defecto para productos, servicios y clientes.
+6. Validar que una cotización esté fiscalmente completa antes de convertirla en factura.
+7. Preparar la estructura de datos para futura integración con un PAC de timbrado CFDI.
+8. Separar claramente los datos comerciales de los datos fiscales.
+9. Diseñar la solución de forma modular, escalable y compatible con CFDI 4.0.
+10. Evitar que el usuario capture códigos fiscales manualmente sin validación.
+
+---
+
+## 4. Catálogos SAT mínimos a contemplar
+
+### 4.1 c_ClaveProdServ
+
+Clave de producto o servicio. Se usa a nivel concepto.
+
+Ejemplos:
+
+- `43211503` - Computadoras.
+- `81111500` - Servicios de desarrollo de software.
+
+Debe poder asociarse a cada producto o servicio interno.
+
+### 4.2 c_ClaveUnidad
+
+Clave de unidad de medida SAT. Se usa a nivel concepto.
+
+Ejemplos:
+
+- `H87` - Pieza.
+- `E48` - Unidad de servicio.
+- `KGM` - Kilogramo.
+- `LTR` - Litro.
+- `XBX` - Caja.
+
+No debe confundirse con la unidad comercial interna.
+
+### 4.3 c_ObjetoImp
+
+Objeto de impuesto. Indica si el concepto es objeto de impuesto.
+
+Ejemplos comunes:
+
+- `01` - No objeto de impuesto.
+- `02` - Sí objeto de impuesto.
+- `03` - Sí objeto de impuesto y no obligado al desglose.
+
+### 4.4 c_Impuesto
+
+Impuestos aplicables.
+
+Ejemplos:
+
+- `002` - IVA.
+- `003` - IEPS.
+
+### 4.5 c_TipoFactor
+
+Tipo de factor del impuesto.
+
+Ejemplos:
+
+- Tasa.
+- Cuota.
+- Exento.
+
+### 4.6 c_TasaOCuota
+
+Tasa o cuota aplicable.
+
+Ejemplo:
+
+- `0.160000` - IVA 16%.
+
+### 4.7 c_FormaPago
+
+Forma de pago. Se usa a nivel documento.
+
+Ejemplos:
+
+- `01` - Efectivo.
+- `03` - Transferencia electrónica.
+- `04` - Tarjeta de crédito.
+- `28` - Tarjeta de débito.
+- `99` - Por definir.
+
+### 4.8 c_MetodoPago
+
+Método de pago. Se usa a nivel documento.
+
+Ejemplos:
+
+- `PUE` - Pago en una sola exhibición.
+- `PPD` - Pago en parcialidades o diferido.
+
+Regla práctica:
+
+- Venta pagada al momento: `PUE`.
+- Venta a crédito, diferida o parcialidades: `PPD`.
+
+### 4.9 c_UsoCFDI
+
+Uso fiscal que dará el receptor al CFDI. Se usa a nivel cliente / documento.
+
+Ejemplos:
+
+- `G03` - Gastos en general.
+- `G01` - Adquisición de mercancías.
+- `I04` - Equipo de cómputo y accesorios.
+- `S01` - Sin efectos fiscales.
+
+### 4.10 c_RegimenFiscal
+
+Régimen fiscal del emisor y receptor. Debe guardarse en clientes y datos fiscales de la empresa emisora.
+
+### 4.11 c_Moneda
+
+Moneda del comprobante.
+
+Ejemplos:
+
+- `MXN`.
+- `USD`.
+
+### 4.12 c_TipoDeComprobante
+
+Tipo de CFDI.
+
+Ejemplos:
+
+- `I` - Ingreso.
+- `E` - Egreso.
+- `P` - Pago.
+- `T` - Traslado.
+
+---
+
+## 5. Alcance visual del módulo
+
+Crear una vista principal llamada **Catálogos SAT**.
+
+Ruta sugerida:
+
+```txt
+/admin/sat-catalogs
+```
+
+La vista debe contener tabs por catálogo, búsqueda, filtros, tablas paginadas y detalle de cada clave.
+
+---
+
+## 6. Secciones de la vista Catálogos SAT
+
+### 6.1 Catálogo de Productos y Servicios SAT
+
+Tabla con columnas:
+
+- Clave SAT.
+- Descripción.
+- División / grupo / clase, si está disponible.
+- Estatus.
+- Fecha inicio de vigencia.
+- Fecha fin de vigencia.
+- Acciones: ver, seleccionar, asociar a producto interno.
+
+Buscador:
+
+- Buscar por clave exacta.
+- Buscar por texto.
+- Buscar por palabras relacionadas.
+- Filtro por activo / inactivo.
+- Filtro por categoría, si existe.
+
+### 6.2 Catálogo de Unidades SAT
+
+Tabla con columnas:
+
+- Clave unidad.
+- Nombre.
+- Descripción.
+- Símbolo.
+- Estatus.
+- Acciones.
+
+### 6.3 Catálogo de Forma de Pago
+
+Tabla con columnas:
+
+- Clave.
+- Descripción.
+- Bancarizado sí/no, si aplica.
+- Estatus.
+
+### 6.4 Catálogo de Método de Pago
+
+Tabla con columnas:
+
+- Clave.
+- Descripción.
+- Uso recomendado.
+
+### 6.5 Catálogo de Uso CFDI
+
+Tabla con columnas:
+
+- Clave.
+- Descripción.
+- Aplica persona física.
+- Aplica persona moral.
+- Régimen fiscal compatible, si se cuenta con matriz de compatibilidad.
+
+### 6.6 Catálogo de Régimen Fiscal
+
+Tabla con columnas:
+
+- Clave.
+- Descripción.
+- Persona física / moral.
+- Estatus.
+
+### 6.7 Catálogo de Objeto de Impuesto
+
+Tabla con columnas:
+
+- Clave.
+- Descripción.
+- Uso recomendado.
+
+---
+
+## 7. UX esperada
+
+El usuario no debe tener que memorizar claves SAT.
+
+El sistema debe mostrar nombre legible y clave fiscal juntos.
+
+Ejemplos de select:
+
+```txt
+H87 - Pieza
+E48 - Unidad de servicio
+03 - Transferencia electrónica de fondos
+G03 - Gastos en general
+```
+
+Los catálogos deben ser consultables desde:
+
+1. Módulo de configuración SAT.
+2. Formulario de producto.
+3. Formulario de servicio.
+4. Formulario de cliente.
+5. Formulario de cotización.
+6. Vista de validación fiscal de la cotización.
+
+---
+
+## 8. Modelo conceptual
+
+Separar tres niveles:
+
+### 8.1 Catálogos SAT oficiales
+
+Son tablas maestras con claves fiscales oficiales.
+
+### 8.2 Catálogo interno de productos / servicios
+
+Son los productos comerciales del negocio. Cada producto puede tener asociada una ClaveProdServ SAT, ClaveUnidad SAT, ObjetoImp, IVA, IEPS y configuración fiscal por defecto.
+
+### 8.3 Cotización
+
+La cotización usa los productos internos, pero al momento de agregar cada concepto debe copiar o referenciar su configuración fiscal.
+
+La recomendación principal es copiar la configuración fiscal hacia `quote_items` como snapshot, para que una cotización conserve el estado fiscal usado al momento de emitirse, aunque después cambie la configuración del producto.
+
+---
+
+## 9. Diferencia entre datos comerciales y fiscales
+
+### 9.1 Producto comercial
+
+- Nombre.
+- SKU.
+- Código de barras.
+- Precio.
+- Categoría.
+- Stock.
+- Unidad comercial.
+
+### 9.2 Capa fiscal
+
+- ClaveProdServ SAT.
+- ClaveUnidad SAT.
+- ObjetoImp.
+- IVA.
+- IEPS.
+- Uso CFDI.
+- Forma de pago.
+- Método de pago.
+- Régimen fiscal.
+
+Regla importante:
+
+```txt
+SKU interno ≠ Clave SAT
+Código de barras ≠ Clave SAT
+Nombre comercial ≠ Clave SAT
+Unidad comercial ≠ ClaveUnidad SAT
+```
+
+---
+
+## 10. Diseño sugerido de base de datos
+
+### 10.1 Tabla: sat_catalogs
+
+Campos:
+
+```txt
+id
+catalog_key
+name
+description
+version
+source
+last_synced_at
+is_active
+created_at
+updated_at
+```
+
+Uso:
+
+Tabla general para registrar qué catálogos SAT existen en el sistema.
+
+### 10.2 Tabla: sat_product_service_codes
+
+Campos:
+
+```txt
+id
+code
+description
+division
+group_name
+class_name
+start_validity_date
+end_validity_date
+is_active
+keywords
+created_at
+updated_at
+```
+
+### 10.3 Tabla: sat_unit_codes
+
+Campos:
+
+```txt
+id
+code
+name
+description
+symbol
+start_validity_date
+end_validity_date
+is_active
+created_at
+updated_at
+```
+
+### 10.4 Tabla: sat_payment_forms
+
+Campos:
+
+```txt
+id
+code
+description
+is_banked
+start_validity_date
+end_validity_date
+is_active
+created_at
+updated_at
+```
+
+### 10.5 Tabla: sat_payment_methods
+
+Campos:
+
+```txt
+id
+code
+description
+is_active
+created_at
+updated_at
+```
+
+### 10.6 Tabla: sat_cfdi_uses
+
+Campos:
+
+```txt
+id
+code
+description
+applies_to_individual
+applies_to_legal_entity
+is_active
+created_at
+updated_at
+```
+
+### 10.7 Tabla: sat_tax_regimes
+
+Campos:
+
+```txt
+id
+code
+description
+applies_to_individual
+applies_to_legal_entity
+is_active
+created_at
+updated_at
+```
+
+### 10.8 Tabla: sat_tax_objects
+
+Campos:
+
+```txt
+id
+code
+description
+is_active
+created_at
+updated_at
+```
+
+### 10.9 Tabla: sat_taxes
+
+Campos:
+
+```txt
+id
+code
+description
+is_retention
+is_transfer
+is_active
+created_at
+updated_at
+```
+
+### 10.10 Tabla: sat_tax_rates
+
+Campos:
+
+```txt
+id
+tax_code
+factor_type
+min_rate
+max_rate
+fixed_rate
+is_active
+created_at
+updated_at
+```
+
+---
+
+## 11. Extensiones a tablas existentes
+
+### 11.1 Extensiones en products
+
+Agregar campos:
+
+```txt
+sat_product_service_code
+sat_unit_code
+sat_tax_object_code
+default_tax_code
+default_tax_factor_type
+default_tax_rate
+fiscal_description
+fiscal_enabled
+fiscal_validated_at
+```
+
+Ejemplo:
+
+```txt
+Producto comercial: Bota industrial negra
+SKU interno: RMAZH-BOTA-001
+Código de barras: 7500000000001
+Clave SAT: 53111600
+Unidad SAT: H87
+ObjetoImp: 02
+IVA: 0.160000
+```
+
+### 11.2 Extensiones en services
+
+Agregar campos:
+
+```txt
+sat_product_service_code
+sat_unit_code
+sat_tax_object_code
+default_tax_code
+default_tax_factor_type
+default_tax_rate
+fiscal_description
+```
+
+### 11.3 Extensiones en customers
+
+Agregar campos:
+
+```txt
+rfc
+legal_name
+fiscal_zip_code
+fiscal_regime_code
+default_cfdi_use
+tax_email
+fiscal_validated
+fiscal_validated_at
+```
+
+### 11.4 Extensiones en quotes
+
+Agregar campos:
+
+```txt
+quote_number
+customer_id
+currency_code
+exchange_rate
+payment_form_code
+payment_method_code
+cfdi_use_code
+issuer_tax_regime_code
+receiver_tax_regime_code
+fiscal_status
+fiscal_validation_errors
+subtotal
+discount_total
+tax_total
+total
+created_at
+updated_at
+```
+
+Valores de `fiscal_status`:
+
+```txt
+draft
+fiscal_pending
+fiscal_valid
+fiscal_invalid
+ready_to_invoice
+invoiced
+```
+
+### 11.5 Extensiones en quote_items
+
+Agregar campos:
+
+```txt
+quote_id
+product_id
+description
+fiscal_description
+quantity
+unit_price
+discount
+subtotal
+sat_product_service_code
+sat_unit_code
+sat_tax_object_code
+tax_code
+tax_factor_type
+tax_rate
+tax_amount
+total
+created_at
+updated_at
+```
+
+Regla importante:
+
+Al agregar un producto a la cotización, copiar la configuración fiscal del producto hacia `quote_items`. No depender únicamente de una referencia dinámica al producto, porque la cotización debe preservar el estado fiscal del momento en que fue emitida.
+
+---
+
+## 12. Flujo funcional de cotización con SAT
+
+1. El usuario crea una cotización.
+2. Selecciona cliente.
+3. El sistema carga datos fiscales del cliente:
+   - RFC.
+   - Razón social.
+   - Código postal fiscal.
+   - Régimen fiscal.
+   - Uso CFDI por defecto.
+4. El usuario agrega productos o servicios.
+5. El sistema carga automáticamente:
+   - ClaveProdServ SAT.
+   - ClaveUnidad SAT.
+   - ObjetoImp.
+   - IVA o impuesto configurado.
+6. El sistema calcula:
+   - Subtotal.
+   - Descuento.
+   - Base gravable.
+   - Impuestos trasladados.
+   - Total.
+7. El usuario selecciona:
+   - Forma de pago.
+   - Método de pago.
+   - Moneda.
+8. El sistema ejecuta validación fiscal.
+9. Si faltan códigos SAT, la cotización queda como `fiscal_pending`.
+10. Si todo está correcto, queda como `ready_to_invoice`.
+11. En una etapa posterior, esta cotización puede convertirse en CFDI usando un PAC.
+
+---
+
+## 13. Validaciones mínimas
+
+### 13.1 A nivel producto
+
+- Todo producto facturable debe tener ClaveProdServ.
+- Todo producto facturable debe tener ClaveUnidad.
+- Todo producto facturable debe tener ObjetoImp.
+- Si ObjetoImp = `02`, debe tener impuesto configurado.
+- Si tiene IVA, debe tener impuesto `002`, tipo factor `Tasa` y tasa válida.
+
+### 13.2 A nivel cliente
+
+- Si la cotización será facturable, el cliente debe tener RFC.
+- Debe tener razón social.
+- Debe tener código postal fiscal.
+- Debe tener régimen fiscal.
+- Debe tener uso CFDI compatible.
+
+### 13.3 A nivel cotización
+
+- Debe tener moneda.
+- Debe tener método de pago.
+- Debe tener forma de pago.
+- Debe tener uso CFDI.
+- Todos los conceptos deben tener clave SAT.
+- Todos los conceptos deben tener unidad SAT.
+- Todos los conceptos deben tener objeto de impuesto.
+- Los impuestos deben estar calculados correctamente.
+
+---
+
+## 14. Reglas fiscales prácticas
+
+- Si la venta se paga al momento, usar método de pago `PUE`.
+- Si se pagará después o en parcialidades, usar método de pago `PPD`.
+- Si método de pago es `PPD`, normalmente forma de pago debe ser `99 - Por definir`.
+- Si método de pago es `PUE`, la forma de pago debe reflejar el medio real: efectivo, transferencia, tarjeta, etc.
+- Si el concepto causa IVA, usar ObjetoImp = `02`.
+- Si el concepto no causa impuesto, usar ObjetoImp = `01` o configuración aplicable según el caso.
+- No confundir SKU interno con ClaveProdServ SAT.
+- No confundir unidad comercial interna con ClaveUnidad SAT.
+
+---
+
+## 15. Pantallas requeridas
+
+### 15.1 Vista: Catálogos SAT
+
+Ruta sugerida:
+
+```txt
+/admin/sat-catalogs
+```
+
+Componentes:
+
+- Tabs por catálogo.
+- Buscador global.
+- Filtros.
+- Tabla paginada.
+- Vista detalle.
+- Botón “Asociar a producto”.
+- Botón “Ver productos asociados”.
+
+### 15.2 Vista: Producto / Servicio
+
+Agregar sección **Datos fiscales SAT**.
+
+Campos:
+
+- Clave SAT de producto o servicio.
+- Buscador con autocompletado.
+- Unidad SAT.
+- Objeto de impuesto.
+- Impuesto predeterminado.
+- Tasa.
+- Descripción fiscal.
+
+Mostrar alerta:
+
+```txt
+Este producto no está fiscalmente completo.
+```
+
+### 15.3 Vista: Cliente
+
+Agregar sección **Datos fiscales CFDI**.
+
+Campos:
+
+- RFC.
+- Razón social.
+- Código postal fiscal.
+- Régimen fiscal.
+- Uso CFDI predeterminado.
+- Correo fiscal.
+
+### 15.4 Vista: Cotización
+
+En encabezado:
+
+- Cliente.
+- Uso CFDI.
+- Régimen fiscal receptor.
+- Forma de pago.
+- Método de pago.
+- Moneda.
+- Tipo de cambio, si aplica.
+
+En conceptos:
+
+- Producto.
+- Descripción comercial.
+- Descripción fiscal.
+- Cantidad.
+- Precio.
+- Descuento.
+- ClaveProdServ SAT.
+- ClaveUnidad SAT.
+- ObjetoImp.
+- IVA.
+- Total.
+
+Agregar botón:
+
+```txt
+Validar datos fiscales
+```
+
+Agregar estado visual:
+
+- Fiscal pendiente.
+- Fiscal válida.
+- Lista para facturar.
+- Con errores fiscales.
+
+### 15.5 Modal: Selector de Clave SAT
+
+Debe permitir:
+
+- Buscar por descripción.
+- Buscar por clave.
+- Ver detalle de la clave.
+- Seleccionar clave.
+- Guardar como valor por defecto del producto.
+
+---
+
+## 16. API sugerida
+
+```http
+GET /api/sat/catalogs
+GET /api/sat/product-service-codes?search=&page=&limit=
+GET /api/sat/unit-codes?search=&page=&limit=
+GET /api/sat/payment-forms
+GET /api/sat/payment-methods
+GET /api/sat/cfdi-uses
+GET /api/sat/tax-regimes
+GET /api/sat/tax-objects
+POST /api/products/{id}/fiscal-config
+POST /api/customers/{id}/fiscal-config
+POST /api/quotes/{id}/validate-fiscal
+POST /api/quotes/{id}/prepare-invoice-payload
+```
+
+---
+
+## 17. Estructura sugerida para validate-fiscal
+
+### Input
+
+```json
+{
+  "quote_id": "123"
+}
+```
+
+### Output
+
+```json
+{
+  "is_valid": false,
+  "status": "fiscal_pending",
+  "errors": [
+    {
+      "scope": "quote_item",
+      "item_id": "123",
+      "field": "sat_product_service_code",
+      "message": "El concepto no tiene ClaveProdServ SAT."
+    },
+    {
+      "scope": "customer",
+      "field": "fiscal_regime_code",
+      "message": "El cliente no tiene régimen fiscal configurado."
+    }
+  ],
+  "warnings": [
+    {
+      "scope": "quote",
+      "field": "payment_method_code",
+      "message": "Si la cotización será pagada después, usar PPD y forma de pago 99."
+    }
+  ]
+}
+```
+
+---
+
+## 18. Estructura sugerida para prepare-invoice-payload
+
+```json
+{
+  "serie": "COT",
+  "folio": "000123",
+  "tipo_comprobante": "I",
+  "moneda": "MXN",
+  "forma_pago": "03",
+  "metodo_pago": "PUE",
+  "lugar_expedicion": "50000",
+  "emisor": {
+    "rfc": "AAA010101AAA",
+    "nombre": "EMPRESA DEMO SA DE CV",
+    "regimen_fiscal": "601"
+  },
+  "receptor": {
+    "rfc": "XAXX010101000",
+    "nombre": "PUBLICO EN GENERAL",
+    "domicilio_fiscal_receptor": "50000",
+    "regimen_fiscal_receptor": "616",
+    "uso_cfdi": "S01"
+  },
+  "conceptos": [
+    {
+      "clave_prod_serv": "43211503",
+      "no_identificacion": "SKU-001",
+      "cantidad": 1,
+      "clave_unidad": "H87",
+      "unidad": "Pieza",
+      "descripcion": "Laptop Dell Inspiron",
+      "valor_unitario": 12000.00,
+      "importe": 12000.00,
+      "objeto_imp": "02",
+      "impuestos": {
+        "traslados": [
+          {
+            "base": 12000.00,
+            "impuesto": "002",
+            "tipo_factor": "Tasa",
+            "tasa_o_cuota": "0.160000",
+            "importe": 1920.00
+          }
+        ]
+      }
+    }
+  ],
+  "subtotal": 12000.00,
+  "impuestos": {
+    "total_trasladados": 1920.00
+  },
+  "total": 13920.00
+}
+```
+
+---
+
+## 19. Requerimientos técnicos
+
+- Usar paginación para catálogos grandes como `c_ClaveProdServ`.
+- Agregar índices en `code`, `description` y `keywords`.
+- Implementar búsqueda full-text si la base de datos lo permite.
+- No cargar todos los catálogos pesados en frontend.
+- Cachear catálogos de uso frecuente.
+- Permitir importación/actualización de catálogos desde archivos oficiales del SAT.
+- Registrar fecha de actualización de cada catálogo.
+- Preparar la arquitectura para que los catálogos puedan actualizarse sin romper cotizaciones históricas.
+- Las cotizaciones deben conservar snapshot fiscal de sus conceptos.
+
+---
+
+## 20. Recomendación de arquitectura
+
+Crear un módulo independiente llamado `sat_catalogs` o `fiscal_catalogs`.
+
+Estructura sugerida:
+
+```txt
+backend/
+  modules/
+    sat_catalogs/
+      models.py
+      schemas.py
+      routes.py
+      services.py
+      repositories.py
+      importers.py
+      validators.py
+
+    quotes/
+      fiscal_validator.py
+      invoice_payload_builder.py
+
+frontend/
+  pages/
+    admin/
+      SatCatalogsPage.tsx
+    products/
+      ProductFiscalConfig.tsx
+    customers/
+      CustomerFiscalConfig.tsx
+    quotes/
+      QuoteFiscalPanel.tsx
+      FiscalValidationDrawer.tsx
+      SatCodeSelectorModal.tsx
+```
+
+---
+
+## 21. Servicios internos
+
+### 21.1 SatCatalogSearchService
+
+Responsabilidades:
+
+- Buscar códigos SAT.
+- Normalizar texto.
+- Permitir búsqueda por clave exacta o descripción.
+- Manejar paginación y filtros.
+
+### 21.2 ProductFiscalConfigService
+
+Responsabilidades:
+
+- Guardar configuración fiscal de productos.
+- Validar que las claves existan.
+- Marcar productos como fiscalmente completos o incompletos.
+
+### 21.3 QuoteFiscalValidationService
+
+Responsabilidades:
+
+- Validar encabezado fiscal.
+- Validar conceptos.
+- Validar impuestos.
+- Devolver errores y advertencias.
+- Actualizar estado fiscal de la cotización.
+
+### 21.4 InvoicePayloadBuilderService
+
+Responsabilidades:
+
+- Convertir una cotización fiscalmente válida en un payload estructurado preparado para CFDI.
+- No timbrar todavía.
+- Preparar la información para una futura integración con PAC.
+
+### 21.5 SatCatalogImporterService
+
+Responsabilidades:
+
+- Importar catálogos desde XLS, CSV o JSON.
+- Evitar duplicados.
+- Actualizar vigencias.
+- Marcar claves inactivas si corresponde.
+- Registrar fecha de actualización.
+
+---
+
+## 22. Criterios de aceptación
+
+1. El usuario puede abrir un módulo de Catálogos SAT y consultar claves.
+2. El usuario puede buscar una clave SAT por número o descripción.
+3. El usuario puede asociar una clave SAT a un producto.
+4. El usuario puede configurar unidad SAT, objeto de impuesto e IVA por producto.
+5. El usuario puede configurar datos fiscales de un cliente.
+6. Al crear una cotización, los productos agregados heredan su configuración fiscal.
+7. La cotización muestra claramente los datos fiscales de cada concepto.
+8. La cotización puede validarse fiscalmente.
+9. Si faltan datos, el sistema muestra errores específicos.
+10. Si todo está completo, la cotización queda en estado `Lista para facturar`.
+11. El sistema puede generar un payload preliminar compatible con CFDI 4.0.
+12. El sistema no timbra todavía, pero queda preparado para una futura integración con PAC.
+13. Las cotizaciones históricas conservan las claves fiscales usadas al momento de su emisión.
+14. El sistema diferencia SKU interno, código de barras y clave SAT.
+15. El sistema diferencia unidad comercial y unidad SAT.
+
+---
+
+## 23. Checklist de implementación
+
+### Fase 1: Base fiscal
+
+- Crear tablas SAT principales.
+- Crear modelos backend.
+- Crear migraciones.
+- Crear seeders o importadores básicos.
+- Cargar catálogos mínimos: unidades, forma de pago, método de pago, uso CFDI, régimen fiscal, objeto de impuesto.
+
+### Fase 2: Consulta de catálogos
+
+- Crear endpoints de consulta.
+- Crear paginación.
+- Crear búsqueda por clave.
+- Crear búsqueda por descripción.
+- Crear vista `/admin/sat-catalogs`.
+
+### Fase 3: Configuración fiscal de productos
+
+- Agregar campos fiscales en productos.
+- Crear sección “Datos fiscales SAT”.
+- Crear modal selector de clave SAT.
+- Validar producto fiscalmente completo.
+
+### Fase 4: Configuración fiscal de clientes
+
+- Agregar campos fiscales en clientes.
+- Crear sección “Datos fiscales CFDI”.
+- Validar RFC, razón social, código postal fiscal, régimen fiscal y uso CFDI.
+
+### Fase 5: Cotización fiscal
+
+- Agregar campos fiscales en encabezado de cotización.
+- Agregar campos fiscales en conceptos.
+- Copiar configuración fiscal del producto hacia el concepto.
+- Calcular impuestos por concepto.
+- Mostrar estado fiscal de la cotización.
+
+### Fase 6: Validación fiscal
+
+- Crear `QuoteFiscalValidationService`.
+- Crear endpoint `/api/quotes/{id}/validate-fiscal`.
+- Devolver errores y advertencias.
+- Marcar cotización como `ready_to_invoice` si cumple criterios.
+
+### Fase 7: Payload CFDI preliminar
+
+- Crear `InvoicePayloadBuilderService`.
+- Crear endpoint `/api/quotes/{id}/prepare-invoice-payload`.
+- Generar JSON preliminar compatible con CFDI 4.0.
+- No timbrar todavía.
+
+---
+
+## 24. Consideraciones para futura integración con PAC
+
+Este módulo debe dejar preparada la plataforma para conectar posteriormente con un PAC.
+
+En una segunda etapa se deberá implementar:
+
+- Generación de XML CFDI 4.0.
+- Certificados CSD.
+- Sellado.
+- Timbrado con PAC.
+- Recepción de UUID.
+- Guardado de XML timbrado.
+- Generación de PDF.
+- Cancelación de CFDI.
+- Complemento de pagos.
+- Notas de crédito.
+- Facturación global para ventas de mostrador, si aplica.
+
+Por ahora, este módulo solo debe preparar y validar la información fiscal.
+
+---
+
+## 25. Reglas de no implementación en esta etapa
+
+No implementar timbrado real todavía.
+
+No generar XML final si no hay PAC.
+
+No asumir que la clave SAT se puede inventar.
+
+No permitir cotizaciones facturables sin claves fiscales completas.
+
+No modificar cotizaciones históricas cuando cambie la configuración fiscal de un producto.
+
+No mezclar lógica fiscal directamente en la UI; crear servicios de backend para validación.
+
+---
+
+## 26. Prompt master para IA de desarrollo
+
+```txt
+Actúa como arquitecto senior de software, especialista en sistemas ERP, facturación electrónica mexicana CFDI 4.0, catálogos SAT, cotizadores comerciales y diseño de bases de datos.
+
+Estoy desarrollando una plataforma tipo cotizador / ERP / POS. Necesito implementar un módulo fiscal para consultar, administrar y utilizar los catálogos del SAT dentro del flujo de cotización, con el objetivo de que cada cotización pueda estar fiscalmente preparada para convertirse posteriormente en una factura CFDI 4.0.
+
+Contexto general:
+La plataforma permite crear cotizaciones de productos y servicios. Actualmente las cotizaciones manejan conceptos comerciales como producto, descripción, cantidad, precio unitario, descuento, subtotal, IVA y total. Ahora se requiere que las cotizaciones también tomen en cuenta códigos fiscales del SAT, principalmente los relacionados con CFDI 4.0.
+
+El SAT utiliza catálogos oficiales para estandarizar la información fiscal del CFDI, como claves de productos y servicios, claves de unidad, formas de pago, métodos de pago, uso CFDI, régimen fiscal, objeto de impuesto, tipo de comprobante, monedas, impuestos y tasas. Estos catálogos forman parte del Anexo 20 de CFDI 4.0.
+
+Objetivo principal:
+Diseñar e implementar un módulo llamado “Catálogos SAT” o “Configuración Fiscal SAT” que permita visualizar, buscar, filtrar y seleccionar claves SAT, y que además permita que las cotizaciones usen esos códigos correctamente en cada concepto y en los datos generales del documento.
+
+Objetivos funcionales:
+1. Crear un módulo de consulta de catálogos SAT.
+2. Permitir buscar códigos SAT por clave, descripción, categoría o palabras clave.
+3. Asociar claves SAT a productos y servicios del catálogo interno.
+4. Asociar claves SAT a conceptos dentro de una cotización.
+5. Permitir definir valores fiscales por defecto para productos, servicios y clientes.
+6. Validar que una cotización esté fiscalmente completa antes de convertirla en factura.
+7. Preparar la estructura de datos para futura integración con un PAC de timbrado CFDI.
+8. Separar claramente los datos comerciales de los datos fiscales.
+9. Diseñar la solución de forma modular, escalable y compatible con CFDI 4.0.
+
+Implementar la solución considerando:
+- Modelo de datos.
+- Migraciones.
+- Endpoints API.
+- Componentes frontend.
+- Flujo UX.
+- Validador fiscal de cotizaciones.
+- Builder de payload preliminar CFDI.
+- Script o mecanismo de importación de catálogos SAT.
+- Checklist de pruebas.
+
+No implementar timbrado real todavía.
+No generar XML final si no hay PAC.
+No permitir cotizaciones facturables sin claves fiscales completas.
+No modificar cotizaciones históricas cuando cambie la configuración fiscal de un producto.
+
+Genera la solución de forma profesional, escalable y modular, pensando en que esta plataforma pueda evolucionar de un cotizador comercial a un ERP con facturación electrónica CFDI 4.0.
+```
+
+---
+
+## 27. Prompt corto para agente de desarrollo
+
+```txt
+Necesito implementar en mi plataforma de cotizaciones un módulo de Catálogos SAT para CFDI 4.0.
+
+El objetivo es que el sistema pueda consultar códigos SAT, asignarlos a productos/servicios/clientes y usarlos dentro de las cotizaciones para dejarlas preparadas para facturación electrónica.
+
+Implementa un módulo fiscal con:
+
+1. Catálogos SAT:
+- c_ClaveProdServ
+- c_ClaveUnidad
+- c_FormaPago
+- c_MetodoPago
+- c_UsoCFDI
+- c_RegimenFiscal
+- c_ObjetoImp
+- c_Impuesto
+- c_TipoFactor
+- c_TasaOCuota
+- c_Moneda
+- c_TipoDeComprobante
+
+2. UI:
+Crear una vista /admin/sat-catalogs con tabs, búsqueda, filtros, tablas paginadas y detalle de cada clave.
+
+3. Productos:
+Agregar sección “Datos fiscales SAT”:
+- ClaveProdServ
+- ClaveUnidad
+- ObjetoImp
+- IVA
+- Descripción fiscal
+
+4. Clientes:
+Agregar sección “Datos fiscales CFDI”:
+- RFC
+- Razón social
+- Código postal fiscal
+- Régimen fiscal
+- Uso CFDI
+
+5. Cotizaciones:
+Agregar al encabezado:
+- Uso CFDI
+- Forma de pago
+- Método de pago
+- Moneda
+- Régimen fiscal receptor
+
+Agregar a cada concepto:
+- ClaveProdServ
+- ClaveUnidad
+- ObjetoImp
+- Impuesto
+- Tipo factor
+- Tasa
+- Importe de impuesto
+
+6. Validación:
+Crear endpoint:
+POST /api/quotes/{id}/validate-fiscal
+
+Debe validar:
+- Cliente con datos fiscales completos.
+- Cotización con forma de pago, método de pago, uso CFDI y moneda.
+- Todos los conceptos con clave SAT, unidad SAT, objeto de impuesto e impuestos correctos.
+- Si falta algo, devolver errores específicos.
+- Si todo está correcto, marcar la cotización como ready_to_invoice.
+
+7. Payload CFDI:
+Crear endpoint:
+POST /api/quotes/{id}/prepare-invoice-payload
+
+Debe generar un JSON preliminar compatible con CFDI 4.0, pero sin timbrar todavía.
+
+8. Regla importante:
+Cuando se agrega un producto a una cotización, copiar su configuración fiscal hacia quote_items como snapshot. No depender únicamente de la configuración actual del producto, porque las cotizaciones históricas deben conservar su información fiscal original.
+
+9. Arquitectura:
+Crear módulo backend:
+modules/sat_catalogs/
+- models.py
+- schemas.py
+- routes.py
+- services.py
+- validators.py
+- importers.py
+
+Crear servicios:
+- SatCatalogSearchService
+- ProductFiscalConfigService
+- QuoteFiscalValidationService
+- InvoicePayloadBuilderService
+- SatCatalogImporterService
+
+10. Resultado esperado:
+Una plataforma de cotizaciones fiscalmente preparada para convertirse después en facturador CFDI 4.0 mediante integración con PAC.
+```

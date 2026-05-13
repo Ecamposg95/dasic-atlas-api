@@ -30,6 +30,15 @@ class ProductoBase(BaseModel):
     precio_publico: Optional[Decimal] = Field(None, ge=0)
     precio_mayorista: Decimal = Field(default=Decimal("0"), ge=0)
     precio_distribuidor: Decimal = Field(default=Decimal("0"), ge=0)
+    # SAT (CFDI 4.0) — opcionales hasta que se vaya a facturar.
+    clave_prod_serv: Optional[str] = Field(None, max_length=8)
+    clave_unidad_sat: Optional[str] = Field(None, max_length=10)
+    objeto_imp: Optional[str] = Field(None, max_length=2)
+    descripcion_fiscal: Optional[str] = None
+    # Clasificación interna
+    catalogo_fabricante: Optional[str] = Field(None, max_length=80)
+    categoria: Optional[str] = Field(None, max_length=80)
+    abreviatura: Optional[str] = Field(None, max_length=20)
 
 
 class ProductoCreate(ProductoBase):
@@ -56,6 +65,14 @@ class ProductoUpdate(BaseModel):
     costo_compra: Optional[Decimal] = Field(None, ge=0)
     stock_minimo: Optional[int] = Field(None, ge=0)
     stock_actual: Optional[int] = Field(None, ge=0)
+    # SAT + clasificación
+    clave_prod_serv: Optional[str] = Field(None, max_length=8)
+    clave_unidad_sat: Optional[str] = Field(None, max_length=10)
+    objeto_imp: Optional[str] = Field(None, max_length=2)
+    descripcion_fiscal: Optional[str] = None
+    catalogo_fabricante: Optional[str] = Field(None, max_length=80)
+    categoria: Optional[str] = Field(None, max_length=80)
+    abreviatura: Optional[str] = Field(None, max_length=20)
 
 
 class ProductoResponseVendedor(ProductoBase):

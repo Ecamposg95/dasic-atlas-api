@@ -98,6 +98,11 @@
                   <button title="Eventos" class="dax-btn-ghost text-xs py-1 px-2" @click="verEventos(v)">
                     <i class="fas fa-clock-rotate-left"></i>
                   </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Editar cotización"
+                          class="dax-btn-ghost text-xs py-1 px-2 hover:text-cyan-300"
+                          @click="editarCotizacion(v)">
+                    <i class="fas fa-pen-to-square text-cyan-400"></i>
+                  </button>
                   <button x-show="v.estatus==='cotizacion'" title="Borrador OC" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
                     <i class="fas fa-file-invoice"></i>
                   </button>
@@ -276,6 +281,16 @@ function seguimiento() {
         if (!g.ok) return alert(gd.detail?.mensaje || gd.detail || 'Error');
         alert('OCs generadas: ' + (gd.ocs || []).map(o => o.folio).join(', '));
       } catch(e) { console.warn(e); alert('Error de red'); }
+    },
+
+    editarCotizacion(v) {
+      // Editar in-situ: misma cotización, mismo folio. Solo aplica si estatus
+      // == 'cotizacion'. Para versionar usar "Recotizar".
+      if (v.estatus !== 'cotizacion') {
+        alert('Solo se pueden editar cotizaciones (no ventas ni canceladas).');
+        return;
+      }
+      window.location.href = '/ventas/cotizador?edit=' + v.id;
     },
 
     async recotizar(v) {

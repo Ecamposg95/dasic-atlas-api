@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+{% block title %}Servicios{% endblock %}
+{% block page_title %}Servicios{% endblock %}
+
+{% block header_actions %}
+  <button type="button" class="dax-btn-primary"
+          x-show="$store.user.can('editar_producto')" x-cloak
+          onclick="window.dispatchEvent(new CustomEvent('servicio-modal-open'))">
+    <i class="fas fa-plus text-xs"></i>
+    Nuevo servicio
+  </button>
+{% endblock %}
+
+{% block content %}
+<div x-data="servicios()" x-init="init()" @servicio-saved.window="init()">
+  <!-- Aviso -->
+  <div x-show="msg.text" x-cloak class="mb-4">
+    <div class="rounded-xl border px-4 py-3 text-sm"
+         :class="msg.type === 'error'
+           ? 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+           : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'">
+      <div class="flex items-start justify-between gap-3">
+        <p x-text="msg.text" class="flex-1"></p>
+        <button type="button" @click="msg = {text:'',type:'success'}"
+                class="text-slate-400 hover:text-white transition shrink-0">
+          <i class="fas fa-times text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Total</p>
+        <p class="text-2xl font-bold text-slate-900 dark:text-slate-100" x-text="kpi.total"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20">
+        <i class="fas fa-wrench"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Activos</p>
+        <p class="text-2xl font-bold text-emerald-400" x-text="kpi.activos"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+        <i class="fas fa-circle-check"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Instalación</p>
+        <p class="text-2xl font-bold text-cyan-400" x-text="kpi.instalacion"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20">
+        <i class="fas fa-screwdriver-wrench"></i>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div>
+        <p class="text-xs font-semibold text-slate-600 dark:text-slate-500 uppercase tracking-wider mb-1">Mantto</p>
+        <p class="text-2xl font-bold text-amber-400" x-text="kpi.mantto"></p>
+      </div>
+      <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+        <i class="fas fa-gears"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="flex flex-col sm:flex-row gap-3 mb-5">
+    <div class="relative flex-1 max-w-sm">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+      <input type="search" x-model="q" @input.debounce.300ms="filtrar()"
+             placeholder="Buscar código, nombre, descripción..."
+             class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500
+                    rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500 transition">
+    </div>
+    <select x-model="filtroCategoria" @change="filtrar()"
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm
+                   rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
+      <option value="">Todas las categorías</option>
+      <option value="instalacion">Instalación</option>
+      <option value="mantto">Mantenimiento</option>
+      <option value="asesoria">Asesoría</option>
+      <option value="otro">Otro</option>
+    </select>
+    <select x-model="filtroActivo" @change="filtrar()"
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm
+                   rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500 transition">
+      <option value="activos">Solo activos</option>
+      <option value="inactivos">Solo inactivos</option>
+      <option value="todos">Todos</option>
+    </select>
+  </div>
+
+  <!-- Tabla -->
+  <div class="dax-card overflow-hidden">
+    <table class="dax-table">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Categoría</th>
+          <th scope="col" class="text-right">Tiempo est.</th>
+          <th scope="col" class="text-right">Costo</th>
+          <th scope="col" class="bg-cyan-500/5 text-cyan-700 dark:text-cyan-300">SAT</th>
+          <th scope="col">Estatus</th>
+          <th scope="col" class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-if="loading">
+          <template x-for="i in 6" :key="i">
+            <tr><td colspan="8">
+              <div class="h-8 bg-slate-200 dark:bg-slate-700/40 animate-pulse rounded my-1"></div>
+            </td></tr>
+          </template>
+        </template>
+        <template x-if="!loading">
+          <template x-for="s in filtrados" :key="s.id">
+            <tr class="hover:bg-slate-100 dark:hover:bg-slate-700/30">
+              <td class="font-mono text-xs text-slate-700 dark:text-slate-300" x-text="s.codigo"></td>
+              <td>
+                <p class="font-medium text-slate-800 dark:text-slate-200 text-xs" x-text="s.nombre"></p>
+                <p class="text-[10px] text-slate-500" x-text="(s.descripcion || '').slice(0, 60) + ((s.descripcion||'').length > 60 ? '…' : '')"></p>
+              </td>
+              <td class="text-xs text-slate-600 dark:text-slate-400" x-text="catLabel(s.categoria_servicio)"></td>
+              <td class="text-right font-mono text-xs text-slate-500" x-text="formatTiempo(s)"></td>
+              <td class="text-right font-mono text-xs text-slate-300" x-text="formatCosto(s)"></td>
+              <td class="font-mono text-[10px] bg-cyan-500/5">
+                <span class="text-cyan-700 dark:text-cyan-300" x-text="s.clave_prod_serv"></span>
+                <span class="text-slate-500"> · </span>
+                <span class="text-slate-700 dark:text-slate-300" x-text="s.clave_unidad_sat"></span>
+              </td>
+              <td>
+                <span class="dax-badge-green" x-show="s.activo">Activo</span>
+                <span class="dax-badge-amber" x-show="!s.activo">Inactivo</span>
+              </td>
+              <td class="text-right">
+                <div class="inline-flex items-center gap-1">
+                  <button @click="abrirEdicion(s)" class="dax-btn-ghost py-1 px-2"
+                          title="Editar">
+                    <i class="fas fa-pen-to-square text-[10px]"></i>
+                  </button>
+                  <button @click="eliminar(s)" class="dax-btn-ghost py-1 px-2 hover:text-red-400"
+                          title="Eliminar">
+                    <i class="fas fa-trash text-[10px]"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="filtrados.length===0">
+            <td colspan="8" class="text-center text-slate-500 py-12 text-sm">
+              <i class="fas fa-wrench text-2xl mb-2 block opacity-30"></i>
+              Sin servicios registrados aún. Crea el primero con "Nuevo servicio".
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal Nuevo / Editar Servicio                                -->
+<!-- ============================================================ -->
+<div id="modal-servicio"
+     x-data="modalServicio()"
+     x-init="init()"
+     x-show="open"
+     x-cloak
+     @keydown.escape.window="close()"
+     @servicio-modal-open.window="openCreate()"
+     @servicio-modal-edit.window="openEdit($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="dax-card w-full max-w-3xl max-h-[92vh] overflow-y-auto custom-scroll p-6"
+       @click.outside="close()">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-base font-bold text-slate-200" x-text="form.id ? 'Editar servicio' : 'Nuevo servicio'"></h2>
+        <p class="text-xs text-slate-500 mt-0.5">Catálogo reutilizable. SAT 81111500 / E48 son default editable.</p>
+      </div>
+      <button @click="close()" class="dax-btn-ghost p-2 rounded-lg" :disabled="saving">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <form @submit.prevent="submit()" class="space-y-4">
+      <!-- Identificación -->
+      <fieldset class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Identificación</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Código *</label>
+            <input x-model="form.codigo" :disabled="saving" required maxlength="30"
+                   placeholder="Ej. SRV-0001" class="dax-input font-mono uppercase">
+            <p class="text-[10px] text-slate-500 mt-1" x-show="proxCodigoSugerido">
+              Sugerido: <code @click="form.codigo = proxCodigoSugerido" class="cursor-pointer underline" x-text="proxCodigoSugerido"></code>
+            </p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Categoría</label>
+            <select x-model="form.categoria_servicio" :disabled="saving" class="dax-input">
+              <option :value="null">(sin categoría)</option>
+              <option value="instalacion">Instalación</option>
+              <option value="mantto">Mantenimiento</option>
+              <option value="asesoria">Asesoría</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Nombre *</label>
+            <input x-model="form.nombre" :disabled="saving" required minlength="2" maxlength="150"
+                   placeholder="Ej. INSTALACIÓN DE TABLERO ELÉCTRICO" class="dax-input">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción</label>
+            <textarea x-model="form.descripcion" :disabled="saving" rows="2"
+                      placeholder="Alcance, exclusiones, condiciones…" class="dax-input"></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Costo + tiempo -->
+      <fieldset class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Costo y tiempo</legend>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Costo</label>
+            <input type="number" min="0" step="0.01" x-model.number="form.costo" :disabled="saving"
+                   class="dax-input text-right font-mono">
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Moneda</label>
+            <select x-model="form.moneda" :disabled="saving" class="dax-input">
+              <option value="MXN">MXN</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Activo</label>
+            <select x-model.boolean="form.activo" :disabled="saving" class="dax-input">
+              <option :value="true">Sí</option>
+              <option :value="false">No</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Tiempo estimado</label>
+            <input type="number" min="0" step="0.5" x-model.number="form.tiempo_estimado" :disabled="saving"
+                   placeholder="Opcional" class="dax-input text-right font-mono">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Unidad de tiempo</label>
+            <select x-model="form.unidad_tiempo" :disabled="saving" class="dax-input">
+              <option :value="null">(sin definir)</option>
+              <option value="horas">Horas</option>
+              <option value="dias">Días</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- SAT -->
+      <fieldset class="border border-slate-300 dark:border-slate-700/40 rounded-xl p-4">
+        <legend class="px-2 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Datos fiscales SAT</legend>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Clave ProdServ</label>
+            <input x-model="form.clave_prod_serv" :disabled="saving" maxlength="8" pattern="\d{8}"
+                   placeholder="81111500 (default)" class="dax-input font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">Default: <code>81111500</code> — servicios profesionales.</p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Clave Unidad SAT</label>
+            <input x-model="form.clave_unidad_sat" :disabled="saving" maxlength="10"
+                   placeholder="E48 (default)" class="dax-input font-mono uppercase">
+            <p class="text-[10px] text-slate-500 mt-1">Default: <code>E48</code> — unidad de servicio.</p>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Objeto Imp.</label>
+            <select x-model="form.objeto_imp" :disabled="saving" class="dax-input">
+              <option :value="null">(default 02)</option>
+              <option value="01">01 — No objeto</option>
+              <option value="02">02 — Sí objeto</option>
+              <option value="03">03 — Sí, no obligado al desglose</option>
+              <option value="04">04 — Sí, no causa impuesto</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1 text-xs font-semibold text-slate-400 uppercase">Descripción fiscal</label>
+            <input x-model="form.descripcion_fiscal" :disabled="saving"
+                   placeholder="Si vacío → usa el nombre del servicio"
+                   class="dax-input">
+          </div>
+        </div>
+      </fieldset>
+
+      <div x-show="error" x-cloak
+           class="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2"
+           x-text="error"></div>
+
+      <div class="flex justify-between items-center pt-1">
+        <div>
+          <button type="button" x-show="form.id" @click="eliminarDesdeModal()"
+                  class="dax-btn-ghost text-rose-400 hover:text-rose-300" :disabled="saving">
+            <i class="fas fa-trash text-xs mr-1"></i> Eliminar
+          </button>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" @click="close()" class="dax-btn-ghost" :disabled="saving">Cancelar</button>
+          <button type="submit" class="dax-btn-primary" :disabled="saving">
+            <template x-if="!saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-save text-xs"></i>
+                <span x-text="form.id ? 'Guardar cambios' : 'Crear servicio'"></span>
+              </span>
+            </template>
+            <template x-if="saving">
+              <span class="flex items-center gap-2">
+                <i class="fas fa-circle-notch fa-spin text-xs"></i>
+                Guardando…
+              </span>
+            </template>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function fmtErr(res, fallback) {
+  try {
+    const data = await res.clone().json();
+    const d = data?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) {
+      return d.map(e => {
+        const loc = Array.isArray(e?.loc) ? e.loc.slice(1).join('.') : '';
+        return loc ? `${loc}: ${e.msg || ''}` : (e.msg || JSON.stringify(e));
+      }).join(' · ');
+    }
+  } catch(_) {}
+  return fallback || 'Error del servidor.';
+}
+
+function servicios() {
+  return {
+    loading: true,
+    todos: [], filtrados: [],
+    q: '', filtroCategoria: '', filtroActivo: 'activos',
+    msg: { text: '', type: 'success' },
+    kpi: { total: 0, activos: 0, instalacion: 0, mantto: 0 },
+
+    async init() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filtroActivo === 'activos') params.set('activo', 'true');
+        else if (this.filtroActivo === 'inactivos') params.set('activo', 'false');
+        const res = await fetch('/api/servicios/?' + params.toString(), { credentials:'include' });
+        if (res.ok) this.todos = await res.json();
+      } catch(e) { console.warn(e); }
+      finally {
+        this.loading = false;
+        this.calcKpi();
+        this.filtrar();
+      }
+    },
+
+    calcKpi() {
+      this.kpi.total = this.todos.length;
+      this.kpi.activos = this.todos.filter(s => s.activo).length;
+      this.kpi.instalacion = this.todos.filter(s => s.categoria_servicio === 'instalacion').length;
+      this.kpi.mantto = this.todos.filter(s => s.categoria_servicio === 'mantto').length;
+    },
+
+    catLabel(c) {
+      return ({ instalacion:'Instalación', mantto:'Mantenimiento', asesoria:'Asesoría', otro:'Otro' })[c] || (c || '—');
+    },
+
+    formatTiempo(s) {
+      if (s.tiempo_estimado === null || s.tiempo_estimado === undefined || s.tiempo_estimado === '') return '—';
+      const t = Number(s.tiempo_estimado);
+      if (Number.isNaN(t)) return '—';
+      const u = s.unidad_tiempo === 'dias' ? 'd' : (s.unidad_tiempo === 'horas' ? 'h' : '');
+      return `${t} ${u}`.trim();
+    },
+
+    formatCosto(s) {
+      const c = Number(s.costo || 0);
+      const moneda = (s.moneda || 'MXN').toUpperCase();
+      const sym = moneda === 'USD' ? 'US$' : '$';
+      return sym + c.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+
+    filtrar() {
+      const q = this.q.toLowerCase();
+      this.filtrados = this.todos.filter(s => {
+        const matchQ = !q
+          || (s.codigo || '').toLowerCase().includes(q)
+          || (s.nombre || '').toLowerCase().includes(q)
+          || (s.descripcion || '').toLowerCase().includes(q);
+        const matchC = !this.filtroCategoria || s.categoria_servicio === this.filtroCategoria;
+        return matchQ && matchC;
+      });
+    },
+
+    abrirEdicion(s) {
+      window.dispatchEvent(new CustomEvent('servicio-modal-edit', { detail: s }));
+    },
+
+    async eliminar(s) {
+      if (!confirm(`Eliminar el servicio "${s.nombre}"?`)) return;
+      try {
+        const r = await fetch(`/api/servicios/${s.id}`, { method:'DELETE', credentials:'include' });
+        if (r.ok) {
+          this.msg = { text: 'Servicio eliminado.', type: 'success' };
+          await this.init();
+        } else {
+          this.msg = { text: await fmtErr(r, 'No se pudo eliminar.'), type: 'error' };
+        }
+      } catch(e) { console.warn(e); }
+    },
+  };
+}
+
+function modalServicio() {
+  const blank = () => ({
+    id: null,
+    codigo: '',
+    nombre: '',
+    descripcion: '',
+    categoria_servicio: null,
+    costo: 0,
+    moneda: 'MXN',
+    tiempo_estimado: null,
+    unidad_tiempo: null,
+    clave_prod_serv: '81111500',
+    clave_unidad_sat: 'E48',
+    objeto_imp: '02',
+    descripcion_fiscal: '',
+    activo: true,
+  });
+  return {
+    open: false,
+    saving: false,
+    error: '',
+    form: blank(),
+    proxCodigoSugerido: '',
+
+    init() {
+      // Pre-carga el código sugerido para el modo crear.
+      this.precargarSugerencia();
+    },
+
+    async precargarSugerencia() {
+      try {
+        const r = await fetch('/api/servicios/utils/proximo-codigo', { credentials:'include' });
+        if (r.ok) {
+          const data = await r.json();
+          this.proxCodigoSugerido = data.codigo || '';
+        }
+      } catch(_) {}
+    },
+
+    openCreate() {
+      this.form = blank();
+      this.error = '';
+      this.open = true;
+      this.precargarSugerencia();
+    },
+
+    openEdit(s) {
+      this.form = {
+        id: s.id,
+        codigo: s.codigo || '',
+        nombre: s.nombre || '',
+        descripcion: s.descripcion || '',
+        categoria_servicio: s.categoria_servicio || null,
+        costo: Number(s.costo || 0),
+        moneda: s.moneda || 'MXN',
+        tiempo_estimado: s.tiempo_estimado !== null && s.tiempo_estimado !== undefined ? Number(s.tiempo_estimado) : null,
+        unidad_tiempo: s.unidad_tiempo || null,
+        clave_prod_serv: s.clave_prod_serv || '81111500',
+        clave_unidad_sat: s.clave_unidad_sat || 'E48',
+        objeto_imp: s.objeto_imp || '02',
+        descripcion_fiscal: s.descripcion_fiscal || '',
+        activo: !!s.activo,
+      };
+      this.error = '';
+      this.open = true;
+    },
+
+    close() {
+      if (this.saving) return;
+      this.open = false;
+      this.error = '';
+    },
+
+    async submit() {
+      if (this.saving) return;
+      const f = this.form;
+      this.error = '';
+      if (!f.codigo || f.codigo.trim().length < 2) { this.error = 'Código requerido.'; return; }
+      if (!f.nombre || f.nombre.trim().length < 2) { this.error = 'Nombre requerido.'; return; }
+
+      const body = {
+        codigo: f.codigo.trim().toUpperCase(),
+        nombre: f.nombre.trim(),
+        descripcion: (f.descripcion || '').trim() || null,
+        categoria_servicio: f.categoria_servicio || null,
+        costo: Number(f.costo || 0),
+        moneda: f.moneda || 'MXN',
+        tiempo_estimado: f.tiempo_estimado !== null && f.tiempo_estimado !== '' && !Number.isNaN(Number(f.tiempo_estimado)) ? Number(f.tiempo_estimado) : null,
+        unidad_tiempo: f.unidad_tiempo || null,
+        clave_prod_serv: (f.clave_prod_serv || '').trim() || null,
+        clave_unidad_sat: (f.clave_unidad_sat || '').trim() || null,
+        objeto_imp: f.objeto_imp || null,
+        descripcion_fiscal: (f.descripcion_fiscal || '').trim() || null,
+        activo: !!f.activo,
+      };
+
+      this.saving = true;
+      try {
+        const url = f.id ? `/api/servicios/${f.id}` : '/api/servicios/';
+        const method = f.id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          this.error = await fmtErr(res, 'No se pudo guardar.');
+          return;
+        }
+        this.open = false;
+        this.form = blank();
+        window.dispatchEvent(new CustomEvent('servicio-saved'));
+      } catch(e) {
+        this.error = 'Error de red al guardar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async eliminarDesdeModal() {
+      if (!this.form.id) return;
+      if (!confirm(`Eliminar el servicio "${this.form.nombre}"?`)) return;
+      this.saving = true;
+      try {
+        const r = await fetch(`/api/servicios/${this.form.id}`, { method:'DELETE', credentials:'include' });
+        if (r.ok) {
+          this.open = false;
+          window.dispatchEvent(new CustomEvent('servicio-saved'));
+        } else {
+          this.error = await fmtErr(r, 'No se pudo eliminar.');
+        }
+      } catch(e) {
+        this.error = 'Error de red al eliminar.';
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

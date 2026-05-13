@@ -142,9 +142,103 @@ def seed_marcas(db: Session) -> None:
         logger.info("Sembradas %d marcas desde taxonomía DASIC.", nuevas)
 
 
+def seed_sat_catalogos_pequenos(db: Session) -> None:
+    """Siembra los 10 catálogos SAT chicos desde `app/data/sat/*`.
+
+    Idempotente: usa `ON CONFLICT DO NOTHING` por código. Si el SAT actualiza
+    una descripción, re-correr no la sobreescribe (preserva ediciones manuales
+    si las hubiera). Para forzar refresh, vaciar la tabla antes del seed.
+    """
+    try:
+        from app.data.sat import (
+            FORMAS_PAGO, METODOS_PAGO, USOS_CFDI, REGIMENES_FISCALES,
+            OBJETOS_IMP, IMPUESTOS, TIPOS_FACTOR, TASAS_O_CUOTAS,
+            MONEDAS, TIPOS_COMPROBANTE,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo importar datos SAT (%s); skip seed SAT.", exc)
+        return
+
+    plan: list[tuple[str, str, list[tuple]]] = [
+        (
+            "sat_forma_pago",
+            "INSERT INTO sat_forma_pago (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in FORMAS_PAGO],
+        ),
+        (
+            "sat_metodo_pago",
+            "INSERT INTO sat_metodo_pago (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in METODOS_PAGO],
+        ),
+        (
+            "sat_uso_cfdi",
+            "INSERT INTO sat_uso_cfdi (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in USOS_CFDI],
+        ),
+        (
+            "sat_regimen_fiscal",
+            "INSERT INTO sat_regimen_fiscal (codigo, descripcion, aplica_persona_fisica, aplica_persona_moral) "
+            "VALUES (:codigo, :descripcion, :pf, :pm) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d, "pf": pf, "pm": pm} for (c, d, pf, pm) in REGIMENES_FISCALES],
+        ),
+        (
+            "sat_objeto_imp",
+            "INSERT INTO sat_objeto_imp (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in OBJETOS_IMP],
+        ),
+        (
+            "sat_impuesto",
+            "INSERT INTO sat_impuesto (codigo, descripcion, aplica_traslado, aplica_retencion) "
+            "VALUES (:codigo, :descripcion, :tr, :re) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d, "tr": tr, "re": re} for (c, d, tr, re) in IMPUESTOS],
+        ),
+        (
+            "sat_tipo_factor",
+            "INSERT INTO sat_tipo_factor (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in TIPOS_FACTOR],
+        ),
+        (
+            "sat_tasa_o_cuota",
+            "INSERT INTO sat_tasa_o_cuota (id_local, impuesto, tipo_factor, valor, descripcion, es_retencion) "
+            "VALUES (:id_local, :imp, :tf, :val, :desc, :ret) ON CONFLICT (id_local) DO NOTHING",
+            [
+                {"id_local": idl, "imp": imp, "tf": tf, "val": val, "desc": desc, "ret": ret}
+                for (idl, imp, tf, val, desc, ret) in TASAS_O_CUOTAS
+            ],
+        ),
+        (
+            "sat_moneda",
+            "INSERT INTO sat_moneda (codigo, descripcion, decimales) VALUES (:codigo, :descripcion, :dec) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d, "dec": str(dec)} for (c, d, dec) in MONEDAS],
+        ),
+        (
+            "sat_tipo_comprobante",
+            "INSERT INTO sat_tipo_comprobante (codigo, descripcion) VALUES (:codigo, :descripcion) ON CONFLICT (codigo) DO NOTHING",
+            [{"codigo": c, "descripcion": d} for (c, d) in TIPOS_COMPROBANTE],
+        ),
+    ]
+
+    total = 0
+    for table_name, stmt, rows in plan:
+        try:
+            res = db.execute(text(stmt), rows)
+            inserted = res.rowcount if res.rowcount and res.rowcount > 0 else 0
+            db.commit()
+            total += inserted
+            if inserted:
+                logger.info("SAT %s: %d filas insertadas.", table_name, inserted)
+        except Exception as exc:
+            db.rollback()
+            logger.warning("SAT seed skip %s: %s", table_name, exc)
+
+    if total == 0:
+        logger.info("SAT catálogos chicos ya estaban completos.")
+
+
 def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
     seed_super_admin(db)
     seed_marcas(db)
+    seed_sat_catalogos_pequenos(db)
     logger.info("Startup completado correctamente.")

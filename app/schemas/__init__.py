@@ -63,6 +63,28 @@ from app.schemas.inventory import (  # noqa: F401
     DisponibilidadResponse,
 )
 
+from app.schemas.sat import (  # noqa: F401
+    SatFormaPagoResponse,
+    SatMetodoPagoResponse,
+    SatUsoCfdiResponse,
+    SatRegimenFiscalResponse,
+    SatObjetoImpResponse,
+    SatImpuestoResponse,
+    SatTipoFactorResponse,
+    SatTasaOCuotaResponse,
+    SatMonedaResponse,
+    SatTipoComprobanteResponse,
+    SatClaveProdServResponse,
+    SatClaveUnidadResponse,
+)
+
+from app.schemas.services import (  # noqa: F401
+    ServicioBase,
+    ServicioCreate,
+    ServicioUpdate,
+    ServicioResponse,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -83,4 +105,11 @@ __all__ = [
     "TipoCambioDiaResponse",
     # inventory
     "MovimientoStockResponse", "AjusteManualIn", "DisponibilidadResponse",
+    # sat
+    "SatFormaPagoResponse", "SatMetodoPagoResponse", "SatUsoCfdiResponse",
+    "SatRegimenFiscalResponse", "SatObjetoImpResponse", "SatImpuestoResponse",
+    "SatTipoFactorResponse", "SatTasaOCuotaResponse", "SatMonedaResponse",
+    "SatTipoComprobanteResponse", "SatClaveProdServResponse", "SatClaveUnidadResponse",
+    # services
+    "ServicioBase", "ServicioCreate", "ServicioUpdate", "ServicioResponse",
 ]

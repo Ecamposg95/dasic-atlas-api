@@ -63,6 +63,23 @@ class Producto(Base):
     precio_mayorista = Column(DECIMAL(10, 2), default=0.00)
     precio_distribuidor = Column(DECIMAL(10, 2), default=0.00)
 
+    # SAT (CFDI 4.0) — todos opcionales; la UI los marca como recomendados
+    # cuando se quiera emitir factura. clave_unidad_sat es alfanumérico
+    # (H87, KGM, E48, etc.) distinto del campo `unidad` comercial.
+    clave_prod_serv = Column(String(8), nullable=True, index=True)
+    clave_unidad_sat = Column(String(10), nullable=True)
+    objeto_imp = Column(String(2), nullable=True)
+    descripcion_fiscal = Column(Text, nullable=True)
+
+    # Clasificación interna
+    # - catalogo_fabricante: SKU del fabricante (lo que el cliente reconoce);
+    #   distinto de `sku` (interno DASIC) y de `sku_comercial`.
+    # - categoria: tipo del producto (relevadores, contactores, sensores, ...).
+    # - abreviatura: derivada de marca+categoria por abreviatura_service.
+    catalogo_fabricante = Column(String(80), nullable=True, index=True)
+    categoria = Column(String(80), nullable=True, index=True)
+    abreviatura = Column(String(20), nullable=True, index=True)
+
     promociones = relationship("Promocion", back_populates="producto")
     detalles_orden = relationship("DetalleOrden", back_populates="producto")
     detalles_compra = relationship("DetalleCompra", back_populates="producto")
