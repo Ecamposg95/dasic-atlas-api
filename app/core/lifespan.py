@@ -28,25 +28,25 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
 
     # 1. Crear tablas que no existan.
     #
-    # En producción `alembic upgrade head` debe ser el path canónico para el
-    # esquema. create_all() salta migraciones y puede dejar drift entre el
-    # modelo SQLAlchemy y lo que vive en BD (ej. CHECK constraints, índices,
-    # políticas ON DELETE no se aplican).
+    # En producción `alembic upgrade head` debería ser el path canónico para
+    # el esquema, pero el Procfile de Railway no lo corre y la app necesita
+    # bootstrap automático si la DB se dropeó. create_all() es idempotente:
+    # CREATE TABLE IF NOT EXISTS por cada modelo. _BACKFILL_DDL en seeds.py
+    # cubre columnas/tablas legacy como segundo puente.
     #
-    # Mantenemos create_all detrás de un flag opt-in para dev/test rápido
-    # (DB local recién creada). En prod el flag NO debería estar prendido;
-    # el _BACKFILL_DDL idempotente de seeds.py cubre columnas/tablas nuevas
-    # como puente.
-    if os.getenv("DASIC_AUTO_CREATE_TABLES", "0").strip().lower() in {"1", "true", "yes", "on"}:
+    # Override opcional: DASIC_AUTO_CREATE_TABLES=0 para desactivar (solo
+    # útil si migras a Alembic puro en deploy y quieres garantizar que
+    # create_all no enmascara drift).
+    if os.getenv("DASIC_AUTO_CREATE_TABLES", "1").strip().lower() in {"1", "true", "yes", "on"}:
         try:
             models.Base.metadata.create_all(bind=engine)
-            logger.info("Tables OK (create_all ejecutado vía DASIC_AUTO_CREATE_TABLES=1).")
+            logger.info("Tables OK (create_all idempotente al boot).")
         except Exception as exc:
             logger.error("Error en create_all: %s", exc, exc_info=True)
             raise
     else:
         logger.info(
-            "create_all desactivado (default). Usa 'alembic upgrade head' "
+            "create_all desactivado vía env. Usa 'alembic upgrade head' "
             "para schema; seeds.py corre DDL backfill idempotente como puente."
         )
 
