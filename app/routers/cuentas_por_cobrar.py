@@ -5,10 +5,10 @@ Endpoints:
   POST /api/cuentas-por-cobrar/marcar-vencidos       (admin; job manual)
 """
 
-from datetime import datetime
-from decimal import Decimal
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app import models
@@ -26,37 +26,52 @@ router = APIRouter(prefix="/api/cuentas-por-cobrar", tags=["Cuentas por cobrar"]
 
 @router.get("/resumen", dependencies=[Depends(allow_all_staff)])
 def resumen_cxc(db: Session = Depends(get_db)):
-    """Métricas globales: total por cobrar, vencido, por vencer (7/30 días)."""
-    rows = (
-        db.query(models.TransaccionCliente)
+    """Métricas globales: total por cobrar, vencido, por vencer (7/30 días).
+
+    Calcula los 4 buckets con un único `SELECT … SUM(CASE …)` en lugar de
+    cargar todas las transacciones en memoria. Mantiene la misma semántica
+    de buckets que la versión Python (delta<0 vencido, 0≤delta≤7 por vencer
+    7d, 8≤delta≤30 por vencer 30d).
+    """
+    hoy = datetime.utcnow().date()
+    saldo_expr = models.TransaccionCliente.monto - func.coalesce(
+        models.TransaccionCliente.monto_pagado, 0
+    )
+    venc = models.TransaccionCliente.fecha_vencimiento
+
+    row = (
+        db.query(
+            func.coalesce(func.sum(saldo_expr), 0).label("total_pendiente"),
+            func.coalesce(
+                func.sum(case((venc < hoy, saldo_expr), else_=0)), 0
+            ).label("total_vencido"),
+            func.coalesce(
+                func.sum(case((venc.between(hoy, hoy + timedelta(days=7)), saldo_expr), else_=0)),
+                0,
+            ).label("total_7"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (venc.between(hoy + timedelta(days=8), hoy + timedelta(days=30)), saldo_expr),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("total_30"),
+            func.count().label("n_cargos_abiertos"),
+        )
         .filter(models.TransaccionCliente.tipo == TipoMovimiento.CARGO)
         .filter(models.TransaccionCliente.estatus_pago != "pagado")
-        .all()
+        .filter(saldo_expr > 0)
+        .one()
     )
-    hoy = datetime.utcnow().date()
-    total_pendiente = Decimal("0")
-    total_vencido = Decimal("0")
-    total_7 = Decimal("0")
-    total_30 = Decimal("0")
-    for r in rows:
-        saldo = Decimal(r.monto or 0) - Decimal(r.monto_pagado or 0)
-        if saldo <= 0:
-            continue
-        total_pendiente += saldo
-        if r.fecha_vencimiento:
-            delta = (r.fecha_vencimiento - hoy).days
-            if delta < 0:
-                total_vencido += saldo
-            elif delta <= 7:
-                total_7 += saldo
-            elif delta <= 30:
-                total_30 += saldo
+
     return {
-        "total_pendiente": float(total_pendiente),
-        "total_vencido": float(total_vencido),
-        "por_vencer_7d": float(total_7),
-        "por_vencer_30d": float(total_30),
-        "n_cargos_abiertos": len([r for r in rows if (Decimal(r.monto or 0) - Decimal(r.monto_pagado or 0)) > 0]),
+        "total_pendiente": float(row.total_pendiente or 0),
+        "total_vencido": float(row.total_vencido or 0),
+        "por_vencer_7d": float(row.total_7 or 0),
+        "por_vencer_30d": float(row.total_30 or 0),
+        "n_cargos_abiertos": int(row.n_cargos_abiertos or 0),
     }
 
 
