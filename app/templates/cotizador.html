@@ -822,29 +822,38 @@
       const haystack = [sku, skuI, nombre, marca, desc].join(' ');
 
       const qLow = q.toLowerCase();
-      // Match directo
+      // Match directo (siempre, incluso con 1 char)
       if (sku.includes(qLow) || skuI.includes(qLow)) return 100;
       if (nombre.includes(qLow)) return 50;
       if (marca.includes(qLow)) return 30;
       if (desc.includes(qLow)) return 25;
 
-      // Sinónimos
-      const expanded = expandirConSinonimos(qLow);
-      let synScore = 0;
-      for (const k of expanded) {
-          if (k === qLow) continue;
-          if (haystack.includes(k)) { synScore = Math.max(synScore, 35); }
+      // Sinónimos solo si el query tiene >=3 chars; un query de 2 chars como
+      // "df" expandido a sinónimos producía falsos positivos masivos.
+      if (qLow.length >= 3) {
+          const expanded = expandirConSinonimos(qLow);
+          let synScore = 0;
+          for (const k of expanded) {
+              if (k === qLow) continue;
+              if (haystack.includes(k)) { synScore = Math.max(synScore, 35); }
+          }
+          if (synScore) return synScore;
       }
-      if (synScore) return synScore;
 
-      // Fuzzy en nombre/sku tokens
-      const tokens = nombre.split(/\s+/).filter(Boolean);
-      for (const tk of tokens) {
-          const d = levenshteinShort(qLow, tk);
-          if (d <= 2) return 20 - d * 5;
+      // Fuzzy SOLO con query >= 4 chars y distancia <= 1. Antes "df" matcheaba
+      // cualquier token de 2-3 letras a distancia 2 (AC, EN, DE...), llenando
+      // la lista de resultados con productos irrelevantes.
+      if (qLow.length >= 4) {
+          const tokens = nombre.split(/\s+/).filter(t => t.length >= 4);
+          for (const tk of tokens) {
+              const d = levenshteinShort(qLow, tk);
+              if (d <= 1) return 18 - d * 5;
+          }
+          if (sku.length >= 4) {
+              const dSku = levenshteinShort(qLow, sku);
+              if (dSku <= 1) return 20 - dSku * 5;
+          }
       }
-      const dSku = levenshteinShort(qLow, sku);
-      if (dSku <= 2) return 22 - dSku * 5;
 
       return 0;
   }
@@ -1626,9 +1635,20 @@
       const empty = document.getElementById('empty-search');
       list.innerHTML = '';
 
-      if(!txt || txt.trim().length < 1) {
+      const trimmed = (txt || '').trim();
+      if (!trimmed) {
           list.classList.add('hidden');
           empty.classList.remove('hidden');
+          return;
+      }
+      // Query muy corto: pide más caracteres (evita ruido del fuzzy en 1 char).
+      if (trimmed.length < 2 && !state.filtroMarca && !state.filtroCategoria) {
+          empty.classList.add('hidden');
+          list.classList.remove('hidden');
+          list.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">
+              Escribe al menos <b class="text-slate-300">2 caracteres</b>.
+          </div>`;
+          state.firstMatch = null;
           return;
       }
 
@@ -1650,34 +1670,60 @@
       empty.classList.add('hidden');
       list.classList.remove('hidden');
 
-      if(matches.length === 0) {
+      if (matches.length === 0) {
           // Sugerencia: ofrecer agregar como fantasma
           list.innerHTML = `<div class="p-4 text-center text-xs text-slate-600 dark:text-slate-400">
-              Sin resultados para <b class="text-slate-300">${txt}</b>.
+              Sin resultados para <b class="text-slate-300">${escapeHtml(txt)}</b>.
               <br><button onclick="abrirModalLineaCustom('fantasma')" class="mt-2 text-amber-400 underline">Agregar como producto fantasma</button>
           </div>`;
+          state.firstMatch = null;
           return;
       }
 
-      matches.slice(0, 10).forEach((p, idx) => {
+      // Contador (header sticky simple)
+      const totalMatches = matches.length;
+      const mostrados = Math.min(totalMatches, 12);
+      const head = document.createElement('div');
+      head.className = "px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10";
+      head.innerHTML = `<span class="font-bold text-cyan-400">${mostrados}</span> de ${totalMatches} resultados`;
+      list.appendChild(head);
+
+      matches.slice(0, 12).forEach((p, idx) => {
           const el = document.createElement('div');
-          el.className = "p-3 border-b border-slate-100 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-slate-700 cursor-pointer flex justify-between items-center transition group";
+          el.className = "px-3 py-2 border-b border-slate-100 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-slate-700/40 cursor-pointer transition group";
           el.dataset.idx = idx;
           el.onmousedown = (e) => { e.preventDefault(); addCart(p); };
           const sku = p.sku_comercial || p.sku || '—';
+          const stock = Number(p.stock_actual || 0);
+          const stockCls = stock === 0
+              ? 'bg-rose-500/15 text-rose-300'
+              : (stock < 5 ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300');
+          const moneda = (p.moneda_compra || 'MXN').toUpperCase();
           el.innerHTML = `
-              <div>
-                  <div class="font-bold text-xs text-slate-700 dark:text-slate-300">${sku}</div>
-                  <div class="text-xs text-slate-500 truncate w-40 group-hover:text-cyan-600">${p.nombre}</div>
+              <div class="flex items-start justify-between gap-2 mb-1">
+                  <div class="min-w-0 flex-1">
+                      <div class="font-bold text-[11px] font-mono text-slate-700 dark:text-slate-200 truncate" title="${escapeHtml(sku)}">${escapeHtml(sku)}</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 group-hover:text-cyan-500 line-clamp-2 leading-snug" title="${escapeHtml(p.nombre || '')}">${escapeHtml(p.nombre || '')}</div>
+                  </div>
+                  <div class="font-bold text-xs text-cyan-600 dark:text-cyan-400 whitespace-nowrap tabular-nums">${moneyForQuote(quoteCost(p))}</div>
               </div>
-              <div class="text-right">
-                  <div class="font-bold text-cyan-600 dark:text-cyan-400">${moneyForQuote(quoteCost(p))}</div>
-                  <div class="text-[10px] text-slate-400">${(p.moneda_compra || 'MXN').toUpperCase()} compra | Stock: ${p.stock_actual}</div>
+              <div class="flex items-center gap-1 flex-wrap">
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300">${moneda}</span>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${stockCls}">${stock} stock</span>
               </div>`;
           list.appendChild(el);
       });
       // expone primer match para Enter en el buscador
       state.firstMatch = matches[0] || null;
+  }
+
+  function escapeHtml(s) {
+      return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
   }
 
   async function cargarFiltrosCatalogo() {
@@ -1693,18 +1739,44 @@
               fetch('/api/productos/utils/categorias', { credentials: 'include' }).then(r => r.ok ? r.json() : { items: [] }),
           ]);
           if (selM) {
+              // Dedup por nombre normalizado (la tabla "marcas" puede tener
+              // duplicados por captura humana: "ALLEN BRADLEY" x14). Sumamos
+              // n_productos y ordenamos por uso desc + alfabético.
+              const acc = new Map();
               for (const m of (mr || [])) {
+                  const nombre = (m.nombre || m.abreviatura || '').trim();
+                  if (!nombre) continue;
+                  const key = nombre.toUpperCase();
+                  const prev = acc.get(key) || { value: nombre, count: 0 };
+                  prev.count += (m.n_productos || 0);
+                  acc.set(key, prev);
+              }
+              const ordenadas = Array.from(acc.values()).sort((a, b) => {
+                  const d = (b.count || 0) - (a.count || 0);
+                  return d !== 0 ? d : a.value.localeCompare(b.value);
+              });
+              for (const { value, count } of ordenadas) {
                   const opt = document.createElement('option');
-                  opt.value = m.nombre || m.abreviatura;
-                  opt.textContent = m.nombre;
+                  opt.value = value;
+                  opt.textContent = count > 0 ? `${value} (${count})` : value;
                   selM.appendChild(opt);
               }
           }
           if (selC) {
-              for (const c of (cr.items || [])) {
+              const seen = new Set();
+              const items = (cr.items || []).filter(c => {
+                  const k = (c.categoria || '').trim().toUpperCase();
+                  if (!k || seen.has(k)) return false;
+                  seen.add(k);
+                  return true;
+              });
+              items.sort((a, b) => ((b.n_productos || 0) - (a.n_productos || 0)) || a.categoria.localeCompare(b.categoria));
+              for (const c of items) {
                   const opt = document.createElement('option');
                   opt.value = c.categoria;
-                  opt.textContent = c.categoria;
+                  opt.textContent = (c.n_productos || 0) > 0
+                      ? `${c.categoria} (${c.n_productos})`
+                      : c.categoria;
                   selC.appendChild(opt);
               }
           }
