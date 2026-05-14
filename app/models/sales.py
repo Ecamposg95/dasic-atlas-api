@@ -61,7 +61,9 @@ class DetalleOrden(Base):
     # Productos fantasma o servicios ad-hoc: si producto_id y servicio_id
     # son ambos NULL, usar estos campos.
     sku_libre = Column(String(80), nullable=True)
-    descripcion_libre = Column(String(255), nullable=True)
+    # Text (no length cap): para productos fantasma / servicios ad-hoc el usuario
+    # pega descripciones reales del fabricante que rebasan 255 chars con facilidad.
+    descripcion_libre = Column(Text, nullable=True)
     moneda_origen_linea = Column(String(3), nullable=True)
     costo_base_linea = Column(DECIMAL(12, 2), nullable=True)
 

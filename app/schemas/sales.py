@@ -24,7 +24,7 @@ class DetalleOrdenCreate(BaseModel):
     moneda_origen: Optional[str] = Field(default=None, min_length=3, max_length=3)
     # Productos fantasma / servicios ad-hoc
     sku_libre: Optional[str] = Field(default=None, max_length=80)
-    descripcion_libre: Optional[str] = Field(default=None, max_length=255)
+    descripcion_libre: Optional[str] = Field(default=None)
     costo_unitario: Optional[Decimal] = Field(default=None, ge=0)
     # Tipo de línea: producto_catalogo / producto_fantasma / servicio (ad-hoc) /
     # servicio_catalogo (vinculado a Servicio).

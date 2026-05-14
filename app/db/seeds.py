@@ -264,6 +264,13 @@ _BACKFILL_DDL = [
     "DROP INDEX IF EXISTS ix_productos_catalogo_fabricante",
     "ALTER TABLE IF EXISTS productos DROP COLUMN IF EXISTS abreviatura",
     "ALTER TABLE IF EXISTS productos DROP COLUMN IF EXISTS catalogo_fabricante",
+
+    # ====================================================================
+    # 20260517_02 — detalles_orden.descripcion_libre VARCHAR(255) → TEXT
+    # Líneas fantasma/servicio reciben descripciones reales que rebasan 255.
+    # Idempotente: ALTER TYPE TEXT cuando ya es TEXT es no-op en Postgres.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_orden ALTER COLUMN descripcion_libre TYPE TEXT",
 ]
 
 
