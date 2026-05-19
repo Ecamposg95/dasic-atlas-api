@@ -1137,9 +1137,15 @@
           const main = document.querySelector('main') || document.querySelector('.container') || document.body;
           main.insertBefore(banner, main.firstChild);
       }
+      const pillPdf = state.pdfDesactualizado
+          ? `<span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 border border-amber-300"
+                    title="El PDF más reciente no refleja los cambios actuales. Descarga uno nuevo para sincronizar.">
+                <i class="fas fa-triangle-exclamation"></i> PDF desactualizado
+             </span>`
+          : '';
       banner.innerHTML = `
         <span><i class="fas fa-pen-to-square mr-1"></i>
-        Editando <strong>${state.editingFolio || ''}</strong> (V${state.editingVersion || 1}) — los cambios actualizan la cotización original.</span>
+        Editando <strong>${state.editingFolio || ''}</strong> (V${state.editingVersion || 1}) — los cambios actualizan la cotización original.${pillPdf}</span>
         <button type="button" onclick="cancelarEdicion()"
                 class="text-xs underline hover:text-white">Cancelar edición</button>
       `;
