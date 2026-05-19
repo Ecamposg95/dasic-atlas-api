@@ -281,7 +281,7 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS pdf_generado_at TIMESTAMP WITH TIME ZONE NULL",
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()",
     "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_enviada_at ON ordenes_venta(enviada_at)",
-    "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS nota VARCHAR(255) NULL",
+    "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS nota TEXT NULL",
     "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS actualizado_por INTEGER NULL",
 ]
 

@@ -40,14 +40,14 @@ def upgrade() -> None:
     )
     op.add_column(
         "tipos_cambio_dia",
-        sa.Column("nota", sa.String(length=255), nullable=True),
+        sa.Column("nota", sa.Text(), nullable=True),
     )
     op.add_column(
         "tipos_cambio_dia",
         sa.Column("actualizado_por", sa.Integer(), nullable=True),
     )
     op.create_foreign_key(
-        "fk_tipos_cambio_dia_actualizado_por_usuarios",
+        "fk_tipos_cambio_dia_actualizado_por",
         "tipos_cambio_dia",
         "usuarios",
         ["actualizado_por"],
@@ -57,7 +57,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_constraint(
-        "fk_tipos_cambio_dia_actualizado_por_usuarios",
+        "fk_tipos_cambio_dia_actualizado_por",
         "tipos_cambio_dia",
         type_="foreignkey",
     )
