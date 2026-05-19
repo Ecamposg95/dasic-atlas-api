@@ -69,6 +69,16 @@
               title="TC del día (click para refrescar)"></span>
       </div>
 
+      {% if current_user and current_user.rol and current_user.rol.value == "ADMINISTRADOR" %}
+      <!-- Admin: pisar TC del día (Task 6.2) -->
+      <button type="button" onclick="abrirModalFXOverride()"
+              class="dax-btn-ghost text-xs flex items-center gap-1"
+              title="Pisar TC del día con un valor manual">
+        <i class="fas fa-shield-halved text-amber-500"></i>
+        <span class="hidden md:inline">Pisar TC</span>
+      </button>
+      {% endif %}
+
       <!-- Fechas (solo en modo edición borrador) -->
       <div id="div-fechas" class="hidden flex items-center gap-2">
         <label class="text-xs text-slate-500">Emisión</label>
@@ -2978,5 +2988,81 @@
             })
             .catch(() => {});
         });
+
+        // FX override admin (Task 6.2)
+        async function abrirModalFXOverride() {
+          // Cargar TC del día actual para mostrar contexto
+          let actual = null;
+          try {
+            const r = await fetch('/api/fx/usd-mxn', { credentials: 'include' });
+            if (r.ok) actual = await r.json();
+          } catch (e) {}
+
+          const fechaDefault = new Date().toISOString().slice(0, 10);
+          const tcActualStr = actual
+            ? `<div class="text-xs text-slate-500 mb-2">TC actual: <b class="font-mono">${parseFloat(actual.usd_mxn).toFixed(4)}</b> · Fuente: ${actual.fuente}</div>`
+            : '';
+
+          const r = await Swal.fire({
+            title: 'Pisar TC del día',
+            html: `
+              ${tcActualStr}
+              <div class="text-xs text-slate-500 text-left mb-3">Las cotizaciones nuevas USD usarán este TC. Las cotizaciones ya guardadas conservan su propio TC.</div>
+              <label class="block text-xs text-slate-500 text-left mb-1">Fecha</label>
+              <input type="date" id="fx-override-fecha" value="${fechaDefault}"
+                     class="swal2-input" style="margin: 0 0 8px 0; width: 100%; box-sizing: border-box;">
+              <label class="block text-xs text-slate-500 text-left mb-1">Nuevo TC (USD/MXN)</label>
+              <input type="number" step="0.01" min="1" max="100" id="fx-override-valor"
+                     class="swal2-input" style="margin: 0 0 8px 0; width: 100%; box-sizing: border-box;"
+                     placeholder="19.50">
+              <label class="block text-xs text-slate-500 text-left mb-1">Nota</label>
+              <input type="text" id="fx-override-nota" maxlength="250"
+                     class="swal2-input" style="margin: 0; width: 100%; box-sizing: border-box;"
+                     placeholder="ej: ajuste por volatilidad">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Confirmar pisar',
+            cancelButtonText: 'Cancelar',
+            focusConfirm: false,
+            preConfirm: () => {
+              const fecha = document.getElementById('fx-override-fecha').value;
+              const valor = parseFloat(document.getElementById('fx-override-valor').value);
+              const nota = document.getElementById('fx-override-nota').value || null;
+              if (!fecha) { Swal.showValidationMessage('Captura una fecha'); return false; }
+              if (!valor || valor < 1 || valor > 100) { Swal.showValidationMessage('Captura un TC entre 1 y 100'); return false; }
+              return { fecha, usd_mxn: valor, nota };
+            },
+          });
+          if (!r.isConfirmed) return;
+
+          try {
+            const res = await fetch('/api/fx/override', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(r.value),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              Swal.fire({
+                icon: 'success',
+                title: 'TC pisado',
+                html: `Nuevo TC del día: <b class="font-mono">${parseFloat(data.usd_mxn).toFixed(4)}</b>`,
+              });
+              // Refrescar el TC mostrado en el badge si existe
+              if (typeof recargarTC === 'function') recargarTC();
+            } else {
+              let detail = 'No se pudo pisar el TC.';
+              try {
+                const err = await res.json();
+                if (typeof err.detail === 'string') detail = err.detail;
+                else if (err.detail && err.detail.message) detail = err.detail.message;
+              } catch (e) {}
+              Swal.fire('Error', detail, 'error');
+            }
+          } catch (e) {
+            Swal.fire('Error de red', String(e), 'error');
+          }
+        }
 </script>
 {% endblock %}
