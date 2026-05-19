@@ -2745,6 +2745,39 @@
                   if (obsDot) obsDot.classList.add('hidden');
                   if (trmDot && trm) trmDot.classList.toggle('hidden', !(trm.value || '').trim());
               }
+          } else if (res.status === 409) {
+              // 409 ALREADY_SENT → ofrecer recotización; 409 WRONG_STATE → mensaje claro
+              let err = null;
+              try { err = await res.json(); } catch(_) {}
+              const code = err && err.detail && err.detail.code;
+              if (code === 'ALREADY_SENT' && state.editingId) {
+                  const r = await Swal.fire({
+                      icon: 'info',
+                      title: 'Cotización ya enviada',
+                      html: '<div class="text-sm text-left">Esta cotización ya fue enviada al cliente. Para registrar los cambios necesitamos crear una <b>versión nueva</b>. La versión actual quedará como histórica.</div>',
+                      showCancelButton: true,
+                      confirmButtonText: 'Crear versión nueva',
+                      cancelButtonText: 'Cancelar',
+                  });
+                  if (r.isConfirmed) {
+                      const rec = await fetch(`/api/ventas/${state.editingId}/recotizar`, { method: 'POST', credentials: 'include' });
+                      if (rec.ok) {
+                          const nueva = await rec.json();
+                          window.location.href = `/ventas/cotizador?id=${nueva.id}`;
+                      } else {
+                          let detRec = 'No se pudo recotizar.';
+                          try {
+                              const e2 = await rec.json();
+                              if (typeof e2.detail === 'string') detRec = e2.detail;
+                              else if (e2.detail && e2.detail.message) detRec = e2.detail.message;
+                          } catch(_) {}
+                          Swal.fire('Error', detRec, 'error');
+                      }
+                  }
+              } else {
+                  const msg = (err && err.detail && (err.detail.message || err.detail)) || 'Conflicto al guardar.';
+                  Swal.fire('No se pudo guardar', typeof msg === 'string' ? msg : 'Conflicto al guardar.', 'warning');
+              }
           } else {
               let detail = 'No se pudo guardar.';
               try {
