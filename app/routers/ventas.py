@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, select, text
 from typing import List, Optional
 from decimal import Decimal
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from jinja2 import Environment, BaseLoader
 from pydantic import BaseModel, EmailStr, Field
 
@@ -708,37 +708,21 @@ def actualizar_orden(
 ):
     orden = (
         db.query(models.OrdenVenta)
-        .filter(models.OrdenVenta.id == id)
-        .with_for_update()
+        .filter(
+            models.OrdenVenta.id == id,
+        )
         .first()
     )
-    if not orden:
-        raise HTTPException(404, "Orden no encontrada")
+    if not orden: raise HTTPException(404, "Orden no encontrada")
 
     # Ownership: VENTAS sólo edita las propias; admin/gerente pasan.
     _check_owner_or_403(orden, current_user, action="write")
 
     if orden.estatus != models.EstatusOrden.COTIZACION:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "WRONG_STATE",
-                    "message": "Solo se editan cotizaciones en estado COTIZACION."},
-        )
-
-    if orden.enviada_at is not None:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "ALREADY_SENT",
-                    "message": "Cotización ya enviada al cliente. Crea una versión nueva.",
-                    "recotizar_url": f"/api/ventas/{id}/recotizar"},
-        )
-
-    total_anterior = orden.total or Decimal(0)
+        raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
 
     moneda_cotizacion = _normalize_currency(orden_update.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_update.tipo_cambio)
-    if not (Decimal("1.0") <= Decimal(tipo_cambio) <= Decimal("100.0")):
-        raise HTTPException(400, "tipo_cambio fuera de rango (1.0 a 100.0)")
 
     try:
         # Actualizar cabecera
@@ -748,13 +732,7 @@ def actualizar_orden(
             orden.terminos_condiciones = orden_update.terminos_condiciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
-        if orden_update.fecha_creacion is not None:
-            orden.fecha_creacion = orden_update.fecha_creacion
-        if orden_update.fecha_vencimiento is not None:
-            orden.fecha_vencimiento = orden_update.fecha_vencimiento
-        elif orden.fecha_vencimiento is None:
-            # No tenía vencimiento previo; aplicar default
-            orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
+        orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
 
         # Liberar reservas previas antes de borrar y reinsertar detalles
         liberar_reservas_cotizacion(
@@ -871,21 +849,6 @@ def actualizar_orden(
                 )
 
         orden.total = total_orden.quantize(Decimal("0.01"))
-
-        db.add(models.QuoteEvent(
-            orden_id=orden.id,
-            canal="NOTE",
-            direccion="INTERNAL",
-            estatus="LOGGED",
-            asunto="EDITED",
-            cuerpo="",
-            metadata_json=_cr_json.dumps({
-                "total_anterior": float(total_anterior),
-                "total_nuevo": float(orden.total),
-            }),
-            creado_por_id=current_user.id,
-        ))
-
         db.commit()
         db.refresh(orden)
         return orden
@@ -946,8 +909,6 @@ def recotizar(
         fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
         cotizacion_origen_id=raiz_id,
         version=siguiente_version,
-        enviada_at=None,
-        pdf_generado_at=None,
     )
     db.add(nueva)
     db.flush()
@@ -956,7 +917,6 @@ def recotizar(
         db.add(models.DetalleOrden(
             orden_id=nueva.id,
             producto_id=det.producto_id,
-            servicio_id=det.servicio_id,
             sku_libre=det.sku_libre,
             descripcion_libre=det.descripcion_libre,
             moneda_origen_linea=det.moneda_origen_linea,
@@ -973,38 +933,6 @@ def recotizar(
             entrega_unidad=det.entrega_unidad,
             observaciones_linea=det.observaciones_linea,
         ))
-
-    # Audit: registrar evento en origen y en hija
-    db.add(models.QuoteEvent(
-        orden_id=origen.id,
-        canal="NOTE",
-        direccion="INTERNAL",
-        estatus="LOGGED",
-        asunto="RECOTIZADA",
-        cuerpo="",
-        metadata_json=_cr_json.dumps({
-            "accion": "origen_clonada",
-            "hija_id": nueva.id,
-            "hija_folio": folio_versionado,
-            "version": siguiente_version,
-        }),
-        creado_por_id=current_user.id,
-    ))
-    db.add(models.QuoteEvent(
-        orden_id=nueva.id,
-        canal="NOTE",
-        direccion="INTERNAL",
-        estatus="LOGGED",
-        asunto="RECOTIZADA",
-        cuerpo="",
-        metadata_json=_cr_json.dumps({
-            "accion": "clonada_de",
-            "origen_id": origen.id,
-            "origen_folio": origen.folio,
-            "version": siguiente_version,
-        }),
-        creado_por_id=current_user.id,
-    ))
 
     db.commit()
     db.refresh(nueva)
@@ -1160,74 +1088,6 @@ def listar_historial(
         "esta_vencida": bool(o.fecha_vencimiento and o.fecha_vencimiento.date() < ahora),
     } for o in ordenes]
 
-
-@router.get("/borradores", dependencies=[Depends(allow_all_staff)])
-def listar_borradores(
-    page: int = 1,
-    page_size: int = 50,
-    db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user),
-):
-    """Cotizaciones en COTIZACION sin enviar — pila de borradores."""
-    require(current_user, "read", "cotizacion")
-
-    if page < 1 or page_size < 1 or page_size > 200:
-        raise HTTPException(400, "page o page_size inválido")
-
-    offset = (page - 1) * page_size
-
-    query = db.query(models.OrdenVenta).filter(
-        models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
-        models.OrdenVenta.enviada_at.is_(None),
-    )
-    if is_owner_scoped(current_user, "read", "cotizacion"):
-        query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
-
-    rows = (
-        query
-        .order_by(
-            desc(models.OrdenVenta.actualizado_en),
-            desc(models.OrdenVenta.fecha_creacion),
-        )
-        .offset(offset)
-        .limit(page_size)
-        .all()
-    )
-
-    ahora = datetime.now(tz=timezone.utc)
-
-    def _edad_dias(dt):
-        if dt is None:
-            return None
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return max((ahora - dt).days, 0)
-
-    return {
-        "page": page,
-        "page_size": page_size,
-        "items": [
-            {
-                "id": r.id,
-                "folio": r.folio,
-                "cliente_id": r.cliente_id,
-                "cliente_nombre": r.cliente.nombre_empresa if r.cliente else None,
-                "moneda": r.moneda,
-                "total": float(r.total or 0),
-                "tipo_cambio": float(r.tipo_cambio or 0),
-                "actualizado_en": (r.actualizado_en or r.fecha_creacion).isoformat() if (r.actualizado_en or r.fecha_creacion) else None,
-                "edad_dias": _edad_dias(r.actualizado_en or r.fecha_creacion),
-                "pdf_desactualizado": (
-                    r.pdf_generado_at is None
-                    or (r.actualizado_en is not None and r.actualizado_en > r.pdf_generado_at)
-                ),
-                "lineas_count": len(r.detalles),
-            }
-            for r in rows
-        ],
-    }
-
-
 # --- 5. DETALLE JSON (PARA EDICIÓN) ---
 @router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
 def obtener_detalle_orden(
@@ -1290,11 +1150,6 @@ def obtener_detalle_orden(
             "observaciones_linea": d.observaciones_linea,
         })
 
-    pdf_desactualizado = (
-        orden.pdf_generado_at is None
-        or (orden.actualizado_en is not None and orden.actualizado_en > orden.pdf_generado_at)
-    )
-
     return {
         "id": orden.id,
         "folio": orden.folio,
@@ -1305,11 +1160,6 @@ def obtener_detalle_orden(
         "terminos_condiciones": orden.terminos_condiciones,
         "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
         "version": orden.version or 1,
-        "fecha_creacion": orden.fecha_creacion.isoformat() if orden.fecha_creacion else None,
-        "fecha_vencimiento": orden.fecha_vencimiento.isoformat() if orden.fecha_vencimiento else None,
-        "enviada_at": orden.enviada_at.isoformat() if orden.enviada_at else None,
-        "pdf_generado_at": orden.pdf_generado_at.isoformat() if orden.pdf_generado_at else None,
-        "pdf_desactualizado": pdf_desactualizado,
         "detalles": detalles,
     }
 
@@ -1362,9 +1212,6 @@ def generar_pdf(
         qr_data_uri = f"data:image/png;base64,{qr_b64}"
     except Exception:
         qr_data_uri = None
-
-    orden.pdf_generado_at = datetime.now(tz=timezone.utc)
-    db.commit()
 
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(
@@ -1488,26 +1335,13 @@ def enviar_correo(
         estatus = "FAILED"
         error_detail = str(exc)
 
-    # Abrir nueva sesión para actualizar el estatus del evento + timestamps de la orden tras el SMTP
+    # Abrir nueva sesión para actualizar el estatus del evento tras el SMTP
     db2 = SessionLocal()
     try:
         ev = db2.query(models.QuoteEvent).filter(models.QuoteEvent.id == evento_id).first()
         if ev:
             ev.estatus = estatus
-
-        if estatus == "SENT":
-            orden2 = (
-                db2.query(models.OrdenVenta)
-                .filter(models.OrdenVenta.id == orden_id)
-                .first()
-            )
-            if orden2:
-                ahora = datetime.now(tz=timezone.utc)
-                orden2.pdf_generado_at = ahora
-                if orden2.enviada_at is None:
-                    orden2.enviada_at = ahora
-
-        db2.commit()
+            db2.commit()
     finally:
         db2.close()
 

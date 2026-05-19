@@ -85,10 +85,6 @@ class OrdenVentaCreate(BaseModel):
     observaciones: Optional[str] = None
     moneda: str = Field(default="MXN", min_length=3, max_length=3)
     tipo_cambio: Optional[Decimal] = Field(default=None, gt=0)
-    # Fechas editables: el editor de borradores puede sobreescribir la fecha
-    # de creación y la fecha de vencimiento de la cotización.
-    fecha_creacion: Optional[datetime] = None
-    fecha_vencimiento: Optional[datetime] = None
     # Bloque editable de Condiciones Comerciales. None → backend aplica
     # defaults. Vacío "" → usuario eligió no tener condiciones (PDF muestra
     # solo metadata: moneda, vigencia).
