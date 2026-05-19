@@ -11,7 +11,7 @@
 {% block content %}
 <div class="flex-1 flex flex-col gap-4 overflow-hidden h-full">
 
-  <div class="mb-4 border-b border-slate-300 dark:border-slate-700 flex-none">
+  <div class="mb-4 border-b border-slate-300 dark:border-slate-700 flex-none flex items-center justify-between">
     <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
       <li class="mr-2">
         <button onclick="cambiarTab('nuevo')" id="tab-btn-nuevo" class="inline-block p-3 border-b-2 border-blue-600 text-blue-600 rounded-t-lg active dark:text-blue-400 dark:border-blue-400 transition-colors">
@@ -24,6 +24,14 @@
         </button>
       </li>
     </ul>
+    <button type="button" onclick="abrirDrawerBorradores()"
+            class="dax-btn-ghost text-sm flex items-center gap-2 mb-2 mr-2"
+            title="Borradores apilados">
+      <i class="fas fa-layer-group"></i>
+      <span class="hidden sm:inline">Borradores</span>
+      <span id="borradores-count"
+            class="hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-500 text-white text-[10px] font-bold"></span>
+    </button>
   </div>
 
   <div id="view-nuevo" class="flex-1 flex flex-col gap-4 overflow-hidden">
@@ -623,6 +631,29 @@
   </div>
 
 </div>
+
+<!-- Drawer "Borradores apilados" (Task 3.4) -->
+<div id="drawer-borradores" class="hidden fixed inset-0 z-40">
+  <div class="absolute inset-0 bg-black/30" onclick="cerrarDrawerBorradores()"></div>
+  <aside class="absolute right-0 top-0 h-full w-[360px] bg-white dark:bg-slate-900 shadow-xl overflow-y-auto">
+    <header class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+      <h3 class="font-medium text-slate-800 dark:text-slate-100">Borradores apilados</h3>
+      <button onclick="cerrarDrawerBorradores()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none">&times;</button>
+    </header>
+    <div id="drawer-borradores-list" class="divide-y divide-slate-100 dark:divide-slate-800">
+      <div class="p-8 text-center text-slate-400 text-sm">
+        <i class="fas fa-spinner fa-spin"></i> Cargando…
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+      <button id="drawer-borradores-more"
+              class="hidden text-cyan-600 hover:underline"
+              onclick="cargarBorradoresMas()">Cargar más</button>
+      <a href="/borradores" class="text-slate-500 dark:text-slate-400 hover:underline ml-auto">Ver todos →</a>
+    </div>
+  </aside>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -2813,5 +2844,106 @@
           input.value = next.toFixed(2);
           if (typeof recalculer === 'function') recalculer();
         }
+
+        // Drawer "Borradores apilados" (Task 3.4)
+        const borradoresState = { page: 1, page_size: 20, items: [], hasMore: false };
+
+        async function abrirDrawerBorradores() {
+          const drawer = document.getElementById('drawer-borradores');
+          if (drawer) drawer.classList.remove('hidden');
+          borradoresState.page = 1;
+          borradoresState.items = [];
+          await cargarBorradores();
+        }
+
+        function cerrarDrawerBorradores() {
+          const drawer = document.getElementById('drawer-borradores');
+          if (drawer) drawer.classList.add('hidden');
+        }
+
+        async function cargarBorradores() {
+          const list = document.getElementById('drawer-borradores-list');
+          const moreBtn = document.getElementById('drawer-borradores-more');
+          if (!list) return;
+          try {
+            const r = await fetch(`/api/ventas/borradores?page=${borradoresState.page}&page_size=${borradoresState.page_size}`, { credentials: 'include' });
+            if (!r.ok) {
+              list.innerHTML = '<div class="p-8 text-center text-rose-500 text-sm">Error al cargar borradores.</div>';
+              return;
+            }
+            const data = await r.json();
+            const incoming = data.items || [];
+            borradoresState.items = borradoresState.page === 1 ? incoming : borradoresState.items.concat(incoming);
+            borradoresState.hasMore = incoming.length === borradoresState.page_size;
+
+            // Render
+            if (borradoresState.items.length === 0) {
+              list.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm"><i class="fas fa-inbox mr-1"></i> Sin borradores apilados.</div>';
+            } else {
+              list.innerHTML = borradoresState.items.map(b => `
+                <a href="/cotizador?id=${b.id}" class="block p-4 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <div class="text-xs text-slate-500 flex justify-between">
+                    <span class="font-mono">${b.folio || ''}</span>
+                    <span>${b.edad_dias === 0 ? 'hoy' : (b.edad_dias || 0) + 'd'}</span>
+                  </div>
+                  <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">${b.cliente_nombre || '— Sin cliente'}</div>
+                  <div class="text-xs text-slate-600 dark:text-slate-400">
+                    $${(b.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${b.moneda || ''}
+                    · ${b.lineas_count || 0} líneas
+                  </div>
+                  ${b.pdf_desactualizado ? '<div class="text-xs text-amber-700 dark:text-amber-400 mt-1"><i class="fas fa-triangle-exclamation"></i> PDF desactualizado</div>' : ''}
+                </a>
+              `).join('');
+            }
+
+            // Counter pill
+            const counter = document.getElementById('borradores-count');
+            if (counter) {
+              if (borradoresState.items.length > 0) {
+                counter.textContent = borradoresState.items.length;
+                counter.classList.remove('hidden');
+              } else {
+                counter.classList.add('hidden');
+              }
+            }
+
+            // "Cargar más" visibility
+            if (moreBtn) {
+              moreBtn.classList.toggle('hidden', !borradoresState.hasMore);
+            }
+          } catch (e) {
+            console.error('Borradores fetch failed', e);
+            list.innerHTML = '<div class="p-8 text-center text-rose-500 text-sm">Error al cargar borradores.</div>';
+          }
+        }
+
+        async function cargarBorradoresMas() {
+          borradoresState.page += 1;
+          await cargarBorradores();
+        }
+
+        // Cerrar drawer con Esc
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            const d = document.getElementById('drawer-borradores');
+            if (d && !d.classList.contains('hidden')) cerrarDrawerBorradores();
+          }
+        });
+
+        // Pre-cargar el contador al abrir el cotizador (no abre el drawer, solo lee el conteo)
+        window.addEventListener('load', () => {
+          fetch('/api/ventas/borradores?page=1&page_size=1', { credentials: 'include' })
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+              if (!d) return;
+              const counter = document.getElementById('borradores-count');
+              if (counter && (d.items || []).length > 0) {
+                // Solo mostramos cuenta exacta cuando se abre el drawer; aquí indicamos "hay al menos 1"
+                counter.textContent = '·';
+                counter.classList.remove('hidden');
+              }
+            })
+            .catch(() => {});
+        });
 </script>
 {% endblock %}
