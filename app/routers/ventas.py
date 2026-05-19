@@ -708,21 +708,37 @@ def actualizar_orden(
 ):
     orden = (
         db.query(models.OrdenVenta)
-        .filter(
-            models.OrdenVenta.id == id,
-        )
+        .filter(models.OrdenVenta.id == id)
+        .with_for_update()
         .first()
     )
-    if not orden: raise HTTPException(404, "Orden no encontrada")
+    if not orden:
+        raise HTTPException(404, "Orden no encontrada")
 
     # Ownership: VENTAS sólo edita las propias; admin/gerente pasan.
     _check_owner_or_403(orden, current_user, action="write")
 
     if orden.estatus != models.EstatusOrden.COTIZACION:
-        raise HTTPException(400, "Solo se pueden editar cotizaciones, no ventas cerradas.")
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "WRONG_STATE",
+                    "message": "Solo se editan cotizaciones en estado COTIZACION."},
+        )
+
+    if orden.enviada_at is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ALREADY_SENT",
+                    "message": "Cotización ya enviada al cliente. Crea una versión nueva.",
+                    "recotizar_url": f"/api/ventas/{id}/recotizar"},
+        )
+
+    total_anterior = orden.total or Decimal(0)
 
     moneda_cotizacion = _normalize_currency(orden_update.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_update.tipo_cambio)
+    if not (Decimal("1.0") <= Decimal(tipo_cambio) <= Decimal("100.0")):
+        raise HTTPException(400, "tipo_cambio fuera de rango (1.0 a 100.0)")
 
     try:
         # Actualizar cabecera
@@ -732,7 +748,13 @@ def actualizar_orden(
             orden.terminos_condiciones = orden_update.terminos_condiciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
-        orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
+        if orden_update.fecha_creacion is not None:
+            orden.fecha_creacion = orden_update.fecha_creacion
+        if orden_update.fecha_vencimiento is not None:
+            orden.fecha_vencimiento = orden_update.fecha_vencimiento
+        elif orden.fecha_vencimiento is None:
+            # No tenía vencimiento previo; aplicar default
+            orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
 
         # Liberar reservas previas antes de borrar y reinsertar detalles
         liberar_reservas_cotizacion(
@@ -849,6 +871,20 @@ def actualizar_orden(
                 )
 
         orden.total = total_orden.quantize(Decimal("0.01"))
+
+        db.add(models.QuoteEvent(
+            orden_id=orden.id,
+            canal="NOTE",
+            direccion="INTERNAL",
+            estatus="LOGGED",
+            asunto="EDITED",
+            metadata_json=_cr_json.dumps({
+                "total_anterior": float(total_anterior),
+                "total_nuevo": float(orden.total),
+            }),
+            creado_por_id=current_user.id,
+        ))
+
         db.commit()
         db.refresh(orden)
         return orden
