@@ -878,6 +878,7 @@ def actualizar_orden(
             direccion="INTERNAL",
             estatus="LOGGED",
             asunto="EDITED",
+            cuerpo="",
             metadata_json=_cr_json.dumps({
                 "total_anterior": float(total_anterior),
                 "total_nuevo": float(orden.total),
