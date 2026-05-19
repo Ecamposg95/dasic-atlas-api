@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, select, text
 from typing import List, Optional
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jinja2 import Environment, BaseLoader
 from pydantic import BaseModel, EmailStr, Field
 
@@ -1249,6 +1249,9 @@ def generar_pdf(
         qr_data_uri = f"data:image/png;base64,{qr_b64}"
     except Exception:
         qr_data_uri = None
+
+    orden.pdf_generado_at = datetime.now(tz=timezone.utc)
+    db.commit()
 
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(
