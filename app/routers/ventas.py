@@ -1125,6 +1125,74 @@ def listar_historial(
         "esta_vencida": bool(o.fecha_vencimiento and o.fecha_vencimiento.date() < ahora),
     } for o in ordenes]
 
+
+@router.get("/borradores", dependencies=[Depends(allow_all_staff)])
+def listar_borradores(
+    page: int = 1,
+    page_size: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Cotizaciones en COTIZACION sin enviar — pila de borradores."""
+    require(current_user, "read", "cotizacion")
+
+    if page < 1 or page_size < 1 or page_size > 200:
+        raise HTTPException(400, "page o page_size inválido")
+
+    offset = (page - 1) * page_size
+
+    query = db.query(models.OrdenVenta).filter(
+        models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
+        models.OrdenVenta.enviada_at.is_(None),
+    )
+    if is_owner_scoped(current_user, "read", "cotizacion"):
+        query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
+
+    rows = (
+        query
+        .order_by(
+            desc(models.OrdenVenta.actualizado_en),
+            desc(models.OrdenVenta.fecha_creacion),
+        )
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    ahora = datetime.now(tz=timezone.utc)
+
+    def _edad_dias(dt):
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return max((ahora - dt).days, 0)
+
+    return {
+        "page": page,
+        "page_size": page_size,
+        "items": [
+            {
+                "id": r.id,
+                "folio": r.folio,
+                "cliente_id": r.cliente_id,
+                "cliente_nombre": r.cliente.nombre_empresa if r.cliente else None,
+                "moneda": r.moneda,
+                "total": float(r.total or 0),
+                "tipo_cambio": float(r.tipo_cambio or 0),
+                "actualizado_en": (r.actualizado_en or r.fecha_creacion).isoformat() if (r.actualizado_en or r.fecha_creacion) else None,
+                "edad_dias": _edad_dias(r.actualizado_en or r.fecha_creacion),
+                "pdf_desactualizado": (
+                    r.pdf_generado_at is None
+                    or (r.actualizado_en is not None and r.actualizado_en > r.pdf_generado_at)
+                ),
+                "lineas_count": len(r.detalles),
+            }
+            for r in rows
+        ],
+    }
+
+
 # --- 5. DETALLE JSON (PARA EDICIÓN) ---
 @router.get("/{id}/detalle-json", dependencies=[Depends(allow_all_staff)])
 def obtener_detalle_orden(
