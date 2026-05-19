@@ -1290,6 +1290,11 @@ def obtener_detalle_orden(
             "observaciones_linea": d.observaciones_linea,
         })
 
+    pdf_desactualizado = (
+        orden.pdf_generado_at is None
+        or (orden.actualizado_en is not None and orden.actualizado_en > orden.pdf_generado_at)
+    )
+
     return {
         "id": orden.id,
         "folio": orden.folio,
@@ -1300,6 +1305,11 @@ def obtener_detalle_orden(
         "terminos_condiciones": orden.terminos_condiciones,
         "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
         "version": orden.version or 1,
+        "fecha_creacion": orden.fecha_creacion.isoformat() if orden.fecha_creacion else None,
+        "fecha_vencimiento": orden.fecha_vencimiento.isoformat() if orden.fecha_vencimiento else None,
+        "enviada_at": orden.enviada_at.isoformat() if orden.enviada_at else None,
+        "pdf_generado_at": orden.pdf_generado_at.isoformat() if orden.pdf_generado_at else None,
+        "pdf_desactualizado": pdf_desactualizado,
         "detalles": detalles,
     }
 

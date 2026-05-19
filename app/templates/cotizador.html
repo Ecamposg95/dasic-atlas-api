@@ -61,6 +61,16 @@
               title="TC del día (click para refrescar)"></span>
       </div>
 
+      <!-- Fechas (solo en modo edición borrador) -->
+      <div id="div-fechas" class="hidden flex items-center gap-2">
+        <label class="text-xs text-slate-500">Emisión</label>
+        <input id="input-fecha-creacion" type="date"
+               class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
+        <label class="text-xs text-slate-500 ml-1">Vence</label>
+        <input id="input-fecha-vencimiento" type="date"
+               class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
+      </div>
+
       <!-- Acciones: obs + términos como dax-btn-ghost compactos -->
       <div class="flex items-center gap-1.5">
         <button type="button" onclick="abrirModalObs()"
@@ -1041,6 +1051,31 @@
           state.editingVersion = data.version || 1;
           state.moneda = data.moneda || 'MXN';
           state.tc = Number(data.tipo_cambio || 20);
+
+          // Fechas editables (Task 3.2)
+          const isBorrador = (data.estatus || '').toLowerCase() === 'cotizacion' && !data.enviada_at;
+          const fcInput = document.getElementById('input-fecha-creacion');
+          const fvInput = document.getElementById('input-fecha-vencimiento');
+          const divFechas = document.getElementById('div-fechas');
+          if (fcInput && fvInput && divFechas) {
+              if (isBorrador) {
+                  divFechas.classList.remove('hidden');
+                  divFechas.classList.add('flex');
+                  fcInput.disabled = false;
+                  fvInput.disabled = false;
+              } else {
+                  // Mostrar pero deshabilitar para que el usuario vea las fechas históricas
+                  divFechas.classList.remove('hidden');
+                  divFechas.classList.add('flex');
+                  fcInput.disabled = true;
+                  fvInput.disabled = true;
+              }
+              fcInput.value = (data.fecha_creacion || '').substring(0, 10);
+              fvInput.value = (data.fecha_vencimiento || '').substring(0, 10);
+          }
+          // Guardar enviada_at en state para badge / modal de recotización (futuras tasks)
+          state.enviadaAt = data.enviada_at || null;
+          state.pdfDesactualizado = !!data.pdf_desactualizado;
 
           // Reconstruir carrito desde detalles
           state.cart = (data.detalles || []).map(d => {
@@ -2600,6 +2635,14 @@
           })),
           observaciones: document.getElementById('observaciones').value,
           terminos_condiciones: document.getElementById('terminos')?.value ?? null,
+          fecha_creacion: (function(){
+              const v = document.getElementById('input-fecha-creacion')?.value;
+              return v ? `${v}T00:00:00` : null;
+          })(),
+          fecha_vencimiento: (function(){
+              const v = document.getElementById('input-fecha-vencimiento')?.value;
+              return v ? `${v}T00:00:00` : null;
+          })(),
       };
 
       // En modo edición: PUT a /api/ventas/{id} (preserva folio).
