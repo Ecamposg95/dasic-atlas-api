@@ -1375,13 +1375,26 @@ def enviar_correo(
         estatus = "FAILED"
         error_detail = str(exc)
 
-    # Abrir nueva sesión para actualizar el estatus del evento tras el SMTP
+    # Abrir nueva sesión para actualizar el estatus del evento + timestamps de la orden tras el SMTP
     db2 = SessionLocal()
     try:
         ev = db2.query(models.QuoteEvent).filter(models.QuoteEvent.id == evento_id).first()
         if ev:
             ev.estatus = estatus
-            db2.commit()
+
+        if estatus == "SENT":
+            orden2 = (
+                db2.query(models.OrdenVenta)
+                .filter(models.OrdenVenta.id == orden_id)
+                .first()
+            )
+            if orden2:
+                ahora = datetime.now(tz=timezone.utc)
+                orden2.pdf_generado_at = ahora
+                if orden2.enviada_at is None:
+                    orden2.enviada_at = ahora
+
+        db2.commit()
     finally:
         db2.close()
 
