@@ -14,3 +14,5 @@ class TipoCambioDia(Base):
     usd_mxn = Column(DECIMAL(12, 6), nullable=False)
     fuente = Column(String(20), nullable=False)
     obtenido_en = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    nota = Column(String(255), nullable=True)
+    actualizado_por = Column(Integer, nullable=True)  # FK lógica a usuarios.id
