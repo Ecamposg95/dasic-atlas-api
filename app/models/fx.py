@@ -1,6 +1,6 @@
 """Tipos de cambio cacheados por día."""
 
-from sqlalchemy import Column, Date, DateTime, DECIMAL, Integer, String
+from sqlalchemy import Column, Date, DateTime, DECIMAL, ForeignKey, Integer, String
 from sqlalchemy.sql import func
 
 from app.db import Base
@@ -15,4 +15,4 @@ class TipoCambioDia(Base):
     fuente = Column(String(20), nullable=False)
     obtenido_en = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     nota = Column(String(255), nullable=True)
-    actualizado_por = Column(Integer, nullable=True)  # FK lógica a usuarios.id
+    actualizado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)

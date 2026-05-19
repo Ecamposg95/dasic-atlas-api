@@ -41,7 +41,7 @@ class OrdenVenta(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
-        nullable=True,
+        nullable=False,
     )
 
     cliente = relationship("Cliente", back_populates="ordenes")
