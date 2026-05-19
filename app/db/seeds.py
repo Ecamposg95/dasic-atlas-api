@@ -271,6 +271,18 @@ _BACKFILL_DDL = [
     # Idempotente: ALTER TYPE TEXT cuando ya es TEXT es no-op en Postgres.
     # ====================================================================
     "ALTER TABLE IF EXISTS detalles_orden ALTER COLUMN descripcion_libre TYPE TEXT",
+
+    # ====================================================================
+    # 20260519_01 — cotizador edición + TC override
+    # Spec 2026-05-19 — edit timestamps en ordenes_venta + nota/actualizado_por
+    # en tipos_cambio_dia. FK constraint se gestiona solo en la migración Alembic.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS enviada_at TIMESTAMP WITH TIME ZONE NULL",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS pdf_generado_at TIMESTAMP WITH TIME ZONE NULL",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()",
+    "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_enviada_at ON ordenes_venta(enviada_at)",
+    "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS nota VARCHAR(255) NULL",
+    "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS actualizado_por INTEGER NULL",
 ]
 
 
