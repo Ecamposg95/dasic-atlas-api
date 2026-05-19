@@ -946,6 +946,8 @@ def recotizar(
         fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
         cotizacion_origen_id=raiz_id,
         version=siguiente_version,
+        enviada_at=None,
+        pdf_generado_at=None,
     )
     db.add(nueva)
     db.flush()
@@ -954,6 +956,7 @@ def recotizar(
         db.add(models.DetalleOrden(
             orden_id=nueva.id,
             producto_id=det.producto_id,
+            servicio_id=det.servicio_id,
             sku_libre=det.sku_libre,
             descripcion_libre=det.descripcion_libre,
             moneda_origen_linea=det.moneda_origen_linea,
@@ -970,6 +973,38 @@ def recotizar(
             entrega_unidad=det.entrega_unidad,
             observaciones_linea=det.observaciones_linea,
         ))
+
+    # Audit: registrar evento en origen y en hija
+    db.add(models.QuoteEvent(
+        orden_id=origen.id,
+        canal="NOTE",
+        direccion="INTERNAL",
+        estatus="LOGGED",
+        asunto="RECOTIZADA",
+        cuerpo="",
+        metadata_json=_cr_json.dumps({
+            "accion": "origen_clonada",
+            "hija_id": nueva.id,
+            "hija_folio": folio_versionado,
+            "version": siguiente_version,
+        }),
+        creado_por_id=current_user.id,
+    ))
+    db.add(models.QuoteEvent(
+        orden_id=nueva.id,
+        canal="NOTE",
+        direccion="INTERNAL",
+        estatus="LOGGED",
+        asunto="RECOTIZADA",
+        cuerpo="",
+        metadata_json=_cr_json.dumps({
+            "accion": "clonada_de",
+            "origen_id": origen.id,
+            "origen_folio": origen.folio,
+            "version": siguiente_version,
+        }),
+        creado_por_id=current_user.id,
+    ))
 
     db.commit()
     db.refresh(nueva)
