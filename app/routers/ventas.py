@@ -386,8 +386,10 @@ PDF_TEMPLATE_VENTA = """
     {% endif %}
   </div>
 
+  {# PDF unificado: si view_detalles viene del backend, usarlo; si no, orden.detalles #}
+  {% set items_list = view_detalles if view_detalles is not none else orden.detalles %}
   {% set ns = namespace(has_desc=false, has_entrega=false) %}
-  {% for d in orden.detalles %}
+  {% for d in items_list %}
     {% if (d.descuento_aplicado or 0) > 0 %}{% set ns.has_desc = true %}{% endif %}
     {% if d.entrega_min is not none and d.entrega_max is not none and d.entrega_unidad %}{% set ns.has_entrega = true %}{% endif %}
   {% endfor %}
@@ -407,14 +409,22 @@ PDF_TEMPLATE_VENTA = """
       </tr>
     </thead>
     <tbody>
-      {% for item in orden.detalles %}
+      {% for item in items_list %}
       <tr>
         <td class="center">{{ loop.index }}</td>
+        {# En modo unificado item es un dict; en modo normal es un ORM object #}
+        {% if view_detalles is not none %}
+        <td><div class="item-cat">—</div></td>
+        <td>
+          <div class="item-desc">{{ item.descripcion or "Proyecto integral" }}</div>
+        </td>
+        {% else %}
         <td><div class="item-cat">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or (item.producto.sku if item.producto else "—") }}</div></td>
         <td>
           <div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div>
           {% if item.observaciones_linea %}<div class="item-nota">{{ item.observaciones_linea }}</div>{% endif %}
         </td>
+        {% endif %}
         <td class="center">{{ item.cantidad }}</td>
         {% if ns.has_entrega %}<td class="center">{% if item.entrega_min is not none and item.entrega_max is not none and item.entrega_unidad %}{% if item.entrega_min == item.entrega_max %}{{ item.entrega_min }} {{ item.entrega_unidad }} <span class="tespv-tag">T.E.S.P.V.</span>{% else %}{{ item.entrega_min }}–{{ item.entrega_max }} {{ item.entrega_unidad }} <span class="tespv-tag">T.E.S.P.V.</span>{% endif %}{% else %}—{% endif %}</td>{% endif %}
         <td class="right">{{ simbolo_moneda }} {{ "{:,.2f}".format(item.precio_unitario) }}</td>
@@ -1401,6 +1411,36 @@ def generar_pdf(
     orden.pdf_generado_at = datetime.now(tz=timezone.utc)
     db.commit()
 
+    # PDF unificado (sub-proyecto D): si el flag está activo, sustituimos la
+    # lista de detalles por un único concepto agregado con el total de la orden.
+    if orden.pdf_unificado:
+        concepto_titulo = (orden.concepto_unificado or "Proyecto integral").strip()
+        lineas_resumen = []
+        for d in orden.detalles:
+            desc = (
+                (d.producto.nombre if d.producto else None)
+                or (d.servicio.nombre if d.servicio else None)
+                or d.descripcion_libre
+                or "—"
+            )
+            lineas_resumen.append(f"• {desc} (x{d.cantidad})")
+        descripcion_unificada = concepto_titulo + "\n\n" + "\n".join(lineas_resumen)
+        view_detalles = [{
+            "es_unificado": True,
+            "descripcion": descripcion_unificada,
+            "sku_libre": None,
+            "cantidad": 1,
+            "precio_unitario": float(orden.total),
+            "subtotal": float(orden.total),
+            "descuento_aplicado": 0,
+            "entrega_min": None,
+            "entrega_max": None,
+            "entrega_unidad": None,
+            "observaciones_linea": None,
+        }]
+    else:
+        view_detalles = None  # usa orden.detalles directamente en la plantilla
+
     env = Environment(loader=BaseLoader())
     return env.from_string(PDF_TEMPLATE_VENTA).render(
         orden=orden,
@@ -1415,6 +1455,7 @@ def generar_pdf(
         fecha_str=fecha_str,
         iva_pct_label=_iva_pct_label(),
         qr_data_uri=qr_data_uri,
+        view_detalles=view_detalles,
     )
 
 
