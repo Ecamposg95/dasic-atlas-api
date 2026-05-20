@@ -165,6 +165,7 @@ _SSR_ROUTES = [
     ("/dashboard",          "dashboard.html"),
     ("/ventas/cotizador",   "cotizador.html"),
     ("/seguimiento",        "seguimiento.html"),
+    ("/borradores",         "borradores.html"),
     ("/inventario",         "inventario.html"),
     ("/servicios",          "servicios.html"),
     ("/clientes",           "clientes.html"),

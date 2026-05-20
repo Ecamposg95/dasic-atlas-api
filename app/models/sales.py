@@ -34,6 +34,16 @@ class OrdenVenta(Base):
     cotizacion_origen_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
     version = Column(Integer, nullable=False, default=1)
 
+    # Lifecycle tracking — Fase Cotizador-Edicion (spec 2026-05-19)
+    enviada_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    pdf_generado_at = Column(DateTime(timezone=True), nullable=True)
+    actualizado_en = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
     cliente = relationship("Cliente", back_populates="ordenes")
     vendedor = relationship("Usuario", back_populates="ventas")
     detalles = relationship(
