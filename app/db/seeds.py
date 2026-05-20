@@ -299,6 +299,15 @@ _BACKFILL_DDL = [
     # ====================================================================
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS pdf_unificado INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS concepto_unificado TEXT NULL",
+
+    # ====================================================================
+    # 20260520_02 — sub-proyecto E: comparador precios
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS precios_proveedor (id SERIAL PRIMARY KEY, proveedor_id INTEGER NOT NULL REFERENCES proveedores(id), producto_id INTEGER REFERENCES productos(id), descripcion_busqueda VARCHAR(500), sku_libre VARCHAR(80), precio NUMERIC(12,2) NOT NULL, moneda VARCHAR(3) NOT NULL DEFAULT 'MXN', fecha_vigencia_desde DATE NOT NULL DEFAULT CURRENT_DATE, fecha_vigencia_hasta DATE, notas TEXT, fuente VARCHAR(20) NOT NULL DEFAULT 'MANUAL', referencia_oc_id INTEGER REFERENCES ordenes_compra(id), creado_por_id INTEGER REFERENCES usuarios(id), creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW())""",
+    "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_proveedor_id ON precios_proveedor(proveedor_id)",
+    "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_producto_id ON precios_proveedor(producto_id)",
+    "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_descripcion ON precios_proveedor(descripcion_busqueda)",
+    "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_sku ON precios_proveedor(sku_libre)",
 ]
 
 
