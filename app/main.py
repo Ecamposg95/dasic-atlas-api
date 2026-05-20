@@ -177,6 +177,7 @@ _SSR_ROUTES = [
     ("/usuarios",           "usuarios.html"),
     ("/catalogos",          "catalogos.html"),
     ("/fantasmas",          "fantasmas.html"),
+    ("/fx",                 "fx.html"),
 ]
 
 for _path, _tmpl in _SSR_ROUTES:
