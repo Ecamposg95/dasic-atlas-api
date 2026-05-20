@@ -30,6 +30,15 @@ class OrdenVenta(Base):
     # cotizaciones legacy creadas antes de esta feature).
     terminos_condiciones = Column(Text, nullable=True)
 
+    # Modo de presentación en el PDF cliente:
+    #   0 (default) → desglose por línea (vista interna y default histórico)
+    #   1            → un solo concepto unificado con todas las líneas en
+    #                  una descripción multi-línea y un solo total final.
+    pdf_unificado = Column(Integer, nullable=False, default=0)
+    # Texto override del concepto principal cuando pdf_unificado=1.
+    # NULL → auto-generado a partir de las líneas del carrito.
+    concepto_unificado = Column(Text, nullable=True)
+
     # Versionado de cotizaciones
     cotizacion_origen_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
     version = Column(Integer, nullable=False, default=1)

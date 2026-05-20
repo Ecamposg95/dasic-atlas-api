@@ -293,6 +293,12 @@ _BACKFILL_DDL = [
     "CREATE INDEX IF NOT EXISTS ix_productos_fantasma_sku ON productos_fantasma(sku_libre)",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS fantasma_id INTEGER REFERENCES productos_fantasma(id)",
     "CREATE INDEX IF NOT EXISTS ix_detalles_orden_fantasma_id ON detalles_orden(fantasma_id)",
+
+    # ====================================================================
+    # 20260520_01 — sub-proyecto D: PDF unificado por proyecto
+    # ====================================================================
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS pdf_unificado INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS concepto_unificado TEXT NULL",
 ]
 
 
