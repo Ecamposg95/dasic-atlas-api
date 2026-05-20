@@ -96,6 +96,12 @@ from app.schemas.precios import (  # noqa: F401
     PrecioProveedorResponse,
 )
 
+from app.schemas.remisiones import (  # noqa: F401
+    DetalleRemisionInput,
+    RemisionCreate,
+    RemisionResponse,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -127,4 +133,6 @@ __all__ = [
     "ProductoFantasmaBase", "ProductoFantasmaResponse", "ProductoFantasmaUpdate",
     # precios
     "PrecioProveedorCreate", "PrecioProveedorResponse",
+    # remisiones
+    "DetalleRemisionInput", "RemisionCreate", "RemisionResponse",
 ]
