@@ -367,6 +367,11 @@
         <span class="sidebar-item-icon"><i class="fas fa-route text-[12px]"></i></span>
         <span>Seguimiento</span>
       </a>
+      <a href="/borradores" class="sidebar-item {% if _path == '/borradores' %}is-active{% endif %}"
+         x-show="$store.user.canVer('cotizador')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-layer-group text-[12px]"></i></span>
+        <span>Borradores</span>
+      </a>
       <a href="/clientes" class="sidebar-item {% if _path == '/clientes' %}is-active{% endif %}"
          x-show="$store.user.canVer('clientes')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-users text-[12px]"></i></span>
@@ -395,6 +400,11 @@
         <span class="sidebar-item-icon"><i class="fas fa-book text-[12px]"></i></span>
         <span>Diccionarios</span>
       </a>
+      <a href="/fantasmas" class="sidebar-item {% if _path == '/fantasmas' %}is-active{% endif %}"
+         x-show="$store.user.canVer('inventario')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-ghost text-[12px]"></i></span>
+        <span>Fantasmas</span>
+      </a>
 
       <!-- ── Backoffice ─────────────────────────────────────────────────── -->
       <p class="sidebar-section-header text-[9px] uppercase font-bold tracking-wider
@@ -407,6 +417,20 @@
          x-show="$store.user.canVer('compras')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-truck text-[12px]"></i></span>
         <span>Compras</span>
+      </a>
+      <a href="/remisiones" class="sidebar-item {% if _path == '/remisiones' %}is-active{% endif %}"
+         x-show="$store.user.canVer('compras')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-truck-fast text-[12px]"></i></span>
+        <span>Remisiones</span>
+      </a>
+      <a href="/precios" class="sidebar-item {% if _path == '/precios' %}is-active{% endif %}"
+         x-show="$store.user.canVer('compras')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-tags text-[12px]"></i></span>
+        <span>Precios</span>
+      </a>
+      <a href="/fx" class="sidebar-item {% if _path == '/fx' %}is-active{% endif %}">
+        <span class="sidebar-item-icon"><i class="fas fa-dollar-sign text-[12px]"></i></span>
+        <span>Tipo de cambio</span>
       </a>
       <a href="/reportes" class="sidebar-item {% if _path == '/reportes' %}is-active{% endif %}"
          x-show="$store.user.canVer('reportes')" x-cloak>
