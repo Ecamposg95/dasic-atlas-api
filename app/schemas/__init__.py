@@ -91,6 +91,11 @@ from app.schemas.fantasmas import (  # noqa: F401
     ProductoFantasmaUpdate,
 )
 
+from app.schemas.precios import (  # noqa: F401
+    PrecioProveedorCreate,
+    PrecioProveedorResponse,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -120,4 +125,6 @@ __all__ = [
     "ServicioBase", "ServicioCreate", "ServicioUpdate", "ServicioResponse",
     # fantasmas
     "ProductoFantasmaBase", "ProductoFantasmaResponse", "ProductoFantasmaUpdate",
+    # precios
+    "PrecioProveedorCreate", "PrecioProveedorResponse",
 ]
