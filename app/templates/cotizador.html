@@ -89,6 +89,21 @@
                class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded p-2 text-sm focus:ring-2 focus:ring-cyan-500 outline-none">
       </div>
 
+      <!-- PDF unificado (Proyectos) — Task D -->
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-slate-500 flex items-center gap-1.5 cursor-pointer" title="PDF cliente: un solo concepto unificado vs desglose por línea">
+          <input type="checkbox" id="chk-pdf-unificado" onchange="togglePdfUnificado()" class="w-4 h-4">
+          <span class="hidden sm:inline">PDF unificado</span>
+        </label>
+      </div>
+      <div id="div-concepto-unificado" class="hidden flex items-center gap-1.5">
+        <button type="button" onclick="abrirModalConcepto()" class="dax-btn-ghost text-xs" title="Editar texto del concepto unificado">
+          <i class="fas fa-pen-to-square"></i>
+          <span class="hidden sm:inline">Concepto</span>
+        </button>
+      </div>
+      <input type="hidden" id="input-concepto-unificado">
+
       <!-- Acciones: obs + términos como dax-btn-ghost compactos -->
       <div class="flex items-center gap-1.5">
         <button type="button" onclick="abrirModalObs()"
@@ -1117,6 +1132,12 @@
           // Guardar enviada_at en state para badge / modal de recotización (futuras tasks)
           state.enviadaAt = data.enviada_at || null;
           state.pdfDesactualizado = !!data.pdf_desactualizado;
+
+          // PDF unificado (Task D)
+          const chkUnif = document.getElementById('chk-pdf-unificado');
+          if (chkUnif) chkUnif.checked = !!data.pdf_unificado;
+          document.getElementById('input-concepto-unificado').value = data.concepto_unificado || '';
+          togglePdfUnificado();
 
           // Reconstruir carrito desde detalles
           state.cart = (data.detalles || []).map(d => {
@@ -2690,6 +2711,8 @@
               const v = document.getElementById('input-fecha-vencimiento')?.value;
               return v ? `${v}T00:00:00` : null;
           })(),
+          pdf_unificado: document.getElementById('chk-pdf-unificado')?.checked ? 1 : 0,
+          concepto_unificado: document.getElementById('input-concepto-unificado')?.value || null,
       };
 
       // En modo edición: PUT a /api/ventas/{id} (preserva folio).
@@ -3062,6 +3085,31 @@
             }
           } catch (e) {
             Swal.fire('Error de red', String(e), 'error');
+          }
+        }
+
+        // PDF unificado toggle (Task D)
+        function togglePdfUnificado() {
+          const chk = document.getElementById('chk-pdf-unificado');
+          const div = document.getElementById('div-concepto-unificado');
+          if (div) {
+            if (chk && chk.checked) div.classList.remove('hidden');
+            else div.classList.add('hidden');
+          }
+        }
+
+        async function abrirModalConcepto() {
+          const current = document.getElementById('input-concepto-unificado').value || '';
+          const r = await Swal.fire({
+            title: 'Concepto unificado',
+            input: 'textarea',
+            inputValue: current,
+            inputLabel: 'Texto que aparece como concepto principal en el PDF',
+            inputPlaceholder: 'ej: Proyecto de mantenimiento industrial integral',
+            showCancelButton: true,
+          });
+          if (r.isConfirmed) {
+            document.getElementById('input-concepto-unificado').value = r.value || '';
           }
         }
 </script>
