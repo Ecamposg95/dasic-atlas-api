@@ -85,6 +85,12 @@ from app.schemas.services import (  # noqa: F401
     ServicioResponse,
 )
 
+from app.schemas.fantasmas import (  # noqa: F401
+    ProductoFantasmaBase,
+    ProductoFantasmaResponse,
+    ProductoFantasmaUpdate,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -112,4 +118,6 @@ __all__ = [
     "SatTipoComprobanteResponse", "SatClaveProdServResponse", "SatClaveUnidadResponse",
     # services
     "ServicioBase", "ServicioCreate", "ServicioUpdate", "ServicioResponse",
+    # fantasmas
+    "ProductoFantasmaBase", "ProductoFantasmaResponse", "ProductoFantasmaUpdate",
 ]
