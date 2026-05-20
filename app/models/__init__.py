@@ -59,6 +59,7 @@ from app.models.services import (  # noqa: F401
     SERVICIO_SAT_DEFAULT_UNIDAD,
     SERVICIO_SAT_DEFAULT_OBJETO_IMP,
 )
+from app.models.fantasmas import ProductoFantasma  # noqa: F401
 
 __all__ = [
     "Base",
@@ -82,4 +83,5 @@ __all__ = [
     "Servicio", "CategoriaServicio", "UnidadTiempoServicio",
     "SERVICIO_SAT_DEFAULT_PROD_SERV", "SERVICIO_SAT_DEFAULT_UNIDAD",
     "SERVICIO_SAT_DEFAULT_OBJETO_IMP",
+    "ProductoFantasma",
 ]

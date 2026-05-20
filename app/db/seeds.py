@@ -283,6 +283,16 @@ _BACKFILL_DDL = [
     "CREATE INDEX IF NOT EXISTS ix_ordenes_venta_enviada_at ON ordenes_venta(enviada_at)",
     "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS nota TEXT NULL",
     "ALTER TABLE IF EXISTS tipos_cambio_dia ADD COLUMN IF NOT EXISTS actualizado_por INTEGER NULL",
+
+    # ====================================================================
+    # 20260519_02 — sub-proyecto B: Productos Fantasma apilados
+    # ====================================================================
+    "CREATE TABLE IF NOT EXISTS productos_fantasma (id SERIAL PRIMARY KEY, descripcion_normalizada VARCHAR(500) NOT NULL, descripcion_original TEXT NOT NULL, sku_libre VARCHAR(80), costo_referencia NUMERIC(12, 2) NOT NULL, moneda_referencia VARCHAR(3) NOT NULL DEFAULT 'MXN', proveedor_sugerido_id INTEGER REFERENCES proveedores(id), estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE', promovido_a_producto_id INTEGER REFERENCES productos(id), veces_solicitado INTEGER NOT NULL DEFAULT 1, creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), ultimo_visto_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW())",
+    "CREATE INDEX IF NOT EXISTS ix_productos_fantasma_descripcion ON productos_fantasma(descripcion_normalizada)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_fantasma_estado ON productos_fantasma(estado)",
+    "CREATE INDEX IF NOT EXISTS ix_productos_fantasma_sku ON productos_fantasma(sku_libre)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS fantasma_id INTEGER REFERENCES productos_fantasma(id)",
+    "CREATE INDEX IF NOT EXISTS ix_detalles_orden_fantasma_id ON detalles_orden(fantasma_id)",
 ]
 
 

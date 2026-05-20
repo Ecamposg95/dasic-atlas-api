@@ -85,6 +85,7 @@ class DetalleOrden(Base):
 
     tipo_linea = Column(String(20), nullable=False, default="producto_catalogo")
     proveedor_sugerido_id = Column(Integer, ForeignKey("proveedores.id"), nullable=True)
+    fantasma_id = Column(Integer, ForeignKey("productos_fantasma.id"), nullable=True, index=True)
 
     # Tiempos de entrega por línea (estructurado). Los 3 viajan juntos: o
     # vienen los 3 o ninguno. unidad ∈ {'dias','semanas','tespv'}. min <= max
