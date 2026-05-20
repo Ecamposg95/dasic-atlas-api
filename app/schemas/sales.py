@@ -93,6 +93,9 @@ class OrdenVentaCreate(BaseModel):
     # defaults. Vacío "" → usuario eligió no tener condiciones (PDF muestra
     # solo metadata: moneda, vigencia).
     terminos_condiciones: Optional[str] = None
+    # PDF unificado (sub-proyecto D). 0 = desglose por línea (default); 1 = concepto único.
+    pdf_unificado: Optional[int] = 0
+    concepto_unificado: Optional[str] = None
 
 
 class OrdenVentaResponse(BaseModel):

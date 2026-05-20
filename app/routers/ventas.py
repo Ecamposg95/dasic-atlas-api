@@ -542,6 +542,8 @@ def crear_orden(
             fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             total=0,
             terminos_condiciones=terminos,
+            pdf_unificado=1 if orden_data.pdf_unificado else 0,
+            concepto_unificado=orden_data.concepto_unificado,
         )
         db.add(nueva_orden)
         db.flush()
@@ -769,6 +771,10 @@ def actualizar_orden(
         elif orden.fecha_vencimiento is None:
             # No tenía vencimiento previo; aplicar default
             orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
+        if orden_update.pdf_unificado is not None:
+            orden.pdf_unificado = 1 if orden_update.pdf_unificado else 0
+        if orden_update.concepto_unificado is not None:
+            orden.concepto_unificado = orden_update.concepto_unificado
 
         # Liberar reservas previas antes de borrar y reinsertar detalles
         liberar_reservas_cotizacion(
@@ -1337,6 +1343,8 @@ def obtener_detalle_orden(
         "enviada_at": orden.enviada_at.isoformat() if orden.enviada_at else None,
         "pdf_generado_at": orden.pdf_generado_at.isoformat() if orden.pdf_generado_at else None,
         "pdf_desactualizado": pdf_desactualizado,
+        "pdf_unificado": bool(orden.pdf_unificado),
+        "concepto_unificado": orden.concepto_unificado,
         "detalles": detalles,
     }
 
