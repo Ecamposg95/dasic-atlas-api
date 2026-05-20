@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Productos Fantasma · DASIC{% endblock %}
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+  <header class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-medium text-slate-800 dark:text-slate-100">
+      <i class="fas fa-ghost mr-2 text-violet-500"></i>Productos Fantasma apilados
+    </h1>
+    <span class="text-xs text-slate-500" id="count-resultados"></span>
+  </header>
+
+  <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <input type="text" id="filtro-q" placeholder="Buscar descripción o SKU…"
+             class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 outline-none flex-1 min-w-[180px]">
+      <select id="filtro-estado"
+              class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
+        <option value="PENDIENTE" selected>Pendientes</option>
+        <option value="">Todos</option>
+        <option value="EN_OC">En OC</option>
+        <option value="RECIBIDO">Recibidos</option>
+        <option value="PROMOVIDO">Promovidos</option>
+        <option value="DESCARTADO">Descartados</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 dark:text-slate-400 uppercase">
+        <tr>
+          <th class="text-left p-3">Descripción</th>
+          <th class="text-left p-3">SKU</th>
+          <th class="text-left p-3">Proveedor</th>
+          <th class="text-right p-3">Veces</th>
+          <th class="text-right p-3">Costo ref</th>
+          <th class="text-center p-3">Moneda</th>
+          <th class="text-center p-3">Estado</th>
+          <th class="text-right p-3">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-fantasmas" class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tr><td colspan="8" class="p-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin"></i> Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  async function cargarFantasmas() {
+    const tbody = document.getElementById('tbody-fantasmas');
+    const q = document.getElementById('filtro-q').value || '';
+    const estado = document.getElementById('filtro-estado').value || '';
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (estado) params.set('estado', estado);
+    params.set('page_size', '200');
+    try {
+      const r = await fetch('/api/fantasmas/?' + params.toString(), { credentials: 'include' });
+      if (!r.ok) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-rose-500">Error al cargar.</td></tr>';
+        return;
+      }
+      const data = await r.json();
+      const items = data.items || [];
+      document.getElementById('count-resultados').textContent = `${items.length} fantasma(s)`;
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400"><i class="fas fa-inbox mr-1"></i> Sin fantasmas.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(f => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+          <td class="p-3 max-w-md truncate" title="${(f.descripcion || '').replace(/"/g, '&quot;')}">${f.descripcion || '—'}</td>
+          <td class="p-3 font-mono text-xs">${f.sku_libre || '—'}</td>
+          <td class="p-3 text-xs">${f.proveedor_sugerido_nombre || '<span class="text-slate-400">— Sin asignar</span>'}</td>
+          <td class="p-3 text-right">${f.veces_solicitado}</td>
+          <td class="p-3 text-right">$${parseFloat(f.costo_referencia).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+          <td class="p-3 text-center font-mono text-xs">${f.moneda}</td>
+          <td class="p-3 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                ${ f.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-800'
+                 : f.estado === 'EN_OC' ? 'bg-cyan-100 text-cyan-800'
+                 : f.estado === 'RECIBIDO' ? 'bg-emerald-100 text-emerald-800'
+                 : f.estado === 'PROMOVIDO' ? 'bg-violet-100 text-violet-800'
+                 : 'bg-slate-200 text-slate-700' }">${f.estado}</span>
+          </td>
+          <td class="p-3 text-right">
+            ${ f.estado === 'PENDIENTE'
+              ? `<button onclick="promoverFantasma(${f.id})" class="text-violet-600 hover:underline text-xs mr-2" title="Promover a producto del catálogo"><i class="fas fa-arrow-up"></i> Promover</button>
+                 <button onclick="descartarFantasma(${f.id})" class="text-rose-600 hover:underline text-xs" title="Descartar"><i class="fas fa-times"></i></button>`
+              : '<span class="text-slate-400 text-xs">—</span>' }
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-rose-500">Error de red.</td></tr>';
+    }
+  }
+
+  async function descartarFantasma(id) {
+    const r = await Swal.fire({ title: '¿Descartar fantasma?', text: 'No aparecerá más en la lista de pendientes.', showCancelButton: true, confirmButtonText: 'Descartar', confirmButtonColor: '#e11d48' });
+    if (!r.isConfirmed) return;
+    const res = await fetch(`/api/fantasmas/${id}/descartar`, { method: 'POST', credentials: 'include' });
+    if (res.ok) { cargarFantasmas(); Swal.fire('Descartado', '', 'success'); }
+    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo descartar', 'error'); }
+  }
+
+  async function promoverFantasma(id) {
+    const r = await Swal.fire({ title: '¿Promover a catálogo?', text: 'Se creará un Producto del catálogo con el SKU y costo del fantasma.', showCancelButton: true, confirmButtonText: 'Promover' });
+    if (!r.isConfirmed) return;
+    const res = await fetch(`/api/fantasmas/${id}/promover`, { method: 'POST', credentials: 'include' });
+    if (res.ok) { const d = await res.json(); Swal.fire('Promovido', `Nuevo producto: ${d.sku}`, 'success'); cargarFantasmas(); }
+    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo promover', 'error'); }
+  }
+
+  document.getElementById('filtro-q').addEventListener('input', () => { clearTimeout(window.__fdb); window.__fdb = setTimeout(cargarFantasmas, 300); });
+  document.getElementById('filtro-estado').addEventListener('change', cargarFantasmas);
+  cargarFantasmas();
+</script>
+{% endblock %}
