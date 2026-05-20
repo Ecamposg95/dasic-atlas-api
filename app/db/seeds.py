@@ -308,6 +308,33 @@ _BACKFILL_DDL = [
     "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_producto_id ON precios_proveedor(producto_id)",
     "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_descripcion ON precios_proveedor(descripcion_busqueda)",
     "CREATE INDEX IF NOT EXISTS ix_precios_proveedor_sku ON precios_proveedor(sku_libre)",
+
+    # ====================================================================
+    # 20260520_03 — sub-proyecto F: remisiones
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS remisiones (
+        id SERIAL PRIMARY KEY,
+        folio VARCHAR(40) UNIQUE,
+        orden_venta_id INTEGER NOT NULL REFERENCES ordenes_venta(id),
+        fecha_remision TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        transportista VARCHAR(150),
+        recibido_por VARCHAR(150),
+        recibido_at TIMESTAMP WITH TIME ZONE,
+        observaciones TEXT,
+        creado_por_id INTEGER REFERENCES usuarios(id),
+        creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_remisiones_orden_venta_id ON remisiones(orden_venta_id)",
+    """CREATE TABLE IF NOT EXISTS detalles_remision (
+        id SERIAL PRIMARY KEY,
+        remision_id INTEGER NOT NULL REFERENCES remisiones(id),
+        detalle_orden_id INTEGER REFERENCES detalles_orden(id),
+        descripcion TEXT NOT NULL,
+        sku VARCHAR(80),
+        cantidad INTEGER NOT NULL,
+        observaciones_linea TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_detalles_remision_remision_id ON detalles_remision(remision_id)",
 ]
 
 
