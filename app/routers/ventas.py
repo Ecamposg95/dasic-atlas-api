@@ -33,6 +33,7 @@ from app.services.stock_service import (
     reservar_para_cotizacion,
     reservas_activas,
 )
+from app.services.fantasmas_service import upsert_from_detalle
 
 logger = logging.getLogger(__name__)
 
@@ -636,6 +637,18 @@ def crear_orden(
             )
             total_orden += subtotal
 
+            # Upsert fantasma solo para líneas ad-hoc (sin producto ni servicio del catálogo)
+            _fantasma_id = None
+            if producto is None and servicio is None:
+                _fantasma_id = upsert_from_detalle(
+                    db,
+                    descripcion=descripcion_libre or "",
+                    sku_libre=sku_libre,
+                    costo=costo_origen,
+                    moneda=moneda_origen_linea,
+                    proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                )
+
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
                 orden_id=nueva_orden.id,
@@ -654,6 +667,7 @@ def crear_orden(
                 subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                fantasma_id=_fantasma_id,
                 entrega_min=item.entrega_min,
                 entrega_max=item.entrega_max,
                 entrega_unidad=item.entrega_unidad,
@@ -835,6 +849,18 @@ def actualizar_orden(
             )
             total_orden += subtotal
 
+            # Upsert fantasma solo para líneas ad-hoc (sin producto ni servicio del catálogo)
+            _fantasma_id = None
+            if producto is None and servicio is None:
+                _fantasma_id = upsert_from_detalle(
+                    db,
+                    descripcion=descripcion_libre or "",
+                    sku_libre=sku_libre,
+                    costo=costo_origen,
+                    moneda=moneda_origen_linea,
+                    proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                )
+
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
                 orden_id=orden.id,
@@ -851,6 +877,7 @@ def actualizar_orden(
                 subtotal=subtotal.quantize(Decimal("0.01")),
                 tipo_linea=tipo_linea,
                 proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                fantasma_id=_fantasma_id,
                 entrega_min=item.entrega_min,
                 entrega_max=item.entrega_max,
                 entrega_unidad=item.entrega_unidad,
