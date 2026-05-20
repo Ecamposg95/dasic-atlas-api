@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Remisiones · DASIC{% endblock %}
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+  <header class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-medium text-slate-800 dark:text-slate-100">
+      <i class="fas fa-truck mr-2 text-sky-500"></i>Remisiones
+    </h1>
+    <button onclick="abrirCrearRemision()" class="dax-btn-primary text-sm">
+      <i class="fas fa-plus mr-1"></i> Nueva remisión
+    </button>
+  </header>
+
+  <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 uppercase">
+        <tr>
+          <th class="text-left p-3">Folio</th>
+          <th class="text-left p-3">Orden de venta</th>
+          <th class="text-left p-3">Cliente</th>
+          <th class="text-left p-3">Fecha</th>
+          <th class="text-left p-3">Transportista</th>
+          <th class="text-center p-3">Recepción</th>
+          <th class="text-right p-3">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-remisiones" class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tr><td colspan="7" class="p-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin"></i> Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  async function cargarRemisiones() {
+    const tbody = document.getElementById('tbody-remisiones');
+    try {
+      const r = await fetch('/api/remisiones/?page_size=200', { credentials: 'include' });
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-rose-500">Error.</td></tr>'; return; }
+      const d = await r.json();
+      const items = d.items || [];
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400"><i class="fas fa-inbox mr-1"></i> Sin remisiones todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(r => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+          <td class="p-3 font-mono text-xs">${r.folio || '—'}</td>
+          <td class="p-3 font-mono text-xs">${r.orden_folio || '—'}</td>
+          <td class="p-3">${r.cliente_nombre || '—'}</td>
+          <td class="p-3 text-xs">${r.fecha_remision ? new Date(r.fecha_remision).toLocaleDateString('es-MX') : '—'}</td>
+          <td class="p-3">${r.transportista || '<span class="text-slate-400">—</span>'}</td>
+          <td class="p-3 text-center">
+            ${r.recibido_at
+              ? `<span class="text-emerald-600 text-xs"><i class="fas fa-check"></i> ${r.recibido_por || ''}</span>`
+              : `<button onclick="registrarRecepcion(${r.id})" class="text-cyan-600 hover:underline text-xs">Registrar</button>`}
+          </td>
+          <td class="p-3 text-right">
+            <button onclick="verRemision(${r.id})" class="text-cyan-600 hover:underline text-xs"><i class="fas fa-eye"></i> Ver</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) { console.error(e); tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-rose-500">Error de red.</td></tr>'; }
+  }
+
+  async function abrirCrearRemision() {
+    const ordenIdStr = await Swal.fire({
+      title: 'Nueva remisión',
+      input: 'number',
+      inputLabel: 'ID de la orden de venta',
+      inputPlaceholder: 'ej: 42',
+      showCancelButton: true,
+    });
+    if (!ordenIdStr.isConfirmed || !ordenIdStr.value) return;
+    const ordenId = parseInt(ordenIdStr.value);
+
+    // Cargar detalles de la orden para sugerir las líneas
+    try {
+      const r = await fetch(`/api/ventas/${ordenId}/detalle-json`, { credentials: 'include' });
+      if (!r.ok) { Swal.fire('Error', 'No se pudo cargar la orden', 'error'); return; }
+      const orden = await r.json();
+      if ((orden.estatus || '').toLowerCase() === 'cotizacion') {
+        Swal.fire('Estatus inválido', 'La orden debe estar convertida a venta primero.', 'warning');
+        return;
+      }
+      // Construir payload con todas las líneas como default
+      const detalles = (orden.detalles || []).map(d => ({
+        detalle_orden_id: null,
+        descripcion: (d.producto && d.producto.nombre) || (d.servicio && d.servicio.nombre) || d.descripcion_libre || 'Línea',
+        sku: (d.producto && (d.producto.sku || d.producto.sku_interno)) || d.sku_libre || null,
+        cantidad: d.cantidad,
+      }));
+      const transResp = await Swal.fire({
+        title: 'Transportista (opcional)',
+        input: 'text',
+        showCancelButton: true,
+      });
+      const transportista = transResp.value || null;
+      const obsResp = await Swal.fire({
+        title: 'Observaciones (opcional)',
+        input: 'textarea',
+        showCancelButton: true,
+      });
+      const observaciones = obsResp.value || null;
+      const payload = { orden_venta_id: ordenId, detalles, transportista, observaciones };
+      const res = await fetch('/api/remisiones/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+      if (res.ok) {
+        const d = await res.json();
+        Swal.fire('Remisión creada', `Folio: ${d.folio}`, 'success');
+        cargarRemisiones();
+      } else {
+        const e = await res.json();
+        Swal.fire('Error', e.detail || 'No se pudo crear', 'error');
+      }
+    } catch (e) { Swal.fire('Error', String(e), 'error'); }
+  }
+
+  async function registrarRecepcion(id) {
+    const r = await Swal.fire({
+      title: 'Registrar recepción',
+      input: 'text',
+      inputLabel: 'Quién recibió',
+      inputPlaceholder: 'Nombre del receptor',
+      showCancelButton: true,
+    });
+    if (!r.isConfirmed || !r.value) return;
+    const res = await fetch(`/api/remisiones/${id}/recepcion?recibido_por=${encodeURIComponent(r.value)}`, { method: 'PATCH', credentials: 'include' });
+    if (res.ok) cargarRemisiones();
+    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo registrar', 'error'); }
+  }
+
+  async function verRemision(id) {
+    const r = await fetch(`/api/remisiones/${id}`, { credentials: 'include' });
+    if (!r.ok) { Swal.fire('Error', 'No se pudo cargar', 'error'); return; }
+    const d = await r.json();
+    Swal.fire({
+      title: d.folio,
+      html: `
+        <div class="text-left text-sm">
+          <div><b>Orden:</b> ${d.orden_folio || '—'}</div>
+          <div><b>Cliente:</b> ${d.cliente_nombre || '—'}</div>
+          <div><b>Fecha:</b> ${d.fecha_remision ? new Date(d.fecha_remision).toLocaleString('es-MX') : '—'}</div>
+          ${d.transportista ? '<div><b>Transportista:</b> ' + d.transportista + '</div>' : ''}
+          ${d.recibido_at ? '<div><b>Recibido:</b> ' + d.recibido_por + ' (' + new Date(d.recibido_at).toLocaleString('es-MX') + ')</div>' : ''}
+          ${d.observaciones ? '<div class="mt-2"><b>Obs:</b> ' + d.observaciones + '</div>' : ''}
+          <hr class="my-2">
+          <div><b>Líneas:</b></div>
+          <ul class="list-disc ml-4 text-xs">${(d.detalles || []).map(l => '<li>' + (l.descripcion || '') + ' (x' + l.cantidad + ')' + (l.sku ? ' [' + l.sku + ']' : '') + '</li>').join('')}</ul>
+        </div>
+      `,
+      width: 600,
+    });
+  }
+
+  cargarRemisiones();
+</script>
+{% endblock %}
