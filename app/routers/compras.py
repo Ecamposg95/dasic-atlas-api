@@ -351,6 +351,222 @@ def borrador_orden_compra_desde_cotizacion(
         "nota": "Borrador de orden de compra. No genera stock ni cuentas por pagar.",
     }
 
+@router.get(
+    "/cotizacion/{quote_id}/grouping",
+    dependencies=[Depends(allow_admin_asistente)],
+)
+def grouping_para_oc(quote_id: int, db: Session = Depends(get_db)):
+    """Preview del agrupamiento de líneas de cotización por proveedor sugerido.
+    Devuelve un bucket por proveedor y un bucket 'sin_asignar' para líneas sin
+    proveedor. Los servicios se excluyen del flujo de OC."""
+    quote = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == quote_id).first()
+    if not quote:
+        raise HTTPException(404, "Cotización no encontrada")
+    if quote.estatus != models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Sólo cotizaciones generan OCs")
+
+    grupos: dict = {}
+
+    for det in quote.detalles:
+        # Servicios se EXCLUYEN del flujo de OC
+        if det.servicio_id:
+            continue
+
+        # Determinar proveedor sugerido
+        proveedor_id = None
+        if det.producto is not None:
+            proveedor_id = (
+                det.proveedor_sugerido_id
+                or det.producto.proveedor_principal_id
+                or det.producto.proveedor_alterno_id
+            )
+        elif det.fantasma_id:
+            fantasma = db.query(models.ProductoFantasma).filter(
+                models.ProductoFantasma.id == det.fantasma_id
+            ).first()
+            if fantasma:
+                proveedor_id = det.proveedor_sugerido_id or fantasma.proveedor_sugerido_id
+        else:
+            # Ad-hoc sin fantasma_id (línea libre pura)
+            proveedor_id = det.proveedor_sugerido_id
+
+        key = proveedor_id  # None = sin_asignar
+        if key not in grupos:
+            prov = None
+            if key:
+                prov = db.query(models.Proveedor).filter(models.Proveedor.id == key).first()
+            grupos[key] = {
+                "proveedor_id": key,
+                "proveedor_nombre": prov.nombre_empresa if prov else "Sin asignar",
+                "lineas": [],
+            }
+
+        grupos[key]["lineas"].append({
+            "detalle_id": det.id,
+            "es_fantasma": det.fantasma_id is not None or (det.producto_id is None and det.servicio_id is None),
+            "fantasma_id": det.fantasma_id,
+            "sku": (det.producto.sku_comercial if det.producto else None) or det.sku_libre or "—",
+            "descripcion": (
+                det.producto.nombre if det.producto
+                else (det.descripcion_libre or "")
+            ),
+            "cantidad": det.cantidad,
+            "costo_unitario": float(det.costo_base_linea or 0),
+            "moneda_origen": det.moneda_origen_linea or "MXN",
+        })
+
+    return {
+        "quote_id": quote.id,
+        "quote_folio": quote.folio,
+        "moneda_cotizacion": quote.moneda,
+        "tipo_cambio": float(quote.tipo_cambio or 1),
+        "grupos": list(grupos.values()),
+    }
+
+
+class _OCLineaInput(BaseModel):
+    detalle_id: int
+    cantidad: Optional[int] = None  # si None, usa cantidad original del detalle
+
+
+class _OCGrupoInput(BaseModel):
+    proveedor_id: Optional[int] = None  # None = bucket "sin asignar" (se ignora)
+    lineas: list[_OCLineaInput]
+
+
+class _ConfirmarOCsInput(BaseModel):
+    grupos: list[_OCGrupoInput]
+
+
+@router.post(
+    "/cotizacion/{quote_id}/confirmar",
+    dependencies=[Depends(allow_admin_asistente)],
+)
+def confirmar_ocs_desde_cotizacion(
+    quote_id: int,
+    payload: _ConfirmarOCsInput,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Persiste UNA OC por cada grupo con proveedor_id no-null. Las líneas pueden
+    incluir fantasmas (se marca fantasma.estado = EN_OC). Estatus inicial = 'borrador'
+    (no afecta stock ni cuentas por pagar). El grupo sin proveedor_id se ignora."""
+    quote = (
+        db.query(models.OrdenVenta)
+        .filter(models.OrdenVenta.id == quote_id)
+        .with_for_update()
+        .first()
+    )
+    if not quote:
+        raise HTTPException(404, "Cotización no encontrada")
+    if quote.estatus != models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "Sólo cotizaciones generan OCs")
+
+    ocs_creadas = []
+    try:
+        for grupo in payload.grupos:
+            if not grupo.proveedor_id:
+                continue  # bucket "sin asignar" — el usuario lo cierra manualmente
+            if not grupo.lineas:
+                continue
+
+            proveedor = db.query(models.Proveedor).filter(
+                models.Proveedor.id == grupo.proveedor_id
+            ).first()
+            if not proveedor:
+                raise HTTPException(404, f"Proveedor {grupo.proveedor_id} no encontrado")
+
+            folio = _generar_folio_oc(db, current_user)
+            oc = models.OrdenCompra(
+                proveedor_id=proveedor.id,
+                fecha=datetime.utcnow(),
+                total=Decimal("0"),
+                estatus="borrador",
+                folio=folio,
+                moneda=quote.moneda,
+                tipo_cambio=quote.tipo_cambio,
+                cotizacion_id=quote.id,
+            )
+            db.add(oc)
+            db.flush()
+
+            total = Decimal("0")
+            fantasmas_marcados: set = set()
+
+            for linea_in in grupo.lineas:
+                det = db.query(models.DetalleOrden).filter(
+                    models.DetalleOrden.id == linea_in.detalle_id,
+                    models.DetalleOrden.orden_id == quote.id,
+                ).first()
+                if not det:
+                    raise HTTPException(
+                        400,
+                        f"Línea {linea_in.detalle_id} no pertenece a la cotización {quote.id}",
+                    )
+                if det.servicio_id:
+                    continue  # servicios no se ordenan
+
+                cantidad = linea_in.cantidad or det.cantidad
+                costo_unitario = Decimal(det.costo_base_linea or 0)
+
+                # Convertir moneda si origen difiere de la moneda de la cotización
+                origen = (det.moneda_origen_linea or "MXN").upper()
+                if origen != quote.moneda:
+                    if quote.moneda == "USD":
+                        costo_unitario = costo_unitario / Decimal(quote.tipo_cambio or 1)
+                    else:
+                        costo_unitario = costo_unitario * Decimal(quote.tipo_cambio or 1)
+                costo_unitario = costo_unitario.quantize(Decimal("0.01"))
+
+                importe = (costo_unitario * cantidad).quantize(Decimal("0.01"))
+                total += importe
+
+                db.add(models.DetalleCompra(
+                    orden_compra_id=oc.id,
+                    producto_id=det.producto_id,
+                    cantidad=cantidad,
+                    costo_unitario=costo_unitario,
+                    sku_libre=det.sku_libre if not det.producto_id else None,
+                    descripcion_libre=det.descripcion_libre if not det.producto_id else None,
+                    moneda_origen_linea=det.moneda_origen_linea,
+                    costo_base_linea=det.costo_base_linea,
+                ))
+
+                if det.fantasma_id:
+                    fantasmas_marcados.add(det.fantasma_id)
+
+            oc.total = total
+
+            # Marcar fantasmas como EN_OC
+            for fid in fantasmas_marcados:
+                fantasma = db.query(models.ProductoFantasma).filter(
+                    models.ProductoFantasma.id == fid
+                ).first()
+                if fantasma and fantasma.estado == "PENDIENTE":
+                    fantasma.estado = "EN_OC"
+
+            ocs_creadas.append({
+                "id": oc.id,
+                "folio": oc.folio,
+                "proveedor_id": proveedor.id,
+                "proveedor_nombre": proveedor.nombre_empresa,
+                "total": float(oc.total),
+                "lineas_count": len(grupo.lineas),
+                "fantasmas_marcados": len(fantasmas_marcados),
+            })
+
+        db.commit()
+        return {"ocs_creadas": ocs_creadas, "total_ocs": len(ocs_creadas)}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("compras.confirmar_ocs_desde_cotizacion falló (quote_id=%s)", quote_id)
+        raise HTTPException(500, "Error al persistir OCs")
+
+
 @router.post("/cotizacion/{quote_id}/orden", dependencies=[Depends(allow_admin_asistente)])
 def crear_oc_desde_cotizacion(
     quote_id: int,
