@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Precios proveedor · DASIC{% endblock %}
+{% block content %}
+<div class="p-6 max-w-6xl mx-auto">
+  <header class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-medium text-slate-800 dark:text-slate-100">
+      <i class="fas fa-tags mr-2 text-amber-500"></i>Precios de proveedor
+    </h1>
+    <button onclick="abrirCrearPrecio()" class="dax-btn-primary text-sm">
+      <i class="fas fa-plus mr-1"></i> Registrar precio
+    </button>
+  </header>
+
+  <!-- Comparador -->
+  <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-6">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-2">Comparador rápido</h2>
+    <div class="flex flex-wrap gap-2 items-end">
+      <input type="text" id="comparar-q" placeholder="Buscar SKU o descripción…"
+             class="flex-1 min-w-[220px] bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-3 py-1.5 text-sm">
+      <button onclick="comparar()" class="dax-btn-ghost text-sm">Comparar</button>
+    </div>
+    <div id="comparador-resultados" class="mt-3 hidden">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase">
+          <tr><th class="text-left p-2">#</th><th class="text-left p-2">Proveedor</th><th class="text-right p-2">Precio</th><th class="text-center p-2">Moneda</th><th class="text-left p-2">Vigencia</th></tr>
+        </thead>
+        <tbody id="comparador-tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Listado general -->
+  <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 uppercase">
+        <tr>
+          <th class="text-left p-3">Proveedor</th>
+          <th class="text-left p-3">Producto / Descripción</th>
+          <th class="text-right p-3">Precio</th>
+          <th class="text-center p-3">Moneda</th>
+          <th class="text-left p-3">Vigencia</th>
+          <th class="text-center p-3">Fuente</th>
+          <th class="text-right p-3">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-precios" class="divide-y divide-slate-100 dark:divide-slate-700">
+        <tr><td colspan="7" class="p-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin"></i> Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let __proveedores = [];
+
+  async function cargarProveedores() {
+    try {
+      const r = await fetch('/api/compras/proveedores', { credentials: 'include' });
+      if (r.ok) __proveedores = await r.json();
+    } catch (e) { console.error(e); }
+  }
+
+  async function cargarPrecios() {
+    const tbody = document.getElementById('tbody-precios');
+    try {
+      const r = await fetch('/api/precios/?page_size=200', { credentials: 'include' });
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-rose-500">Error.</td></tr>'; return; }
+      const d = await r.json();
+      const items = d.items || [];
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400"><i class="fas fa-inbox mr-1"></i> Sin precios registrados todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(p => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+          <td class="p-3">${p.proveedor_nombre || '—'}</td>
+          <td class="p-3 truncate max-w-md">${p.producto_nombre || p.descripcion_busqueda || p.sku_libre || '—'}</td>
+          <td class="p-3 text-right font-mono">$${p.precio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+          <td class="p-3 text-center text-xs font-mono">${p.moneda}</td>
+          <td class="p-3 text-xs">${p.fecha_vigencia_desde}${p.fecha_vigencia_hasta ? ' → ' + p.fecha_vigencia_hasta : ''}</td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${p.fuente === 'MANUAL' ? 'bg-cyan-100 text-cyan-800' : 'bg-violet-100 text-violet-800'}">${p.fuente}</span></td>
+          <td class="p-3 text-right">
+            <button onclick="borrarPrecio(${p.id})" class="text-rose-600 hover:underline text-xs" title="Borrar"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) { console.error(e); tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-rose-500">Error de red.</td></tr>'; }
+  }
+
+  async function comparar() {
+    const q = document.getElementById('comparar-q').value.trim();
+    if (!q) { Swal.fire('Captura una búsqueda', '', 'info'); return; }
+    const r = await fetch(`/api/precios/comparar?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+    if (!r.ok) { Swal.fire('Error', 'No se pudo comparar', 'error'); return; }
+    const d = await r.json();
+    const items = d.items || [];
+    const wrap = document.getElementById('comparador-resultados');
+    const tb = document.getElementById('comparador-tbody');
+    if (items.length === 0) {
+      tb.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-slate-400">Sin coincidencias.</td></tr>';
+    } else {
+      tb.innerHTML = items.map((it, idx) => `
+        <tr class="${idx === 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}">
+          <td class="p-2 text-xs">${idx + 1}${idx === 0 ? ' 🏆' : ''}</td>
+          <td class="p-2">${it.proveedor_nombre || '—'}</td>
+          <td class="p-2 text-right font-mono">$${it.precio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+          <td class="p-2 text-center text-xs font-mono">${it.moneda}</td>
+          <td class="p-2 text-xs">${it.fecha_vigencia_desde || '—'}</td>
+        </tr>
+      `).join('');
+    }
+    wrap.classList.remove('hidden');
+  }
+
+  async function abrirCrearPrecio() {
+    const opts = __proveedores.map(p => `<option value="${p.id}">${p.nombre_empresa || p.nombre || p.id}</option>`).join('');
+    const r = await Swal.fire({
+      title: 'Registrar precio',
+      html: `
+        <label class="block text-xs text-slate-500 text-left mb-1">Proveedor</label>
+        <select id="pr-proveedor" class="swal2-input" style="margin:0 0 8px 0; width:100%;">${opts}</select>
+        <label class="block text-xs text-slate-500 text-left mb-1">SKU / Descripción búsqueda</label>
+        <input id="pr-desc" class="swal2-input" style="margin:0 0 8px 0; width:100%;" placeholder="ej: bomba centrífuga 5HP">
+        <label class="block text-xs text-slate-500 text-left mb-1">Precio</label>
+        <input id="pr-precio" type="number" step="0.01" class="swal2-input" style="margin:0 0 8px 0; width:100%;">
+        <label class="block text-xs text-slate-500 text-left mb-1">Moneda</label>
+        <select id="pr-moneda" class="swal2-input" style="margin:0; width:100%;"><option>MXN</option><option>USD</option></select>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      preConfirm: () => {
+        const proveedor_id = parseInt(document.getElementById('pr-proveedor').value);
+        const descripcion_busqueda = document.getElementById('pr-desc').value.trim();
+        const precio = parseFloat(document.getElementById('pr-precio').value);
+        const moneda = document.getElementById('pr-moneda').value;
+        if (!proveedor_id || !descripcion_busqueda || !precio) { Swal.showValidationMessage('Llena todos los campos'); return false; }
+        return { proveedor_id, descripcion_busqueda, precio, moneda };
+      },
+    });
+    if (!r.isConfirmed) return;
+    const res = await fetch('/api/precios/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(r.value),
+    });
+    if (res.ok) { Swal.fire('Guardado', '', 'success'); cargarPrecios(); }
+    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo guardar', 'error'); }
+  }
+
+  async function borrarPrecio(id) {
+    const r = await Swal.fire({ title: '¿Borrar precio?', showCancelButton: true, confirmButtonText: 'Borrar', confirmButtonColor: '#e11d48' });
+    if (!r.isConfirmed) return;
+    const res = await fetch(`/api/precios/${id}`, { method: 'DELETE', credentials: 'include' });
+    if (res.ok) cargarPrecios();
+    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo borrar', 'error'); }
+  }
+
+  cargarProveedores().then(cargarPrecios);
+</script>
+{% endblock %}
