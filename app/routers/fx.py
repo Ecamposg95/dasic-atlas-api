@@ -110,3 +110,36 @@ def override_tc_del_dia(
         payload.fecha, payload.usd_mxn, current_user.id,
     )
     return row
+
+
+@router.get(
+    "/historico",
+    dependencies=[Depends(allow_all_staff)],
+)
+def fx_historico(
+    dias: int = Query(30, ge=1, le=365, description="Días hacia atrás; default 30, max 365"),
+    db: Session = Depends(get_db),
+):
+    """Histórico de TC USD/MXN en los últimos N días."""
+    from datetime import timedelta
+    desde = _date.today() - timedelta(days=dias)
+    rows = (
+        db.query(models.TipoCambioDia)
+        .filter(models.TipoCambioDia.fecha >= desde)
+        .order_by(models.TipoCambioDia.fecha.desc())
+        .all()
+    )
+    return {
+        "dias": dias,
+        "items": [
+            {
+                "fecha": r.fecha.isoformat(),
+                "usd_mxn": float(r.usd_mxn),
+                "fuente": r.fuente,
+                "nota": getattr(r, "nota", None),
+                "actualizado_por": getattr(r, "actualizado_por", None),
+                "obtenido_en": r.obtenido_en.isoformat() if r.obtenido_en else None,
+            }
+            for r in rows
+        ],
+    }
