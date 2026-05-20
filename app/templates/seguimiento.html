@@ -107,6 +107,9 @@
                   <button x-show="v.estatus==='cotizacion'" title="Borrador OC" class="dax-btn-ghost text-xs py-1 px-2" @click="verBorradorCompra(v)">
                     <i class="fas fa-file-invoice"></i>
                   </button>
+                  <button x-show="v.estatus==='cotizacion'" title="Generar OCs por proveedor" class="dax-btn-ghost text-xs py-1 px-2 hover:text-sky-300" @click="generarOCs(v)">
+                    <i class="fas fa-cart-flatbed text-sky-400"></i>
+                  </button>
                   <button x-show="v.estatus==='cotizacion'" title="Sugerir OC (auto)" class="dax-btn-ghost text-xs py-1 px-2 hover:text-violet-300" @click="sugerirOC(v)">
                     <i class="fas fa-truck text-violet-400"></i>
                   </button>
@@ -327,6 +330,64 @@ function seguimiento() {
         window.toast(`Cancelada: ${d.folio} (${d.productos_liberados} productos liberados)`, 'success');
         await this.init();
       } catch(e) { console.warn(e); window.toast('Error de red', 'error'); }
+    },
+
+    async generarOCs(v) {
+      try {
+        // 1. Obtener agrupamiento por proveedor
+        const gr = await fetch(`/api/compras/cotizacion/${v.id}/grouping`, { credentials:'include' });
+        const gd = await gr.json();
+        if (!gr.ok) return window.toast(gd.detail || 'Error al obtener agrupamiento', 'error');
+
+        const grupos = gd.grupos || [];
+        if (!grupos.length) return window.toast(`${v.folio}: sin líneas para ordenar`, 'info');
+
+        // 2. Construir resumen para confirmar
+        const conProv = grupos.filter(g => g.proveedor_id);
+        const sinProv = grupos.filter(g => !g.proveedor_id);
+
+        if (!conProv.length) {
+          let msg = `${v.folio}: ninguna línea tiene proveedor asignado.`;
+          if (sinProv.length) {
+            msg += `\n\nLíneas sin proveedor (${sinProv.flatMap(g => g.lineas).length}):`;
+            sinProv.flatMap(g => g.lineas).forEach(l => {
+              msg += `\n  ${l.sku} – ${l.descripcion} ×${l.cantidad}`;
+            });
+          }
+          return alert(msg);
+        }
+
+        let txt = `Generar OCs para ${v.folio}\n\n`;
+        conProv.forEach(g => {
+          const subtotal = g.lineas.reduce((s, l) => s + (l.costo_unitario * l.cantidad), 0);
+          txt += `• ${g.proveedor_nombre} (${g.lineas.length} línea(s)) — subtotal estimado: $${subtotal.toFixed(2)}\n`;
+        });
+        if (sinProv.length) {
+          const nSin = sinProv.flatMap(g => g.lineas).length;
+          txt += `\n⚠ ${nSin} línea(s) sin proveedor asignado serán omitidas.`;
+        }
+        txt += `\n\n¿Confirmar y crear ${conProv.length} OC(s) en borrador?`;
+
+        if (!confirm(txt)) return;
+
+        // 3. POST a /confirmar con todos los grupos (se ignoran los sin proveedor_id en el backend)
+        const body = { grupos: grupos.map(g => ({
+          proveedor_id: g.proveedor_id,
+          lineas: g.lineas.map(l => ({ detalle_id: l.detalle_id }))
+        })) };
+
+        const cr = await fetch(`/api/compras/cotizacion/${v.id}/confirmar`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify(body)
+        });
+        const cd = await cr.json();
+        if (!cr.ok) return window.toast(cd.detail || 'Error al crear OCs', 'error');
+
+        const folios = (cd.ocs_creadas || []).map(o => o.folio).join(', ');
+        window.toast(`OCs creadas: ${folios}`, 'success', 6000);
+      } catch(e) { console.warn(e); window.toast('Error de red al generar OCs', 'error'); }
     },
 
     async verEventos(v) {
