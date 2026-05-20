@@ -437,6 +437,11 @@
         <span class="sidebar-item-icon"><i class="fas fa-chart-pie text-[12px]"></i></span>
         <span>Reportes</span>
       </a>
+      <a href="/reportes-servicio" class="sidebar-item {% if _path == '/reportes-servicio' %}is-active{% endif %}"
+         x-show="$store.user.canVer('reportes')" x-cloak>
+        <span class="sidebar-item-icon"><i class="fas fa-chart-line text-[12px]"></i></span>
+        <span>Reportes operación</span>
+      </a>
       <a href="/gastos" class="sidebar-item {% if _path == '/gastos' %}is-active{% endif %}"
          x-show="$store.user.canVer('gastos')" x-cloak>
         <span class="sidebar-item-icon"><i class="fas fa-file-invoice-dollar text-[12px]"></i></span>

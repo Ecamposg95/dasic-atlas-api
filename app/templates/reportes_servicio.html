@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}Reportes de servicio · DASIC{% endblock %}
+{% block content %}
+<div class="p-6 max-w-7xl mx-auto space-y-6">
+  <header class="flex items-center justify-between mb-2">
+    <h1 class="text-2xl font-medium text-slate-800 dark:text-slate-100">
+      <i class="fas fa-chart-line mr-2 text-cyan-500"></i>Reportes de servicio / operación
+    </h1>
+    <select id="filtro-dias" onchange="recargarTodo()"
+            class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-sm">
+      <option value="30">30 días</option>
+      <option value="60">60 días</option>
+      <option value="90" selected>90 días</option>
+      <option value="180">6 meses</option>
+      <option value="365">1 año</option>
+    </select>
+  </header>
+
+  <!-- Conversión cotización → VTA -->
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-3">Conversión cotización → venta</h2>
+    <div id="conv-kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+      <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded">
+        <div class="text-xs text-slate-500">Cotizaciones</div>
+        <div id="conv-total" class="text-2xl font-bold text-slate-700 dark:text-slate-100">—</div>
+      </div>
+      <div class="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded">
+        <div class="text-xs text-emerald-700 dark:text-emerald-300">Tasa conversión</div>
+        <div id="conv-tasa" class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">—</div>
+      </div>
+      <div class="p-3 bg-rose-50 dark:bg-rose-900/30 rounded">
+        <div class="text-xs text-rose-700 dark:text-rose-300">Tasa cancelación</div>
+        <div id="conv-cancel" class="text-2xl font-bold text-rose-700 dark:text-rose-300">—</div>
+      </div>
+      <div class="p-3 bg-cyan-50 dark:bg-cyan-900/30 rounded">
+        <div class="text-xs text-cyan-700 dark:text-cyan-300">Tiempo medio (días)</div>
+        <div id="conv-tiempo" class="text-2xl font-bold text-cyan-700 dark:text-cyan-300">—</div>
+      </div>
+      <div class="p-3 bg-amber-50 dark:bg-amber-900/30 rounded">
+        <div class="text-xs text-amber-700 dark:text-amber-300">Pipeline activo MXN</div>
+        <div id="conv-pipeline" class="text-2xl font-bold text-amber-700 dark:text-amber-300">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Top servicios -->
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-3">Top servicios cotizados</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase border-b">
+          <tr>
+            <th class="text-left p-2">#</th>
+            <th class="text-left p-2">Servicio</th>
+            <th class="text-right p-2">Líneas</th>
+            <th class="text-right p-2">Cantidad total</th>
+            <th class="text-right p-2">Monto MXN</th>
+          </tr>
+        </thead>
+        <tbody id="top-srv-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+          <tr><td colspan="5" class="p-6 text-center text-slate-400">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Fantasmas pendientes por proveedor -->
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-3">
+      Fantasmas pendientes por proveedor
+      <span id="fant-total" class="ml-2 text-slate-400 normal-case font-normal"></span>
+    </h2>
+    <div id="fant-grupos" class="space-y-3">
+      <div class="text-center text-slate-400 py-6">Cargando…</div>
+    </div>
+  </section>
+
+  <!-- Vencimientos próximos -->
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-3">
+      Vencimientos próximos (14 días)
+      <span id="venc-total" class="ml-2 text-slate-400 normal-case font-normal"></span>
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase border-b">
+          <tr>
+            <th class="text-left p-2">Folio</th>
+            <th class="text-left p-2">Cliente</th>
+            <th class="text-left p-2">Vendedor</th>
+            <th class="text-right p-2">Total MXN</th>
+            <th class="text-right p-2">Días restantes</th>
+          </tr>
+        </thead>
+        <tbody id="venc-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+          <tr><td colspan="5" class="p-6 text-center text-slate-400">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Órdenes pendientes de entrega (sin remisión) -->
+  <section class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5">
+    <h2 class="text-xs uppercase font-bold text-slate-500 mb-3">
+      Órdenes pendientes de entrega
+      <span class="text-slate-400 normal-case font-normal">— ventas sin remisión registrada</span>
+      <span id="pend-total" class="ml-2 text-slate-400 normal-case font-normal"></span>
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 uppercase border-b">
+          <tr>
+            <th class="text-left p-2">Folio</th>
+            <th class="text-left p-2">Cliente</th>
+            <th class="text-left p-2">Estatus</th>
+            <th class="text-right p-2">Total MXN</th>
+            <th class="text-right p-2">Días desde venta</th>
+          </tr>
+        </thead>
+        <tbody id="pend-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+          <tr><td colspan="5" class="p-6 text-center text-slate-400">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function fmtMXN(n) { return '$' + (n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  async function cargarConversion() {
+    const dias = document.getElementById('filtro-dias').value || '90';
+    try {
+      const r = await fetch(`/api/reportes/conversion-cotizaciones?dias=${dias}`, { credentials: 'include' });
+      if (!r.ok) return;
+      const d = await r.json();
+      document.getElementById('conv-total').textContent = d.total_cotizaciones || 0;
+      document.getElementById('conv-tasa').textContent = (d.tasa_conversion_pct ?? 0) + '%';
+      document.getElementById('conv-cancel').textContent = (d.tasa_cancelacion_pct ?? 0) + '%';
+      document.getElementById('conv-tiempo').textContent = d.tiempo_medio_conversion_dias != null ? d.tiempo_medio_conversion_dias : '—';
+      document.getElementById('conv-pipeline').textContent = fmtMXN(d.monto_pipeline_activo_mxn);
+    } catch (e) { console.error(e); }
+  }
+
+  async function cargarTopServicios() {
+    const dias = document.getElementById('filtro-dias').value || '90';
+    const tbody = document.getElementById('top-srv-tbody');
+    try {
+      const r = await fetch(`/api/reportes/top-servicios?dias=${dias}&limite=20`, { credentials: 'include' });
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error.</td></tr>'; return; }
+      const d = await r.json();
+      const items = d.items || [];
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400">Sin servicios cotizados en el rango.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map((s, i) => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+          <td class="p-2 text-xs text-slate-500">${i + 1}</td>
+          <td class="p-2 max-w-md truncate" title="${(s.nombre || '').replace(/"/g, '&quot;')}">${s.nombre || '—'}</td>
+          <td class="p-2 text-right">${s.cantidad_lineas}</td>
+          <td class="p-2 text-right">${s.cantidad_total}</td>
+          <td class="p-2 text-right font-mono">${fmtMXN(s.monto_mxn)}</td>
+        </tr>
+      `).join('');
+    } catch (e) { console.error(e); tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error de red.</td></tr>'; }
+  }
+
+  async function cargarFantasmas() {
+    const wrap = document.getElementById('fant-grupos');
+    try {
+      const r = await fetch('/api/reportes/fantasmas-por-proveedor', { credentials: 'include' });
+      if (!r.ok) { wrap.innerHTML = '<div class="text-center text-rose-500 py-6">Error.</div>'; return; }
+      const d = await r.json();
+      document.getElementById('fant-total').textContent = `(${d.total_pendientes} pendientes)`;
+      const grupos = d.grupos || [];
+      if (grupos.length === 0) {
+        wrap.innerHTML = '<div class="text-center text-slate-400 py-6">Sin fantasmas pendientes.</div>';
+        return;
+      }
+      wrap.innerHTML = grupos.map(g => `
+        <details class="bg-slate-50 dark:bg-slate-900 rounded p-3">
+          <summary class="cursor-pointer text-sm font-medium flex justify-between">
+            <span>${g.proveedor_nombre}</span>
+            <span class="text-xs text-slate-500">${g.cantidad} ítems · ${g.veces_solicitado_total} solicitudes totales</span>
+          </summary>
+          <ul class="mt-2 ml-3 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+            ${(g.items || []).slice(0, 50).map(it => `<li>• <span class="font-mono text-[10px]">x${it.veces_solicitado}</span> ${it.descripcion} · <span class="font-mono">${fmtMXN(it.costo_referencia)} ${it.moneda}</span></li>`).join('')}
+            ${g.items && g.items.length > 50 ? `<li class="text-slate-400">… y ${g.items.length - 50} más</li>` : ''}
+          </ul>
+        </details>
+      `).join('');
+    } catch (e) { console.error(e); wrap.innerHTML = '<div class="text-center text-rose-500 py-6">Error de red.</div>'; }
+  }
+
+  async function cargarVencimientos() {
+    const tbody = document.getElementById('venc-tbody');
+    try {
+      const r = await fetch('/api/reportes/vencimientos-proximos?dias=14', { credentials: 'include' });
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error.</td></tr>'; return; }
+      const d = await r.json();
+      document.getElementById('venc-total').textContent = `(${d.total_cotizaciones} · ${fmtMXN(d.monto_total_mxn)})`;
+      const items = d.items || [];
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400">Sin vencimientos próximos.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => {
+        const urgencia = it.dias_restantes <= 3 ? 'text-rose-600 font-bold'
+                       : it.dias_restantes <= 7 ? 'text-amber-600 font-bold'
+                       : 'text-slate-600';
+        return `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+            <td class="p-2 font-mono text-xs"><a href="/ventas/cotizador?id=${it.id}" class="text-cyan-600 hover:underline">${it.folio}</a></td>
+            <td class="p-2">${it.cliente_nombre || '—'}</td>
+            <td class="p-2 text-xs">${it.vendedor_nombre || '—'}</td>
+            <td class="p-2 text-right font-mono">${fmtMXN(it.total_mxn)}</td>
+            <td class="p-2 text-right ${urgencia}">${it.dias_restantes} d</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) { console.error(e); tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error de red.</td></tr>'; }
+  }
+
+  async function cargarPendientesEntrega() {
+    const tbody = document.getElementById('pend-tbody');
+    try {
+      const r = await fetch('/api/reportes/ordenes-pendientes-entrega', { credentials: 'include' });
+      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error.</td></tr>'; return; }
+      const d = await r.json();
+      document.getElementById('pend-total').textContent = `(${d.total} · ${fmtMXN(d.monto_total_mxn)})`;
+      const items = d.items || [];
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-400">Sin pendientes de entrega.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => {
+        const dias = it.dias_desde_venta != null ? it.dias_desde_venta : '—';
+        const urgencia = (typeof dias === 'number' && dias >= 7) ? 'text-rose-600 font-bold'
+                       : (typeof dias === 'number' && dias >= 3) ? 'text-amber-600 font-bold'
+                       : 'text-slate-600';
+        return `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+            <td class="p-2 font-mono text-xs">${it.folio || '—'}</td>
+            <td class="p-2">${it.cliente_nombre || '—'}</td>
+            <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-cyan-100 text-cyan-800">${it.estatus}</span></td>
+            <td class="p-2 text-right font-mono">${fmtMXN(it.total_mxn)}</td>
+            <td class="p-2 text-right ${urgencia}">${dias} d</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) { console.error(e); tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-rose-500">Error de red.</td></tr>'; }
+  }
+
+  function recargarTodo() {
+    cargarConversion();
+    cargarTopServicios();
+    cargarFantasmas();
+    cargarVencimientos();
+    cargarPendientesEntrega();
+  }
+
+  recargarTodo();
+</script>
+{% endblock %}

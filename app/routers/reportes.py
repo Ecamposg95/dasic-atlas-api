@@ -235,3 +235,229 @@ def ventas_mes_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=ventas_por_mes.csv"},
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sub-proyecto H — Reportes de servicio / operación
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get("/conversion-cotizaciones", dependencies=[Depends(allow_all_staff)])
+def conversion_cotizaciones(
+    dias: int = Query(90, ge=1, le=365),
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Tasa de conversión cotización → VTA en los últimos N días.
+
+    Considera "convertida" cualquier orden con estatus != COTIZACION y != CANCELADA.
+    Tiempo medio = diferencia entre fecha_creacion y actualizado_en (proxy de cuándo
+    cambió de estatus). Si actualizado_en es NULL, se ignora del cálculo de tiempo."""
+    desde = datetime.utcnow() - timedelta(days=dias)
+    q = db.query(models.OrdenVenta).filter(models.OrdenVenta.fecha_creacion >= desde)
+    q = _scope_ventas(q, current_user)
+    ordenes = q.all()
+
+    total = len(ordenes)
+    convertidas = [o for o in ordenes if o.estatus != models.EstatusOrden.COTIZACION
+                   and o.estatus != models.EstatusOrden.CANCELADA]
+    canceladas = [o for o in ordenes if o.estatus == models.EstatusOrden.CANCELADA]
+    activas = [o for o in ordenes if o.estatus == models.EstatusOrden.COTIZACION]
+
+    # Tiempo medio de conversión
+    tiempos = []
+    for o in convertidas:
+        if o.fecha_creacion and getattr(o, "actualizado_en", None):
+            delta = o.actualizado_en - o.fecha_creacion
+            tiempos.append(delta.total_seconds() / 86400.0)
+    tiempo_medio_dias = round(sum(tiempos) / len(tiempos), 1) if tiempos else None
+
+    monto_convertido = sum(_to_mxn(o.total, o.moneda, o.tipo_cambio) for o in convertidas)
+    monto_activo = sum(_to_mxn(o.total, o.moneda, o.tipo_cambio) for o in activas)
+
+    return {
+        "dias": dias,
+        "total_cotizaciones": total,
+        "convertidas": len(convertidas),
+        "canceladas": len(canceladas),
+        "activas": len(activas),
+        "tasa_conversion_pct": round(100.0 * len(convertidas) / total, 1) if total else 0,
+        "tasa_cancelacion_pct": round(100.0 * len(canceladas) / total, 1) if total else 0,
+        "tiempo_medio_conversion_dias": tiempo_medio_dias,
+        "monto_convertido_mxn": round(monto_convertido, 2),
+        "monto_pipeline_activo_mxn": round(monto_activo, 2),
+    }
+
+
+@router.get("/top-servicios", dependencies=[Depends(allow_all_staff)])
+def top_servicios(
+    dias: int = Query(90, ge=1, le=365),
+    limite: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Top servicios cotizados en los últimos N días (cuenta + monto MXN).
+
+    Cuenta líneas con `servicio_id` no nulo o `tipo_linea` con prefijo 'servicio'."""
+    desde = datetime.utcnow() - timedelta(days=dias)
+    q = (
+        db.query(models.DetalleOrden, models.OrdenVenta)
+        .join(models.OrdenVenta, models.DetalleOrden.orden_id == models.OrdenVenta.id)
+        .filter(models.OrdenVenta.fecha_creacion >= desde)
+    )
+    q = _scope_ventas(q, current_user)
+    rows = q.all()
+
+    agg: dict[str, dict] = {}
+    for det, orden in rows:
+        es_servicio = bool(det.servicio_id) or (det.tipo_linea or "").startswith("servicio")
+        if not es_servicio:
+            continue
+        nombre = (det.servicio.nombre if det.servicio else None) or det.descripcion_libre or "—"
+        key = (det.servicio_id, nombre.lower().strip())
+        bucket = agg.setdefault(str(key), {
+            "servicio_id": det.servicio_id,
+            "nombre": nombre,
+            "cantidad_lineas": 0,
+            "cantidad_total": 0,
+            "monto_mxn": 0.0,
+        })
+        bucket["cantidad_lineas"] += 1
+        bucket["cantidad_total"] += int(det.cantidad or 0)
+        bucket["monto_mxn"] += _to_mxn(det.subtotal, orden.moneda, orden.tipo_cambio)
+
+    items = sorted(agg.values(), key=lambda x: x["monto_mxn"], reverse=True)[:limite]
+    return {
+        "dias": dias,
+        "items": [{**it, "monto_mxn": round(it["monto_mxn"], 2)} for it in items],
+        "total_lineas_servicio": sum(it["cantidad_lineas"] for it in agg.values()),
+        "monto_total_servicios_mxn": round(sum(it["monto_mxn"] for it in agg.values()), 2),
+    }
+
+
+@router.get("/fantasmas-por-proveedor", dependencies=[Depends(allow_all_staff)])
+def fantasmas_por_proveedor(
+    db: Session = Depends(get_db),
+):
+    """Fantasmas pendientes agrupados por proveedor sugerido. Útil para
+    priorizar negociaciones y cotizaciones a proveedor."""
+    q = db.query(models.ProductoFantasma).filter(
+        models.ProductoFantasma.estado == "PENDIENTE"
+    )
+    rows = q.all()
+
+    por_prov: dict[Optional[int], dict] = {}
+    for f in rows:
+        key = f.proveedor_sugerido_id
+        bucket = por_prov.setdefault(key, {
+            "proveedor_id": key,
+            "proveedor_nombre": (f.proveedor_sugerido.nombre_empresa if f.proveedor_sugerido else "Sin asignar"),
+            "cantidad": 0,
+            "veces_solicitado_total": 0,
+            "items": [],
+        })
+        bucket["cantidad"] += 1
+        bucket["veces_solicitado_total"] += f.veces_solicitado or 0
+        bucket["items"].append({
+            "id": f.id,
+            "descripcion": f.descripcion_original,
+            "veces_solicitado": f.veces_solicitado,
+            "costo_referencia": float(f.costo_referencia),
+            "moneda": f.moneda_referencia,
+        })
+
+    return {
+        "grupos": sorted(por_prov.values(), key=lambda x: x["veces_solicitado_total"], reverse=True),
+        "total_pendientes": sum(g["cantidad"] for g in por_prov.values()),
+    }
+
+
+@router.get("/vencimientos-proximos", dependencies=[Depends(allow_all_staff)])
+def vencimientos_proximos(
+    dias: int = Query(14, ge=1, le=90),
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Cotizaciones activas que vencen en los próximos N días (default 14)."""
+    ahora = datetime.utcnow()
+    horizonte = ahora + timedelta(days=dias)
+    q = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
+            models.OrdenVenta.fecha_vencimiento.isnot(None),
+            models.OrdenVenta.fecha_vencimiento >= ahora,
+            models.OrdenVenta.fecha_vencimiento <= horizonte,
+        )
+    )
+    q = _scope_ventas(q, current_user)
+    rows = q.order_by(models.OrdenVenta.fecha_vencimiento.asc()).all()
+
+    items = []
+    for o in rows:
+        dias_restantes = (o.fecha_vencimiento - ahora).days
+        items.append({
+            "id": o.id,
+            "folio": o.folio,
+            "cliente_nombre": (o.cliente.nombre_empresa if o.cliente else None),
+            "vendedor_nombre": (o.vendedor.nombre if o.vendedor else None),
+            "moneda": o.moneda,
+            "total": float(o.total or 0),
+            "total_mxn": round(_to_mxn(o.total, o.moneda, o.tipo_cambio), 2),
+            "fecha_vencimiento": o.fecha_vencimiento.isoformat() if o.fecha_vencimiento else None,
+            "dias_restantes": dias_restantes,
+        })
+    monto_total_mxn = round(sum(it["total_mxn"] for it in items), 2)
+    return {
+        "dias_horizonte": dias,
+        "total_cotizaciones": len(items),
+        "monto_total_mxn": monto_total_mxn,
+        "items": items,
+    }
+
+
+@router.get("/ordenes-pendientes-entrega", dependencies=[Depends(allow_all_staff)])
+def ordenes_pendientes_entrega(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Órdenes de venta convertidas (no cotización, no cancelada) que NO tienen
+    remisión registrada. Útil para operación de entrega."""
+    ahora = datetime.utcnow()
+    q = (
+        db.query(models.OrdenVenta)
+        .filter(
+            models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
+            models.OrdenVenta.estatus != models.EstatusOrden.CANCELADA,
+        )
+    )
+    q = _scope_ventas(q, current_user)
+    ordenes = q.all()
+
+    # Cargar remisiones existentes en un solo query
+    remisiones_por_orden: dict[int, int] = {}
+    for r in db.query(models.Remision).all():
+        remisiones_por_orden[r.orden_venta_id] = remisiones_por_orden.get(r.orden_venta_id, 0) + 1
+
+    pendientes = [o for o in ordenes if remisiones_por_orden.get(o.id, 0) == 0]
+    pendientes.sort(key=lambda o: o.fecha_creacion or ahora, reverse=False)
+
+    items = []
+    for o in pendientes:
+        dias_desde = (ahora - o.fecha_creacion).days if o.fecha_creacion else None
+        items.append({
+            "id": o.id,
+            "folio": o.folio,
+            "cliente_nombre": (o.cliente.nombre_empresa if o.cliente else None),
+            "estatus": o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus),
+            "moneda": o.moneda,
+            "total": float(o.total or 0),
+            "total_mxn": round(_to_mxn(o.total, o.moneda, o.tipo_cambio), 2),
+            "fecha_creacion": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+            "dias_desde_venta": dias_desde,
+        })
+    return {
+        "total": len(items),
+        "monto_total_mxn": round(sum(it["total_mxn"] for it in items), 2),
+        "items": items,
+    }
