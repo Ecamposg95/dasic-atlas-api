@@ -850,7 +850,12 @@ def actualizar_orden(
                 moneda_origen_linea = (
                     item.moneda_origen or producto.moneda_compra or "MXN"
                 ).upper()
-                costo_origen = Decimal(producto.costo_compra or 0)
+                # Override de costo (mismo contrato que POST): costo_unitario > 0 = override
+                # para esta cotización; 0/None = snapshot del catálogo.
+                if item.costo_unitario and Decimal(item.costo_unitario) > 0:
+                    costo_origen = Decimal(item.costo_unitario)
+                else:
+                    costo_origen = Decimal(producto.costo_compra or 0)
             else:
                 if not descripcion_libre:
                     raise HTTPException(400, "Producto fantasma requiere descripción.")
