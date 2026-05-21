@@ -1,0 +1,19 @@
+# Multi-builder para Railway: Node 20 (Vite SPA) + Python 3.11 (FastAPI).
+# El build de Vite escribe a app/static/dist/ (referenciado por catch-all
+# en app/main.py). Procfile sigue arrancando uvicorn.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python311"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt",
+  "cd web && npm ci",
+]
+
+[phases.build]
+cmds = ["cd web && npm run build"]
+
+[start]
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"

@@ -33,6 +33,10 @@ htmlcov/
 # Node deps (frontend tooling)
 node_modules/
 
+# Vite build output del SPA (regenerado por nixpacks en cada deploy)
+app/static/dist/
+web/.vite/
+
 # Workflow local de Claude Code (cache del plugin superpowers y planes
 # borrador que no son artefactos de producto).
 .superpowers/
