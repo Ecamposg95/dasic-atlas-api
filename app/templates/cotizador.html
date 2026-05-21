@@ -2574,6 +2574,90 @@
       document.getElementById('el-cost').value = Number(it.cost_original || 0).toFixed(2);
   }
 
+  function abrirReemplazoProducto() {
+      if (_editandoIdx == null) return;
+      const it = state.cart[_editandoIdx];
+      const tieneOverride = it && (
+          (it.sku_original && it.sku !== it.sku_original) ||
+          (it.nom_original && it.nom !== it.nom_original) ||
+          (it.cost_original != null && Number(it.cost) !== Number(it.cost_original))
+      );
+      const _abrir = () => {
+          document.getElementById('el-vista-reemplazo').classList.remove('hidden');
+          document.getElementById('el-reemplazo-q').value = '';
+          filtrarReemplazo('');
+          setTimeout(() => document.getElementById('el-reemplazo-q').focus(), 50);
+      };
+      if (tieneOverride) {
+          Swal.fire({
+              icon: 'warning',
+              title: '¿Descartar overrides?',
+              text: 'Al reemplazar el producto se perderán los cambios de descripción, SKU y costo de esta línea.',
+              showCancelButton: true,
+              confirmButtonText: 'Reemplazar igual',
+              cancelButtonText: 'Cancelar',
+          }).then(r => { if (r.isConfirmed) _abrir(); });
+      } else {
+          _abrir();
+      }
+  }
+
+  function cerrarReemplazoProducto() {
+      document.getElementById('el-vista-reemplazo').classList.add('hidden');
+  }
+
+  function filtrarReemplazo(q) {
+      const needle = (q || '').toLowerCase().trim();
+      const todos = state.prods || [];
+      const matches = !needle ? todos.slice(0, 30) : todos.filter(p =>
+          (p.sku_comercial || p.sku || '').toLowerCase().includes(needle) ||
+          (p.nombre || '').toLowerCase().includes(needle) ||
+          (p.marca || '').toLowerCase().includes(needle)
+      ).slice(0, 30);
+      const cont = document.getElementById('el-reemplazo-lista');
+      if (matches.length === 0) {
+          cont.innerHTML = '<div class="text-xs text-slate-400 text-center p-4">Sin coincidencias</div>';
+          return;
+      }
+      cont.innerHTML = matches.map(p => `
+          <button type="button" onclick="aplicarReemplazo(${p.id})"
+                  class="w-full text-left px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition border border-transparent hover:border-cyan-300">
+              <div class="font-mono text-[11px] font-bold text-cyan-700 dark:text-cyan-300">${(p.sku_comercial || p.sku || '—').replace(/</g, '&lt;')}</div>
+              <div class="text-xs text-slate-700 dark:text-slate-200 truncate">${(p.nombre || '').replace(/</g, '&lt;')}</div>
+              <div class="text-[10px] text-slate-500">${(p.moneda_compra || 'MXN')} $${Number(p.costo_compra || 0).toFixed(2)} · Stock ${p.stock_actual || 0}</div>
+          </button>
+      `).join('');
+  }
+
+  function aplicarReemplazo(productoId) {
+      if (_editandoIdx == null) return;
+      const p = (state.prods || []).find(x => x.id === productoId);
+      if (!p) { Swal.fire('Error', 'Producto no encontrado', 'error'); return; }
+      const it = state.cart[_editandoIdx];
+      snapshotHistorial();
+      state.cart[_editandoIdx] = {
+          ...it,
+          id: p.id,
+          producto_id: p.id,
+          servicio_id: null,
+          ghost: false,
+          servicio: false,
+          sku: p.sku_comercial || p.sku || '—',
+          nom: p.nombre,
+          cost: parseFloat(p.costo_compra || 0),
+          productCurrency: (p.moneda_compra || 'MXN').toUpperCase(),
+          max: p.stock_actual,
+          tipo_linea: 'producto_catalogo',
+          sku_original: p.sku_comercial || p.sku || '—',
+          nom_original: p.nombre,
+          cost_original: parseFloat(p.costo_compra || 0),
+      };
+      cerrarEditarLinea();
+      renderCart();
+      autosaveBorrador();
+      window.toast(`Producto reemplazado por ${p.sku_comercial || p.sku}`, 'success');
+  }
+
   function abrirNotaLinea(idx) {
       const item = state.cart[idx];
       if (!item) return;
