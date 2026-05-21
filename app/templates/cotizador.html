@@ -2652,6 +2652,30 @@
       } catch(_) {}
   }
 
+  // ============ Helpers de serialización de overrides por línea ============
+  function _hayOverride(i, campo) {
+      const orig = i[campo === 'sku' ? 'sku_original' : 'nom_original'];
+      return orig != null && i[campo] !== orig;
+  }
+  function _hayOverrideCosto(i) {
+      return i.cost_original != null && Number(i.cost) !== Number(i.cost_original);
+  }
+  function _serializarSkuLibre(i) {
+      if (i.ghost || i.servicio_id) {
+          if (i.sku === '— FANTASMA' || i.sku === '— SERVICIO') return null;
+          return i.sku;
+      }
+      return _hayOverride(i, 'sku') ? i.sku : null;
+  }
+  function _serializarDescLibre(i) {
+      if (i.ghost || i.servicio_id) return i.nom;
+      return _hayOverride(i, 'nom') ? i.nom : null;
+  }
+  function _serializarCostoUnit(i) {
+      if (i.ghost || i.servicio_id) return i.cost;
+      return _hayOverrideCosto(i) ? i.cost : null;
+  }
+
   async function guardar(tipo) {
       const cli = document.getElementById('select-cliente').value;
       if (!cli) return Swal.fire('Falta cliente', 'Selecciona un cliente antes de guardar.', 'warning');
@@ -2701,9 +2725,9 @@
               utilidad: i.utilidad,
               descuento: Number(i.descuento) || 0,
               moneda_origen: i.productCurrency,
-              sku_libre: (i.ghost || i.servicio_id) ? (i.sku === '— FANTASMA' || i.sku === '— SERVICIO' ? null : i.sku) : null,
-              descripcion_libre: (i.ghost || i.servicio_id) ? i.nom : null,
-              costo_unitario: (i.ghost || i.servicio_id) ? i.cost : null,
+              sku_libre: _serializarSkuLibre(i),
+              descripcion_libre: _serializarDescLibre(i),
+              costo_unitario: _serializarCostoUnit(i),
               tipo_linea: i.tipo_linea || i.tipoLinea || (i.servicio_id ? 'servicio_catalogo' : (i.servicio ? 'servicio' : (i.ghost ? 'producto_fantasma' : 'producto_catalogo'))),
               proveedor_sugerido_id: i.proveedor_sugerido_id || null,
               entrega_min: i.entrega_min ?? null,
