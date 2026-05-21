@@ -2216,6 +2216,15 @@
           if (i.observaciones_linea) {
               chips.push(`<span class="text-[9px] font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded" title="Nota de línea"><i class="fas fa-sticky-note text-[8px] mr-0.5"></i>Nota</span>`);
           }
+          // Chip "Editado" para líneas de catálogo con cualquier override visible.
+          if (i.id && !i.ghost && !i.servicio_id && typeof i.id === 'number') {
+              const esEdit = (i.sku_original != null && i.sku !== i.sku_original)
+                  || (i.nom_original != null && i.nom !== i.nom_original)
+                  || (i.cost_original != null && Number(i.cost) !== Number(i.cost_original));
+              if (esEdit) {
+                  chips.push('<span class="text-[9px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded uppercase" title="Línea editada — overrides solo en esta cotización"><i class="fas fa-pen text-[8px] mr-0.5"></i>Editado</span>');
+              }
+          }
           const stockBadge = stockBadgeHTML(i);
           if (stockBadge) chips.push(stockBadge);
 
@@ -2290,6 +2299,10 @@
           // Popover de acciones (⋮)
           const actionsPop = actionsOpen ? `
               <div class="cot-actions-pop absolute right-1 top-8 z-30 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[180px]" onclick="event.stopPropagation()">
+                  <button onclick="abrirEditarLinea(${idx}); cerrarAcciones()" type="button"
+                          class="w-full text-left text-xs px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+                      <i class="fas fa-pen mr-2 w-3"></i> Editar línea
+                  </button>
                   <button onclick="expandirYScroll(${idx}, 'entrega_min'); cerrarAcciones()" type="button"
                           class="w-full text-left text-xs px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
                       <i class="fas fa-truck-fast mr-2 w-3"></i> Entrega y descuento
