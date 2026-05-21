@@ -2486,6 +2486,94 @@
   // ====== NOTA POR LÍNEA (productos similares manuales) ======
   let _notaLineaIdx = null;
 
+  // ============ Editar línea (sku/desc/costo + restaurar + reemplazar) ============
+  let _editandoIdx = null;
+
+  function abrirEditarLinea(idx) {
+      _editandoIdx = idx;
+      const it = state.cart[idx];
+      if (!it) return;
+
+      document.getElementById('el-desc').value = it.nom || '';
+      document.getElementById('el-sku').value = it.sku || '';
+      document.getElementById('el-cost').value = Number(it.cost || 0).toFixed(2);
+      document.getElementById('el-moneda').value = it.productCurrency || 'MXN';
+
+      const esCatalogo = !!it.id && !it.ghost && !it.servicio_id && typeof it.id === 'number';
+      const chip = document.getElementById('el-chip-origen');
+      if (esCatalogo) {
+          chip.textContent = `Catálogo · producto #${it.id}`;
+          chip.className = 'inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300';
+      } else if (it.servicio_id) {
+          chip.textContent = `Servicio · #${it.servicio_id}`;
+          chip.className = 'inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300';
+      } else if (it.servicio) {
+          chip.textContent = 'Servicio ad-hoc';
+          chip.className = 'inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300';
+      } else {
+          chip.textContent = 'Fantasma';
+          chip.className = 'inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
+      }
+
+      // Moneda solo editable en fantasma/servicio (igual que el panel expandible actual).
+      document.getElementById('el-row-moneda').classList.toggle('hidden', !!esCatalogo);
+      // Acciones específicas de catálogo (restaurar + reemplazar) solo si es catálogo.
+      document.getElementById('el-row-acciones-cat').classList.toggle('hidden', !esCatalogo);
+      // Warning solo aplica a catálogo (donde hay un catálogo que NO se está tocando).
+      document.getElementById('el-warn-override').classList.toggle('hidden', !esCatalogo);
+      // Cerrar sub-vista de reemplazo si quedó abierta.
+      document.getElementById('el-vista-reemplazo').classList.add('hidden');
+
+      const m = document.getElementById('modal-editar-linea');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      setTimeout(() => document.getElementById('el-desc').focus(), 50);
+  }
+
+  function cerrarEditarLinea() {
+      const m = document.getElementById('modal-editar-linea');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+      _editandoIdx = null;
+  }
+
+  function guardarEditarLinea() {
+      if (_editandoIdx == null) return;
+      const it = state.cart[_editandoIdx];
+      if (!it) { cerrarEditarLinea(); return; }
+      const nuevoDesc = document.getElementById('el-desc').value.trim();
+      const nuevoSku = document.getElementById('el-sku').value.trim();
+      const nuevoCost = parseFloat(document.getElementById('el-cost').value);
+      const nuevaMon = document.getElementById('el-moneda').value || 'MXN';
+
+      if (!nuevoDesc) { Swal.fire('Falta descripción', 'La línea necesita una descripción visible.', 'warning'); return; }
+      if (!Number.isFinite(nuevoCost) || nuevoCost <= 0) { Swal.fire('Costo inválido', 'El costo debe ser mayor a 0.', 'warning'); return; }
+
+      snapshotHistorial();
+      it.nom = nuevoDesc;
+      it.sku = nuevoSku || it.sku;
+      it.cost = nuevoCost;
+      const esCatalogo = !!it.id && !it.ghost && !it.servicio_id && typeof it.id === 'number';
+      if (!esCatalogo) it.productCurrency = nuevaMon;
+
+      cerrarEditarLinea();
+      renderCart();
+      autosaveBorrador();
+  }
+
+  function restaurarCatalogoLinea() {
+      if (_editandoIdx == null) return;
+      const it = state.cart[_editandoIdx];
+      if (!it) return;
+      if (it.sku_original == null && it.nom_original == null && it.cost_original == null) {
+          Swal.fire('Producto no disponible', 'El producto original ya no existe en el catálogo.', 'warning');
+          return;
+      }
+      document.getElementById('el-desc').value = it.nom_original || '';
+      document.getElementById('el-sku').value = it.sku_original || '';
+      document.getElementById('el-cost').value = Number(it.cost_original || 0).toFixed(2);
+  }
+
   function abrirNotaLinea(idx) {
       const item = state.cart[idx];
       if (!item) return;
