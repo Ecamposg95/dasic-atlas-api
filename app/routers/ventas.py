@@ -620,8 +620,11 @@ def crear_orden(
                 moneda_origen_linea = (
                     item.moneda_origen or producto.moneda_compra or "MXN"
                 ).upper()
-                # Override de costo: si el frontend manda costo_unitario > 0,
-                # es un override para esta cotización. Si no, snapshot del catálogo.
+                # Override de costo: si el frontend manda costo_unitario > 0, es un
+                # override para esta cotización. Schema acepta ge=0 pero aquí 0 (o None)
+                # se interpreta como "no override" — el frontend valida cost > 0 antes
+                # de enviar overrides, así que un 0 solo llega cuando no se pretende
+                # override. Si no hay override, snapshot del catálogo.
                 if item.costo_unitario and Decimal(item.costo_unitario) > 0:
                     costo_origen = Decimal(item.costo_unitario)
                 else:
