@@ -2578,8 +2578,12 @@
       if (_editandoIdx == null) return;
       const it = state.cart[_editandoIdx];
       if (!it) return;
-      if (it.sku_original == null && it.nom_original == null && it.cost_original == null) {
-          Swal.fire('Producto no disponible', 'El producto original ya no existe en el catálogo.', 'warning');
+      // Snapshots vienen como '' o 0 (no null) cuando esCatalogo=true pero el
+      // producto fue eliminado del catálogo. Tratar valores vacíos/cero como
+      // "sin datos del catálogo" para el restore.
+      const hayDatos = !!it.sku_original || !!it.nom_original || (it.cost_original != null && Number(it.cost_original) > 0);
+      if (!hayDatos) {
+          Swal.fire('Producto no disponible', 'El producto original ya no existe en el catálogo o no tiene datos suficientes para restaurar.', 'warning');
           return;
       }
       document.getElementById('el-desc').value = it.nom_original || '';
