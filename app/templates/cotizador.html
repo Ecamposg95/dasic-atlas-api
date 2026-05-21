@@ -1143,13 +1143,15 @@
           state.cart = (data.detalles || []).map(d => {
               const ghost = !d.producto_id && !d.servicio_id;
               const esServ = !!d.servicio_id || (d.tipo_linea && d.tipo_linea.startsWith('servicio'));
+              const esCatalogo = !!d.producto_id && !ghost && !esServ;
               return {
                   id: d.producto_id || (d.servicio_id ? `srv-${d.servicio_id}` : `g-${Date.now()}-${Math.random()}`),
                   servicio_id: d.servicio_id || null,
                   producto_id: d.producto_id || null,
                   ghost: ghost,
                   servicio: esServ,
-                  sku: (d.producto && (d.producto.sku || d.producto.sku_interno)) || d.sku_libre || (d.servicio && d.servicio.codigo) || '',
+                  // Override gana sobre catálogo (sku_libre primero, luego producto).
+                  sku: d.sku_libre || (d.producto && (d.producto.sku_comercial || d.producto.sku)) || (d.servicio && d.servicio.codigo) || '',
                   nom: d.descripcion_libre || (d.producto && d.producto.nombre) || (d.servicio && d.servicio.nombre) || '',
                   cost: Number(d.costo_base_linea || 0),
                   productCurrency: d.moneda_origen_linea || state.moneda,
@@ -1161,6 +1163,10 @@
                   entrega_max: d.entrega_max,
                   entrega_unidad: d.entrega_unidad,
                   observaciones_linea: d.observaciones_linea || '',
+                  // Snapshot del catálogo (solo si esCatalogo). Para fantasmas/servicios queda null.
+                  sku_original: esCatalogo ? ((d.producto && (d.producto.sku_comercial || d.producto.sku)) || '') : null,
+                  nom_original: esCatalogo ? ((d.producto && d.producto.nombre) || '') : null,
+                  cost_original: esCatalogo ? Number((d.producto && d.producto.costo_compra) || 0) : null,
               };
           });
 
@@ -2049,6 +2055,10 @@
               entrega_min: null,
               entrega_max: null,
               entrega_unidad: null,
+              // Snapshot del catálogo para detectar overrides en renderCart y restaurar.
+              sku_original: p.sku_comercial || p.sku || '—',
+              nom_original: p.nombre,
+              cost_original: parseFloat(p.costo_compra || 0),
           });
           state._newlyAdded = state.cart.length - 1;
           // B5: cargar productos relacionados (no bloquea)
