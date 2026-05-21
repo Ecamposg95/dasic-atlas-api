@@ -18,7 +18,7 @@ This repo is documented in `context/`. Before any non-trivial change, read:
 - **Backend:** FastAPI + SQLAlchemy 2.x + Alembic, Python (see `runtime.txt`)
 - **DB:** PostgreSQL only, via `psycopg` (no SQLite, no in-memory fakes)
 - **Auth:** JWT (`python-jose`) in HttpOnly cookie (`access_token`); `passlib[bcrypt]==4.0.1`
-- **Frontend:** SSR with Jinja2 templates + Tailwind CDN + Alpine.js. **No SPA frameworks.**
+- **Frontend (en migración 2026-05-21+):** Híbrido SSR + SPA. Las rutas existentes (`/dashboard`, `/ventas/cotizador`, `/seguimiento`, etc.) siguen Jinja2 + Tailwind CDN + Alpine.js mientras se migran fase por fase. Las rutas `/spa/*` sirven el nuevo SPA (React 18 + Vite + TypeScript + Tailwind compilado + shadcn/ui + Zustand + TanStack Query v5), código en `/web/`, build a `app/static/dist/`. Plan: `docs/superpowers/specs/2026-05-21-spa-migration-phase-0-foundation.md`. **No crear páginas Jinja nuevas** — vistas nuevas van al SPA.
 - **PDFs / exports:** `fpdf2`, `openpyxl`, `qrcode`
 - **Email:** SMTP via stdlib (configured through `SMTP_*` env vars)
 - **AI:** Anthropic SDK (`app/services/ai_service.py`)
@@ -92,7 +92,7 @@ Canonical roles in `RolUsuario`: `ADMINISTRADOR`, `GERENTE_COMERCIAL`, `VENTAS`.
 
 - **Multi-tenant always.** Every business query filters by `organization_id`. New tables get an `organization_id` column.
 - **Alembic for schema changes.** Add a revision under `migrations/versions/` for any `app/models/` edit. Use `_BACKFILL_DDL` in `app/db/seeds.py` only as a transitional shim — new work goes into Alembic.
-- **SSR only.** Templates are Jinja2 in `app/templates/`. Frontend interactivity is Alpine.js + Tailwind CDN. Do not introduce React/Vue/Svelte/etc.
+- **Híbrido SSR + SPA (en migración).** Las páginas Jinja existentes en `app/templates/` siguen vivas con Alpine.js + Tailwind CDN hasta que se migren. El SPA React vive en `/web/` y se monta en `/spa/*`. No introducir páginas Jinja nuevas — features nuevos van al SPA. La regla "no SPA frameworks" se reemplazó el 2026-05-21 (ver `docs/superpowers/specs/2026-05-21-spa-migration-phase-0-foundation.md`).
 - **Folios, totals, stock movements are server-side.** Never compute folios in the frontend. Recompute subtotal/IVA/total in the backend on save. Stock changes only via `MovimientoStock` rows.
 - **Cookie auth.** SSR routes read the JWT from the `access_token` cookie; API routes accept `Authorization: Bearer …` or the same cookie. Do not move auth client-side.
 - **DB URL normalization.** `app/core/config.py::normalize_database_url` rewrites `postgres://` and `postgresql://` to `postgresql+psycopg://`. Don't hand-craft URLs that bypass it.

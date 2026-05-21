@@ -194,6 +194,29 @@ for _path, _tmpl in _SSR_ROUTES:
     )
 
 # ---------------------------------------------------------------------------
+# SPA — Migración gradual a React+Vite (ver docs/superpowers/specs/2026-05-21-
+# spa-migration-phase-0-foundation.md). React Router maneja el routing del
+# lado del cliente. La cookie de auth (access_token) es la misma que usa
+# Jinja, así que /api/* funciona sin cambios. El build de Vite escribe a
+# app/static/dist/ — los assets son servidos por el mount existente de
+# /static. Esta ruta solo entrega el index.html shell.
+# ---------------------------------------------------------------------------
+SPA_DIST = BASE_DIR / "static" / "dist"
+
+
+@app.get("/spa/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
+async def spa_catchall(request: Request, full_path: str) -> HTMLResponse:
+    index_path = SPA_DIST / "index.html"
+    if not index_path.exists():
+        return HTMLResponse(
+            "<h1>SPA build missing</h1>"
+            "<p>Run <code>cd web && npm run build</code> o despliega en Railway.</p>",
+            status_code=503,
+        )
+    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Ops"])
