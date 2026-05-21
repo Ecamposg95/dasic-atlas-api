@@ -4,7 +4,12 @@ export type User = {
   id: number;
   email: string;
   nombre: string;
-  rol: string;
+  activo: boolean;
+  rol: string | null;
+  rol_label: string;
+  modulos_visibles: string[];
+  // Capability flags + gestionar_usuarios (de capabilities_for); pueden variar.
+  [key: string]: unknown;
 };
 
 type AuthState = {

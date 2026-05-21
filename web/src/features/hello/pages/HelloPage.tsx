@@ -38,7 +38,7 @@ export function HelloPage() {
         <CardContent className="space-y-2">
           <p className="text-slate-400">
             Esta es la página de prueba del nuevo stack SPA. Tu rol es{' '}
-            <code className="text-accent-glow">{data?.rol}</code>.
+            <code className="text-accent-glow">{data?.rol_label}</code>.
           </p>
           <p className="text-slate-500 text-sm">
             Resto de la app sigue en Jinja+Alpine. Próximo paso: migrar el cotizador (Phase 1).

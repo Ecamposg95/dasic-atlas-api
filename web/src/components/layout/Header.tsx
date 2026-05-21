@@ -7,7 +7,7 @@ export function Header() {
       <h2 className="text-sm uppercase tracking-wider text-slate-400">DASIC ERP — SPA</h2>
       {user && (
         <div className="text-sm">
-          {user.nombre} <span className="text-slate-500">· {user.rol}</span>
+          {user.nombre} <span className="text-slate-500">· {user.rol_label}</span>
         </div>
       )}
     </header>
