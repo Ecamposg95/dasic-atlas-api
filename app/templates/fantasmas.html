@@ -1,34 +1,96 @@
 {% extends "base.html" %}
 {% block title %}Productos Fantasma · DASIC{% endblock %}
 {% block content %}
-<div class="p-6 max-w-6xl mx-auto">
+<div class="p-6 max-w-7xl mx-auto">
   <header class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-medium text-slate-800 dark:text-slate-100">
       <i class="fas fa-ghost mr-2 text-violet-500"></i>Productos Fantasma apilados
     </h1>
-    <span class="text-xs text-slate-500" id="count-resultados"></span>
+    <div class="flex items-center gap-2">
+      <button onclick="exportarCSV()" class="dax-btn-ghost text-xs" title="Exportar resultados filtrados a CSV">
+        <i class="fas fa-file-csv text-emerald-500"></i> CSV
+      </button>
+      <span class="text-xs text-slate-500" id="count-resultados"></span>
+    </div>
   </header>
 
+  <!-- KPIs por estado -->
+  <div id="kpis" class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+    <button data-estado="PENDIENTE" class="kpi-btn p-3 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50 text-left hover:ring-2 hover:ring-amber-400 transition">
+      <div class="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300">Pendientes</div>
+      <div class="text-2xl font-bold text-amber-700 dark:text-amber-300" data-kpi="PENDIENTE">—</div>
+    </button>
+    <button data-estado="EN_OC" class="kpi-btn p-3 rounded-lg border bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-700/50 text-left hover:ring-2 hover:ring-cyan-400 transition">
+      <div class="text-[10px] uppercase font-bold text-cyan-700 dark:text-cyan-300">En OC</div>
+      <div class="text-2xl font-bold text-cyan-700 dark:text-cyan-300" data-kpi="EN_OC">—</div>
+    </button>
+    <button data-estado="RECIBIDO" class="kpi-btn p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/50 text-left hover:ring-2 hover:ring-emerald-400 transition">
+      <div class="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300">Recibidos</div>
+      <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300" data-kpi="RECIBIDO">—</div>
+    </button>
+    <button data-estado="PROMOVIDO" class="kpi-btn p-3 rounded-lg border bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700/50 text-left hover:ring-2 hover:ring-violet-400 transition">
+      <div class="text-[10px] uppercase font-bold text-violet-700 dark:text-violet-300">Promovidos</div>
+      <div class="text-2xl font-bold text-violet-700 dark:text-violet-300" data-kpi="PROMOVIDO">—</div>
+    </button>
+    <button data-estado="DESCARTADO" class="kpi-btn p-3 rounded-lg border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-left hover:ring-2 hover:ring-slate-400 transition">
+      <div class="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Descartados</div>
+      <div class="text-2xl font-bold text-slate-600 dark:text-slate-400" data-kpi="DESCARTADO">—</div>
+    </button>
+  </div>
+
+  <!-- Filtros -->
   <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 mb-4">
     <div class="flex flex-wrap items-center gap-2">
       <input type="text" id="filtro-q" placeholder="Buscar descripción o SKU…"
-             class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 outline-none flex-1 min-w-[180px]">
+             class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 outline-none flex-1 min-w-[200px]">
       <select id="filtro-estado"
               class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
         <option value="PENDIENTE" selected>Pendientes</option>
-        <option value="">Todos</option>
+        <option value="">Todos los estados</option>
         <option value="EN_OC">En OC</option>
         <option value="RECIBIDO">Recibidos</option>
         <option value="PROMOVIDO">Promovidos</option>
         <option value="DESCARTADO">Descartados</option>
       </select>
+      <select id="filtro-proveedor"
+              class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm min-w-[180px]">
+        <option value="">Todos los proveedores</option>
+        <option value="__sin_asignar__">— Sin asignar</option>
+      </select>
+      <select id="filtro-moneda"
+              class="bg-slate-50 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-sm">
+        <option value="">Cualquier moneda</option>
+        <option value="MXN">MXN</option>
+        <option value="USD">USD</option>
+      </select>
+      <button onclick="limpiarFiltros()" class="dax-btn-ghost text-xs">
+        <i class="fas fa-broom"></i> Limpiar
+      </button>
     </div>
   </div>
 
+  <!-- Bulk actions bar (oculto hasta que haya selección) -->
+  <div id="bulk-bar" class="hidden bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700/50 rounded-lg p-3 mb-3 flex items-center gap-3">
+    <span class="text-sm font-medium text-violet-700 dark:text-violet-300">
+      <span id="bulk-count">0</span> seleccionados
+    </span>
+    <button onclick="bulkDescartar()" class="text-rose-600 hover:underline text-xs">
+      <i class="fas fa-times"></i> Descartar seleccionados
+    </button>
+    <button onclick="bulkAsignarProveedor()" class="text-cyan-600 hover:underline text-xs">
+      <i class="fas fa-truck"></i> Asignar proveedor a seleccionados
+    </button>
+    <button onclick="clearSel()" class="ml-auto text-slate-500 hover:underline text-xs">
+      <i class="fas fa-times"></i> Cancelar selección
+    </button>
+  </div>
+
+  <!-- Tabla -->
   <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden">
     <table class="w-full text-sm">
       <thead class="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 dark:text-slate-400 uppercase">
         <tr>
+          <th class="text-center p-3 w-8"><input type="checkbox" id="chk-all" onchange="toggleAll()"></th>
           <th class="text-left p-3">Descripción</th>
           <th class="text-left p-3">SKU</th>
           <th class="text-left p-3">Proveedor</th>
@@ -36,88 +98,475 @@
           <th class="text-right p-3">Costo ref</th>
           <th class="text-center p-3">Moneda</th>
           <th class="text-center p-3">Estado</th>
+          <th class="text-left p-3">Última actividad</th>
           <th class="text-right p-3">Acciones</th>
         </tr>
       </thead>
       <tbody id="tbody-fantasmas" class="divide-y divide-slate-100 dark:divide-slate-700">
-        <tr><td colspan="8" class="p-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin"></i> Cargando…</td></tr>
+        <tr><td colspan="10" class="p-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin"></i> Cargando…</td></tr>
       </tbody>
     </table>
   </div>
+
+  <p class="mt-3 text-xs text-slate-400 text-center">
+    <i class="fas fa-info-circle mr-1"></i>
+    Los fantasmas se apilan automáticamente cuando una línea ad-hoc (sin producto del catálogo) se guarda en una cotización.
+    Mismo nombre + misma moneda = misma fila apilada, con contador de cuántas veces se ha solicitado.
+  </p>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+  let __fantasmasActuales = [];
+  const __seleccionados = new Set();
+
+  function fmtMoneda(num) {
+    return '$' + Number(num || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtFecha(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }); }
+    catch { return iso; }
+  }
+
+  function pillEstado(estado) {
+    const cls = estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-800'
+              : estado === 'EN_OC' ? 'bg-cyan-100 text-cyan-800'
+              : estado === 'RECIBIDO' ? 'bg-emerald-100 text-emerald-800'
+              : estado === 'PROMOVIDO' ? 'bg-violet-100 text-violet-800'
+              : 'bg-slate-200 text-slate-700';
+    return `<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cls}">${estado}</span>`;
+  }
+
+  async function cargarProveedoresFiltro() {
+    try {
+      const r = await fetch('/api/compras/proveedores', { credentials: 'include' });
+      if (!r.ok) return;
+      const provs = await r.json();
+      const sel = document.getElementById('filtro-proveedor');
+      provs.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.nombre_empresa || p.nombre || `Proveedor ${p.id}`;
+        sel.appendChild(opt);
+      });
+      window.__proveedores = provs;
+    } catch (e) { console.error('No se pudieron cargar proveedores', e); }
+  }
+
+  async function cargarKpis() {
+    try {
+      const r = await fetch('/api/fantasmas/?estado=&page_size=500', { credentials: 'include' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const items = d.items || [];
+      const counts = { PENDIENTE: 0, EN_OC: 0, RECIBIDO: 0, PROMOVIDO: 0, DESCARTADO: 0 };
+      items.forEach(it => { if (counts[it.estado] != null) counts[it.estado]++; });
+      Object.entries(counts).forEach(([k, v]) => {
+        const el = document.querySelector(`[data-kpi="${k}"]`);
+        if (el) el.textContent = v;
+      });
+    } catch (e) { console.error(e); }
+  }
+
   async function cargarFantasmas() {
     const tbody = document.getElementById('tbody-fantasmas');
     const q = document.getElementById('filtro-q').value || '';
     const estado = document.getElementById('filtro-estado').value || '';
+    const proveedorFiltro = document.getElementById('filtro-proveedor').value || '';
+    const monedaFiltro = document.getElementById('filtro-moneda').value || '';
+
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (estado) params.set('estado', estado);
-    params.set('page_size', '200');
+    if (proveedorFiltro && proveedorFiltro !== '__sin_asignar__') params.set('proveedor_id', proveedorFiltro);
+    params.set('page_size', '500');
+
     try {
       const r = await fetch('/api/fantasmas/?' + params.toString(), { credentials: 'include' });
       if (!r.ok) {
-        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-rose-500">Error al cargar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-rose-500">Error al cargar.</td></tr>';
         return;
       }
       const data = await r.json();
-      const items = data.items || [];
+      let items = data.items || [];
+
+      // Filtros client-side (proveedor sin_asignar + moneda)
+      if (proveedorFiltro === '__sin_asignar__') {
+        items = items.filter(it => !it.proveedor_sugerido_id);
+      }
+      if (monedaFiltro) {
+        items = items.filter(it => it.moneda === monedaFiltro);
+      }
+
+      __fantasmasActuales = items;
       document.getElementById('count-resultados').textContent = `${items.length} fantasma(s)`;
+
       if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400"><i class="fas fa-inbox mr-1"></i> Sin fantasmas.</td></tr>';
+        tbody.innerHTML = `
+          <tr><td colspan="10" class="p-12 text-center text-slate-400">
+            <i class="fas fa-ghost text-4xl text-violet-300 mb-2"></i>
+            <div class="font-medium">Sin fantasmas que coincidan</div>
+            <div class="text-xs mt-1">Ajusta filtros o crea cotizaciones con líneas ad-hoc.</div>
+          </td></tr>`;
         return;
       }
+
       tbody.innerHTML = items.map(f => `
         <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-          <td class="p-3 max-w-md truncate" title="${(f.descripcion || '').replace(/"/g, '&quot;')}">${f.descripcion || '—'}</td>
-          <td class="p-3 font-mono text-xs">${f.sku_libre || '—'}</td>
-          <td class="p-3 text-xs">${f.proveedor_sugerido_nombre || '<span class="text-slate-400">— Sin asignar</span>'}</td>
-          <td class="p-3 text-right">${f.veces_solicitado}</td>
-          <td class="p-3 text-right">$${parseFloat(f.costo_referencia).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-          <td class="p-3 text-center font-mono text-xs">${f.moneda}</td>
           <td class="p-3 text-center">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
-                ${ f.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-800'
-                 : f.estado === 'EN_OC' ? 'bg-cyan-100 text-cyan-800'
-                 : f.estado === 'RECIBIDO' ? 'bg-emerald-100 text-emerald-800'
-                 : f.estado === 'PROMOVIDO' ? 'bg-violet-100 text-violet-800'
-                 : 'bg-slate-200 text-slate-700' }">${f.estado}</span>
+            <input type="checkbox" class="chk-fantasma" data-id="${f.id}" onchange="toggleSel(${f.id}, this.checked)" ${__seleccionados.has(f.id) ? 'checked' : ''}>
           </td>
-          <td class="p-3 text-right">
+          <td class="p-3 max-w-md">
+            <div class="truncate" title="${(f.descripcion || '').replace(/"/g, '&quot;')}">${f.descripcion || '—'}</div>
+          </td>
+          <td class="p-3 font-mono text-xs">${f.sku_libre || '<span class="text-slate-400">—</span>'}</td>
+          <td class="p-3 text-xs">${f.proveedor_sugerido_nombre || '<span class="text-slate-400">— Sin asignar</span>'}</td>
+          <td class="p-3 text-right"><span class="inline-block min-w-[28px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">${f.veces_solicitado}</span></td>
+          <td class="p-3 text-right font-mono">${fmtMoneda(f.costo_referencia)}</td>
+          <td class="p-3 text-center font-mono text-xs">${f.moneda}</td>
+          <td class="p-3 text-center">${pillEstado(f.estado)}</td>
+          <td class="p-3 text-xs text-slate-500">${fmtFecha(f.ultimo_visto_en)}</td>
+          <td class="p-3 text-right whitespace-nowrap">
+            <button onclick="verDetalle(${f.id})" class="text-cyan-600 hover:underline text-xs mr-2" title="Ver dónde aparece"><i class="fas fa-eye"></i></button>
+            ${ f.estado === 'PENDIENTE' || f.estado === 'EN_OC' || f.estado === 'RECIBIDO'
+              ? `<button onclick="editarFantasma(${f.id})" class="text-slate-600 hover:underline text-xs mr-2" title="Editar"><i class="fas fa-pen-to-square"></i></button>`
+              : '' }
             ${ f.estado === 'PENDIENTE'
-              ? `<button onclick="promoverFantasma(${f.id})" class="text-violet-600 hover:underline text-xs mr-2" title="Promover a producto del catálogo"><i class="fas fa-arrow-up"></i> Promover</button>
+              ? `<button onclick="promoverFantasma(${f.id})" class="text-violet-600 hover:underline text-xs mr-2" title="Promover a catálogo"><i class="fas fa-arrow-up"></i></button>
                  <button onclick="descartarFantasma(${f.id})" class="text-rose-600 hover:underline text-xs" title="Descartar"><i class="fas fa-times"></i></button>`
-              : '<span class="text-slate-400 text-xs">—</span>' }
+              : '' }
           </td>
         </tr>
       `).join('');
+
+      actualizarBulkBar();
     } catch (e) {
       console.error(e);
-      tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-rose-500">Error de red.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-rose-500">Error de red.</td></tr>';
     }
   }
 
+  // ─── Acciones individuales ───────────────────────────────────────────
+
   async function descartarFantasma(id) {
-    const r = await Swal.fire({ title: '¿Descartar fantasma?', text: 'No aparecerá más en la lista de pendientes.', showCancelButton: true, confirmButtonText: 'Descartar', confirmButtonColor: '#e11d48' });
+    const r = await Swal.fire({
+      title: '¿Descartar fantasma?',
+      text: 'No aparecerá más como pendiente. Esta acción es reversible solo manualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Descartar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#e11d48',
+    });
     if (!r.isConfirmed) return;
     const res = await fetch(`/api/fantasmas/${id}/descartar`, { method: 'POST', credentials: 'include' });
-    if (res.ok) { cargarFantasmas(); Swal.fire('Descartado', '', 'success'); }
-    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo descartar', 'error'); }
+    if (res.ok) {
+      __seleccionados.delete(id);
+      cargarFantasmas(); cargarKpis();
+      Swal.fire({ icon: 'success', title: 'Descartado', timer: 1200, showConfirmButton: false });
+    } else {
+      const e = await res.json().catch(() => ({}));
+      Swal.fire('Error', e.detail || 'No se pudo descartar', 'error');
+    }
   }
 
   async function promoverFantasma(id) {
-    const r = await Swal.fire({ title: '¿Promover a catálogo?', text: 'Se creará un Producto del catálogo con el SKU y costo del fantasma.', showCancelButton: true, confirmButtonText: 'Promover' });
+    const f = __fantasmasActuales.find(x => x.id === id);
+    if (f && !f.sku_libre) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Asigna un SKU primero',
+        text: 'El catálogo de productos requiere un SKU. Edita el fantasma para capturarlo antes de promover.',
+      });
+      return;
+    }
+    const r = await Swal.fire({
+      title: '¿Promover a catálogo?',
+      html: `<div class="text-sm text-left">Se creará un Producto del catálogo con:<br>
+              <div class="mt-2 text-xs"><b>SKU:</b> <span class="font-mono">${f?.sku_libre || '—'}</span></div>
+              <div class="text-xs"><b>Costo:</b> ${fmtMoneda(f?.costo_referencia)} ${f?.moneda || ''}</div>
+              <div class="text-xs"><b>Proveedor:</b> ${f?.proveedor_sugerido_nombre || '— Sin asignar'}</div>
+              <div class="text-xs mt-2 text-slate-500">El fantasma quedará marcado como PROMOVIDO. Cotizaciones existentes mantendrán la referencia para auditoría.</div>
+            </div>`,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Promover',
+      cancelButtonText: 'Cancelar',
+    });
     if (!r.isConfirmed) return;
     const res = await fetch(`/api/fantasmas/${id}/promover`, { method: 'POST', credentials: 'include' });
-    if (res.ok) { const d = await res.json(); Swal.fire('Promovido', `Nuevo producto: ${d.sku}`, 'success'); cargarFantasmas(); }
-    else { const e = await res.json(); Swal.fire('Error', e.detail || 'No se pudo promover', 'error'); }
+    if (res.ok) {
+      const d = await res.json();
+      cargarFantasmas(); cargarKpis();
+      Swal.fire({ icon: 'success', title: 'Promovido', html: `Nuevo producto creado:<br><span class="font-mono">${d.sku}</span>` });
+    } else {
+      const e = await res.json().catch(() => ({}));
+      Swal.fire('Error', e.detail || 'No se pudo promover', 'error');
+    }
   }
 
-  document.getElementById('filtro-q').addEventListener('input', () => { clearTimeout(window.__fdb); window.__fdb = setTimeout(cargarFantasmas, 300); });
+  async function editarFantasma(id) {
+    const f = __fantasmasActuales.find(x => x.id === id);
+    if (!f) return;
+    const provs = window.__proveedores || [];
+    const opts = ['<option value="">— Sin asignar —</option>']
+      .concat(provs.map(p => `<option value="${p.id}" ${p.id === f.proveedor_sugerido_id ? 'selected' : ''}>${(p.nombre_empresa || p.nombre || p.id)}</option>`))
+      .join('');
+
+    const r = await Swal.fire({
+      title: 'Editar fantasma',
+      html: `
+        <label class="block text-xs text-slate-500 text-left mb-1">Descripción</label>
+        <textarea id="ed-desc" rows="3" class="swal2-textarea" style="margin:0 0 8px 0; width:100%; box-sizing:border-box;">${(f.descripcion || '').replace(/</g, '&lt;')}</textarea>
+        <label class="block text-xs text-slate-500 text-left mb-1">SKU</label>
+        <input id="ed-sku" class="swal2-input" style="margin:0 0 8px 0; width:100%; box-sizing:border-box;" value="${(f.sku_libre || '').replace(/"/g, '&quot;')}">
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="block text-xs text-slate-500 text-left mb-1">Costo ref</label>
+            <input id="ed-costo" type="number" step="0.01" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box;" value="${f.costo_referencia || 0}">
+          </div>
+          <div class="w-24">
+            <label class="block text-xs text-slate-500 text-left mb-1">Moneda</label>
+            <select id="ed-moneda" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box;">
+              <option value="MXN" ${f.moneda === 'MXN' ? 'selected' : ''}>MXN</option>
+              <option value="USD" ${f.moneda === 'USD' ? 'selected' : ''}>USD</option>
+            </select>
+          </div>
+        </div>
+        <label class="block text-xs text-slate-500 text-left mb-1 mt-2">Proveedor sugerido</label>
+        <select id="ed-prov" class="swal2-input" style="margin:0; width:100%; box-sizing:border-box;">${opts}</select>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      width: 540,
+      preConfirm: () => {
+        const descripcion_original = document.getElementById('ed-desc').value.trim();
+        if (!descripcion_original) { Swal.showValidationMessage('Descripción es obligatoria'); return false; }
+        const sku_libre = document.getElementById('ed-sku').value.trim() || null;
+        const costo_referencia = parseFloat(document.getElementById('ed-costo').value) || 0;
+        if (costo_referencia <= 0) { Swal.showValidationMessage('Costo debe ser > 0'); return false; }
+        const moneda_referencia = document.getElementById('ed-moneda').value;
+        const provVal = document.getElementById('ed-prov').value;
+        const proveedor_sugerido_id = provVal ? parseInt(provVal) : null;
+        return { descripcion_original, sku_libre, costo_referencia, moneda_referencia, proveedor_sugerido_id };
+      },
+    });
+    if (!r.isConfirmed) return;
+
+    const res = await fetch(`/api/fantasmas/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(r.value),
+    });
+    if (res.ok) {
+      cargarFantasmas();
+      Swal.fire({ icon: 'success', title: 'Actualizado', timer: 1200, showConfirmButton: false });
+    } else {
+      const e = await res.json().catch(() => ({}));
+      Swal.fire('Error', e.detail || 'No se pudo actualizar', 'error');
+    }
+  }
+
+  async function verDetalle(id) {
+    try {
+      const r = await fetch(`/api/fantasmas/${id}`, { credentials: 'include' });
+      if (!r.ok) { Swal.fire('Error', 'No se pudo cargar el detalle', 'error'); return; }
+      const d = await r.json();
+      const cotizaciones = d.cotizaciones || [];
+      const listaCot = cotizaciones.length === 0
+        ? '<div class="text-slate-400 text-xs">No aparece en ninguna cotización (probable backfill o promovido).</div>'
+        : '<ul class="text-xs space-y-1">' + cotizaciones.map(c =>
+            `<li>• <span class="font-mono text-cyan-600">${c.folio}</span> <span class="text-slate-500">(${c.estatus})</span> <span class="text-slate-400">x${c.cantidad}</span></li>`
+          ).join('') + '</ul>';
+
+      Swal.fire({
+        title: 'Detalle fantasma',
+        html: `
+          <div class="text-left text-sm">
+            <div class="mb-2"><b>Descripción:</b> ${d.descripcion}</div>
+            <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div><b>SKU:</b> ${d.sku_libre || '—'}</div>
+              <div><b>Estado:</b> ${pillEstado(d.estado)}</div>
+              <div><b>Costo ref:</b> ${fmtMoneda(d.costo_referencia)} ${d.moneda}</div>
+              <div><b>Veces solicitado:</b> ${d.veces_solicitado}</div>
+              <div><b>Creado:</b> ${fmtFecha(d.creado_en)}</div>
+              <div><b>Última actividad:</b> ${fmtFecha(d.ultimo_visto_en)}</div>
+            </div>
+            <hr class="my-2">
+            <div class="font-medium mb-1">Cotizaciones donde aparece (${cotizaciones.length}):</div>
+            ${listaCot}
+          </div>
+        `,
+        width: 600,
+      });
+    } catch (e) { Swal.fire('Error', String(e), 'error'); }
+  }
+
+  // ─── Bulk actions ────────────────────────────────────────────────────
+
+  function toggleSel(id, checked) {
+    if (checked) __seleccionados.add(id);
+    else __seleccionados.delete(id);
+    actualizarBulkBar();
+  }
+
+  function toggleAll() {
+    const all = document.getElementById('chk-all').checked;
+    __seleccionados.clear();
+    if (all) __fantasmasActuales.forEach(f => __seleccionados.add(f.id));
+    document.querySelectorAll('.chk-fantasma').forEach(cb => {
+      cb.checked = __seleccionados.has(parseInt(cb.dataset.id));
+    });
+    actualizarBulkBar();
+  }
+
+  function clearSel() {
+    __seleccionados.clear();
+    document.getElementById('chk-all').checked = false;
+    document.querySelectorAll('.chk-fantasma').forEach(cb => { cb.checked = false; });
+    actualizarBulkBar();
+  }
+
+  function actualizarBulkBar() {
+    const bar = document.getElementById('bulk-bar');
+    const count = __seleccionados.size;
+    document.getElementById('bulk-count').textContent = count;
+    bar.classList.toggle('hidden', count === 0);
+  }
+
+  async function bulkDescartar() {
+    if (__seleccionados.size === 0) return;
+    const r = await Swal.fire({
+      icon: 'warning',
+      title: `¿Descartar ${__seleccionados.size} fantasma(s)?`,
+      text: 'Solo se descartarán los que estén en estado PENDIENTE.',
+      showCancelButton: true,
+      confirmButtonText: 'Descartar',
+      confirmButtonColor: '#e11d48',
+    });
+    if (!r.isConfirmed) return;
+
+    let ok = 0, skip = 0, fail = 0;
+    for (const id of Array.from(__seleccionados)) {
+      try {
+        const res = await fetch(`/api/fantasmas/${id}/descartar`, { method: 'POST', credentials: 'include' });
+        if (res.ok) ok++;
+        else if (res.status === 409) skip++;
+        else fail++;
+      } catch { fail++; }
+    }
+    clearSel();
+    cargarFantasmas(); cargarKpis();
+    Swal.fire({
+      icon: ok > 0 ? 'success' : 'info',
+      title: 'Descartado masivo',
+      html: `<div class="text-sm">Descartados: <b>${ok}</b><br>Omitidos (estado no permitido): <b>${skip}</b><br>Fallidos: <b>${fail}</b></div>`,
+    });
+  }
+
+  async function bulkAsignarProveedor() {
+    if (__seleccionados.size === 0) return;
+    const provs = window.__proveedores || [];
+    const opts = ['<option value="">— Selecciona —</option>']
+      .concat(provs.map(p => `<option value="${p.id}">${p.nombre_empresa || p.nombre || p.id}</option>`))
+      .join('');
+    const r = await Swal.fire({
+      title: `Asignar proveedor a ${__seleccionados.size} fantasma(s)`,
+      html: `<select id="bulk-prov" class="swal2-input" style="width:100%; box-sizing:border-box;">${opts}</select>`,
+      showCancelButton: true,
+      confirmButtonText: 'Asignar',
+      preConfirm: () => {
+        const v = document.getElementById('bulk-prov').value;
+        if (!v) { Swal.showValidationMessage('Selecciona un proveedor'); return false; }
+        return parseInt(v);
+      },
+    });
+    if (!r.isConfirmed) return;
+    const provId = r.value;
+
+    let ok = 0, fail = 0;
+    for (const id of Array.from(__seleccionados)) {
+      try {
+        const res = await fetch(`/api/fantasmas/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ proveedor_sugerido_id: provId }),
+        });
+        if (res.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+    clearSel();
+    cargarFantasmas();
+    Swal.fire({
+      icon: ok > 0 ? 'success' : 'error',
+      title: 'Asignación masiva',
+      html: `<div class="text-sm">Asignados: <b>${ok}</b><br>Fallidos: <b>${fail}</b></div>`,
+    });
+  }
+
+  // ─── CSV export ──────────────────────────────────────────────────────
+
+  function exportarCSV() {
+    if (__fantasmasActuales.length === 0) { Swal.fire('Sin datos', 'No hay fantasmas para exportar', 'info'); return; }
+    const rows = [['descripcion', 'sku', 'proveedor', 'veces', 'costo_referencia', 'moneda', 'estado', 'creado_en', 'ultimo_visto_en']];
+    __fantasmasActuales.forEach(f => {
+      rows.push([
+        (f.descripcion || '').replace(/"/g, '""'),
+        f.sku_libre || '',
+        f.proveedor_sugerido_nombre || '',
+        f.veces_solicitado,
+        f.costo_referencia,
+        f.moneda,
+        f.estado,
+        f.creado_en || '',
+        f.ultimo_visto_en || '',
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fantasmas_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ─── Filtros ─────────────────────────────────────────────────────────
+
+  function limpiarFiltros() {
+    document.getElementById('filtro-q').value = '';
+    document.getElementById('filtro-estado').value = 'PENDIENTE';
+    document.getElementById('filtro-proveedor').value = '';
+    document.getElementById('filtro-moneda').value = '';
+    cargarFantasmas();
+  }
+
+  document.getElementById('filtro-q').addEventListener('input', () => {
+    clearTimeout(window.__fdb);
+    window.__fdb = setTimeout(cargarFantasmas, 300);
+  });
   document.getElementById('filtro-estado').addEventListener('change', cargarFantasmas);
-  cargarFantasmas();
+  document.getElementById('filtro-proveedor').addEventListener('change', cargarFantasmas);
+  document.getElementById('filtro-moneda').addEventListener('change', cargarFantasmas);
+
+  // KPI cards como filtro rápido
+  document.querySelectorAll('.kpi-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('filtro-estado').value = btn.dataset.estado;
+      cargarFantasmas();
+    });
+  });
+
+  cargarProveedoresFiltro().then(() => {
+    cargarFantasmas();
+    cargarKpis();
+  });
 </script>
 {% endblock %}
