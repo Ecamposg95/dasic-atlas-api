@@ -419,9 +419,9 @@ PDF_TEMPLATE_VENTA = """
           <div class="item-desc">{{ item.descripcion or "Proyecto integral" }}</div>
         </td>
         {% else %}
-        <td><div class="item-cat">{{ (item.producto.sku_comercial if item.producto else item.sku_libre) or (item.producto.sku if item.producto else "—") }}</div></td>
+        <td><div class="item-cat">{{ item.sku_libre or (item.producto.sku_comercial if item.producto else None) or (item.producto.sku if item.producto else "—") }}</div></td>
         <td>
-          <div class="item-desc">{{ (item.producto.nombre if item.producto else (item.descripcion_libre or "Producto especial")) }}</div>
+          <div class="item-desc">{{ item.descripcion_libre or (item.producto.nombre if item.producto else None) or "Producto especial" }}</div>
           {% if item.observaciones_linea %}<div class="item-nota">{{ item.observaciones_linea }}</div>{% endif %}
         </td>
         {% endif %}
@@ -1430,10 +1430,11 @@ def generar_pdf(
         concepto_titulo = (orden.concepto_unificado or "Proyecto integral").strip()
         lineas_resumen = []
         for d in orden.detalles:
+            # Override gana sobre catálogo (descripcion_libre primero).
             desc = (
-                (d.producto.nombre if d.producto else None)
+                d.descripcion_libre
+                or (d.producto.nombre if d.producto else None)
                 or (d.servicio.nombre if d.servicio else None)
-                or d.descripcion_libre
                 or "—"
             )
             lineas_resumen.append(f"• {desc} (x{d.cantidad})")
