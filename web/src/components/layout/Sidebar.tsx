@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { FileText, Home } from 'lucide-react';
 
 const NAV = [
-  { to: '/spa/hello', label: 'Inicio (Phase 0)', Icon: Home },
+  { to: '/spa/hello', label: 'Inicio', Icon: Home },
+  { to: '/spa/cotizador', label: 'Cotizador', Icon: FileText },
 ];
 
 export function Sidebar() {
