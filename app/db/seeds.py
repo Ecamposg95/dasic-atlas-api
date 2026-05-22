@@ -254,12 +254,24 @@ _BACKFILL_DDL = [
     # 20260517_01 — drop columnas redundantes (abreviatura, catalogo_fabricante)
     # Idempotente: si ya no existen, no-op. Si existen con datos, primero
     # copiamos a sku_comercial cuando aplica para no perder info del usuario.
+    # El UPDATE se envuelve en un bloque PL/pgSQL que primero verifica
+    # `information_schema.columns` — así DBs frescas (Railway) que nunca
+    # tuvieron la columna no spamean WARNINGs en cada boot.
     # ====================================================================
-    """UPDATE productos
-          SET sku_comercial = catalogo_fabricante
-        WHERE catalogo_fabricante IS NOT NULL
-          AND catalogo_fabricante <> ''
-          AND (sku_comercial IS NULL OR sku_comercial = '')""",
+    """DO $$
+       BEGIN
+         IF EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'productos'
+              AND column_name = 'catalogo_fabricante'
+         ) THEN
+           UPDATE productos
+              SET sku_comercial = catalogo_fabricante
+            WHERE catalogo_fabricante IS NOT NULL
+              AND catalogo_fabricante <> ''
+              AND (sku_comercial IS NULL OR sku_comercial = '');
+         END IF;
+       END $$""",
     "DROP INDEX IF EXISTS ix_productos_abreviatura",
     "DROP INDEX IF EXISTS ix_productos_catalogo_fabricante",
     "ALTER TABLE IF EXISTS productos DROP COLUMN IF EXISTS abreviatura",
