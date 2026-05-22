@@ -8,6 +8,9 @@ export type Producto = {
   sku_comercial: string | null;
   nombre: string;
   marca: string | null;
+  // Texto libre (no FK); el backend la expone para filtros client-side
+  // mientras `/api/productos` no acepte `categoria_id` como query param.
+  categoria?: string | null;
   costo_compra: number;
   moneda_compra: 'MXN' | 'USD';
   stock_actual: number;

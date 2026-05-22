@@ -5,6 +5,7 @@ import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useAuth } from '@/stores/auth';
 import { FXBadge } from './FXBadge';
+import { UltimaCotHint } from './UltimaCotHint';
 
 export function HeaderCotizacion() {
   const moneda = useCotizador((s) => s.moneda);
@@ -16,6 +17,7 @@ export function HeaderCotizacion() {
   const fechaVencimiento = useCotizador((s) => s.fecha_vencimiento);
   const setFechaVencimiento = useCotizador((s) => s.setFechaVencimiento);
   const editingId = useCotizador((s) => s.editingId);
+  const clienteId = useCotizador((s) => s.cliente_id);
   const { config } = useConfig();
   const user = useAuth((s) => s.user);
   // Patrones existentes en `web/src/features/{clientes,reportes,cxc,fx,precios,inventario}/`
@@ -45,6 +47,7 @@ export function HeaderCotizacion() {
           Cliente
         </label>
         <ClientPicker />
+        <UltimaCotHint clienteId={clienteId} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">

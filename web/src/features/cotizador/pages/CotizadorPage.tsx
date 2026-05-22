@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, ClipboardList } from 'lucide-react';
+import { FileText, ClipboardList, Download, Upload } from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
 import { ProductSearch } from '../components/ProductSearch';
 import { Cart } from '../components/Cart';
@@ -19,6 +19,10 @@ import { ModalPisarTC } from '../components/ModalPisarTC';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
 import { useAtajos, type AtajoHandler } from '../hooks/useAtajos';
+import { exportBorrador, importBorrador } from '../lib/jsonExport';
+import { api } from '@/lib/api';
+import type { Producto } from '../types';
+import { toast } from '@/lib/toast';
 
 export function CotizadorPage() {
   const [params] = useSearchParams();
@@ -40,6 +44,92 @@ export function CotizadorPage() {
   const setPdfConceptoEnabled = useCotizador((s) => s.setPdfConceptoEnabled);
 
   const { data: orden, isLoading, error } = useCotizacionLoader(editIdNum);
+
+  // Phase 5 (Task 5.2): Export / Import del borrador a JSON.
+  // `useRef` para mantener el <input type=file> oculto que se dispara al
+  // hacer click en el botón Upload.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleExport() {
+    const s = useCotizador.getState();
+    const json = exportBorrador({
+      cliente_id: s.cliente_id,
+      moneda: s.moneda,
+      tc: s.tc,
+      observaciones: s.observaciones,
+      terminos_condiciones: s.terminos_condiciones,
+      cart: s.cart,
+    });
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.download = `cotizacion-borrador-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast({ kind: 'success', title: 'Borrador exportado', description: a.download });
+  }
+
+  async function handleImportFile(file: File) {
+    let snap: ReturnType<typeof importBorrador>;
+    try {
+      const text = await file.text();
+      snap = importBorrador(text);
+    } catch (err) {
+      toast({
+        kind: 'error',
+        title: 'No se pudo importar',
+        description: (err as Error).message || 'Archivo inválido',
+      });
+      return;
+    }
+    const st = useCotizador.getState();
+    st.reset();
+    if (snap.cliente_id != null) st.setCliente(snap.cliente_id);
+    st.setMoneda(snap.moneda);
+    st.setTc(snap.tc);
+    st.setObservaciones(snap.observaciones);
+    st.setTerminos(snap.terminos_condiciones);
+
+    let agregadas = 0;
+    let saltadas = 0;
+    for (const it of snap.cart) {
+      if (it.producto_id == null) {
+        saltadas += 1;
+        continue;
+      }
+      try {
+        const p = await api.get<Producto>(`/api/productos/${it.producto_id}`);
+        st.addProducto(p, it.qty, it.utilidad);
+        const uid = useCotizador.getState().cart.slice(-1)[0]?.uid;
+        if (uid) {
+          st.updateLinea(uid, {
+            descuento: it.descuento,
+            sku: it.sku,
+            nom: it.nom,
+            cost: it.cost,
+            entrega_min: it.entrega_min,
+            entrega_max: it.entrega_max,
+            entrega_unidad: it.entrega_unidad,
+            observaciones_linea: it.observaciones_linea,
+          });
+        }
+        agregadas += 1;
+      } catch {
+        // Producto eliminado del catálogo o sin permisos; lo saltamos
+        // sin abortar la importación.
+        saltadas += 1;
+      }
+    }
+    toast({
+      kind: saltadas > 0 ? 'warning' : 'success',
+      title: 'Borrador importado',
+      description: `${agregadas} línea(s) cargadas${saltadas > 0 ? ` · ${saltadas} omitida(s)` : ''}`,
+    });
+  }
 
   // Atajos globales del editor. Memoizado para que el effect del hook no
   // re-suscriba en cada render.
@@ -113,6 +203,34 @@ export function CotizadorPage() {
             >
               <ClipboardList className="h-3.5 w-3.5" /> Borradores
             </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              title="Exportar borrador a JSON"
+              className="text-xs px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Importar borrador desde JSON"
+              className="text-xs px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+            >
+              <Upload className="h-3.5 w-3.5" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) await handleImportFile(file);
+                // Permite reimportar el mismo archivo si el usuario lo necesita.
+                e.target.value = '';
+              }}
+            />
             {editingId != null && (
               <a
                 href={`/api/ventas/${editingId}/pdf`}

@@ -17,7 +17,12 @@ export function EditLineModal() {
   const [err, setErr] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
   const [searchQ, setSearchQ] = useState('');
-  const { data: searchData } = useProductosSearch(showReplace ? searchQ : '');
+  // El reemplazo de línea solo sustituye por productos del catálogo, así que
+  // siempre buscamos en scope `producto` sin filtros (Phase 5 — Task 5.1).
+  const { data: searchData } = useProductosSearch({
+    q: showReplace ? searchQ : '',
+    tipo: 'producto',
+  });
   const productos = (searchData?.items ?? []).map((it) => it.producto);
 
   // Listen for the event

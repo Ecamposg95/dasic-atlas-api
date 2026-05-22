@@ -6,13 +6,27 @@ import { useProductosSearch } from '../hooks/useProductosSearch';
 import { fetchAutoUtilidad } from '../hooks/useAutoUtilidad';
 import { useCotizador } from '../store';
 import type { Producto } from '../types';
+import { CatalogoFiltros } from './CatalogoFiltros';
 
 export function ProductSearch() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  // Phase 5 (Task 5.1): filtros para el scope de búsqueda.
+  // `tipo` queda fijo en 'producto' en MVP porque el store no soporta
+  // servicios todavía (CatalogoFiltros muestra la tab deshabilitada).
+  const [tipo, setTipo] = useState<'producto' | 'servicio'>('producto');
+  const [marcaId, setMarcaId] = useState<number | null>(null);
+  const [marcaNombre, setMarcaNombre] = useState<string | null>(null);
+  const [categoriaNombre, setCategoriaNombre] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addProducto = useCotizador((s) => s.addProducto);
-  const { data, isLoading, error } = useProductosSearch(q);
+  const { data, isLoading, error } = useProductosSearch({
+    q,
+    tipo,
+    marca_id: marcaId,
+    marca_nombre: marcaNombre,
+    categoria_nombre: categoriaNombre,
+  });
 
   const items = data?.items ?? [];
   const cantidadParseada = data?.cantidad ?? null;
@@ -59,6 +73,18 @@ export function ProductSearch() {
 
   return (
     <div className="relative">
+      <CatalogoFiltros
+        tipo={tipo}
+        onTipoChange={setTipo}
+        marcaId={marcaId}
+        marcaNombre={marcaNombre}
+        onMarcaChange={(id, nombre) => {
+          setMarcaId(id);
+          setMarcaNombre(nombre);
+        }}
+        categoriaNombre={categoriaNombre}
+        onCategoriaChange={setCategoriaNombre}
+      />
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <Input

@@ -1,1 +1,0 @@
-import{d as e}from"./vendor-query-DiHzPxHS.js";import{a as r}from"./index-hhX4OGwo.js";function u(){return e({queryKey:["productos"],queryFn:()=>r.get("/api/productos?page_size=200"),staleTime:3e4})}function t(){return e({queryKey:["proveedores"],queryFn:()=>r.get("/api/compras/proveedores"),staleTime:5*60*1e3})}export{t as a,u};
