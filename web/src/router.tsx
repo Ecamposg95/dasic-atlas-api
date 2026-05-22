@@ -43,6 +43,10 @@ const legacyRoute = (path: string, lazyLoader: ReturnType<typeof lazyPage>) => (
 });
 
 export const router = createBrowserRouter([
+  // Login (público) — fuera del Layout (sin sidebar/header).
+  // Sirve también la URL `/` (matching el flujo previo de Jinja).
+  { path: '/', element: <LoginPage /> },
+  { path: '/login', element: <LoginPage /> },
   {
     path: '/spa',
     element: <Layout />,

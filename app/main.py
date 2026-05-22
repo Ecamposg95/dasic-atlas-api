@@ -154,19 +154,25 @@ def _protected_view(template_name: str):
 # SSR Routes
 # ---------------------------------------------------------------------------
 
-# Login (pública)
+# Login (pública) — sirve el SPA, React Router monta LoginPage.
+# Si la cookie ya es válida, devolvemos 302 a /dashboard para evitar hidratar
+# el SPA antes de redirect (mejor TTI). El SPA además tiene su propio guard
+# como segunda línea de defensa.
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def view_login(request: Request) -> HTMLResponse:
-    # Si ya está autenticado → dashboard directamente
+async def view_root(request: Request):
     if _get_user_from_cookie(request):
         return RedirectResponse("/dashboard", status_code=302)
-    return templates.TemplateResponse(request, "login.html", context={"request": request})
+    index_path = SPA_DIST / "index.html"
+    if not index_path.exists():
+        # Fallback al Jinja viejo si por alguna razón el build no existe.
+        return templates.TemplateResponse(request, "login.html", context={"request": request})
+    return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 
-# Phase 5 (2026-05-22): TODAS las páginas migradas al SPA. Solo queda /login
-# (Jinja, pública) y los handlers SPA abajo. _SSR_ROUTES vacía intencionalmente.
-# Los templates Jinja en app/templates/ se conservan como respaldo histórico;
-# si una migración falla, descomenta la línea aquí y comenta el handler SPA.
+# Phase 6 (2026-05-22): TODAS las páginas (incluso login) migradas al SPA.
+# _SSR_ROUTES vacía intencionalmente. Los templates Jinja en app/templates/ se
+# conservan como respaldo histórico; si algo se rompe, descomenta y comenta
+# el handler SPA correspondiente.
 _SSR_ROUTES: list[tuple[str, str]] = []
 
 for _path, _tmpl in _SSR_ROUTES:
