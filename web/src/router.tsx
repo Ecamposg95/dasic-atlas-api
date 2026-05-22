@@ -15,6 +15,11 @@ import { RemisionesPage } from '@/features/remisiones/pages/RemisionesPage';
 import { GastosPage } from '@/features/gastos/pages/GastosPage';
 import { ReportesPage } from '@/features/reportes/pages/ReportesPage';
 import { ReportesServicioPage } from '@/features/reportes_servicio/pages/ReportesServicioPage';
+import { CuentasPorCobrarPage } from '@/features/cxc/pages/CuentasPorCobrarPage';
+import { FxPage } from '@/features/fx/pages/FxPage';
+import { PreciosPage } from '@/features/precios/pages/PreciosPage';
+import { UsuariosPage } from '@/features/usuarios/pages/UsuariosPage';
+import { ServiciosPage } from '@/features/servicios/pages/ServiciosPage';
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +42,11 @@ export const router = createBrowserRouter([
       { path: 'gastos', element: <GastosPage /> },
       { path: 'reportes', element: <ReportesPage /> },
       { path: 'reportes-servicio', element: <ReportesServicioPage /> },
+      { path: 'cuentas-por-cobrar', element: <CuentasPorCobrarPage /> },
+      { path: 'fx', element: <FxPage /> },
+      { path: 'precios', element: <PreciosPage /> },
+      { path: 'usuarios', element: <UsuariosPage /> },
+      { path: 'servicios', element: <ServiciosPage /> },
     ],
   },
   {
@@ -118,5 +128,35 @@ export const router = createBrowserRouter([
     path: '/reportes-servicio',
     element: <Layout />,
     children: [{ index: true, element: <ReportesServicioPage /> }],
+  },
+  {
+    // Ruta legacy /cuentas-por-cobrar — swap cuando FastAPI ceda la URL al SPA.
+    path: '/cuentas-por-cobrar',
+    element: <Layout />,
+    children: [{ index: true, element: <CuentasPorCobrarPage /> }],
+  },
+  {
+    // Ruta legacy /fx — swap cuando FastAPI ceda la URL al SPA.
+    path: '/fx',
+    element: <Layout />,
+    children: [{ index: true, element: <FxPage /> }],
+  },
+  {
+    // Ruta legacy /precios — swap cuando FastAPI ceda la URL al SPA.
+    path: '/precios',
+    element: <Layout />,
+    children: [{ index: true, element: <PreciosPage /> }],
+  },
+  {
+    // Ruta legacy /usuarios — swap cuando FastAPI ceda la URL al SPA.
+    path: '/usuarios',
+    element: <Layout />,
+    children: [{ index: true, element: <UsuariosPage /> }],
+  },
+  {
+    // Ruta legacy /servicios — swap cuando FastAPI ceda la URL al SPA.
+    path: '/servicios',
+    element: <Layout />,
+    children: [{ index: true, element: <ServiciosPage /> }],
   },
 ]);

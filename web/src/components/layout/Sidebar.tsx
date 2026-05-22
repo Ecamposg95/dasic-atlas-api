@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Activity, BarChart3, BookMarked, FileText, FileClock, Ghost, Home, LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Truck, Users } from 'lucide-react';
+import { Activity, BarChart3, BookMarked, Coins, FileText, FileClock, Ghost, Home, LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Tags, Truck, UserCog, Users, Wallet, Wrench } from 'lucide-react';
 
 const NAV = [
   { to: '/spa/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -16,6 +16,11 @@ const NAV = [
   { to: '/spa/gastos', label: 'Gastos', Icon: Receipt },
   { to: '/spa/reportes', label: 'Reportes', Icon: BarChart3 },
   { to: '/spa/reportes-servicio', label: 'Reportes Servicio', Icon: Activity },
+  { to: '/spa/cuentas-por-cobrar', label: 'Cuentas por cobrar', Icon: Wallet },
+  { to: '/spa/fx', label: 'Tipo de cambio', Icon: Coins },
+  { to: '/spa/precios', label: 'Precios', Icon: Tags },
+  { to: '/spa/usuarios', label: 'Usuarios', Icon: UserCog },
+  { to: '/spa/servicios', label: 'Servicios', Icon: Wrench },
 ];
 
 export function Sidebar() {

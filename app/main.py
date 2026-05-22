@@ -163,27 +163,11 @@ async def view_login(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "login.html", context={"request": request})
 
 
-# Rutas protegidas
-_SSR_ROUTES = [
-    # ("/dashboard",          "dashboard.html"),    # SPA Phase 4 — ver handler abajo
-    # ("/ventas/cotizador",   "cotizador.html"),    # SPA Phase 1d — ver handler abajo
-    # ("/seguimiento",        "seguimiento.html"),  # SPA Phase 2 — ver handler abajo
-    # ("/borradores",         "borradores.html"),   # SPA Phase 2 — ver handler abajo
-    # ("/inventario",         "inventario.html"),   # SPA Phase 3 — ver handler abajo
-    ("/servicios",          "servicios.html"),
-    # ("/clientes",           "clientes.html"),     # SPA Phase 3 — ver handler abajo
-    ("/cuentas-por-cobrar", "cuentas_por_cobrar.html"),
-    # ("/compras",            "compras.html"),      # SPA Phase 4 — ver handler abajo
-    # ("/gastos",             "gastos.html"),       # SPA Phase 4 — ver handler abajo
-    # ("/reportes",           "reportes.html"),     # SPA Phase 4 — ver handler abajo
-    ("/usuarios",           "usuarios.html"),
-    # ("/catalogos",          "catalogos.html"),    # SPA Phase 3 — ver handler abajo
-    # ("/fantasmas",          "fantasmas.html"),    # SPA Phase 2 — ver handler abajo
-    ("/fx",                 "fx.html"),
-    ("/precios",            "precios.html"),
-    # ("/remisiones",         "remisiones.html"),   # SPA Phase 4 — ver handler abajo
-    # ("/reportes-servicio",  "reportes_servicio.html"),  # SPA Phase 4 — ver handler abajo
-]
+# Phase 5 (2026-05-22): TODAS las páginas migradas al SPA. Solo queda /login
+# (Jinja, pública) y los handlers SPA abajo. _SSR_ROUTES vacía intencionalmente.
+# Los templates Jinja en app/templates/ se conservan como respaldo histórico;
+# si una migración falla, descomenta la línea aquí y comenta el handler SPA.
+_SSR_ROUTES: list[tuple[str, str]] = []
 
 for _path, _tmpl in _SSR_ROUTES:
     app.add_api_route(
@@ -299,6 +283,32 @@ async def view_remisiones_spa(request: Request):
 
 @app.get("/gastos", response_class=HTMLResponse, include_in_schema=False)
 async def view_gastos_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+# Phase 5: /usuarios, /servicios, /cuentas-por-cobrar, /fx, /precios → SPA (final)
+@app.get("/usuarios", response_class=HTMLResponse, include_in_schema=False)
+async def view_usuarios_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/servicios", response_class=HTMLResponse, include_in_schema=False)
+async def view_servicios_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/cuentas-por-cobrar", response_class=HTMLResponse, include_in_schema=False)
+async def view_cxc_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/fx", response_class=HTMLResponse, include_in_schema=False)
+async def view_fx_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/precios", response_class=HTMLResponse, include_in_schema=False)
+async def view_precios_spa(request: Request):
     return _serve_spa_protected(request)
 
 
