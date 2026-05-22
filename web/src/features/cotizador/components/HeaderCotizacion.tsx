@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert } from 'lucide-react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert, Minus, Plus } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -72,15 +72,34 @@ export function HeaderCotizacion() {
             <ArrowRightLeft className="h-3 w-3" />
             TC (MXN/USD)
           </label>
-          <Input
-            type="number"
-            step="0.0001"
-            min="0"
-            value={tc}
-            onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
-            disabled={!tcVisible}
-            className={`h-8 text-xs ${tcVisible ? '' : 'opacity-50'}`}
-          />
+          <div className={`flex items-center gap-1 ${tcVisible ? '' : 'opacity-60'}`}>
+            <button
+              type="button"
+              onClick={() => setTc(Math.max(0, +(tc - 1).toFixed(4)))}
+              title="-1 peso"
+              aria-label="Restar 1 peso al TC"
+              className="h-8 w-7 inline-flex items-center justify-center rounded border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:border-accent-glow transition text-sm font-bold shrink-0"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <Input
+              type="number"
+              step="0.0001"
+              min="0"
+              value={tc}
+              onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
+              className="h-8 text-xs text-right font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => setTc(+(tc + 1).toFixed(4))}
+              title="+1 peso"
+              aria-label="Sumar 1 peso al TC"
+              className="h-8 w-7 inline-flex items-center justify-center rounded border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:border-accent-glow transition text-sm font-bold shrink-0"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
           {tcVisible && (
             <div className="mt-1 space-y-0.5">
               <FXBadge />
@@ -95,6 +114,11 @@ export function HeaderCotizacion() {
                   <ShieldAlert className="h-2.5 w-2.5" /> Pisar TC manualmente
                 </button>
               )}
+            </div>
+          )}
+          {!tcVisible && (
+            <div className="text-[10px] text-slate-500 mt-1">
+              MXN: TC se respeta para líneas USD en el carrito.
             </div>
           )}
         </div>

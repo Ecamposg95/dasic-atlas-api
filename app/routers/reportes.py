@@ -423,41 +423,60 @@ def ordenes_pendientes_entrega(
 ):
     """Órdenes de venta convertidas (no cotización, no cancelada) que NO tienen
     remisión registrada. Útil para operación de entrega."""
-    ahora = datetime.utcnow()
-    q = (
-        db.query(models.OrdenVenta)
-        .filter(
-            models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
-            models.OrdenVenta.estatus != models.EstatusOrden.CANCELADA,
+    import logging
+    import traceback
+    logger = logging.getLogger(__name__)
+
+    try:
+        ahora = datetime.utcnow()
+        q = (
+            db.query(models.OrdenVenta)
+            .filter(
+                models.OrdenVenta.estatus != models.EstatusOrden.COTIZACION,
+                models.OrdenVenta.estatus != models.EstatusOrden.CANCELADA,
+            )
         )
-    )
-    q = _scope_ventas(q, current_user)
-    ordenes = q.all()
+        q = _scope_ventas(q, current_user)
+        ordenes = q.all()
 
-    # Cargar remisiones existentes en un solo query
-    remisiones_por_orden: dict[int, int] = {}
-    for r in db.query(models.Remision).all():
-        remisiones_por_orden[r.orden_venta_id] = remisiones_por_orden.get(r.orden_venta_id, 0) + 1
+        # Cargar remisiones existentes en un solo query
+        remisiones_por_orden: dict[int, int] = {}
+        for r in db.query(models.Remision).all():
+            remisiones_por_orden[r.orden_venta_id] = remisiones_por_orden.get(r.orden_venta_id, 0) + 1
 
-    pendientes = [o for o in ordenes if remisiones_por_orden.get(o.id, 0) == 0]
-    pendientes.sort(key=lambda o: o.fecha_creacion or ahora, reverse=False)
+        pendientes = [o for o in ordenes if remisiones_por_orden.get(o.id, 0) == 0]
+        pendientes.sort(key=lambda o: o.fecha_creacion or ahora, reverse=False)
 
-    items = []
-    for o in pendientes:
-        dias_desde = (ahora - o.fecha_creacion).days if o.fecha_creacion else None
-        items.append({
-            "id": o.id,
-            "folio": o.folio,
-            "cliente_nombre": (o.cliente.nombre_empresa if o.cliente else None),
-            "estatus": o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus),
-            "moneda": o.moneda,
-            "total": float(o.total or 0),
-            "total_mxn": round(_to_mxn(o.total, o.moneda, o.tipo_cambio), 2),
-            "fecha_creacion": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
-            "dias_desde_venta": dias_desde,
-        })
-    return {
-        "total": len(items),
-        "monto_total_mxn": round(sum(it["total_mxn"] for it in items), 2),
-        "items": items,
-    }
+        items = []
+        for o in pendientes:
+            try:
+                dias_desde = (ahora - o.fecha_creacion).days if o.fecha_creacion else None
+                cliente_nombre = o.cliente.nombre_empresa if o.cliente else None
+                estatus_val = o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus)
+                items.append({
+                    "id": o.id,
+                    "folio": o.folio,
+                    "cliente_nombre": cliente_nombre,
+                    "estatus": estatus_val,
+                    "moneda": o.moneda,
+                    "total": float(o.total or 0),
+                    "total_mxn": round(_to_mxn(o.total, o.moneda, o.tipo_cambio), 2),
+                    "fecha_creacion": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+                    "dias_desde_venta": dias_desde,
+                })
+            except Exception as row_err:  # noqa: BLE001
+                logger.warning("orden_pendiente_entrega: fila %s falló: %s", getattr(o, "id", "?"), row_err)
+                # Saltamos esta fila para no tirar todo el reporte
+                continue
+
+        return {
+            "total": len(items),
+            "monto_total_mxn": round(sum(it["total_mxn"] for it in items), 2),
+            "items": items,
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Error en ordenes_pendientes_entrega")
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: {str(e)[:500]}",
+        ) from e

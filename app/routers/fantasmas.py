@@ -1,5 +1,7 @@
 """Endpoints para gestión de productos fantasma apilados."""
 
+import logging
+import traceback
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +13,32 @@ from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.security.jwt import allow_admin
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/fantasmas", tags=["Fantasmas"])
+
+
+def _serialize_fantasma_row(f) -> dict:
+    """Defensiva contra rows con FK rotos o campos NULL inesperados."""
+    try:
+        proveedor_nombre = f.proveedor_sugerido.nombre if f.proveedor_sugerido else None
+    except Exception as e:  # noqa: BLE001
+        logger.warning("fantasma %s: error cargando proveedor_sugerido: %s", f.id, e)
+        proveedor_nombre = None
+    return {
+        "id": f.id,
+        "descripcion": f.descripcion_original or "",
+        "sku_libre": f.sku_libre,
+        "costo_referencia": float(f.costo_referencia) if f.costo_referencia is not None else 0.0,
+        "moneda": f.moneda_referencia or "MXN",
+        "proveedor_sugerido_id": f.proveedor_sugerido_id,
+        "proveedor_sugerido_nombre": proveedor_nombre,
+        "estado": f.estado or "PENDIENTE",
+        "veces_solicitado": f.veces_solicitado or 0,
+        "creado_en": f.creado_en.isoformat() if f.creado_en else None,
+        "ultimo_visto_en": f.ultimo_visto_en.isoformat() if f.ultimo_visto_en else None,
+        "promovido_a_producto_id": f.promovido_a_producto_id,
+    }
 
 
 @router.get("/", dependencies=[Depends(allow_all_staff)])
@@ -26,49 +53,39 @@ def listar_fantasmas(
     if page < 1 or page_size < 1 or page_size > 500:
         raise HTTPException(400, "page o page_size inválido")
 
-    query = db.query(models.ProductoFantasma)
-    if estado:
-        query = query.filter(models.ProductoFantasma.estado == estado.upper())
-    if proveedor_id:
-        query = query.filter(models.ProductoFantasma.proveedor_sugerido_id == proveedor_id)
-    if q:
-        like = f"%{q.lower()}%"
-        query = query.filter(
-            or_(
-                models.ProductoFantasma.descripcion_normalizada.ilike(like),
-                models.ProductoFantasma.sku_libre.ilike(like),
+    try:
+        query = db.query(models.ProductoFantasma)
+        if estado:
+            query = query.filter(models.ProductoFantasma.estado == estado.upper())
+        if proveedor_id:
+            query = query.filter(models.ProductoFantasma.proveedor_sugerido_id == proveedor_id)
+        if q:
+            like = f"%{q.lower()}%"
+            query = query.filter(
+                or_(
+                    models.ProductoFantasma.descripcion_normalizada.ilike(like),
+                    models.ProductoFantasma.sku_libre.ilike(like),
+                )
             )
+
+        rows = (
+            query
+            .order_by(desc(models.ProductoFantasma.ultimo_visto_en))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
         )
+        items = [_serialize_fantasma_row(f) for f in rows]
+    except Exception as e:  # noqa: BLE001
+        # Logueamos el traceback completo a Railway logs Y devolvemos el detail al navegador
+        # para que el desarrollador no tenga que adivinar la causa raíz.
+        logger.exception("Error listando fantasmas (page=%s, page_size=%s, estado=%s)", page, page_size, estado)
+        raise HTTPException(
+            status_code=500,
+            detail=f"{type(e).__name__}: {str(e)[:500]}",
+        ) from e
 
-    rows = (
-        query
-        .order_by(desc(models.ProductoFantasma.ultimo_visto_en))
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
-
-    return {
-        "page": page,
-        "page_size": page_size,
-        "items": [
-            {
-                "id": f.id,
-                "descripcion": f.descripcion_original,
-                "sku_libre": f.sku_libre,
-                "costo_referencia": float(f.costo_referencia),
-                "moneda": f.moneda_referencia,
-                "proveedor_sugerido_id": f.proveedor_sugerido_id,
-                "proveedor_sugerido_nombre": f.proveedor_sugerido.nombre if f.proveedor_sugerido else None,
-                "estado": f.estado,
-                "veces_solicitado": f.veces_solicitado,
-                "creado_en": f.creado_en.isoformat() if f.creado_en else None,
-                "ultimo_visto_en": f.ultimo_visto_en.isoformat() if f.ultimo_visto_en else None,
-                "promovido_a_producto_id": f.promovido_a_producto_id,
-            }
-            for f in rows
-        ],
-    }
+    return {"page": page, "page_size": page_size, "items": items}
 
 
 @router.get("/{id}", dependencies=[Depends(allow_all_staff)])
