@@ -166,7 +166,7 @@ async def view_login(request: Request) -> HTMLResponse:
 # Rutas protegidas
 _SSR_ROUTES = [
     ("/dashboard",          "dashboard.html"),
-    ("/ventas/cotizador",   "cotizador.html"),
+    # ("/ventas/cotizador",   "cotizador.html"),  # SPA Phase 1d — ver handler abajo
     ("/seguimiento",        "seguimiento.html"),
     ("/borradores",         "borradores.html"),
     ("/inventario",         "inventario.html"),
@@ -206,6 +206,26 @@ SPA_DIST = BASE_DIR / "static" / "dist"
 
 @app.get("/spa/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
 async def spa_catchall(request: Request, full_path: str) -> HTMLResponse:
+    index_path = SPA_DIST / "index.html"
+    if not index_path.exists():
+        return HTMLResponse(
+            "<h1>SPA build missing</h1>"
+            "<p>Run <code>cd web && npm run build</code> o despliega en Railway.</p>",
+            status_code=503,
+        )
+    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+
+
+# Phase 1d: /ventas/cotizador migrado al SPA. Conserva la URL legacy (todos los
+# enlaces de /seguimiento, sidebar, redirects, etc. apuntan a ella). React Router
+# tiene una ruta /ventas/cotizador que monta CotizadorPage. Revertir esta feature
+# es un git revert del commit que añadió este handler — la línea de _SSR_ROUTES
+# que sirve cotizador.html queda comentada arriba lista para descomentar.
+@app.get("/ventas/cotizador", response_class=HTMLResponse, include_in_schema=False)
+async def view_ventas_cotizador_spa(request: Request) -> HTMLResponse:
+    user = _get_user_from_cookie(request)
+    if user is None:
+        return RedirectResponse("/", status_code=302)
     index_path = SPA_DIST / "index.html"
     if not index_path.exists():
         return HTMLResponse(
