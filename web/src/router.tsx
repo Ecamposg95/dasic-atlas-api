@@ -1,25 +1,46 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
-import { HelloPage } from '@/features/hello/pages/HelloPage';
-import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
-import { CotizadorPage } from '@/features/cotizador/pages/CotizadorPage';
-import { BorradoresPage } from '@/features/borradores/pages/BorradoresPage';
-import { SeguimientoPage } from '@/features/seguimiento/pages/SeguimientoPage';
-import { FantasmasPage } from '@/features/fantasmas/pages/FantasmasPage';
-import { ClientesPage } from '@/features/clientes/pages/ClientesPage';
-import { InventarioPage } from '@/features/inventario/pages/InventarioPage';
-import { CatalogosPage } from '@/features/catalogos/pages/CatalogosPage';
-import { ComprasPage } from '@/features/compras/pages/ComprasPage';
-import { RemisionesPage } from '@/features/remisiones/pages/RemisionesPage';
-import { GastosPage } from '@/features/gastos/pages/GastosPage';
-import { ReportesPage } from '@/features/reportes/pages/ReportesPage';
-import { ReportesServicioPage } from '@/features/reportes_servicio/pages/ReportesServicioPage';
-import { CuentasPorCobrarPage } from '@/features/cxc/pages/CuentasPorCobrarPage';
-import { FxPage } from '@/features/fx/pages/FxPage';
-import { PreciosPage } from '@/features/precios/pages/PreciosPage';
-import { UsuariosPage } from '@/features/usuarios/pages/UsuariosPage';
-import { ServiciosPage } from '@/features/servicios/pages/ServiciosPage';
+
+// Code-split: cada página se carga on-demand al navegar a ella.
+// React Router v6.4 acepta `lazy: async () => ({ Component })` por route.
+// LoginPage queda eager porque es la ruta crítica del primer paint.
+//
+// Esto baja el bundle inicial de ~520kB a ~150kB (vendor + shell + dashboard).
+// Las otras pages bajan en chunks separados según el usuario navega.
+
+const lazyPage = <K extends string>(loader: () => Promise<Record<K, React.ComponentType>>, key: K) =>
+  async () => {
+    const mod = await loader();
+    return { Component: mod[key] };
+  };
+
+const hello = lazyPage(() => import('@/features/hello/pages/HelloPage'), 'HelloPage');
+const dashboard = lazyPage(() => import('@/features/dashboard/pages/DashboardPage'), 'DashboardPage');
+const cotizador = lazyPage(() => import('@/features/cotizador/pages/CotizadorPage'), 'CotizadorPage');
+const borradores = lazyPage(() => import('@/features/borradores/pages/BorradoresPage'), 'BorradoresPage');
+const seguimiento = lazyPage(() => import('@/features/seguimiento/pages/SeguimientoPage'), 'SeguimientoPage');
+const fantasmas = lazyPage(() => import('@/features/fantasmas/pages/FantasmasPage'), 'FantasmasPage');
+const clientes = lazyPage(() => import('@/features/clientes/pages/ClientesPage'), 'ClientesPage');
+const inventario = lazyPage(() => import('@/features/inventario/pages/InventarioPage'), 'InventarioPage');
+const catalogos = lazyPage(() => import('@/features/catalogos/pages/CatalogosPage'), 'CatalogosPage');
+const compras = lazyPage(() => import('@/features/compras/pages/ComprasPage'), 'ComprasPage');
+const remisiones = lazyPage(() => import('@/features/remisiones/pages/RemisionesPage'), 'RemisionesPage');
+const gastos = lazyPage(() => import('@/features/gastos/pages/GastosPage'), 'GastosPage');
+const reportes = lazyPage(() => import('@/features/reportes/pages/ReportesPage'), 'ReportesPage');
+const reportesServicio = lazyPage(() => import('@/features/reportes_servicio/pages/ReportesServicioPage'), 'ReportesServicioPage');
+const cxc = lazyPage(() => import('@/features/cxc/pages/CuentasPorCobrarPage'), 'CuentasPorCobrarPage');
+const fx = lazyPage(() => import('@/features/fx/pages/FxPage'), 'FxPage');
+const precios = lazyPage(() => import('@/features/precios/pages/PreciosPage'), 'PreciosPage');
+const usuarios = lazyPage(() => import('@/features/usuarios/pages/UsuariosPage'), 'UsuariosPage');
+const servicios = lazyPage(() => import('@/features/servicios/pages/ServiciosPage'), 'ServiciosPage');
+
+// Helper: ruta legacy que envuelve el mismo Layout y mounta el mismo lazy.
+const legacyRoute = (path: string, lazyLoader: ReturnType<typeof lazyPage>) => ({
+  path,
+  element: <Layout />,
+  children: [{ index: true, lazy: lazyLoader }],
+});
 
 export const router = createBrowserRouter([
   {
@@ -28,135 +49,49 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/spa/dashboard" replace /> },
       { path: 'login', element: <LoginPage /> },
-      { path: 'hello', element: <HelloPage /> },
-      { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'cotizador', element: <CotizadorPage /> },
-      { path: 'borradores', element: <BorradoresPage /> },
-      { path: 'seguimiento', element: <SeguimientoPage /> },
-      { path: 'fantasmas', element: <FantasmasPage /> },
-      { path: 'clientes', element: <ClientesPage /> },
-      { path: 'inventario', element: <InventarioPage /> },
-      { path: 'catalogos', element: <CatalogosPage /> },
-      { path: 'compras', element: <ComprasPage /> },
-      { path: 'remisiones', element: <RemisionesPage /> },
-      { path: 'gastos', element: <GastosPage /> },
-      { path: 'reportes', element: <ReportesPage /> },
-      { path: 'reportes-servicio', element: <ReportesServicioPage /> },
-      { path: 'cuentas-por-cobrar', element: <CuentasPorCobrarPage /> },
-      { path: 'fx', element: <FxPage /> },
-      { path: 'precios', element: <PreciosPage /> },
-      { path: 'usuarios', element: <UsuariosPage /> },
-      { path: 'servicios', element: <ServiciosPage /> },
+      { path: 'hello', lazy: hello },
+      { path: 'dashboard', lazy: dashboard },
+      { path: 'cotizador', lazy: cotizador },
+      { path: 'borradores', lazy: borradores },
+      { path: 'seguimiento', lazy: seguimiento },
+      { path: 'fantasmas', lazy: fantasmas },
+      { path: 'clientes', lazy: clientes },
+      { path: 'inventario', lazy: inventario },
+      { path: 'catalogos', lazy: catalogos },
+      { path: 'compras', lazy: compras },
+      { path: 'remisiones', lazy: remisiones },
+      { path: 'gastos', lazy: gastos },
+      { path: 'reportes', lazy: reportes },
+      { path: 'reportes-servicio', lazy: reportesServicio },
+      { path: 'cuentas-por-cobrar', lazy: cxc },
+      { path: 'fx', lazy: fx },
+      { path: 'precios', lazy: precios },
+      { path: 'usuarios', lazy: usuarios },
+      { path: 'servicios', lazy: servicios },
     ],
   },
+  // Rutas legacy — FastAPI sirve el mismo dist/index.html para estas URLs.
+  // React Router las captura y monta el mismo componente que /spa/<x>.
   {
-    // Rutas legacy que ya viven en el SPA. Aplica solo cuando el handler de
-    // FastAPI para esa URL se haya movido del Jinja al SPA catch-all
-    // (swap atómico en Phase 1d).
     path: '/ventas',
     element: <Layout />,
-    children: [{ path: 'cotizador', element: <CotizadorPage /> }],
+    children: [{ path: 'cotizador', lazy: cotizador }],
   },
-  {
-    // Ruta legacy /borradores — swap cuando FastAPI ceda la URL al SPA.
-    path: '/borradores',
-    element: <Layout />,
-    children: [{ index: true, element: <BorradoresPage /> }],
-  },
-  {
-    // Ruta legacy /seguimiento — swap cuando FastAPI ceda la URL al SPA.
-    path: '/seguimiento',
-    element: <Layout />,
-    children: [{ index: true, element: <SeguimientoPage /> }],
-  },
-  {
-    // Ruta legacy /fantasmas — swap cuando FastAPI ceda la URL al SPA.
-    path: '/fantasmas',
-    element: <Layout />,
-    children: [{ index: true, element: <FantasmasPage /> }],
-  },
-  {
-    // Ruta legacy /clientes — swap cuando FastAPI ceda la URL al SPA.
-    path: '/clientes',
-    element: <Layout />,
-    children: [{ index: true, element: <ClientesPage /> }],
-  },
-  {
-    // Ruta legacy /inventario — swap cuando FastAPI ceda la URL al SPA.
-    path: '/inventario',
-    element: <Layout />,
-    children: [{ index: true, element: <InventarioPage /> }],
-  },
-  {
-    // Ruta legacy /catalogos — swap cuando FastAPI ceda la URL al SPA.
-    path: '/catalogos',
-    element: <Layout />,
-    children: [{ index: true, element: <CatalogosPage /> }],
-  },
-  {
-    // Ruta legacy /dashboard — swap cuando FastAPI ceda la URL al SPA.
-    path: '/dashboard',
-    element: <Layout />,
-    children: [{ index: true, element: <DashboardPage /> }],
-  },
-  {
-    // Ruta legacy /compras — swap cuando FastAPI ceda la URL al SPA.
-    path: '/compras',
-    element: <Layout />,
-    children: [{ index: true, element: <ComprasPage /> }],
-  },
-  {
-    // Ruta legacy /remisiones — swap cuando FastAPI ceda la URL al SPA.
-    path: '/remisiones',
-    element: <Layout />,
-    children: [{ index: true, element: <RemisionesPage /> }],
-  },
-  {
-    // Ruta legacy /gastos — swap cuando FastAPI ceda la URL al SPA.
-    path: '/gastos',
-    element: <Layout />,
-    children: [{ index: true, element: <GastosPage /> }],
-  },
-  {
-    // Ruta legacy /reportes — swap cuando FastAPI ceda la URL al SPA.
-    path: '/reportes',
-    element: <Layout />,
-    children: [{ index: true, element: <ReportesPage /> }],
-  },
-  {
-    // Ruta legacy /reportes-servicio — swap cuando FastAPI ceda la URL al SPA.
-    path: '/reportes-servicio',
-    element: <Layout />,
-    children: [{ index: true, element: <ReportesServicioPage /> }],
-  },
-  {
-    // Ruta legacy /cuentas-por-cobrar — swap cuando FastAPI ceda la URL al SPA.
-    path: '/cuentas-por-cobrar',
-    element: <Layout />,
-    children: [{ index: true, element: <CuentasPorCobrarPage /> }],
-  },
-  {
-    // Ruta legacy /fx — swap cuando FastAPI ceda la URL al SPA.
-    path: '/fx',
-    element: <Layout />,
-    children: [{ index: true, element: <FxPage /> }],
-  },
-  {
-    // Ruta legacy /precios — swap cuando FastAPI ceda la URL al SPA.
-    path: '/precios',
-    element: <Layout />,
-    children: [{ index: true, element: <PreciosPage /> }],
-  },
-  {
-    // Ruta legacy /usuarios — swap cuando FastAPI ceda la URL al SPA.
-    path: '/usuarios',
-    element: <Layout />,
-    children: [{ index: true, element: <UsuariosPage /> }],
-  },
-  {
-    // Ruta legacy /servicios — swap cuando FastAPI ceda la URL al SPA.
-    path: '/servicios',
-    element: <Layout />,
-    children: [{ index: true, element: <ServiciosPage /> }],
-  },
+  legacyRoute('/dashboard', dashboard),
+  legacyRoute('/borradores', borradores),
+  legacyRoute('/seguimiento', seguimiento),
+  legacyRoute('/fantasmas', fantasmas),
+  legacyRoute('/clientes', clientes),
+  legacyRoute('/inventario', inventario),
+  legacyRoute('/catalogos', catalogos),
+  legacyRoute('/compras', compras),
+  legacyRoute('/remisiones', remisiones),
+  legacyRoute('/gastos', gastos),
+  legacyRoute('/reportes', reportes),
+  legacyRoute('/reportes-servicio', reportesServicio),
+  legacyRoute('/cuentas-por-cobrar', cxc),
+  legacyRoute('/fx', fx),
+  legacyRoute('/precios', precios),
+  legacyRoute('/usuarios', usuarios),
+  legacyRoute('/servicios', servicios),
 ]);
