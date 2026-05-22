@@ -16,8 +16,10 @@ venv/
 *.db
 *.sqlite3
 
-# Archivos de build / dist
+# Archivos de build / dist (Python). El SPA build vive en app/static/dist/
+# y SÍ está commiteado — ver bloque más abajo.
 dist/
+!app/static/dist/
 build/
 *.egg-info/
 
@@ -33,8 +35,15 @@ htmlcov/
 # Node deps (frontend tooling)
 node_modules/
 
-# Vite build output del SPA (regenerado por nixpacks en cada deploy)
-app/static/dist/
+# Vite build output del SPA — commiteado intencionalmente.
+# Razón: Railway no respeta nixpacks.toml en este proyecto (autodetect lo
+# clasifica como Python-only porque package.json vive en /web/, no en raíz).
+# La alternativa de mover el build a un Docker multi-stage es overkill —
+# subir el dist es 0 piezas en movimiento y deja claro qué corre en prod.
+# CONSECUENCIA: al editar el SPA, corre `cd web && npm run build` antes
+# del commit. Hay un check-build.sh opcional que valida que dist no
+# esté desactualizado vs los .ts/.tsx.
+# app/static/dist/  -- INTENCIONALMENTE NO IGNORADO
 web/.vite/
 web/*.tsbuildinfo
 
