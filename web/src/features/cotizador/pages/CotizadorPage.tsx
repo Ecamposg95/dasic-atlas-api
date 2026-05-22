@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { FileText, ClipboardList } from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
 import { ProductSearch } from '../components/ProductSearch';
 import { Cart } from '../components/Cart';
@@ -11,6 +11,11 @@ import { HistorialTab } from '../components/HistorialTab';
 import { AtajosPopover } from '../components/AtajosPopover';
 import { PlantillasModal } from '../components/PlantillasModal';
 import { SuggestRelacionados } from '../components/SuggestRelacionados';
+import { DrawerBorradores } from '../components/DrawerBorradores';
+import { ModalNotaLinea } from '../components/ModalNotaLinea';
+import { ModalTerminos } from '../components/ModalTerminos';
+import { ModalConceptoPDF } from '../components/ModalConceptoPDF';
+import { ModalPisarTC } from '../components/ModalPisarTC';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
 import { useAtajos, type AtajoHandler } from '../hooks/useAtajos';
@@ -30,7 +35,9 @@ export function CotizadorPage() {
   const observaciones = useCotizador((s) => s.observaciones);
   const setObservaciones = useCotizador((s) => s.setObservaciones);
   const terminos = useCotizador((s) => s.terminos_condiciones);
-  const setTerminos = useCotizador((s) => s.setTerminos);
+  const pdfConceptoEnabled = useCotizador((s) => s.pdf_concepto_enabled);
+  const pdfConceptoUnificado = useCotizador((s) => s.pdf_concepto_unificado);
+  const setPdfConceptoEnabled = useCotizador((s) => s.setPdfConceptoEnabled);
 
   const { data: orden, isLoading, error } = useCotizacionLoader(editIdNum);
 
@@ -97,6 +104,15 @@ export function CotizadorPage() {
                 Editando <strong className="font-mono">{editingFolio}</strong>
               </span>
             )}
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('cot:open-borradores'))
+              }
+              className="text-xs px-3 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+            >
+              <ClipboardList className="h-3.5 w-3.5" /> Borradores
+            </button>
             {editingId != null && (
               <a
                 href={`/api/ventas/${editingId}/pdf`}
@@ -154,14 +170,50 @@ export function CotizadorPage() {
                 <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
                   Términos y condiciones
                 </label>
-                <textarea
-                  value={terminos}
-                  onChange={(e) => setTerminos(e.target.value)}
-                  rows={4}
-                  placeholder="Una línea por cláusula. Vacío → usa los defaults del backend."
-                  className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
-                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent('cot:open-terminos'))
+                  }
+                  className="w-full text-left text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 hover:border-accent-glow text-slate-300 flex items-start gap-2 min-h-[6rem]"
+                >
+                  <FileText className="h-4 w-4 mt-0.5 text-slate-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-slate-500 mb-1">
+                      {terminos.split('\n').filter((l) => l.trim()).length} cláusulas · click para editar
+                    </div>
+                    <div className="text-xs text-slate-400 line-clamp-3 whitespace-pre-wrap">
+                      {terminos || 'Vacío — se usarán los defaults del backend al guardar.'}
+                    </div>
+                  </div>
+                </button>
               </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs flex-wrap">
+              <label className="flex items-center gap-2 text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={pdfConceptoEnabled}
+                  onChange={(e) => setPdfConceptoEnabled(e.target.checked)}
+                  className="accent-cyan-500"
+                />
+                PDF con concepto unificado
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent('cot:open-concepto'))
+                }
+                className="text-xs text-accent-glow hover:underline"
+              >
+                Editar concepto…
+              </button>
+              {pdfConceptoEnabled && pdfConceptoUnificado && (
+                <span className="text-[10px] text-slate-500 truncate max-w-md">
+                  «{pdfConceptoUnificado}»
+                </span>
+              )}
             </div>
           </>
         )}
@@ -174,6 +226,14 @@ export function CotizadorPage() {
       {tab === 'editor' && <TotalsBar />}
       <EditLineModal />
       <PlantillasModal />
+      {/* Modales/drawer Phase 4 — viven fuera del tab conditional para que sigan
+          disponibles incluso si el usuario cambia a "Historial" mientras hay un
+          modal abierto. La apertura es vía window events. */}
+      <DrawerBorradores />
+      <ModalNotaLinea />
+      <ModalTerminos />
+      <ModalConceptoPDF />
+      <ModalPisarTC />
       {tab === 'editor' && <AtajosPopover atajos={atajos} />}
     </div>
   );

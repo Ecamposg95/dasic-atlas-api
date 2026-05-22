@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pen, RotateCcw, Shuffle, X, ArrowLeft } from 'lucide-react';
+import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -156,6 +156,24 @@ export function EditLineModal() {
                 </button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!uid) return;
+                // Cerramos este modal primero, luego abrimos el de nota tras un
+                // tick para que React desmonte limpiamente antes del nuevo mount.
+                onClose();
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent('cot:open-nota', { detail: { uid } }),
+                  );
+                }, 100);
+              }}
+              className="text-xs text-slate-400 hover:text-accent-glow hover:underline mb-3 flex items-center gap-1"
+            >
+              <MessageSquare className="h-3 w-3" /> Editar nota larga / productos similares…
+            </button>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
               <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>

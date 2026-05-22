@@ -79,6 +79,8 @@ export function TotalsBar() {
         fecha_vencimiento: s.fecha_vencimiento,
         observaciones: s.observaciones,
         terminos_condiciones: s.terminos_condiciones,
+        pdf_concepto_unificado: s.pdf_concepto_unificado,
+        pdf_concepto_enabled: s.pdf_concepto_enabled,
         cart: s.cart,
       },
       {

@@ -11,6 +11,8 @@ export type CotizadorSnapshot = {
   fecha_vencimiento: string | null;
   observaciones: string;
   terminos_condiciones: string;
+  pdf_concepto_unificado: string;
+  pdf_concepto_enabled: boolean;
   cart: CartItem[];
 };
 
@@ -38,6 +40,12 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
     observaciones: s.observaciones || null,
     terminos_condiciones: s.terminos_condiciones || null,
     tipo: 'cotizacion',
+    // Sólo persistimos el texto si la opción está habilitada; si no, mandamos
+    // null para que el backend (cuando lo soporte) sepa que es un toggle off.
+    pdf_concepto_unificado: s.pdf_concepto_enabled
+      ? (s.pdf_concepto_unificado || null)
+      : null,
+    pdf_concepto_enabled: s.pdf_concepto_enabled,
     detalles: s.cart.map((i) => ({
       producto_id: i.producto_id,
       servicio_id: null,

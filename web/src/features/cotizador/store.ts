@@ -16,6 +16,12 @@ type CotizadorState = {
   observaciones: string;
   terminos_condiciones: string;
 
+  // PDF: concepto unificado (una sola línea descriptiva en lugar del detalle).
+  // El backend aún no consume estos campos en POST/PUT /api/ventas; se envían
+  // igual para future-proof (ver `lib/serialize.ts`).
+  pdf_concepto_unificado: string;
+  pdf_concepto_enabled: boolean;
+
   // Carrito:
   cart: CartItem[];
   // Líneas no soportadas en MVP (fantasmas/servicios) que vinieron en una cot. cargada.
@@ -32,6 +38,8 @@ type CotizadorState = {
   setFechaVencimiento: (d: string | null) => void;
   setObservaciones: (s: string) => void;
   setTerminos: (s: string) => void;
+  setPdfConcepto: (s: string) => void;
+  setPdfConceptoEnabled: (b: boolean) => void;
 
   // Cart ops:
   addProducto: (p: Producto, qty?: number, utilidadOverride?: number) => void;
@@ -54,6 +62,8 @@ const initialState = {
   fecha_vencimiento: null as string | null,
   observaciones: '',
   terminos_condiciones: '',
+  pdf_concepto_unificado: '',
+  pdf_concepto_enabled: false,
   cart: [] as CartItem[],
   lineasNoSoportadas: [] as LineaNoSoportada[],
   expandedUids: new Set<string>() as Set<string>,
@@ -75,6 +85,8 @@ export const useCotizador = create<CotizadorState>((set) => ({
   setFechaVencimiento: (fecha_vencimiento) => set({ fecha_vencimiento }),
   setObservaciones: (observaciones) => set({ observaciones }),
   setTerminos: (terminos_condiciones) => set({ terminos_condiciones }),
+  setPdfConcepto: (pdf_concepto_unificado) => set({ pdf_concepto_unificado }),
+  setPdfConceptoEnabled: (pdf_concepto_enabled) => set({ pdf_concepto_enabled }),
 
   addProducto: (p, qty = 1, utilidadOverride) =>
     set((s) => {
@@ -197,6 +209,12 @@ export const useCotizador = create<CotizadorState>((set) => ({
         fecha_vencimiento: orden.fecha_vencimiento?.slice(0, 10) ?? null,
         observaciones: orden.observaciones ?? '',
         terminos_condiciones: orden.terminos_condiciones ?? '',
+        // El backend aún no devuelve estos campos en `OrdenVentaDetail`; los
+        // leemos con cast defensivo para hidratar cuando estén disponibles.
+        pdf_concepto_unificado:
+          (orden as { pdf_concepto_unificado?: string | null }).pdf_concepto_unificado ?? '',
+        pdf_concepto_enabled: !!(orden as { pdf_concepto_enabled?: boolean })
+          .pdf_concepto_enabled,
         cart,
         lineasNoSoportadas: noSoportadas,
         expandedUids: new Set<string>(),

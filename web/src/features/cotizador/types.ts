@@ -24,6 +24,10 @@ export type CotizadorConfig = {
   iva_rate: number;
   iva_pct_label: string;
   quote_validity_days: number;
+  // TODO(backend): `app/routers/ventas.py:104` no devuelve aún el default de
+  // términos. Cuando se agregue, el modal de Términos hará el "Restaurar default"
+  // útil. Mientras tanto queda como string vacío.
+  terminos_condiciones_default?: string;
 };
 
 export type Moneda = 'MXN' | 'USD';
@@ -136,6 +140,12 @@ export type OrdenVentaCreate = {
   observaciones: string | null;
   terminos_condiciones: string | null;
   tipo: 'cotizacion';
+  // Future-proof: el backend en `app/routers/ventas.py` (POST/PUT /api/ventas)
+  // todavía no acepta estos campos — Pydantic los ignora silenciosamente.
+  // Se envían para que cuando la columna exista en `orden_venta`, ya esté la
+  // pipa armada del front sin re-deploy.
+  pdf_concepto_unificado: string | null;
+  pdf_concepto_enabled: boolean;
   detalles: DetalleOrdenCreate[];
 };
 
