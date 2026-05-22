@@ -1,0 +1,208 @@
+import { useEffect, useState } from 'react';
+import { Pen, RotateCcw, Shuffle, X, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useCotizador } from '../store';
+import { useProductosSearch } from '../hooks/useProductosSearch';
+import type { CartItem, Producto } from '../types';
+
+export function EditLineModal() {
+  const cart = useCotizador((s) => s.cart);
+  const updateLinea = useCotizador((s) => s.updateLinea);
+  const [open, setOpen] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+  const [desc, setDesc] = useState('');
+  const [sku, setSku] = useState('');
+  const [cost, setCost] = useState('0');
+  const [err, setErr] = useState<string | null>(null);
+  const [showReplace, setShowReplace] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const { data: productos } = useProductosSearch(showReplace ? searchQ : '');
+
+  // Listen for the event
+  useEffect(() => {
+    function onEdit(e: Event) {
+      const ce = e as CustomEvent<{ uid: string }>;
+      const it = useCotizador.getState().cart.find((x) => x.uid === ce.detail.uid);
+      if (!it) return;
+      setUid(ce.detail.uid);
+      setDesc(it.nom || '');
+      setSku(it.sku || '');
+      setCost(String(it.cost ?? 0));
+      setErr(null);
+      setShowReplace(false);
+      setSearchQ('');
+      setOpen(true);
+    }
+    window.addEventListener('cot:edit-line', onEdit);
+    return () => window.removeEventListener('cot:edit-line', onEdit);
+  }, []);
+
+  const it: CartItem | undefined = cart.find((x) => x.uid === uid);
+  const esCatalogo = !!it && it.producto_id != null;
+  const hayDatosCatalogo = !!it && (
+    !!it.sku_original || !!it.nom_original || (it.cost_original != null && it.cost_original > 0)
+  );
+
+  function onClose() {
+    setOpen(false);
+    setUid(null);
+    setShowReplace(false);
+  }
+
+  function onRestore() {
+    if (!it || !hayDatosCatalogo) return;
+    setDesc(it.nom_original || '');
+    setSku(it.sku_original || '');
+    setCost(String(it.cost_original ?? 0));
+  }
+
+  function onSave() {
+    setErr(null);
+    if (!desc.trim()) { setErr('La descripción es obligatoria.'); return; }
+    const c = parseFloat(cost);
+    if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
+    if (!uid) return;
+    updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
+    onClose();
+  }
+
+  function onPickReplacement(p: Producto) {
+    if (!it || !uid) return;
+    const skuNuevo = p.sku_comercial || p.sku || '—';
+    const costNuevo = Number(p.costo_compra ?? 0);
+    updateLinea(uid, {
+      producto_id: p.id,
+      sku: skuNuevo,
+      nom: p.nombre,
+      cost: costNuevo,
+      productCurrency: (p.moneda_compra || 'MXN').toUpperCase() as 'MXN' | 'USD',
+      sku_original: skuNuevo,
+      nom_original: p.nombre,
+      cost_original: costNuevo,
+      max: p.stock_actual,
+    });
+    onClose();
+  }
+
+  if (!open || !it) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Pen className="h-4 w-4 text-accent-glow" /> Editar línea
+          </h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-cyan-900/30 text-cyan-300">
+          {esCatalogo ? `Catálogo · producto #${it.producto_id}` : 'Ad-hoc'}
+        </div>
+
+        {!showReplace ? (
+          <>
+            <label className="block text-xs text-slate-400 mb-1">Descripción</label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              rows={3}
+              className="w-full text-sm rounded border border-slate-700 bg-slate-900 px-2 py-1.5 mb-3 focus:border-accent-glow outline-none"
+            />
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">SKU</label>
+                <Input value={sku} onChange={(e) => setSku(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Costo base</label>
+                <Input type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
+              </div>
+            </div>
+
+            {esCatalogo && (
+              <div className="text-xs bg-amber-900/20 border border-amber-700/50 rounded p-2 mb-3 text-amber-300">
+                Override solo en esta cotización. El catálogo no se modifica.
+              </div>
+            )}
+
+            {err && (
+              <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 mb-3 text-rose-300">
+                {err}
+              </div>
+            )}
+
+            {esCatalogo && (
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={onRestore}
+                  disabled={!hayDatosCatalogo}
+                  className="text-xs text-slate-400 hover:text-slate-100 hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" /> Restaurar valores del catálogo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowReplace(true); setSearchQ(''); }}
+                  className="text-xs text-accent-glow hover:underline ml-auto flex items-center gap-1"
+                >
+                  <Shuffle className="h-3 w-3" /> Reemplazar producto
+                </button>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
+              <Button size="sm" onClick={onSave}>Guardar</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <label className="block text-xs text-slate-400 mb-1">Buscar producto para reemplazar</label>
+            <Input
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              placeholder="SKU, nombre o marca…"
+              autoFocus
+            />
+            <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
+              {(productos ?? []).length === 0 && (
+                <div className="text-xs text-slate-500 text-center p-4">
+                  {searchQ ? 'Sin coincidencias' : 'Escribe para buscar productos del catálogo'}
+                </div>
+              )}
+              {(productos ?? []).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onPickReplacement(p)}
+                  className="w-full text-left px-3 py-2 rounded hover:bg-slate-800 transition border border-transparent hover:border-accent-glow/40"
+                >
+                  <div className="font-mono text-[11px] font-bold text-accent-glow">
+                    {p.sku_comercial || p.sku || '—'}
+                  </div>
+                  <div className="text-xs text-slate-200 truncate">{p.nombre}</div>
+                  <div className="text-[10px] text-slate-500">
+                    {p.moneda_compra || 'MXN'} ${Number(p.costo_compra ?? 0).toFixed(2)} · Stock {p.stock_actual ?? 0}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowReplace(false)}
+              className="text-xs text-slate-400 hover:underline mt-2 flex items-center gap-1"
+            >
+              <ArrowLeft className="h-3 w-3" /> Volver a editar
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
