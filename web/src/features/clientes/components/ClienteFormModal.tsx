@@ -1,0 +1,211 @@
+import { useState } from 'react';
+import { Modal, ModalFooter } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import type { Cliente, ClienteCreate, MonedaCredito } from '../types';
+
+type Props = {
+  mode: 'create' | 'edit';
+  cliente?: Cliente;
+  onSave: (data: ClienteCreate) => void;
+  onClose: () => void;
+  busy: boolean;
+};
+
+function fmtMoney(moneda: MonedaCredito, value: number | string) {
+  const n = Number(value) || 0;
+  return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+}
+
+export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props) {
+  const [nombre, setNombre] = useState(cliente?.nombre_empresa ?? '');
+  const [contacto, setContacto] = useState(cliente?.contacto_nombre ?? '');
+  const [rfc, setRfc] = useState(cliente?.rfc_tax_id ?? '');
+  const [email, setEmail] = useState(cliente?.email ?? '');
+  const [telefono, setTelefono] = useState(cliente?.telefono ?? '');
+  const [direccion, setDireccion] = useState(cliente?.direccion ?? '');
+  const [limiteCredito, setLimiteCredito] = useState(
+    cliente != null ? String(Number(cliente.limite_credito) || 0) : '0',
+  );
+  const [diasCredito, setDiasCredito] = useState(
+    cliente != null ? String(cliente.dias_credito) : '0',
+  );
+  const [diaCorte, setDiaCorte] = useState(
+    cliente?.dia_corte != null ? String(cliente.dia_corte) : '',
+  );
+  const [moneda, setMoneda] = useState<MonedaCredito>(
+    cliente?.moneda_credito ?? 'MXN',
+  );
+  const [err, setErr] = useState<string | null>(null);
+
+  function onSubmit() {
+    setErr(null);
+    if (nombre.trim().length < 2) {
+      setErr('El nombre de empresa debe tener al menos 2 caracteres.');
+      return;
+    }
+
+    const limiteNum = parseFloat(limiteCredito);
+    const diasNum = parseInt(diasCredito, 10);
+    const diaCorteNum = diaCorte.trim() ? parseInt(diaCorte, 10) : null;
+
+    if (diaCorteNum != null && (diaCorteNum < 1 || diaCorteNum > 31)) {
+      setErr('El día de corte debe estar entre 1 y 31.');
+      return;
+    }
+
+    const payload: ClienteCreate = {
+      nombre_empresa: nombre.trim(),
+      contacto_nombre: contacto.trim() || null,
+      rfc_tax_id: rfc.trim() || null,
+      email: email.trim() || null,
+      telefono: telefono.trim() || null,
+      direccion: direccion.trim() || null,
+      limite_credito: Number.isFinite(limiteNum) ? limiteNum : 0,
+      dias_credito: Number.isFinite(diasNum) ? diasNum : 0,
+      dia_corte: diaCorteNum,
+      moneda_credito: moneda,
+    };
+
+    onSave(payload);
+  }
+
+  const limiteDisplay = fmtMoney(moneda, limiteCredito);
+
+  return (
+    <Modal
+      title={mode === 'create' ? 'Nuevo cliente' : `Editar: ${cliente?.nombre_empresa ?? ''}`}
+      onClose={onClose}
+      size="lg"
+    >
+      <div className="space-y-3">
+        {/* Nombre empresa */}
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">
+            Empresa <span className="text-rose-400">*</span>
+          </label>
+          <Input
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Nombre de empresa"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Contacto */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Contacto</label>
+            <Input
+              value={contacto}
+              onChange={(e) => setContacto(e.target.value)}
+              placeholder="Nombre contacto"
+            />
+          </div>
+          {/* RFC */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">RFC / Tax ID</label>
+            <Input
+              value={rfc}
+              onChange={(e) => setRfc(e.target.value)}
+              placeholder="XAXX010101000"
+            />
+          </div>
+          {/* Email */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
+          {/* Teléfono */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Teléfono</label>
+            <Input
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="+52 800 000 0000"
+            />
+          </div>
+        </div>
+
+        {/* Dirección */}
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Dirección</label>
+          <textarea
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            rows={2}
+            placeholder="Calle, colonia, ciudad, estado, CP"
+            className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent-glow/40"
+          />
+        </div>
+
+        {/* Crédito */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Límite crédito</label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={limiteCredito}
+              onChange={(e) => setLimiteCredito(e.target.value)}
+            />
+            <div className="text-[10px] text-slate-500 mt-0.5">{limiteDisplay}</div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Días crédito</label>
+            <Input
+              type="number"
+              min="0"
+              value={diasCredito}
+              onChange={(e) => setDiasCredito(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Día de corte (1-31)</label>
+            <Input
+              type="number"
+              min="1"
+              max="31"
+              value={diaCorte}
+              onChange={(e) => setDiaCorte(e.target.value)}
+              placeholder="Opcional"
+            />
+          </div>
+        </div>
+
+        {/* Moneda crédito */}
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Moneda crédito</label>
+          <select
+            value={moneda}
+            onChange={(e) => setMoneda(e.target.value as MonedaCredito)}
+            className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+          >
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+
+        {err && (
+          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+            {err}
+          </div>
+        )}
+      </div>
+
+      <ModalFooter>
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button size="sm" onClick={onSubmit} disabled={busy}>
+          {busy ? 'Guardando…' : mode === 'create' ? 'Crear cliente' : 'Guardar cambios'}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}

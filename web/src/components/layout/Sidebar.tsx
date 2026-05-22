@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FileText, FileClock, Ghost, Home, ListChecks } from 'lucide-react';
+import { BookMarked, FileText, FileClock, Ghost, Home, ListChecks, Package, Users } from 'lucide-react';
 
 const NAV = [
   { to: '/spa/hello', label: 'Inicio', Icon: Home },
@@ -7,6 +7,9 @@ const NAV = [
   { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
   { to: '/spa/seguimiento', label: 'Seguimiento', Icon: ListChecks },
   { to: '/spa/fantasmas', label: 'Fantasmas', Icon: Ghost },
+  { to: '/spa/clientes', label: 'Clientes', Icon: Users },
+  { to: '/spa/inventario', label: 'Inventario', Icon: Package },
+  { to: '/spa/catalogos', label: 'Catálogos', Icon: BookMarked },
 ];
 
 export function Sidebar() {

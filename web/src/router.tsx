@@ -6,6 +6,9 @@ import { CotizadorPage } from '@/features/cotizador/pages/CotizadorPage';
 import { BorradoresPage } from '@/features/borradores/pages/BorradoresPage';
 import { SeguimientoPage } from '@/features/seguimiento/pages/SeguimientoPage';
 import { FantasmasPage } from '@/features/fantasmas/pages/FantasmasPage';
+import { ClientesPage } from '@/features/clientes/pages/ClientesPage';
+import { InventarioPage } from '@/features/inventario/pages/InventarioPage';
+import { CatalogosPage } from '@/features/catalogos/pages/CatalogosPage';
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +22,9 @@ export const router = createBrowserRouter([
       { path: 'borradores', element: <BorradoresPage /> },
       { path: 'seguimiento', element: <SeguimientoPage /> },
       { path: 'fantasmas', element: <FantasmasPage /> },
+      { path: 'clientes', element: <ClientesPage /> },
+      { path: 'inventario', element: <InventarioPage /> },
+      { path: 'catalogos', element: <CatalogosPage /> },
     ],
   },
   {
@@ -46,5 +52,23 @@ export const router = createBrowserRouter([
     path: '/fantasmas',
     element: <Layout />,
     children: [{ index: true, element: <FantasmasPage /> }],
+  },
+  {
+    // Ruta legacy /clientes — swap cuando FastAPI ceda la URL al SPA.
+    path: '/clientes',
+    element: <Layout />,
+    children: [{ index: true, element: <ClientesPage /> }],
+  },
+  {
+    // Ruta legacy /inventario — swap cuando FastAPI ceda la URL al SPA.
+    path: '/inventario',
+    element: <Layout />,
+    children: [{ index: true, element: <InventarioPage /> }],
+  },
+  {
+    // Ruta legacy /catalogos — swap cuando FastAPI ceda la URL al SPA.
+    path: '/catalogos',
+    element: <Layout />,
+    children: [{ index: true, element: <CatalogosPage /> }],
   },
 ]);

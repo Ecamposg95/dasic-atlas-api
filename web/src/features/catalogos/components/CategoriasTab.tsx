@@ -1,0 +1,195 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Pen, Trash2, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  DataTable, DataTableBody, DataTableEmpty, DataTableHead, DataTableRow,
+} from '@/components/ui/data-table';
+import { api } from '@/lib/api';
+import { toast } from '@/lib/toast';
+import { useCategorias } from '../hooks/useCategorias';
+import type { Categoria } from '../types';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function ModalShell({
+  title, children, onClose,
+}: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-md w-full p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── RenombrarModal ──────────────────────────────────────────────────────────
+
+function RenombrarModal({
+  categoria,
+  onClose,
+  onSaved,
+}: {
+  categoria: Categoria;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const qc = useQueryClient();
+  const [nuevo, setNuevo] = useState(categoria.categoria);
+  const [err, setErr] = useState<string | null>(null);
+
+  const renameMut = useMutation<unknown, { status?: number; detail?: string }, { antiguo: string; nuevo: string }>({
+    mutationFn: (payload) => api.put('/api/catalogos/categorias-producto/rename', payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['catalogos', 'categorias-producto'] });
+      toast({ kind: 'success', title: 'Categoría renombrada' });
+      onSaved();
+    },
+    onError: (e) => {
+      if (e.status === 403) toast({ kind: 'error', title: 'Sin permiso' });
+      else setErr(e.detail ?? 'No se pudo renombrar.');
+    },
+  });
+
+  function onSubmit() {
+    setErr(null);
+    const nuevoTrim = nuevo.trim();
+    if (!nuevoTrim) { setErr('El nombre no puede estar vacío.'); return; }
+    if (nuevoTrim === categoria.categoria) { onClose(); return; }
+    renameMut.mutate({ antiguo: categoria.categoria, nuevo: nuevoTrim });
+  }
+
+  return (
+    <ModalShell title="Renombrar categoría" onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Nombre actual</label>
+          <p className="text-sm font-medium text-slate-200">{categoria.categoria}</p>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Nuevo nombre *</label>
+          <Input
+            value={nuevo}
+            onChange={(e) => setNuevo(e.target.value)}
+            placeholder="Ej: Relés"
+            autoFocus
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Se actualizarán {categoria.n_productos} producto(s).
+          </p>
+        </div>
+        {err && (
+          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">{err}</div>
+        )}
+        <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={renameMut.isPending}>Cancelar</Button>
+          <Button size="sm" onClick={onSubmit} disabled={renameMut.isPending}>
+            {renameMut.isPending ? 'Renombrando…' : 'Renombrar'}
+          </Button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── CategoriasTab ───────────────────────────────────────────────────────────
+
+export function CategoriasTab() {
+  const { data, isLoading } = useCategorias();
+  const qc = useQueryClient();
+  const [modalRename, setModalRename] = useState<Categoria | null>(null);
+
+  const eliminarMut = useMutation<unknown, { status?: number; detail?: string }, string>({
+    mutationFn: (nombre) => api.delete(`/api/catalogos/categorias-producto/${encodeURIComponent(nombre)}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['catalogos', 'categorias-producto'] });
+      toast({ kind: 'success', title: 'Categoría eliminada', description: 'Los productos quedaron sin categoría.' });
+    },
+    onError: (e) => {
+      if (e.status === 403) toast({ kind: 'error', title: 'Sin permiso' });
+      else toast({ kind: 'error', title: 'Error al eliminar', description: e.detail });
+    },
+  });
+
+  function onEliminar(c: Categoria) {
+    if (c.n_productos > 0) {
+      if (!window.confirm(
+        `¿Eliminar la categoría "${c.categoria}"?\n\nEsto quitará la categoría a ${c.n_productos} producto(s).`,
+      )) return;
+    } else if (!window.confirm(`¿Eliminar la categoría "${c.categoria}"?`)) {
+      return;
+    }
+    eliminarMut.mutate(c.categoria);
+  }
+
+  const items = data?.items ?? [];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-400">{items.length} categoría(s) de producto en uso</p>
+
+      <DataTable>
+        <DataTableHead>
+          <tr>
+            <th className="p-3 text-left">Nombre</th>
+            <th className="p-3 text-center"># Productos</th>
+            <th className="p-3 text-right">Acciones</th>
+          </tr>
+        </DataTableHead>
+        <DataTableBody>
+          {isLoading && (
+            <DataTableEmpty colSpan={3}>Cargando categorías…</DataTableEmpty>
+          )}
+          {!isLoading && items.length === 0 && (
+            <DataTableEmpty colSpan={3}>Sin categorías registradas</DataTableEmpty>
+          )}
+          {items.map((c) => (
+            <DataTableRow key={c.categoria}>
+              <td className="p-3 text-slate-200">{c.categoria}</td>
+              <td className="p-3 text-center">
+                <Badge variant={c.n_productos > 0 ? 'cyan' : 'slate'}>{c.n_productos}</Badge>
+              </td>
+              <td className="p-3 text-right whitespace-nowrap">
+                <button
+                  onClick={() => setModalRename(c)}
+                  title="Renombrar"
+                  className="text-slate-300 hover:text-slate-100 px-1"
+                >
+                  <Pen className="h-4 w-4 inline" />
+                </button>
+                <button
+                  onClick={() => onEliminar(c)}
+                  title="Eliminar"
+                  className="text-rose-400 hover:text-rose-300 px-1 disabled:opacity-40"
+                  disabled={eliminarMut.isPending}
+                >
+                  <Trash2 className="h-4 w-4 inline" />
+                </button>
+              </td>
+            </DataTableRow>
+          ))}
+        </DataTableBody>
+      </DataTable>
+
+      {modalRename && (
+        <RenombrarModal
+          categoria={modalRename}
+          onClose={() => setModalRename(null)}
+          onSaved={() => setModalRename(null)}
+        />
+      )}
+    </div>
+  );
+}

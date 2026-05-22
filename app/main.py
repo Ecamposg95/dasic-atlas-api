@@ -169,15 +169,15 @@ _SSR_ROUTES = [
     # ("/ventas/cotizador",   "cotizador.html"),  # SPA Phase 1d — ver handler abajo
     # ("/seguimiento",        "seguimiento.html"),  # SPA Phase 2 — ver handler abajo
     # ("/borradores",         "borradores.html"),   # SPA Phase 2 — ver handler abajo
-    ("/inventario",         "inventario.html"),
+    # ("/inventario",         "inventario.html"),   # SPA Phase 3 — ver handler abajo
     ("/servicios",          "servicios.html"),
-    ("/clientes",           "clientes.html"),
+    # ("/clientes",           "clientes.html"),     # SPA Phase 3 — ver handler abajo
     ("/cuentas-por-cobrar", "cuentas_por_cobrar.html"),
     ("/compras",            "compras.html"),
     ("/gastos",             "gastos.html"),
     ("/reportes",           "reportes.html"),
     ("/usuarios",           "usuarios.html"),
-    ("/catalogos",          "catalogos.html"),
+    # ("/catalogos",          "catalogos.html"),    # SPA Phase 3 — ver handler abajo
     # ("/fantasmas",          "fantasmas.html"),  # SPA Phase 2 — ver handler abajo
     ("/fx",                 "fx.html"),
     ("/precios",            "precios.html"),
@@ -252,6 +252,22 @@ async def view_borradores_spa(request: Request):
 
 @app.get("/fantasmas", response_class=HTMLResponse, include_in_schema=False)
 async def view_fantasmas_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+# Phase 3: /inventario, /clientes, /catalogos → SPA
+@app.get("/inventario", response_class=HTMLResponse, include_in_schema=False)
+async def view_inventario_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/clientes", response_class=HTMLResponse, include_in_schema=False)
+async def view_clientes_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/catalogos", response_class=HTMLResponse, include_in_schema=False)
+async def view_catalogos_spa(request: Request):
     return _serve_spa_protected(request)
 
 
