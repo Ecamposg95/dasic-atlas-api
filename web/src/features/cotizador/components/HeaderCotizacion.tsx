@@ -3,6 +3,9 @@ import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
+import { useAuth } from '@/stores/auth';
+import { FXBadge } from './FXBadge';
+import { UltimaCotHint } from './UltimaCotHint';
 
 export function HeaderCotizacion() {
   const moneda = useCotizador((s) => s.moneda);
@@ -14,7 +17,12 @@ export function HeaderCotizacion() {
   const fechaVencimiento = useCotizador((s) => s.fecha_vencimiento);
   const setFechaVencimiento = useCotizador((s) => s.setFechaVencimiento);
   const editingId = useCotizador((s) => s.editingId);
+  const clienteId = useCotizador((s) => s.cliente_id);
   const { config } = useConfig();
+  const user = useAuth((s) => s.user);
+  // Patrones existentes en `web/src/features/{clientes,reportes,cxc,fx,precios,inventario}/`
+  // usan `user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN'`. Replicamos.
+  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
 
   // Defaults para cotización nueva: hoy + vigencia (config.quote_validity_days).
   useEffect(() => {
@@ -39,6 +47,7 @@ export function HeaderCotizacion() {
           Cliente
         </label>
         <ClientPicker />
+        <UltimaCotHint clienteId={clienteId} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -68,6 +77,22 @@ export function HeaderCotizacion() {
             disabled={!tcVisible}
             className={tcVisible ? '' : 'opacity-50'}
           />
+          {tcVisible && (
+            <div className="mt-1 space-y-0.5">
+              <FXBadge />
+              {esAdmin && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent('cot:open-pisartc'))
+                  }
+                  className="text-[10px] text-amber-400 hover:underline block"
+                >
+                  Pisar TC manualmente
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

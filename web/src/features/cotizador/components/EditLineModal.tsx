@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pen, RotateCcw, Shuffle, X, ArrowLeft } from 'lucide-react';
+import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -17,7 +17,13 @@ export function EditLineModal() {
   const [err, setErr] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
   const [searchQ, setSearchQ] = useState('');
-  const { data: productos } = useProductosSearch(showReplace ? searchQ : '');
+  // El reemplazo de línea solo sustituye por productos del catálogo, así que
+  // siempre buscamos en scope `producto` sin filtros (Phase 5 — Task 5.1).
+  const { data: searchData } = useProductosSearch({
+    q: showReplace ? searchQ : '',
+    tipo: 'producto',
+  });
+  const productos = (searchData?.items ?? []).map((it) => it.producto);
 
   // Listen for the event
   useEffect(() => {
@@ -156,6 +162,24 @@ export function EditLineModal() {
               </div>
             )}
 
+            <button
+              type="button"
+              onClick={() => {
+                if (!uid) return;
+                // Cerramos este modal primero, luego abrimos el de nota tras un
+                // tick para que React desmonte limpiamente antes del nuevo mount.
+                onClose();
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent('cot:open-nota', { detail: { uid } }),
+                  );
+                }, 100);
+              }}
+              className="text-xs text-slate-400 hover:text-accent-glow hover:underline mb-3 flex items-center gap-1"
+            >
+              <MessageSquare className="h-3 w-3" /> Editar nota larga / productos similares…
+            </button>
+
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
               <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
               <Button size="sm" onClick={onSave}>Guardar</Button>
@@ -171,12 +195,12 @@ export function EditLineModal() {
               autoFocus
             />
             <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
-              {(productos ?? []).length === 0 && (
+              {productos.length === 0 && (
                 <div className="text-xs text-slate-500 text-center p-4">
                   {searchQ ? 'Sin coincidencias' : 'Escribe para buscar productos del catálogo'}
                 </div>
               )}
-              {(productos ?? []).map((p) => (
+              {productos.map((p) => (
                 <button
                   key={p.id}
                   type="button"

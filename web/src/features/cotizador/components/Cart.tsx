@@ -1,10 +1,33 @@
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle, ShoppingCart } from 'lucide-react';
 import { CartRow } from './CartRow';
+import { RowExpanded } from './RowExpanded';
 import { useCotizador } from '../store';
 
 export function Cart() {
   const cart = useCotizador((s) => s.cart);
   const lineasNoSoportadas = useCotizador((s) => s.lineasNoSoportadas);
+  const expandedUids = useCotizador((s) => s.expandedUids);
+  const seenUids = useRef<Set<string>>(new Set());
+
+  // Compute "new since last render" during render — synchronous so children
+  // see the animation flag on the same frame their row appears.
+  const justAdded = useMemo(() => {
+    const added = new Set<string>();
+    for (const item of cart) {
+      if (!seenUids.current.has(item.uid)) added.add(item.uid);
+    }
+    return added;
+  }, [cart]);
+
+  // Update the seen-set in an effect, AFTER children have committed.
+  // (We use a normal effect — useLayoutEffect not needed because animation is
+  // CSS-driven and a single frame of delay before "remembering" is harmless.)
+  useEffect(() => {
+    const next = new Set<string>();
+    cart.forEach((c) => next.add(c.uid));
+    seenUids.current = next;
+  }, [cart]);
 
   return (
     <div className="space-y-3">
@@ -18,7 +41,10 @@ export function Cart() {
             <p className="text-xs text-amber-300">
               Fantasmas o servicios capturados en el cotizador clásico se ocultan aquí para evitar
               borrarlos al guardar. Para editar esta cotización con sus líneas ad-hoc, ve a{' '}
-              <a href={`/ventas/cotizador?edit=${useCotizador.getState().editingId}`} className="underline">
+              <a
+                href={`/ventas/cotizador?edit=${useCotizador.getState().editingId}`}
+                className="underline"
+              >
                 cotizador clásico
               </a>
               . El botón Guardar está deshabilitado mientras esto sea visible.
@@ -48,7 +74,7 @@ export function Cart() {
       ) : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-wider">
+            <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 z-10">
               <tr>
                 <th className="p-3 text-left">SKU / Descripción</th>
                 <th className="p-3 text-center w-24">Cant</th>
@@ -62,7 +88,10 @@ export function Cart() {
             </thead>
             <tbody>
               {cart.map((item) => (
-                <CartRow key={item.uid} item={item} />
+                <Fragment key={item.uid}>
+                  <CartRow item={item} justAdded={justAdded.has(item.uid)} />
+                  {expandedUids.has(item.uid) && <RowExpanded item={item} />}
+                </Fragment>
               ))}
             </tbody>
           </table>

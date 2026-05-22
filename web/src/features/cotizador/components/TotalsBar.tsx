@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
@@ -46,9 +46,30 @@ export function TotalsBar() {
     }
   }
 
+  const margenStats = useMemo(() => {
+    const criticas = cart.filter((l) => l.utilidad < 5).length;
+    const bajas = cart.filter((l) => l.utilidad < 15).length;
+    return { criticas, bajas };
+  }, [cart]);
+
   function onSave() {
     setErr(null);
     const s = useCotizador.getState();
+
+    if (margenStats.criticas > 0) {
+      if (
+        !window.confirm(
+          `⚠ ${margenStats.criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
+        )
+      ) {
+        return;
+      }
+    } else if (margenStats.bajas > 0) {
+      if (!window.confirm(`${margenStats.bajas} línea(s) con utilidad < 15 %. ¿Continuar?`)) {
+        return;
+      }
+    }
+
     guardar.mutate(
       {
         cliente_id: s.cliente_id,
@@ -58,6 +79,8 @@ export function TotalsBar() {
         fecha_vencimiento: s.fecha_vencimiento,
         observaciones: s.observaciones,
         terminos_condiciones: s.terminos_condiciones,
+        pdf_concepto_unificado: s.pdf_concepto_unificado,
+        pdf_concepto_enabled: s.pdf_concepto_enabled,
         cart: s.cart,
       },
       {
@@ -87,6 +110,13 @@ export function TotalsBar() {
           Pendiente para guardar: {reasons.join(', ')}
         </div>
       )}
+      {margenStats.bajas > 0 && (
+        <div className="mb-2 text-[11px] text-amber-400">
+          {margenStats.criticas > 0
+            ? `⚠ ${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
+            : `${margenStats.bajas} línea(s) con utilidad baja (<15 %)`}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-6 text-sm">
           <div>
@@ -106,7 +136,7 @@ export function TotalsBar() {
           <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>
             Cancelar
           </Button>
-          <Button onClick={onSave} disabled={disabled}>
+          <Button onClick={onSave} disabled={disabled} data-cot-save>
             {guardar.isPending ? 'Guardando…' : editingId != null ? 'Actualizar cotización' : 'Guardar cotización'}
           </Button>
         </div>

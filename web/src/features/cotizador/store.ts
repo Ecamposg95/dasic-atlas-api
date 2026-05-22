@@ -16,10 +16,19 @@ type CotizadorState = {
   observaciones: string;
   terminos_condiciones: string;
 
+  // PDF: concepto unificado (una sola línea descriptiva en lugar del detalle).
+  // El backend aún no consume estos campos en POST/PUT /api/ventas; se envían
+  // igual para future-proof (ver `lib/serialize.ts`).
+  pdf_concepto_unificado: string;
+  pdf_concepto_enabled: boolean;
+
   // Carrito:
   cart: CartItem[];
   // Líneas no soportadas en MVP (fantasmas/servicios) que vinieron en una cot. cargada.
   lineasNoSoportadas: LineaNoSoportada[];
+
+  // UIDs de filas con panel expandido visible.
+  expandedUids: Set<string>;
 
   // Setters:
   setCliente: (id: number | null) => void;
@@ -29,12 +38,15 @@ type CotizadorState = {
   setFechaVencimiento: (d: string | null) => void;
   setObservaciones: (s: string) => void;
   setTerminos: (s: string) => void;
+  setPdfConcepto: (s: string) => void;
+  setPdfConceptoEnabled: (b: boolean) => void;
 
   // Cart ops:
-  addProducto: (p: Producto, qty?: number) => void;
+  addProducto: (p: Producto, qty?: number, utilidadOverride?: number) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
+  toggleExpand: (uid: string) => void;
   reset: () => void;
   hydrateFromOrden: (orden: OrdenVentaDetail) => void;
 };
@@ -50,8 +62,11 @@ const initialState = {
   fecha_vencimiento: null as string | null,
   observaciones: '',
   terminos_condiciones: '',
+  pdf_concepto_unificado: '',
+  pdf_concepto_enabled: false,
   cart: [] as CartItem[],
   lineasNoSoportadas: [] as LineaNoSoportada[],
+  expandedUids: new Set<string>() as Set<string>,
 };
 
 let _uidCounter = 0;
@@ -70,10 +85,13 @@ export const useCotizador = create<CotizadorState>((set) => ({
   setFechaVencimiento: (fecha_vencimiento) => set({ fecha_vencimiento }),
   setObservaciones: (observaciones) => set({ observaciones }),
   setTerminos: (terminos_condiciones) => set({ terminos_condiciones }),
+  setPdfConcepto: (pdf_concepto_unificado) => set({ pdf_concepto_unificado }),
+  setPdfConceptoEnabled: (pdf_concepto_enabled) => set({ pdf_concepto_enabled }),
 
-  addProducto: (p, qty = 1) =>
+  addProducto: (p, qty = 1, utilidadOverride) =>
     set((s) => {
       // Si el producto ya está en el carrito, sumar cantidad en vez de duplicar.
+      // (No tocamos `utilidad` del existente — el override sólo aplica al primer add.)
       const existente = s.cart.find((x) => x.producto_id === p.id);
       if (existente) {
         return {
@@ -87,6 +105,9 @@ export const useCotizador = create<CotizadorState>((set) => ({
         nom: p.nombre,
         cost: Number(p.costo_compra ?? 0),
       };
+      const utilidad = utilidadOverride != null && Number.isFinite(utilidadOverride)
+        ? utilidadOverride
+        : 30;
       const nueva: CartItem = {
         uid: nextUid('nuevo'),
         producto_id: p.id,
@@ -99,7 +120,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         cost_original: snapshot.cost,
         max: p.stock_actual,
         qty,
-        utilidad: 30,
+        utilidad,
         descuento: 0,
         entrega_min: null,
         entrega_max: null,
@@ -127,7 +148,15 @@ export const useCotizador = create<CotizadorState>((set) => ({
       return { cart: next };
     }),
 
-  reset: () => set({ ...initialState }),
+  toggleExpand: (uid) =>
+    set((s) => {
+      const n = new Set(s.expandedUids);
+      if (n.has(uid)) n.delete(uid);
+      else n.add(uid);
+      return { expandedUids: n };
+    }),
+
+  reset: () => set({ ...initialState, expandedUids: new Set<string>() }),
 
   hydrateFromOrden: (orden) =>
     set(() => {
@@ -180,8 +209,15 @@ export const useCotizador = create<CotizadorState>((set) => ({
         fecha_vencimiento: orden.fecha_vencimiento?.slice(0, 10) ?? null,
         observaciones: orden.observaciones ?? '',
         terminos_condiciones: orden.terminos_condiciones ?? '',
+        // El backend aún no devuelve estos campos en `OrdenVentaDetail`; los
+        // leemos con cast defensivo para hidratar cuando estén disponibles.
+        pdf_concepto_unificado:
+          (orden as { pdf_concepto_unificado?: string | null }).pdf_concepto_unificado ?? '',
+        pdf_concepto_enabled: !!(orden as { pdf_concepto_enabled?: boolean })
+          .pdf_concepto_enabled,
         cart,
         lineasNoSoportadas: noSoportadas,
+        expandedUids: new Set<string>(),
       };
     }),
 }));

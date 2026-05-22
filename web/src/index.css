@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes cot-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+    background-color: rgba(34, 211, 238, 0.08);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    background-color: transparent;
+  }
+}
+.cot-row-in {
+  animation: cot-row-in 0.4s ease-out;
+}

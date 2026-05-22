@@ -1,20 +1,27 @@
-import { useState } from 'react';
-import { MoreVertical, Pen, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { lineImporte, convertCost } from '../lib/calc';
+import { StockBadge } from './StockBadge';
+import { EntregaChip } from './EntregaChip';
+import { MargenChip } from './MargenChip';
 import type { CartItem } from '../types';
 
 function fmt(n: number) {
   return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function CartRow({ item }: { item: CartItem }) {
+export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
+  const expandedUids = useCotizador((s) => s.expandedUids);
+  const toggleExpand = useCotizador((s) => s.toggleExpand);
   const updateLinea = useCotizador((s) => s.updateLinea);
   const removeLinea = useCotizador((s) => s.removeLinea);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const expanded = expandedUids.has(item.uid);
 
   const costoConvertido = convertCost(item.cost, item.productCurrency, moneda, tc);
   const importe = lineImporte(item, moneda, tc);
@@ -23,13 +30,31 @@ export function CartRow({ item }: { item: CartItem }) {
     (item.nom_original != null && item.nom !== item.nom_original) ||
     (item.cost_original != null && Number(item.cost) !== Number(item.cost_original));
 
+  useEffect(() => {
+    if (justAdded && rowRef.current) {
+      const el = rowRef.current;
+      el.classList.add('cot-row-in');
+      const t = setTimeout(() => el.classList.remove('cot-row-in'), 400);
+      return () => clearTimeout(t);
+    }
+  }, [justAdded]);
+
   function openEditModal() {
     window.dispatchEvent(new CustomEvent('cot:edit-line', { detail: { uid: item.uid } }));
     setMenuOpen(false);
   }
 
   return (
-    <tr className="border-b border-slate-800 hover:bg-slate-800/30 transition">
+    <tr
+      ref={rowRef}
+      className="border-b border-slate-800 hover:bg-slate-800/30 transition cursor-pointer"
+      onClick={(e) => {
+        // No expandir cuando el click es sobre un input/select/button/textarea/anchor.
+        const target = e.target as HTMLElement;
+        if (target.closest('input, select, button, textarea, a')) return;
+        toggleExpand(item.uid);
+      }}
+    >
       <td className="p-3 align-top max-w-md">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs font-bold text-accent-glow">{item.sku}</span>
@@ -43,22 +68,26 @@ export function CartRow({ item }: { item: CartItem }) {
               <Pen className="inline h-2.5 w-2.5 mr-0.5" /> Editado
             </span>
           )}
+          <StockBadge stock={item.max} qty={item.qty} />
         </div>
         <div className="text-xs text-slate-300 mt-0.5">{item.nom}</div>
-        <textarea
-          value={item.observaciones_linea}
-          onChange={(e) => updateLinea(item.uid, { observaciones_linea: e.target.value })}
-          placeholder="Nota / productos similares (opcional)…"
-          rows={1}
-          className="mt-1 w-full text-[11px] bg-transparent border border-slate-800 rounded px-2 py-1 text-slate-400 focus:border-accent-glow outline-none resize-none"
-        />
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <EntregaChip min={item.entrega_min} max={item.entrega_max} unidad={item.entrega_unidad} />
+          <MargenChip utilidad={item.utilidad} />
+          <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+            {expanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+            {expanded ? 'Cerrar' : 'Detalles'}
+          </span>
+        </div>
       </td>
       <td className="p-3 align-top text-center w-24">
         <Input
           type="number"
           min="1"
           value={item.qty}
-          onChange={(e) => updateLinea(item.uid, { qty: Math.max(1, parseInt(e.target.value) || 1) })}
+          onChange={(e) =>
+            updateLinea(item.uid, { qty: Math.max(1, parseInt(e.target.value) || 1) })
+          }
           className="h-8 text-center"
         />
       </td>
@@ -102,7 +131,8 @@ export function CartRow({ item }: { item: CartItem }) {
             value={item.entrega_min ?? ''}
             onChange={(e) =>
               updateLinea(item.uid, {
-                entrega_min: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
+                entrega_min:
+                  e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
               })
             }
             className="h-8 text-center w-14"
@@ -114,7 +144,8 @@ export function CartRow({ item }: { item: CartItem }) {
             value={item.entrega_max ?? ''}
             onChange={(e) =>
               updateLinea(item.uid, {
-                entrega_max: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
+                entrega_max:
+                  e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
               })
             }
             className="h-8 text-center w-14"
@@ -141,7 +172,10 @@ export function CartRow({ item }: { item: CartItem }) {
       <td className="p-3 align-top text-center w-10 relative">
         <button
           type="button"
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((v) => !v);
+          }}
           className="w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition"
           aria-label="Acciones de la línea"
         >
