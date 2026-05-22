@@ -73,8 +73,8 @@ export function LoginPage() {
                 (e.currentTarget as HTMLImageElement).style.display = 'none';
               }}
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">DASIC ERP</h1>
-            <p className="mt-1 text-sm text-slate-400">Sistema de Gestión Industrial</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Atlas ONE</h1>
+            <p className="mt-1 text-sm text-slate-400">DASIC <span className="text-accent-glow">·</span> Sistema Industrial</p>
           </div>
 
           {/* Error */}
@@ -148,7 +148,7 @@ export function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-[10px] text-slate-600">
-          Powered by Atlas Tech · DASIC ERP v2.0
+          Powered by Atlas Tech · Atlas ONE v2.0
         </p>
       </div>
     </div>

@@ -54,11 +54,23 @@ export function Header() {
   return (
     <header className="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900 shrink-0">
       <h2 className="text-sm uppercase tracking-wider text-slate-400 font-semibold">
-        DASIC ERP <span className="text-accent-glow">·</span> SPA
+        DASIC <span className="text-accent-glow">·</span> Atlas ONE
       </h2>
 
       {user && (
-        <div className="relative" ref={menuRef}>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={busy}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-900/20 transition disabled:opacity-50"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+
+          <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -114,6 +126,7 @@ export function Header() {
               </button>
             </div>
           )}
+          </div>
         </div>
       )}
     </header>

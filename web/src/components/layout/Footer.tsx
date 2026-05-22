@@ -4,7 +4,7 @@ export function Footer() {
       <span>
         Powered by <strong className="text-slate-400">Atlas Tech</strong>
       </span>
-      <span className="font-mono hidden sm:inline">DASIC ERP v2.0</span>
+      <span className="font-mono hidden sm:inline">DASIC <span className="text-slate-600">·</span> Atlas ONE v2.0</span>
     </footer>
   );
 }

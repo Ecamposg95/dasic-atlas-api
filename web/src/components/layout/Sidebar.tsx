@@ -26,8 +26,11 @@ const NAV = [
 export function Sidebar() {
   return (
     <aside className="w-64 bg-sidebar text-sidebar-text border-r border-slate-800 p-4">
-      <div className="text-xl font-bold mb-6">
-        DASIC <span className="text-accent-glow">·</span> SPA
+      <div className="mb-6">
+        <div className="text-xl font-bold leading-tight">Atlas ONE</div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-0.5">
+          DASIC <span className="text-accent-glow">·</span> Sistema Industrial
+        </div>
       </div>
       <nav className="space-y-1">
         {NAV.map(({ to, label, Icon }) => (
