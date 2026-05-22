@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
@@ -8,8 +8,12 @@ import { TotalsBar } from '../components/TotalsBar';
 import { EditLineModal } from '../components/EditLineModal';
 import { TabsCotizador, type CotizadorTab } from '../components/TabsCotizador';
 import { HistorialTab } from '../components/HistorialTab';
+import { AtajosPopover } from '../components/AtajosPopover';
+import { PlantillasModal } from '../components/PlantillasModal';
+import { SuggestRelacionados } from '../components/SuggestRelacionados';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
+import { useAtajos, type AtajoHandler } from '../hooks/useAtajos';
 
 export function CotizadorPage() {
   const [params] = useSearchParams();
@@ -29,6 +33,40 @@ export function CotizadorPage() {
   const setTerminos = useCotizador((s) => s.setTerminos);
 
   const { data: orden, isLoading, error } = useCotizacionLoader(editIdNum);
+
+  // Atajos globales del editor. Memoizado para que el effect del hook no
+  // re-suscriba en cada render.
+  const atajos = useMemo<AtajoHandler[]>(() => [
+    {
+      combo: '/',
+      description: 'Enfocar búsqueda',
+      handler: () => {
+        (document.querySelector('[data-cot-search]') as HTMLInputElement | null)?.focus();
+      },
+    },
+    {
+      combo: 'ctrl+s',
+      description: 'Guardar cotización',
+      handler: () => {
+        document.querySelector<HTMLButtonElement>('[data-cot-save]')?.click();
+      },
+    },
+    {
+      combo: 'p',
+      description: 'Abrir plantillas',
+      handler: () => {
+        window.dispatchEvent(new CustomEvent('cot:open-plantillas'));
+      },
+    },
+    {
+      combo: '?',
+      description: 'Mostrar este popover',
+      handler: () => {
+        window.dispatchEvent(new CustomEvent('cot:open-atajos'));
+      },
+    },
+  ], []);
+  useAtajos(atajos);
 
   // Hydrate when the GET resolves
   useEffect(() => {
@@ -97,6 +135,7 @@ export function CotizadorPage() {
             </div>
 
             <Cart />
+            <SuggestRelacionados />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -134,6 +173,8 @@ export function CotizadorPage() {
 
       {tab === 'editor' && <TotalsBar />}
       <EditLineModal />
+      <PlantillasModal />
+      {tab === 'editor' && <AtajosPopover atajos={atajos} />}
     </div>
   );
 }

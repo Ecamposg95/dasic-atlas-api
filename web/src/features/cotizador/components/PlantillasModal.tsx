@@ -1,0 +1,194 @@
+import { useEffect, useState } from 'react';
+import { X, Folder, Save, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from '@/lib/toast';
+import { api, type ApiError } from '@/lib/api';
+import { usePlantillas, useCrearPlantilla, useBorrarPlantilla } from '../hooks/usePlantillas';
+import { useCotizador } from '../store';
+import type { Plantilla, Producto } from '../types';
+
+async function fetchProductoById(id: number): Promise<Producto | null> {
+  try {
+    return await api.get<Producto>(`/api/productos/${id}`);
+  } catch {
+    return null;
+  }
+}
+
+export function PlantillasModal() {
+  const [open, setOpen] = useState(false);
+  const [modo, setModo] = useState<'cargar' | 'guardar'>('cargar');
+  const [nombre, setNombre] = useState('');
+
+  const cart = useCotizador((s) => s.cart);
+  const { data: plantillas, isLoading } = usePlantillas();
+  const crear = useCrearPlantilla();
+  const borrar = useBorrarPlantilla();
+
+  useEffect(() => {
+    function onOpen() { setOpen(true); setModo('cargar'); }
+    window.addEventListener('cot:open-plantillas', onOpen);
+    return () => window.removeEventListener('cot:open-plantillas', onOpen);
+  }, []);
+
+  async function onGuardar() {
+    if (!nombre.trim()) {
+      toast({ kind: 'error', title: 'Falta nombre', description: 'Dale un nombre a la plantilla.' });
+      return;
+    }
+    if (cart.length === 0) {
+      toast({ kind: 'error', title: 'Carrito vacío', description: 'Agrega al menos una línea antes de guardar.' });
+      return;
+    }
+    try {
+      await crear.mutateAsync({
+        nombre: nombre.trim(),
+        lineas: cart.map((i) => ({
+          producto_id: i.producto_id,
+          qty: i.qty,
+          utilidad: i.utilidad,
+          descuento: i.descuento,
+          entrega_min: i.entrega_min,
+          entrega_max: i.entrega_max,
+          entrega_unidad: i.entrega_unidad,
+          observaciones_linea: i.observaciones_linea,
+        })),
+      });
+      toast({ kind: 'success', title: 'Plantilla guardada', description: `"${nombre.trim()}"` });
+      setNombre('');
+      setModo('cargar');
+    } catch (e) {
+      const err = e as ApiError;
+      toast({ kind: 'error', title: 'No se pudo guardar', description: err.detail });
+    }
+  }
+
+  async function onCargar(p: Plantilla) {
+    const { reset, addProducto, updateLinea } = useCotizador.getState();
+    reset();
+    let cargadas = 0;
+    let faltantes = 0;
+    for (const l of p.lineas) {
+      const prod = await fetchProductoById(l.producto_id);
+      if (!prod) { faltantes += 1; continue; }
+      addProducto(prod, l.qty, l.utilidad);
+      // aplicar overrides remanentes (utilidad ya se aplicó vía addProducto)
+      const uid = useCotizador.getState().cart.slice(-1)[0]?.uid;
+      if (uid) {
+        updateLinea(uid, {
+          descuento: l.descuento,
+          entrega_min: l.entrega_min,
+          entrega_max: l.entrega_max,
+          entrega_unidad: l.entrega_unidad,
+          observaciones_linea: l.observaciones_linea,
+        });
+      }
+      cargadas += 1;
+    }
+    if (cargadas > 0) {
+      toast({
+        kind: 'success',
+        title: `Plantilla "${p.nombre}" cargada`,
+        description: faltantes > 0 ? `${cargadas} línea(s) cargada(s), ${faltantes} producto(s) ya no existe(n).` : undefined,
+      });
+    } else {
+      toast({ kind: 'error', title: 'No se cargó nada', description: 'Los productos referenciados ya no existen.' });
+    }
+    setOpen(false);
+  }
+
+  async function onBorrar(p: Plantilla) {
+    if (!window.confirm(`Borrar plantilla "${p.nombre}"?`)) return;
+    try {
+      await borrar.mutateAsync(p.id);
+      toast({ kind: 'success', title: 'Plantilla borrada' });
+    } catch (e) {
+      const err = e as ApiError;
+      toast({ kind: 'error', title: 'No se pudo borrar', description: err.detail });
+    }
+  }
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-xl w-full p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Folder className="h-4 w-4 text-accent-glow" /> Plantillas
+          </h3>
+          <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex gap-1 border-b border-slate-800 mb-3">
+          <button
+            type="button"
+            onClick={() => setModo('cargar')}
+            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'cargar' ? 'text-accent-glow border-accent-glow' : 'text-slate-400 border-transparent'}`}
+          >
+            Cargar
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo('guardar')}
+            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'guardar' ? 'text-accent-glow border-accent-glow' : 'text-slate-400 border-transparent'}`}
+          >
+            Guardar carrito actual
+          </button>
+        </div>
+
+        {modo === 'cargar' && (
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {isLoading && <div className="text-xs text-slate-500 text-center p-4">Cargando…</div>}
+            {!isLoading && (plantillas?.length ?? 0) === 0 && (
+              <div className="text-xs text-slate-500 text-center p-4">Aún no tienes plantillas</div>
+            )}
+            {(plantillas ?? []).map((p) => (
+              <div key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-800 border border-slate-800">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{p.nombre}</div>
+                  <div className="text-[10px] text-slate-500">
+                    {p.n_lineas} línea(s) · {p.es_global ? 'Global' : 'Personal'}
+                    {p.descripcion ? ` · ${p.descripcion}` : ''}
+                  </div>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => onCargar(p)}>Cargar</Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={borrar.isPending}
+                  onClick={() => onBorrar(p)}
+                  title={p.es_propia ? 'Borrar plantilla' : 'Solo el dueño o un admin puede borrar'}
+                >
+                  <Trash2 className="h-3 w-3 text-rose-400" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {modo === 'guardar' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nombre</label>
+              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Kit arranque industrial" />
+            </div>
+            <div className="text-xs text-slate-500">
+              Se guardará el carrito actual: <strong>{cart.length}</strong> línea(s).
+            </div>
+            <Button
+              onClick={onGuardar}
+              disabled={crear.isPending || !nombre.trim() || cart.length === 0}
+              className="w-full"
+            >
+              <Save className="h-3.5 w-3.5 mr-2" /> {crear.isPending ? 'Guardando…' : 'Guardar plantilla'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

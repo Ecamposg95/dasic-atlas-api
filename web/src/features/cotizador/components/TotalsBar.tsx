@@ -106,7 +106,7 @@ export function TotalsBar() {
           <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>
             Cancelar
           </Button>
-          <Button onClick={onSave} disabled={disabled}>
+          <Button onClick={onSave} disabled={disabled} data-cot-save>
             {guardar.isPending ? 'Guardando…' : editingId != null ? 'Actualizar cotización' : 'Guardar cotización'}
           </Button>
         </div>

@@ -31,7 +31,7 @@ type CotizadorState = {
   setTerminos: (s: string) => void;
 
   // Cart ops:
-  addProducto: (p: Producto, qty?: number) => void;
+  addProducto: (p: Producto, qty?: number, utilidadOverride?: number) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
@@ -71,9 +71,10 @@ export const useCotizador = create<CotizadorState>((set) => ({
   setObservaciones: (observaciones) => set({ observaciones }),
   setTerminos: (terminos_condiciones) => set({ terminos_condiciones }),
 
-  addProducto: (p, qty = 1) =>
+  addProducto: (p, qty = 1, utilidadOverride) =>
     set((s) => {
       // Si el producto ya está en el carrito, sumar cantidad en vez de duplicar.
+      // (No tocamos `utilidad` del existente — el override sólo aplica al primer add.)
       const existente = s.cart.find((x) => x.producto_id === p.id);
       if (existente) {
         return {
@@ -87,6 +88,9 @@ export const useCotizador = create<CotizadorState>((set) => ({
         nom: p.nombre,
         cost: Number(p.costo_compra ?? 0),
       };
+      const utilidad = utilidadOverride != null && Number.isFinite(utilidadOverride)
+        ? utilidadOverride
+        : 30;
       const nueva: CartItem = {
         uid: nextUid('nuevo'),
         producto_id: p.id,
@@ -99,7 +103,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         cost_original: snapshot.cost,
         max: p.stock_actual,
         qty,
-        utilidad: 30,
+        utilidad,
         descuento: 0,
         entrega_min: null,
         entrega_max: null,

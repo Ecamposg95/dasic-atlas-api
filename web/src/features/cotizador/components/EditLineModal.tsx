@@ -17,7 +17,8 @@ export function EditLineModal() {
   const [err, setErr] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
   const [searchQ, setSearchQ] = useState('');
-  const { data: productos } = useProductosSearch(showReplace ? searchQ : '');
+  const { data: searchData } = useProductosSearch(showReplace ? searchQ : '');
+  const productos = (searchData?.items ?? []).map((it) => it.producto);
 
   // Listen for the event
   useEffect(() => {
@@ -171,12 +172,12 @@ export function EditLineModal() {
               autoFocus
             />
             <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
-              {(productos ?? []).length === 0 && (
+              {productos.length === 0 && (
                 <div className="text-xs text-slate-500 text-center p-4">
                   {searchQ ? 'Sin coincidencias' : 'Escribe para buscar productos del catálogo'}
                 </div>
               )}
-              {(productos ?? []).map((p) => (
+              {productos.map((p) => (
                 <button
                   key={p.id}
                   type="button"

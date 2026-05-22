@@ -249,3 +249,47 @@ export type RecotizarResponse = {
   folio: string;
   version: number;
 };
+
+// === Plantillas ===
+//
+// Shape REAL del backend (`app/routers/ventas.py:1855`):
+//   GET → [{ id, nombre, descripcion, lineas, n_lineas, creado_en, es_global, es_propia }]
+//   POST input → { nombre, descripcion?, lineas: [...] }
+//   POST output → { id, nombre, n_lineas }
+//
+// El plan usaba `payload.cart` + `cantidad_lineas`; aquí adoptamos los nombres
+// reales del backend para evitar transformaciones a media capa.
+
+export type PlantillaLinea = {
+  producto_id: number;
+  qty: number;
+  utilidad: number;
+  descuento: number;
+  entrega_min: number | null;
+  entrega_max: number | null;
+  entrega_unidad: 'dias' | 'semanas' | null;
+  observaciones_linea: string;
+};
+
+export type Plantilla = {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  lineas: PlantillaLinea[];
+  n_lineas: number;
+  creado_en: string | null;
+  es_global: boolean;
+  es_propia: boolean;
+};
+
+export type PlantillaCreate = {
+  nombre: string;
+  descripcion?: string;
+  lineas: PlantillaLinea[];
+};
+
+export type PlantillaCreateResponse = {
+  id: number;
+  nombre: string;
+  n_lineas: number;
+};

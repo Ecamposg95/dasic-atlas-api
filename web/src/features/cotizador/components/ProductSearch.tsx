@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import type { ApiError } from '@/lib/api';
 import { useProductosSearch } from '../hooks/useProductosSearch';
+import { fetchAutoUtilidad } from '../hooks/useAutoUtilidad';
 import { useCotizador } from '../store';
 import type { Producto } from '../types';
 
@@ -10,7 +12,18 @@ export function ProductSearch() {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addProducto = useCotizador((s) => s.addProducto);
-  const { data: productos, isLoading } = useProductosSearch(q);
+  const { data, isLoading, error } = useProductosSearch(q);
+
+  const items = data?.items ?? [];
+  const cantidadParseada = data?.cantidad ?? null;
+
+  // Auth error en la búsqueda → bounce a login.
+  // CotizadorPage solo redirige por errores de useCotizacionLoader; el primary
+  // variant de useProductosSearch ahora burbujea 401 y lo manejamos aquí.
+  useEffect(() => {
+    const status = (error as unknown as ApiError | undefined)?.status;
+    if (status === 401) window.location.href = '/spa/login';
+  }, [error]);
 
   // Close on outside click
   useEffect(() => {
@@ -25,8 +38,10 @@ export function ProductSearch() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  function onSelect(p: Producto) {
-    addProducto(p, 1);
+  async function onSelect(p: Producto) {
+    const cliente_id = useCotizador.getState().cliente_id;
+    const util = await fetchAutoUtilidad(cliente_id, p.id);
+    addProducto(p, cantidadParseada ?? 1, util ?? undefined);
     setQ('');
     setOpen(false);
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -52,17 +67,28 @@ export function ProductSearch() {
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
-          placeholder="Buscar producto (SKU, nombre, marca)…"
+          placeholder='Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
           className="pl-8"
+          data-cot-search
         />
+        {cantidadParseada != null && q.trim() && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-900/30 text-violet-300 px-2 py-0.5 rounded font-bold pointer-events-none flex items-center gap-1">
+            <Sparkles className="h-2.5 w-2.5" /> ×{cantidadParseada}
+          </div>
+        )}
       </div>
       {open && (
         <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-md shadow-xl z-20">
-          {isLoading && <div className="px-3 py-4 text-xs text-slate-500 text-center">Buscando…</div>}
-          {!isLoading && (productos?.length ?? 0) === 0 && (
+          {(items.length > 0 || isLoading) && (
+            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span>{isLoading ? 'Buscando…' : `${items.length} resultado(s)`}</span>
+              {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
+            </div>
+          )}
+          {!isLoading && items.length === 0 && (
             <div className="px-3 py-4 text-xs text-slate-500 text-center">Sin coincidencias</div>
           )}
-          {(productos ?? []).map((p) => (
+          {items.map(({ producto: p }) => (
             <button key={p.id} type="button" onClick={() => onSelect(p)}
               className="w-full text-left px-3 py-2 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0 flex items-center gap-3">
               <Package className="h-4 w-4 text-slate-500 shrink-0" />
