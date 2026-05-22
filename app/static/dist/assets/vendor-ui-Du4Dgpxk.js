@@ -1,4 +1,4 @@
-import{r as m,j as D,R as he}from"./vendor-query-DaWJvR7S.js";import"./vendor-react-D3U8qxIM.js";/**
+import{r as m,j as D,R as he}from"./vendor-query-DiHzPxHS.js";import"./vendor-react-BOzPcRUd.js";/**
  * @license lucide-react v0.460.0 - ISC
  *
  * This source code is licensed under the ISC license.

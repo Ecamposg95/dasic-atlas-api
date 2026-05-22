@@ -4,6 +4,10 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  // Los assets viven bajo /app/static/dist/, servidos por FastAPI en /static/dist/.
+  // Vite generaría paths absolutos /assets/... por default; con `base` lo arreglamos
+  // para que el index.html referencie /static/dist/assets/... (URLs reales).
+  base: '/static/dist/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
