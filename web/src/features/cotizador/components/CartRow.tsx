@@ -55,9 +55,9 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
         toggleExpand(item.uid);
       }}
     >
-      <td className="p-3 align-top max-w-md">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-xs font-bold text-accent-glow">{item.sku}</span>
+      <td className="p-2 align-top max-w-md">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-mono text-[11px] font-bold text-accent-glow">{item.sku}</span>
           {item.productCurrency !== moneda && (
             <span className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded">
               {item.productCurrency} · TC {tc}
@@ -70,7 +70,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           )}
           <StockBadge stock={item.max} qty={item.qty} />
         </div>
-        <div className="text-xs text-slate-300 mt-0.5">{item.nom}</div>
+        <div className="text-[11px] text-slate-300 mt-0.5">{item.nom}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <EntregaChip min={item.entrega_min} max={item.entrega_max} unidad={item.entrega_unidad} />
           <MargenChip utilidad={item.utilidad} />
@@ -80,7 +80,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           </span>
         </div>
       </td>
-      <td className="p-3 align-top text-center w-24">
+      <td className="p-2 align-top text-center w-20">
         <Input
           type="number"
           min="1"
@@ -88,13 +88,13 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           onChange={(e) =>
             updateLinea(item.uid, { qty: Math.max(1, parseInt(e.target.value) || 1) })
           }
-          className="h-8 text-center"
+          className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-3 align-top text-right font-mono text-sm text-slate-300 w-32">
+      <td className="p-2 align-top text-right font-mono text-xs text-slate-300 w-28">
         ${fmt(costoConvertido)}
       </td>
-      <td className="p-3 align-top text-center w-20">
+      <td className="p-2 align-top text-center w-16">
         <Input
           type="number"
           min="0"
@@ -105,10 +105,10 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
               utilidad: Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)),
             })
           }
-          className="h-8 text-center"
+          className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-3 align-top text-center w-20">
+      <td className="p-2 align-top text-center w-16">
         <Input
           type="number"
           min="0"
@@ -120,10 +120,10 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
               descuento: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
             })
           }
-          className="h-8 text-center"
+          className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-3 align-top text-center w-44">
+      <td className="p-2 align-top text-center w-40">
         <div className="flex items-center gap-1">
           <Input
             type="number"
@@ -135,9 +135,9 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
                   e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
               })
             }
-            className="h-8 text-center w-14"
+            className="h-7 text-center text-xs px-1 w-12"
           />
-          <span className="text-slate-500">–</span>
+          <span className="text-slate-500 text-xs">–</span>
           <Input
             type="number"
             placeholder="max"
@@ -148,7 +148,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
                   e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
               })
             }
-            className="h-8 text-center w-14"
+            className="h-7 text-center text-xs px-1 w-12"
           />
           <select
             value={item.entrega_unidad ?? ''}
@@ -160,7 +160,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
                 ...(u == null ? { entrega_min: null, entrega_max: null } : {}),
               });
             }}
-            className="h-8 text-xs rounded border border-slate-700 bg-slate-900 px-1"
+            className="h-7 text-[11px] rounded border border-slate-700 bg-slate-900 px-1"
           >
             <option value="">—</option>
             <option value="dias">días</option>
@@ -168,27 +168,27 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           </select>
         </div>
       </td>
-      <td className="p-3 align-top text-right font-mono font-bold text-sm w-32">${fmt(importe)}</td>
-      <td className="p-3 align-top text-center w-10 relative">
+      <td className="p-2 align-top text-right font-mono font-bold text-xs w-28">${fmt(importe)}</td>
+      <td className="p-2 align-top text-center w-8 relative">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             setMenuOpen((v) => !v);
           }}
-          className="w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition"
+          className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition"
           aria-label="Acciones de la línea"
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-3.5 w-3.5" />
         </button>
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-1 top-9 z-20 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[160px] text-left">
+            <div className="absolute right-1 top-8 z-20 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[150px] text-left">
               <button
                 type="button"
                 onClick={openEditModal}
-                className="w-full text-left text-xs px-3 py-2 hover:bg-slate-800 text-slate-200 flex items-center gap-2"
+                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-slate-800 text-slate-200 flex items-center gap-2"
               >
                 <Pen className="h-3 w-3" /> Editar línea
               </button>
@@ -198,7 +198,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
                   removeLinea(item.uid);
                   setMenuOpen(false);
                 }}
-                className="w-full text-left text-xs px-3 py-2 hover:bg-rose-900/30 text-rose-400 flex items-center gap-2"
+                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-rose-900/30 text-rose-400 flex items-center gap-2"
               >
                 <Trash2 className="h-3 w-3" /> Eliminar
               </button>

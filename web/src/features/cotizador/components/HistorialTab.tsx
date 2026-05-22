@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, Search, FileText, ShoppingBag, RefreshCw, Settings } from 'lucide-react';
+import {
+  Calendar,
+  Search,
+  FileText,
+  ShoppingBag,
+  RefreshCw,
+  Settings,
+  Hash,
+  User,
+  CircleDot,
+  Coins,
+  CalendarDays,
+  GitBranch,
+  Zap,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
@@ -138,85 +152,113 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 grid grid-cols-1 md:grid-cols-5 gap-2">
         <div className="md:col-span-2 relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
           <Input
             placeholder="Folio o cliente…"
             value={filtros.q ?? ''}
             onChange={(e) => setFiltros((f) => ({ ...f, q: e.target.value || undefined, page: 1 }))}
-            className="pl-8"
+            className="pl-7 h-8 text-xs"
           />
         </div>
         <select
           value={filtros.estatus ?? ''}
           onChange={(e) => setFiltros((f) => ({ ...f, estatus: e.target.value as EstatusOrden | '', page: 1 }))}
-          className="h-10 rounded border border-slate-700 bg-slate-900 px-2 text-sm"
+          className="h-8 rounded border border-slate-700 bg-slate-900 px-2 text-xs"
         >
           {ESTATUS_OPCIONES.map((o) => (
             <option key={o.key} value={o.key}>{o.label}</option>
           ))}
         </select>
         <div className="relative">
-          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
           <Input
             type="date"
             value={filtros.desde ?? ''}
             onChange={(e) => setFiltros((f) => ({ ...f, desde: e.target.value || undefined, page: 1 }))}
-            className="pl-8"
+            className="pl-7 h-8 text-xs"
           />
         </div>
         <div className="relative">
-          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
           <Input
             type="date"
             value={filtros.hasta ?? ''}
             onChange={(e) => setFiltros((f) => ({ ...f, hasta: e.target.value || undefined, page: 1 }))}
-            className="pl-8"
+            className="pl-7 h-8 text-xs"
           />
         </div>
       </div>
 
       {/* Tabla */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 z-10">
+        <table className="w-full text-xs">
+          <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
             <tr>
-              <th className="p-3 text-left">Folio</th>
-              <th className="p-3 text-left">Cliente</th>
-              <th className="p-3 text-left">Estatus</th>
-              <th className="p-3 text-right w-32">Total</th>
-              <th className="p-3 text-center w-28">F. creación</th>
-              <th className="p-3 text-center w-16">v.</th>
-              <th className="p-3 text-right w-60">Acciones</th>
+              <th className="p-2 text-left">
+                <span className="inline-flex items-center gap-1">
+                  <Hash className="h-3 w-3 text-slate-500" /> Folio
+                </span>
+              </th>
+              <th className="p-2 text-left">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3 w-3 text-slate-500" /> Cliente
+                </span>
+              </th>
+              <th className="p-2 text-left">
+                <span className="inline-flex items-center gap-1">
+                  <CircleDot className="h-3 w-3 text-slate-500" /> Estatus
+                </span>
+              </th>
+              <th className="p-2 text-right w-28">
+                <span className="inline-flex items-center gap-1 justify-end">
+                  <Coins className="h-3 w-3 text-slate-500" /> Total
+                </span>
+              </th>
+              <th className="p-2 text-center w-24">
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3 text-slate-500" /> F. creación
+                </span>
+              </th>
+              <th className="p-2 text-center w-12">
+                <span className="inline-flex items-center gap-1">
+                  <GitBranch className="h-3 w-3 text-slate-500" /> v.
+                </span>
+              </th>
+              <th className="p-2 text-right w-56">
+                <span className="inline-flex items-center gap-1 justify-end">
+                  <Zap className="h-3 w-3 text-slate-500" /> Acciones
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Cargando historial…</td></tr>
+              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-slate-500">Cargando historial…</td></tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Sin cotizaciones que coincidan</td></tr>
+              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-slate-500">Sin cotizaciones que coincidan</td></tr>
             )}
             {items.map((o) => (
               <tr key={o.id} className="border-b border-slate-800 hover:bg-slate-800/30">
-                <td className="p-3 font-mono text-xs font-bold text-cyan-400">{o.folio}</td>
-                <td className="p-3 text-slate-300 max-w-xs truncate">{o.cliente ?? '—'}</td>
-                <td className="p-3"><span className={badgeEstatus(o.estatus)}>{o.estatus.toUpperCase()}</span></td>
-                <td className="p-3 text-right font-mono font-bold">{fmtMoney(o.total, o.moneda)}</td>
-                <td className="p-3 text-center text-xs text-slate-400">{fmtDate(o.fecha)}</td>
-                <td className="p-3 text-center">
+                <td className="p-2 font-mono text-[11px] font-bold text-cyan-400">{o.folio}</td>
+                <td className="p-2 text-slate-300 max-w-xs truncate">{o.cliente ?? '—'}</td>
+                <td className="p-2"><span className={badgeEstatus(o.estatus)}>{o.estatus.toUpperCase()}</span></td>
+                <td className="p-2 text-right font-mono font-bold">{fmtMoney(o.total, o.moneda)}</td>
+                <td className="p-2 text-center text-[11px] text-slate-400">{fmtDate(o.fecha)}</td>
+                <td className="p-2 text-center">
                   {o.version > 1 && (
                     <span className="text-[10px] bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded">v{o.version}</span>
                   )}
                 </td>
-                <td className="p-3">
+                <td className="p-2">
                   <div className="flex items-center justify-end gap-1 flex-wrap">
                     <a
                       href={`/api/ventas/${o.id}/pdf`} target="_blank" rel="noreferrer"
-                      className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 flex items-center gap-1"
+                      className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 hover:border-accent-glow text-slate-300 flex items-center gap-1"
                       title="Ver PDF"
                     ><FileText className="h-3 w-3" /> PDF</a>
                     {o.estatus === 'cotizacion' && (
@@ -242,7 +284,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
 
       {/* Paginación */}
       {total > pageSize && (
-        <div className="flex items-center justify-between text-xs text-slate-400">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
           <div>Página {page} de {totalPages} · {total} cotizaciones</div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" disabled={page === 1}

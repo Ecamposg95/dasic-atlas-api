@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, ClipboardList, Download, Upload } from 'lucide-react';
+import {
+  FileText,
+  ClipboardList,
+  Download,
+  Upload,
+  Package,
+  MessageSquare,
+  FileOutput,
+  Pencil,
+} from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
 import { ProductSearch } from '../components/ProductSearch';
 import { Cart } from '../components/Cart';
@@ -183,15 +192,18 @@ export function CotizadorPage() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-4">
+      <div className="flex-1 p-4 max-w-7xl mx-auto w-full space-y-3">
         <header className="flex items-center justify-between gap-2 flex-wrap">
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5 text-accent-glow" />
             {editingId ? 'Editar cotización' : 'Nueva cotización'}
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {editingFolio && (
-              <span className="text-sm bg-amber-900/30 text-amber-300 border border-amber-700/50 px-3 py-1 rounded">
-                Editando <strong className="font-mono">{editingFolio}</strong>
+              <span className="text-xs bg-amber-900/30 text-amber-300 border border-amber-700/50 px-2 py-1 rounded flex items-center gap-1">
+                <Pencil className="h-3 w-3" />
+                <span>Editando</span>
+                <strong className="font-mono">{editingFolio}</strong>
               </span>
             )}
             <button
@@ -199,25 +211,25 @@ export function CotizadorPage() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent('cot:open-borradores'))
               }
-              className="text-xs px-3 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
-              <ClipboardList className="h-3.5 w-3.5" /> Borradores
+              <ClipboardList className="h-3 w-3" /> Borradores
             </button>
             <button
               type="button"
               onClick={handleExport}
               title="Exportar borrador a JSON"
-              className="text-xs px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-3 w-3" />
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Importar borrador desde JSON"
-              className="text-xs px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
-              <Upload className="h-3.5 w-3.5" />
+              <Upload className="h-3 w-3" />
             </button>
             <input
               ref={fileInputRef}
@@ -236,9 +248,9 @@ export function CotizadorPage() {
                 href={`/api/ventas/${editingId}/pdf`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs px-3 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+                className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
               >
-                <FileText className="h-3.5 w-3.5" /> Ver PDF
+                <FileText className="h-3 w-3" /> Ver PDF
               </a>
             )}
           </div>
@@ -249,58 +261,64 @@ export function CotizadorPage() {
         {tab === 'editor' && (
           <>
             {isLoading && editIdNum != null && (
-              <div className="text-sm text-slate-400 bg-slate-900 border border-slate-800 rounded p-4">
+              <div className="text-xs text-slate-400 bg-slate-900 border border-slate-800 rounded p-3">
                 Cargando cotización #{editIdNum}…
               </div>
             )}
             {noEditable && (
-              <div className="text-sm bg-rose-900/20 border border-rose-700/50 text-rose-300 rounded p-3">
+              <div className="text-xs bg-rose-900/20 border border-rose-700/50 text-rose-300 rounded p-2">
                 Esta orden ya no es editable (estatus <code>{editingEstatus}</code>). El botón Guardar está deshabilitado.
               </div>
             )}
 
             <HeaderCotizacion />
 
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mt-2">
+              <Package className="h-3 w-3" />
+              <span>Productos</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                Agregar producto
-              </label>
               <ProductSearch />
             </div>
 
             <Cart />
             <SuggestRelacionados />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                  Observaciones
-                </label>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-1">
+                  <MessageSquare className="h-3 w-3" />
+                  <span>Observaciones</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                </div>
                 <textarea
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
                   rows={4}
                   placeholder="Notas internas o para el cliente…"
-                  className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
+                  className="w-full text-xs rounded-md border border-slate-700 bg-slate-900 px-2 py-2 focus:border-accent-glow outline-none"
                 />
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                  Términos y condiciones
-                </label>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-1">
+                  <FileText className="h-3 w-3" />
+                  <span>Términos y condiciones</span>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                </div>
                 <button
                   type="button"
                   onClick={() =>
                     window.dispatchEvent(new CustomEvent('cot:open-terminos'))
                   }
-                  className="w-full text-left text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 hover:border-accent-glow text-slate-300 flex items-start gap-2 min-h-[6rem]"
+                  className="w-full text-left text-xs rounded-md border border-slate-700 bg-slate-900 px-2 py-2 hover:border-accent-glow text-slate-300 flex items-start gap-2 min-h-[5rem]"
                 >
-                  <FileText className="h-4 w-4 mt-0.5 text-slate-500 shrink-0" />
+                  <FileText className="h-3.5 w-3.5 mt-0.5 text-slate-500 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-slate-500 mb-1">
+                    <div className="text-[11px] text-slate-500 mb-1">
                       {terminos.split('\n').filter((l) => l.trim()).length} cláusulas · click para editar
                     </div>
-                    <div className="text-xs text-slate-400 line-clamp-3 whitespace-pre-wrap">
+                    <div className="text-[11px] text-slate-400 line-clamp-3 whitespace-pre-wrap">
                       {terminos || 'Vacío — se usarán los defaults del backend al guardar.'}
                     </div>
                   </div>
@@ -308,7 +326,12 @@ export function CotizadorPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-xs flex-wrap">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mt-2">
+              <FileOutput className="h-3 w-3" />
+              <span>PDF unificado</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            </div>
+            <div className="flex items-center gap-3 text-[11px] flex-wrap">
               <label className="flex items-center gap-2 text-slate-300">
                 <input
                   type="checkbox"
@@ -323,9 +346,9 @@ export function CotizadorPage() {
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent('cot:open-concepto'))
                 }
-                className="text-xs text-accent-glow hover:underline"
+                className="text-[11px] text-accent-glow hover:underline flex items-center gap-1"
               >
-                Editar concepto…
+                <Pencil className="h-3 w-3" /> Editar concepto…
               </button>
               {pdfConceptoEnabled && pdfConceptoUnificado && (
                 <span className="text-[10px] text-slate-500 truncate max-w-md">

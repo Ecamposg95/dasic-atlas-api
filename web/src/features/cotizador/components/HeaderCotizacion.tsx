@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -41,9 +42,10 @@ export function HeaderCotizacion() {
   const tcVisible = moneda === 'USD';
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
       <div className="md:col-span-2">
-        <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+          <User className="h-3 w-3" />
           Cliente
         </label>
         <ClientPicker />
@@ -52,20 +54,22 @@ export function HeaderCotizacion() {
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+            <Coins className="h-3 w-3" />
             Moneda
           </label>
           <select
             value={moneda}
             onChange={(e) => setMoneda(e.target.value as 'MXN' | 'USD')}
-            className="w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
+            className="w-full h-8 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
           >
             <option value="MXN">MXN</option>
             <option value="USD">USD</option>
           </select>
         </div>
         <div>
-          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3" />
             TC (MXN/USD)
           </label>
           <Input
@@ -75,7 +79,7 @@ export function HeaderCotizacion() {
             value={tc}
             onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
             disabled={!tcVisible}
-            className={tcVisible ? '' : 'opacity-50'}
+            className={`h-8 text-xs ${tcVisible ? '' : 'opacity-50'}`}
           />
           {tcVisible && (
             <div className="mt-1 space-y-0.5">
@@ -86,9 +90,9 @@ export function HeaderCotizacion() {
                   onClick={() =>
                     window.dispatchEvent(new CustomEvent('cot:open-pisartc'))
                   }
-                  className="text-[10px] text-amber-400 hover:underline block"
+                  className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
                 >
-                  Pisar TC manualmente
+                  <ShieldAlert className="h-2.5 w-2.5" /> Pisar TC manualmente
                 </button>
               )}
             </div>
@@ -97,28 +101,32 @@ export function HeaderCotizacion() {
       </div>
 
       <div>
-        <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+          <CalendarPlus className="h-3 w-3" />
           F. creación
         </label>
         <Input
           type="date"
           value={fechaCreacion ?? ''}
           onChange={(e) => setFechaCreacion(e.target.value || null)}
+          className="h-8 text-xs"
         />
       </div>
 
       <div>
-        <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+          <CalendarClock className="h-3 w-3" />
           F. vencimiento
         </label>
         <Input
           type="date"
           value={fechaVencimiento ?? ''}
           onChange={(e) => setFechaVencimiento(e.target.value || null)}
+          className="h-8 text-xs"
         />
       </div>
 
-      <div className="text-xs text-slate-500 flex items-end">
+      <div className="text-[11px] text-slate-500 flex items-end">
         Vigencia default: {config.quote_validity_days} días
       </div>
     </div>

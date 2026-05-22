@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Sigma, Percent, Coins, TrendingUp, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
@@ -49,7 +50,10 @@ export function TotalsBar() {
   const margenStats = useMemo(() => {
     const criticas = cart.filter((l) => l.utilidad < 5).length;
     const bajas = cart.filter((l) => l.utilidad < 15).length;
-    return { criticas, bajas };
+    const avg = cart.length
+      ? cart.reduce((acc, l) => acc + (Number(l.utilidad) || 0), 0) / cart.length
+      : 0;
+    return { criticas, bajas, avg };
   }, [cart]);
 
   function onSave() {
@@ -98,39 +102,61 @@ export function TotalsBar() {
     );
   }
 
+  const avgClass =
+    margenStats.avg < 5
+      ? 'bg-rose-900/30 text-rose-300 border-rose-700/50'
+      : margenStats.avg < 15
+        ? 'bg-amber-900/30 text-amber-300 border-amber-700/50'
+        : 'bg-emerald-900/30 text-emerald-300 border-emerald-700/50';
+
   return (
-    <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-6 py-3">
+    <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-4 py-2">
       {err && (
-        <div className="mb-2 text-xs bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-3 py-2">
+        <div className="mb-2 text-[11px] bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-2 py-1.5 flex items-center gap-1.5">
+          <AlertTriangle className="h-3 w-3 shrink-0" />
           {err}
         </div>
       )}
       {reasons.length > 0 && cart.length > 0 && (
-        <div className="mb-2 text-[11px] text-amber-400">
+        <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
           Pendiente para guardar: {reasons.join(', ')}
         </div>
       )}
       {margenStats.bajas > 0 && (
-        <div className="mb-2 text-[11px] text-amber-400">
+        <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
           {margenStats.criticas > 0
-            ? `⚠ ${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
+            ? `${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
             : `${margenStats.bajas} línea(s) con utilidad baja (<15 %)`}
         </div>
       )}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-6 text-sm">
-          <div>
-            <span className="text-slate-500">Subtotal: </span>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Sigma className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-slate-500">Subtotal</span>
             <span className="font-mono">{fmtMoney(subtotal, moneda)}</span>
           </div>
-          <div>
-            <span className="text-slate-500">IVA ({config.iva_pct_label}): </span>
+          <div className="flex items-center gap-1.5">
+            <Percent className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-slate-500">IVA ({config.iva_pct_label})</span>
             <span className="font-mono">{fmtMoney(iva, moneda)}</span>
           </div>
-          <div>
-            <span className="text-slate-500">Total: </span>
+          <div className="flex items-center gap-1.5">
+            <Coins className="h-3.5 w-3.5 text-accent-glow" />
+            <span className="text-slate-500">Total</span>
             <span className="font-mono font-bold text-accent-glow">{fmtMoney(total, moneda)}</span>
           </div>
+          {cart.length > 0 && (
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}
+              title="Utilidad promedio del carrito"
+            >
+              <TrendingUp className="h-2.5 w-2.5" />
+              Util prom. {margenStats.avg.toFixed(1)}%
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>
