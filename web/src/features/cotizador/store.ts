@@ -21,6 +21,9 @@ type CotizadorState = {
   // Líneas no soportadas en MVP (fantasmas/servicios) que vinieron en una cot. cargada.
   lineasNoSoportadas: LineaNoSoportada[];
 
+  // UIDs de filas con panel expandido visible.
+  expandedUids: Set<string>;
+
   // Setters:
   setCliente: (id: number | null) => void;
   setMoneda: (m: Moneda) => void;
@@ -35,6 +38,7 @@ type CotizadorState = {
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
+  toggleExpand: (uid: string) => void;
   reset: () => void;
   hydrateFromOrden: (orden: OrdenVentaDetail) => void;
 };
@@ -52,6 +56,7 @@ const initialState = {
   terminos_condiciones: '',
   cart: [] as CartItem[],
   lineasNoSoportadas: [] as LineaNoSoportada[],
+  expandedUids: new Set<string>() as Set<string>,
 };
 
 let _uidCounter = 0;
@@ -131,7 +136,15 @@ export const useCotizador = create<CotizadorState>((set) => ({
       return { cart: next };
     }),
 
-  reset: () => set({ ...initialState }),
+  toggleExpand: (uid) =>
+    set((s) => {
+      const n = new Set(s.expandedUids);
+      if (n.has(uid)) n.delete(uid);
+      else n.add(uid);
+      return { expandedUids: n };
+    }),
+
+  reset: () => set({ ...initialState, expandedUids: new Set<string>() }),
 
   hydrateFromOrden: (orden) =>
     set(() => {
@@ -186,6 +199,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         terminos_condiciones: orden.terminos_condiciones ?? '',
         cart,
         lineasNoSoportadas: noSoportadas,
+        expandedUids: new Set<string>(),
       };
     }),
 }));
