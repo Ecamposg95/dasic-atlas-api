@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
@@ -6,6 +6,8 @@ import { ProductSearch } from '../components/ProductSearch';
 import { Cart } from '../components/Cart';
 import { TotalsBar } from '../components/TotalsBar';
 import { EditLineModal } from '../components/EditLineModal';
+import { TabsCotizador, type CotizadorTab } from '../components/TabsCotizador';
+import { HistorialTab } from '../components/HistorialTab';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
 
@@ -13,12 +15,14 @@ export function CotizadorPage() {
   const [params] = useSearchParams();
   const editId = params.get('edit');
   const editIdNum = editId ? parseInt(editId, 10) : null;
+  const [tab, setTab] = useState<CotizadorTab>('editor');
 
   const reset = useCotizador((s) => s.reset);
   const hydrateFromOrden = useCotizador((s) => s.hydrateFromOrden);
   const editingFolio = useCotizador((s) => s.editingFolio);
   const editingId = useCotizador((s) => s.editingId);
   const editingEstatus = useCotizador((s) => s.editingEstatus);
+  const cliente_id = useCotizador((s) => s.cliente_id);
   const observaciones = useCotizador((s) => s.observaciones);
   const setObservaciones = useCotizador((s) => s.setObservaciones);
   const terminos = useCotizador((s) => s.terminos_condiciones);
@@ -68,58 +72,67 @@ export function CotizadorPage() {
           </div>
         </header>
 
-        {isLoading && editIdNum != null && (
-          <div className="text-sm text-slate-400 bg-slate-900 border border-slate-800 rounded p-4">
-            Cargando cotización #{editIdNum}…
-          </div>
+        <TabsCotizador active={tab} onChange={setTab} />
+
+        {tab === 'editor' && (
+          <>
+            {isLoading && editIdNum != null && (
+              <div className="text-sm text-slate-400 bg-slate-900 border border-slate-800 rounded p-4">
+                Cargando cotización #{editIdNum}…
+              </div>
+            )}
+            {noEditable && (
+              <div className="text-sm bg-rose-900/20 border border-rose-700/50 text-rose-300 rounded p-3">
+                Esta orden ya no es editable (estatus <code>{editingEstatus}</code>). El botón Guardar está deshabilitado.
+              </div>
+            )}
+
+            <HeaderCotizacion />
+
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+                Agregar producto
+              </label>
+              <ProductSearch />
+            </div>
+
+            <Cart />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+                  Observaciones
+                </label>
+                <textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  rows={4}
+                  placeholder="Notas internas o para el cliente…"
+                  className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
+                  Términos y condiciones
+                </label>
+                <textarea
+                  value={terminos}
+                  onChange={(e) => setTerminos(e.target.value)}
+                  rows={4}
+                  placeholder="Una línea por cláusula. Vacío → usa los defaults del backend."
+                  className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
+                />
+              </div>
+            </div>
+          </>
         )}
 
-        {noEditable && (
-          <div className="text-sm bg-rose-900/20 border border-rose-700/50 text-rose-300 rounded p-3">
-            Esta orden ya no es editable (estatus <code>{editingEstatus}</code>). El botón Guardar está deshabilitado.
-          </div>
+        {tab === 'historial' && (
+          <HistorialTab clienteIdFiltro={cliente_id} />
         )}
-
-        <HeaderCotizacion />
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-            Agregar producto
-          </label>
-          <ProductSearch />
-        </div>
-
-        <Cart />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-              Observaciones
-            </label>
-            <textarea
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              rows={4}
-              placeholder="Notas internas o para el cliente…"
-              className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-              Términos y condiciones
-            </label>
-            <textarea
-              value={terminos}
-              onChange={(e) => setTerminos(e.target.value)}
-              rows={4}
-              placeholder="Una línea por cláusula. Vacío → usa los defaults del backend."
-              className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none"
-            />
-          </div>
-        </div>
       </div>
 
-      <TotalsBar />
+      {tab === 'editor' && <TotalsBar />}
       <EditLineModal />
     </div>
   );

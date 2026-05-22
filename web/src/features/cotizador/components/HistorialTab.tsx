@@ -1,0 +1,266 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Calendar, Search, FileText, ShoppingBag, RefreshCw, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
+import type { ApiError } from '@/lib/api';
+import { useHistorial } from '../hooks/useHistorial';
+import { useConvertir } from '../hooks/useConvertir';
+import { useRecotizar } from '../hooks/useRecotizar';
+import { useSugerirOC } from '../hooks/useSugerirOC';
+import { SugerirOCModal } from './SugerirOCModal';
+import type { EstatusOrden, HistorialFiltros, OrdenHistorial, SugerirOCResponse } from '../types';
+
+const ESTATUS_OPCIONES: Array<{ key: EstatusOrden | ''; label: string }> = [
+  { key: '', label: 'Todos' },
+  { key: 'cotizacion', label: 'Cotización' },
+  { key: 'pendiente', label: 'Venta (pendiente cobro)' },
+  { key: 'pagada', label: 'Pagada' },
+  { key: 'cancelada', label: 'Cancelada' },
+];
+
+const ESTATUS_CLASS: Record<EstatusOrden, string> = {
+  cotizacion: 'bg-cyan-900/30 text-cyan-300 border border-cyan-700/50',
+  pendiente: 'bg-amber-900/30 text-amber-300 border border-amber-700/50',
+  pagada: 'bg-emerald-900/30 text-emerald-300 border border-emerald-700/50',
+  cancelada: 'bg-slate-800 text-slate-400 border border-slate-700',
+};
+
+function badgeEstatus(estatus: EstatusOrden) {
+  const cls = ESTATUS_CLASS[estatus] ?? 'bg-slate-800 text-slate-400 border border-slate-700';
+  return `text-[10px] font-bold uppercase px-2 py-0.5 rounded ${cls}`;
+}
+
+function fmtMoney(n: number, m: string) {
+  return `${m} $${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+}
+
+function fmtDate(s: string | null) {
+  if (!s) return '—';
+  try {
+    return new Date(s).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+  } catch {
+    return s;
+  }
+}
+
+// Compara una fecha ISO contra un YYYY-MM-DD (>= desde / <= hasta).
+function inRangeISO(iso: string, desde?: string, hasta?: string): boolean {
+  if (!iso) return false;
+  const d = iso.slice(0, 10);
+  if (desde && d < desde) return false;
+  if (hasta && d > hasta) return false;
+  return true;
+}
+
+export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdFiltro: number | null }) {
+  // El endpoint /historial actual no devuelve cliente_id, así que el filtro
+  // por cliente del editor (`_clienteIdFiltro`) no se aplica server-side ni
+  // client-side por ahora. Se mantiene en la firma para futura extensión
+  // cuando el backend exponga el id.
+  void _clienteIdFiltro;
+
+  const [filtros, setFiltros] = useState<HistorialFiltros>({
+    estatus: '',
+    page: 1,
+    page_size: 25,
+  });
+  const [sugerirOpen, setSugerirOpen] = useState<{ cotId: number; folio: string; data: SugerirOCResponse } | null>(null);
+
+  const { data, isLoading, error } = useHistorial();
+  const convertir = useConvertir();
+  const recotizar = useRecotizar();
+  const sugerir = useSugerirOC();
+
+  // Auth error → bounce to login.
+  useEffect(() => {
+    const status = (error as unknown as ApiError | undefined)?.status;
+    if (status === 401) window.location.href = '/spa/login';
+  }, [error]);
+
+  const all = data ?? [];
+
+  // Filtrado en cliente — el backend no soporta filtros server-side todavía.
+  const filtrados = useMemo(() => {
+    const q = (filtros.q ?? '').trim().toLowerCase();
+    return all.filter((o) => {
+      if (filtros.estatus && o.estatus !== filtros.estatus) return false;
+      if (filtros.desde || filtros.hasta) {
+        if (!inRangeISO(o.fecha, filtros.desde, filtros.hasta)) return false;
+      }
+      if (q) {
+        const hay = `${o.folio} ${o.cliente ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [all, filtros.estatus, filtros.desde, filtros.hasta, filtros.q]);
+
+  const page = filtros.page ?? 1;
+  const pageSize = filtros.page_size ?? 25;
+  const total = filtrados.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const items = useMemo(
+    () => filtrados.slice((page - 1) * pageSize, page * pageSize),
+    [filtrados, page, pageSize],
+  );
+
+  async function onVender(orden: OrdenHistorial) {
+    if (!confirm(`Convertir ${orden.folio} a VENTA? Esta acción crea la orden de venta y consume el stock.`)) return;
+    try {
+      const r = await convertir.mutateAsync(orden.id);
+      toast({ kind: 'success', title: `${orden.folio} convertida`, description: `Nuevo folio: ${r.nuevo_folio}` });
+    } catch (e) {
+      const err = e as ApiError;
+      toast({ kind: 'error', title: 'No se pudo convertir', description: err.detail });
+    }
+  }
+
+  async function onRecotizar(orden: OrdenHistorial) {
+    if (!confirm(`Crear nueva versión de ${orden.folio}? Te llevará al editor con los datos copiados.`)) return;
+    try {
+      const r = await recotizar.mutateAsync(orden.id);
+      window.location.href = `/ventas/cotizador?edit=${r.id}`;
+    } catch (e) {
+      const err = e as ApiError;
+      toast({ kind: 'error', title: 'No se pudo recotizar', description: err.detail });
+    }
+  }
+
+  async function onSugerirOC(orden: OrdenHistorial) {
+    try {
+      const r = await sugerir.mutateAsync(orden.id);
+      setSugerirOpen({ cotId: orden.id, folio: orden.folio, data: r });
+    } catch (e) {
+      const err = e as ApiError;
+      toast({ kind: 'error', title: 'No se pudo calcular sugerencia', description: err.detail });
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Filtros */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-5 gap-2">
+        <div className="md:col-span-2 relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Folio o cliente…"
+            value={filtros.q ?? ''}
+            onChange={(e) => setFiltros((f) => ({ ...f, q: e.target.value || undefined, page: 1 }))}
+            className="pl-8"
+          />
+        </div>
+        <select
+          value={filtros.estatus ?? ''}
+          onChange={(e) => setFiltros((f) => ({ ...f, estatus: e.target.value as EstatusOrden | '', page: 1 }))}
+          className="h-10 rounded border border-slate-700 bg-slate-900 px-2 text-sm"
+        >
+          {ESTATUS_OPCIONES.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+        <div className="relative">
+          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input
+            type="date"
+            value={filtros.desde ?? ''}
+            onChange={(e) => setFiltros((f) => ({ ...f, desde: e.target.value || undefined, page: 1 }))}
+            className="pl-8"
+          />
+        </div>
+        <div className="relative">
+          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input
+            type="date"
+            value={filtros.hasta ?? ''}
+            onChange={(e) => setFiltros((f) => ({ ...f, hasta: e.target.value || undefined, page: 1 }))}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0 z-10">
+            <tr>
+              <th className="p-3 text-left">Folio</th>
+              <th className="p-3 text-left">Cliente</th>
+              <th className="p-3 text-left">Estatus</th>
+              <th className="p-3 text-right w-32">Total</th>
+              <th className="p-3 text-center w-28">F. creación</th>
+              <th className="p-3 text-center w-16">v.</th>
+              <th className="p-3 text-right w-60">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Cargando historial…</td></tr>
+            )}
+            {!isLoading && items.length === 0 && (
+              <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Sin cotizaciones que coincidan</td></tr>
+            )}
+            {items.map((o) => (
+              <tr key={o.id} className="border-b border-slate-800 hover:bg-slate-800/30">
+                <td className="p-3 font-mono text-xs font-bold text-cyan-400">{o.folio}</td>
+                <td className="p-3 text-slate-300 max-w-xs truncate">{o.cliente ?? '—'}</td>
+                <td className="p-3"><span className={badgeEstatus(o.estatus)}>{o.estatus.toUpperCase()}</span></td>
+                <td className="p-3 text-right font-mono font-bold">{fmtMoney(o.total, o.moneda)}</td>
+                <td className="p-3 text-center text-xs text-slate-400">{fmtDate(o.fecha)}</td>
+                <td className="p-3 text-center">
+                  {o.version > 1 && (
+                    <span className="text-[10px] bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded">v{o.version}</span>
+                  )}
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center justify-end gap-1 flex-wrap">
+                    <a
+                      href={`/api/ventas/${o.id}/pdf`} target="_blank" rel="noreferrer"
+                      className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 flex items-center gap-1"
+                      title="Ver PDF"
+                    ><FileText className="h-3 w-3" /> PDF</a>
+                    {o.estatus === 'cotizacion' && (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => onVender(o)} disabled={convertir.isPending}>
+                          <ShoppingBag className="h-3 w-3 mr-1" /> Vender
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => onRecotizar(o)} disabled={recotizar.isPending}>
+                          <RefreshCw className="h-3 w-3 mr-1" /> Recotizar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => onSugerirOC(o)} disabled={sugerir.isPending}>
+                          <Settings className="h-3 w-3 mr-1" /> Sugerir OC
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Paginación */}
+      {total > pageSize && (
+        <div className="flex items-center justify-between text-xs text-slate-400">
+          <div>Página {page} de {totalPages} · {total} cotizaciones</div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" disabled={page === 1}
+              onClick={() => setFiltros((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}>← Anterior</Button>
+            <Button size="sm" variant="ghost" disabled={page >= totalPages}
+              onClick={() => setFiltros((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}>Siguiente →</Button>
+          </div>
+        </div>
+      )}
+
+      {sugerirOpen && (
+        <SugerirOCModal
+          cotizacionId={sugerirOpen.cotId}
+          folio={sugerirOpen.folio}
+          data={sugerirOpen.data}
+          onClose={() => setSugerirOpen(null)}
+        />
+      )}
+    </div>
+  );
+}
