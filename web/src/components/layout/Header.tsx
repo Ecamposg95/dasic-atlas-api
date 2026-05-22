@@ -4,6 +4,7 @@ import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useAuth, type User } from '@/stores/auth';
+import { ThemeToggle } from './ThemeToggle';
 
 function initialsOf(u: User): string {
   const parts = (u.nombre || u.email || '?').trim().split(/\s+/).filter(Boolean);
@@ -52,80 +53,82 @@ export function Header() {
   }
 
   return (
-    <header className="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-900 shrink-0">
-      <h2 className="text-sm uppercase tracking-wider text-slate-400 font-semibold">
+    <header className="h-16 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
+      <h2 className="text-sm uppercase tracking-wider text-slate-700 dark:text-slate-400 font-semibold">
         DASIC <span className="text-accent-glow">·</span> Atlas ONE
       </h2>
 
       {user && (
         <div className="flex items-center gap-1">
+          <ThemeToggle />
+
           <button
             type="button"
             onClick={onLogout}
             disabled={busy}
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-900/20 transition disabled:opacity-50"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
           </button>
 
           <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-800 transition group"
-            aria-haspopup="menu"
-            aria-expanded={open}
-          >
-            <span className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-xs font-bold flex items-center justify-center shadow">
-              {initialsOf(user)}
-            </span>
-            <div className="hidden sm:flex flex-col items-start leading-tight">
-              <span className="text-sm text-slate-100">{user.nombre || user.email}</span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">{user.rol_label}</span>
-            </div>
-            <ChevronDown
-              className={`h-3.5 w-3.5 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
-            />
-          </button>
-
-          {open && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full mt-1 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50"
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition group"
+              aria-haspopup="menu"
+              aria-expanded={open}
             >
-              <div className="px-3 py-2 border-b border-slate-800">
-                <div className="text-xs text-slate-400 truncate">{user.email}</div>
+              <span className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-xs font-bold flex items-center justify-center shadow">
+                {initialsOf(user)}
+              </span>
+              <div className="hidden sm:flex flex-col items-start leading-tight">
+                <span className="text-sm text-slate-700 dark:text-slate-100">{user.nombre || user.email}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-wider">{user.rol_label}</span>
               </div>
-              <button
-                type="button"
-                disabled
-                title="Próximamente"
-                className="w-full text-left px-3 py-2 text-sm text-slate-500 flex items-center gap-2 cursor-not-allowed"
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-slate-400 dark:text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {open && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden z-50"
               >
-                <UserIcon className="h-3.5 w-3.5" /> Mi perfil
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Próximamente"
-                className="w-full text-left px-3 py-2 text-sm text-slate-500 flex items-center gap-2 cursor-not-allowed"
-              >
-                <Settings className="h-3.5 w-3.5" /> Configuración
-              </button>
-              <div className="border-t border-slate-800" />
-              <button
-                type="button"
-                onClick={onLogout}
-                disabled={busy}
-                className="w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-rose-900/30 flex items-center gap-2 transition disabled:opacity-50"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                {busy ? 'Cerrando…' : 'Cerrar sesión'}
-              </button>
-            </div>
-          )}
+                <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</div>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  title="Próximamente"
+                  className="w-full text-left px-3 py-2 text-sm text-slate-400 dark:text-slate-500 flex items-center gap-2 cursor-not-allowed"
+                >
+                  <UserIcon className="h-3.5 w-3.5" /> Mi perfil
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="Próximamente"
+                  className="w-full text-left px-3 py-2 text-sm text-slate-400 dark:text-slate-500 flex items-center gap-2 cursor-not-allowed"
+                >
+                  <Settings className="h-3.5 w-3.5" /> Configuración
+                </button>
+                <div className="border-t border-slate-200 dark:border-slate-800" />
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  disabled={busy}
+                  className="w-full text-left px-3 py-2 text-sm text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center gap-2 transition disabled:opacity-50"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  {busy ? 'Cerrando…' : 'Cerrar sesión'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
