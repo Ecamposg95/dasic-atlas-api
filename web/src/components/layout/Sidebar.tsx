@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { FileText, Home } from 'lucide-react';
+import { FileText, FileClock, Ghost, Home, ListChecks } from 'lucide-react';
 
 const NAV = [
   { to: '/spa/hello', label: 'Inicio', Icon: Home },
   { to: '/spa/cotizador', label: 'Cotizador', Icon: FileText },
+  { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
+  { to: '/spa/seguimiento', label: 'Seguimiento', Icon: ListChecks },
+  { to: '/spa/fantasmas', label: 'Fantasmas', Icon: Ghost },
 ];
 
 export function Sidebar() {

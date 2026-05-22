@@ -167,8 +167,8 @@ async def view_login(request: Request) -> HTMLResponse:
 _SSR_ROUTES = [
     ("/dashboard",          "dashboard.html"),
     # ("/ventas/cotizador",   "cotizador.html"),  # SPA Phase 1d — ver handler abajo
-    ("/seguimiento",        "seguimiento.html"),
-    ("/borradores",         "borradores.html"),
+    # ("/seguimiento",        "seguimiento.html"),  # SPA Phase 2 — ver handler abajo
+    # ("/borradores",         "borradores.html"),   # SPA Phase 2 — ver handler abajo
     ("/inventario",         "inventario.html"),
     ("/servicios",          "servicios.html"),
     ("/clientes",           "clientes.html"),
@@ -178,7 +178,7 @@ _SSR_ROUTES = [
     ("/reportes",           "reportes.html"),
     ("/usuarios",           "usuarios.html"),
     ("/catalogos",          "catalogos.html"),
-    ("/fantasmas",          "fantasmas.html"),
+    # ("/fantasmas",          "fantasmas.html"),  # SPA Phase 2 — ver handler abajo
     ("/fx",                 "fx.html"),
     ("/precios",            "precios.html"),
     ("/remisiones",         "remisiones.html"),
@@ -216,13 +216,10 @@ async def spa_catchall(request: Request, full_path: str) -> HTMLResponse:
     return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 
-# Phase 1d: /ventas/cotizador migrado al SPA. Conserva la URL legacy (todos los
-# enlaces de /seguimiento, sidebar, redirects, etc. apuntan a ella). React Router
-# tiene una ruta /ventas/cotizador que monta CotizadorPage. Revertir esta feature
-# es un git revert del commit que añadió este handler — la línea de _SSR_ROUTES
-# que sirve cotizador.html queda comentada arriba lista para descomentar.
-@app.get("/ventas/cotizador", response_class=HTMLResponse, include_in_schema=False)
-async def view_ventas_cotizador_spa(request: Request) -> HTMLResponse:
+# Helper para servir el SPA en una URL legacy. Reusado por todas las páginas
+# migradas (Phase 1d en adelante). Revertir migración = comentar el endpoint y
+# descomentar la línea correspondiente en _SSR_ROUTES.
+def _serve_spa_protected(request: Request) -> HTMLResponse | RedirectResponse:
     user = _get_user_from_cookie(request)
     if user is None:
         return RedirectResponse("/", status_code=302)
@@ -234,6 +231,28 @@ async def view_ventas_cotizador_spa(request: Request) -> HTMLResponse:
             status_code=503,
         )
     return HTMLResponse(index_path.read_text(encoding="utf-8"))
+
+
+# Phase 1d: /ventas/cotizador → SPA
+@app.get("/ventas/cotizador", response_class=HTMLResponse, include_in_schema=False)
+async def view_ventas_cotizador_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+# Phase 2: /seguimiento, /borradores, /fantasmas → SPA
+@app.get("/seguimiento", response_class=HTMLResponse, include_in_schema=False)
+async def view_seguimiento_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/borradores", response_class=HTMLResponse, include_in_schema=False)
+async def view_borradores_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/fantasmas", response_class=HTMLResponse, include_in_schema=False)
+async def view_fantasmas_spa(request: Request):
+    return _serve_spa_protected(request)
 
 
 # ---------------------------------------------------------------------------
