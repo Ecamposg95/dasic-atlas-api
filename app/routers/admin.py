@@ -4,9 +4,10 @@ Sólo accesibles para roles de admin.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
-from app.db import get_db
+from app.db import engine, get_db
 from app.security import allow_admin
 
 router = APIRouter(prefix="/api/admin", tags=["Administración"])
@@ -33,3 +34,35 @@ def seed_context(
         return run_seed(db, dry_run=dry_run)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Seed falló: {exc}")
+
+
+@router.post("/drop-all-tables", dependencies=[Depends(allow_admin)])
+def drop_all_tables():
+    """Elimina **todas** las tablas de la base de datos con CASCADE.
+
+    ⚠️  OPERACIÓN DESTRUCTIVA E IRREVERSIBLE. Úsese únicamente para
+    reinicializar el esquema en entornos de desarrollo/staging.
+    """
+    try:
+        inspector = inspect(engine)
+        table_names = inspector.get_table_names()
+
+        with engine.begin() as conn:
+            # Desactivar restricciones de FK temporalmente para poder
+            # eliminar tablas en cualquier orden sin violar integridad.
+            conn.execute(text("SET session_replication_role = replica;"))
+            for table in table_names:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+            conn.execute(text("SET session_replication_role = DEFAULT;"))
+
+        return {
+            "status": "ok",
+            "warning": "Todas las tablas han sido eliminadas de forma permanente.",
+            "dropped_tables": table_names,
+            "count": len(table_names),
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al eliminar tablas: {exc}",
+        )
