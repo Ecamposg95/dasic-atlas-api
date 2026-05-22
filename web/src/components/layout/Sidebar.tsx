@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { BookMarked, FileText, FileClock, Ghost, Home, ListChecks, Package, Users } from 'lucide-react';
+import { Activity, BarChart3, BookMarked, FileText, FileClock, Ghost, Home, LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Truck, Users } from 'lucide-react';
 
 const NAV = [
+  { to: '/spa/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { to: '/spa/hello', label: 'Inicio', Icon: Home },
   { to: '/spa/cotizador', label: 'Cotizador', Icon: FileText },
   { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
@@ -10,6 +11,11 @@ const NAV = [
   { to: '/spa/clientes', label: 'Clientes', Icon: Users },
   { to: '/spa/inventario', label: 'Inventario', Icon: Package },
   { to: '/spa/catalogos', label: 'Catálogos', Icon: BookMarked },
+  { to: '/spa/compras', label: 'Compras', Icon: ShoppingCart },
+  { to: '/spa/remisiones', label: 'Remisiones', Icon: Truck },
+  { to: '/spa/gastos', label: 'Gastos', Icon: Receipt },
+  { to: '/spa/reportes', label: 'Reportes', Icon: BarChart3 },
+  { to: '/spa/reportes-servicio', label: 'Reportes Servicio', Icon: Activity },
 ];
 
 export function Sidebar() {

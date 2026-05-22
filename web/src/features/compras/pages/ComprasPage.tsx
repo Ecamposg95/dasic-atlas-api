@@ -1,0 +1,273 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Eye, Printer, Package, DollarSign, ShoppingCart,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  DataTable, DataTableBody, DataTableEmpty, DataTableHead, DataTableRow,
+} from '@/components/ui/data-table';
+import { toast } from '@/lib/toast';
+import { useOrdenesCompra } from '../hooks/useOrdenesCompra';
+import { OrdenCompraDetalleModal } from '../components/OrdenCompraDetalleModal';
+import { RegistrarRecepcionModal } from '../components/RegistrarRecepcionModal';
+import { RegistrarPagoModal } from '../components/RegistrarPagoModal';
+import { ProveedoresModal } from '../components/ProveedoresModal';
+import type { EstatusOC, OrdenCompraListItem } from '../types';
+
+const ESTATUS_OPTS: { value: EstatusOC | ''; label: string }[] = [
+  { value: '', label: 'Todos los estatus' },
+  { value: 'borrador', label: 'Borrador' },
+  { value: 'enviada', label: 'Enviada' },
+  { value: 'confirmada', label: 'Confirmada' },
+  { value: 'recibido', label: 'Recibida' },
+  { value: 'recibida_parcial', label: 'Recibida parcial' },
+  { value: 'pagado', label: 'Pagada' },
+  { value: 'cancelada', label: 'Cancelada' },
+];
+
+function badgeEstatus(e: EstatusOC) {
+  const map: Record<EstatusOC, 'default' | 'amber' | 'cyan' | 'emerald' | 'rose' | 'slate'> = {
+    borrador: 'slate',
+    enviada: 'amber',
+    confirmada: 'cyan',
+    recibido: 'emerald',
+    recibida_parcial: 'amber',
+    pagado: 'emerald',
+    cancelada: 'rose',
+  };
+  return <Badge variant={map[e] ?? 'default'}>{e}</Badge>;
+}
+
+function fmtMoney(n: number, m: string) {
+  return `${m === 'USD' ? 'US$' : '$'}${Number(n || 0).toLocaleString('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function fmtDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', { dateStyle: 'medium' });
+  } catch {
+    return iso;
+  }
+}
+
+/** OC se puede recibir si no está ya recibida, pagada o cancelada */
+function puedeRecibir(e: EstatusOC) {
+  return !['recibido', 'pagado', 'cancelada'].includes(e);
+}
+
+/** OC tiene saldo pendiente si no está pagada ni cancelada */
+function tieneSaldoPendiente(e: EstatusOC) {
+  return !['pagado', 'cancelada'].includes(e);
+}
+
+export function ComprasPage() {
+  const { data: ordenes, isLoading, error } = useOrdenesCompra();
+
+  const [filtroQ, setFiltroQ] = useState('');
+  const [filtroEstatus, setFiltroEstatus] = useState<EstatusOC | ''>('');
+  const [modalDetalle, setModalDetalle] = useState<number | null>(null);
+  const [modalRecepcion, setModalRecepcion] = useState<OrdenCompraListItem | null>(null);
+  const [modalPago, setModalPago] = useState<OrdenCompraListItem | null>(null);
+  const [modalProveedores, setModalProveedores] = useState(false);
+
+  // 401 → login
+  useEffect(() => {
+    const status = (error as { status?: number } | undefined)?.status;
+    if (status === 401) window.location.href = '/spa/login';
+  }, [error]);
+
+  const filtradas = useMemo(() => {
+    if (!ordenes) return [];
+    const needle = filtroQ.trim().toLowerCase();
+    return ordenes.filter((o) => {
+      if (filtroEstatus && o.estatus !== filtroEstatus) return false;
+      if (needle) {
+        const hay = `${o.folio ?? ''} ${o.proveedor}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [ordenes, filtroQ, filtroEstatus]);
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-4">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-2 flex-wrap">
+        <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <ShoppingCart className="h-5 w-5 text-cyan-400" /> Compras
+        </h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModalProveedores(true)}
+          >
+            Ver proveedores
+          </Button>
+          <Button
+            size="sm"
+            onClick={() =>
+              toast({ kind: 'info', title: 'Próximamente', description: 'Crear OC manual — en desarrollo.' })
+            }
+          >
+            + Nueva OC manual
+          </Button>
+        </div>
+      </header>
+
+      {/* Filtros */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+        <Input
+          value={filtroQ}
+          onChange={(e) => setFiltroQ(e.target.value)}
+          placeholder="Buscar folio o proveedor…"
+          className="flex-1 min-w-[200px]"
+        />
+        <select
+          value={filtroEstatus}
+          onChange={(e) => setFiltroEstatus(e.target.value as EstatusOC | '')}
+          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm"
+        >
+          {ESTATUS_OPTS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => { setFiltroQ(''); setFiltroEstatus(''); }}
+        >
+          Limpiar
+        </Button>
+        <span className="text-xs text-slate-500 ml-auto">{filtradas.length} orden(es)</span>
+      </div>
+
+      {/* Tabla */}
+      <DataTable>
+        <DataTableHead>
+          <tr>
+            <th className="p-3 text-left">Folio</th>
+            <th className="p-3 text-left">Proveedor</th>
+            <th className="p-3 text-left">Fecha</th>
+            <th className="p-3 text-right">Total</th>
+            <th className="p-3 text-center">Estatus</th>
+            <th className="p-3 text-left">Cotización</th>
+            <th className="p-3 text-right">Acciones</th>
+          </tr>
+        </DataTableHead>
+        <DataTableBody>
+          {isLoading && (
+            <DataTableEmpty colSpan={7}>Cargando órdenes de compra…</DataTableEmpty>
+          )}
+          {!isLoading && filtradas.length === 0 && (
+            <DataTableEmpty colSpan={7}>
+              <ShoppingCart className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              Sin órdenes que coincidan
+            </DataTableEmpty>
+          )}
+          {filtradas.map((o) => (
+            <DataTableRow key={o.id}>
+              <td className="p-3 font-mono text-xs text-cyan-300">
+                {o.folio ?? `#${o.id}`}
+              </td>
+              <td className="p-3 text-sm">{o.proveedor}</td>
+              <td className="p-3 text-xs text-slate-400">{fmtDate(o.fecha)}</td>
+              <td className="p-3 text-right font-mono text-sm">
+                {fmtMoney(o.total, o.moneda)}{' '}
+                <span className="text-xs text-slate-500">{o.moneda}</span>
+              </td>
+              <td className="p-3 text-center">{badgeEstatus(o.estatus)}</td>
+              <td className="p-3 text-xs">
+                {o.cotizacion_id ? (
+                  <a
+                    href={`/ventas/cotizador?edit=${o.cotizacion_id}`}
+                    className="text-cyan-400 hover:underline"
+                  >
+                    #{o.cotizacion_id}
+                  </a>
+                ) : (
+                  <span className="text-slate-600">—</span>
+                )}
+              </td>
+              <td className="p-3 text-right whitespace-nowrap">
+                {/* Ver detalle */}
+                <button
+                  onClick={() => setModalDetalle(o.id)}
+                  title="Ver detalle"
+                  className="text-cyan-400 hover:text-cyan-300 px-1"
+                >
+                  <Eye className="h-4 w-4 inline" />
+                </button>
+
+                {/* Imprimir */}
+                <a
+                  href={`/api/compras/${o.id}/imprimir`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Imprimir"
+                  className="text-slate-400 hover:text-slate-200 px-1"
+                >
+                  <Printer className="h-4 w-4 inline" />
+                </a>
+
+                {/* Registrar recepción */}
+                {puedeRecibir(o.estatus) && (
+                  <button
+                    onClick={() => setModalRecepcion(o)}
+                    title="Registrar recepción"
+                    className="text-emerald-400 hover:text-emerald-300 px-1"
+                  >
+                    <Package className="h-4 w-4 inline" />
+                  </button>
+                )}
+
+                {/* Registrar pago */}
+                {tieneSaldoPendiente(o.estatus) && (
+                  <button
+                    onClick={() => setModalPago(o)}
+                    title="Registrar pago"
+                    className="text-amber-400 hover:text-amber-300 px-1"
+                  >
+                    <DollarSign className="h-4 w-4 inline" />
+                  </button>
+                )}
+              </td>
+            </DataTableRow>
+          ))}
+        </DataTableBody>
+      </DataTable>
+
+      {/* Modales */}
+      {modalDetalle != null && (
+        <OrdenCompraDetalleModal
+          id={modalDetalle}
+          onClose={() => setModalDetalle(null)}
+        />
+      )}
+
+      {modalRecepcion && (
+        <RegistrarRecepcionModal
+          id={modalRecepcion.id}
+          folio={modalRecepcion.folio}
+          onClose={() => setModalRecepcion(null)}
+        />
+      )}
+
+      {modalPago && (
+        <RegistrarPagoModal
+          orden={modalPago}
+          onClose={() => setModalPago(null)}
+        />
+      )}
+
+      {modalProveedores && (
+        <ProveedoresModal onClose={() => setModalProveedores(false)} />
+      )}
+    </div>
+  );
+}

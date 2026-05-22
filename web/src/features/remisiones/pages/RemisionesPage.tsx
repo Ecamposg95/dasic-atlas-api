@@ -1,0 +1,392 @@
+import { useState } from 'react';
+import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X } from 'lucide-react';
+import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hooks/useRemisiones';
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Modal, ModalFooter } from '@/components/ui/modal';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableBody,
+  DataTableRow,
+  DataTableEmpty,
+} from '@/components/ui/data-table';
+import type { RemisionItem } from '../types';
+
+const PAGE_SIZE = 50;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function fmtFecha(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-slate-800">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div className="h-4 bg-slate-800 rounded animate-pulse" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modal: Registrar Recepción
+// ---------------------------------------------------------------------------
+
+interface RecepcionModalProps {
+  remisionId: number;
+  folio: string;
+  onClose: () => void;
+}
+
+function RecepcionModal({ remisionId, folio, onClose }: RecepcionModalProps) {
+  const [recibidoPor, setRecibidoPor] = useState('');
+  const registrar = useRegistrarRecepcion();
+
+  function handleSubmit() {
+    if (!recibidoPor.trim()) return;
+    registrar.mutate(
+      { id: remisionId, recibido_por: recibidoPor.trim() },
+      {
+        onSuccess: () => {
+          toast({ kind: 'success', title: `Recepción registrada para ${folio}` });
+          onClose();
+        },
+        onError: (err) => {
+          const detail = (err as { detail?: string }).detail ?? 'Error al registrar recepción';
+          toast({ kind: 'error', title: detail });
+        },
+      },
+    );
+  }
+
+  return (
+    <Modal title={`Registrar recepción — ${folio}`} onClose={onClose} size="sm">
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">
+            Recibido por <span className="text-rose-400">*</span>
+          </label>
+          <Input
+            value={recibidoPor}
+            onChange={(e) => setRecibidoPor(e.target.value)}
+            placeholder="Nombre de quien recibe"
+            autoFocus
+          />
+        </div>
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={registrar.isPending}>
+          Cancelar
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={registrar.isPending || !recibidoPor.trim()}
+        >
+          {registrar.isPending ? 'Guardando…' : 'Confirmar recepción'}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modal: Detalle de remisión
+// ---------------------------------------------------------------------------
+
+interface DetalleModalProps {
+  remisionId: number;
+  onClose: () => void;
+}
+
+function DetalleModal({ remisionId, onClose }: DetalleModalProps) {
+  const { data, isLoading } = useRemisionDetalle(remisionId);
+
+  return (
+    <Modal title={`Detalle remisión${data ? ` — ${data.folio}` : ''}`} onClose={onClose} size="lg">
+      {isLoading || !data ? (
+        <div className="space-y-2 py-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-4 bg-slate-800 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-slate-300">
+            <div>
+              <span className="text-slate-500 text-xs">Orden de venta</span>
+              <div>{data.orden_folio ?? '—'}</div>
+            </div>
+            <div>
+              <span className="text-slate-500 text-xs">Cliente</span>
+              <div>{data.cliente_nombre ?? '—'}</div>
+            </div>
+            <div>
+              <span className="text-slate-500 text-xs">Fecha remisión</span>
+              <div>{fmtFecha(data.fecha_remision)}</div>
+            </div>
+            <div>
+              <span className="text-slate-500 text-xs">Transportista</span>
+              <div>{data.transportista ?? '—'}</div>
+            </div>
+            {data.recibido_por && (
+              <>
+                <div>
+                  <span className="text-slate-500 text-xs">Recibido por</span>
+                  <div>{data.recibido_por}</div>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-xs">Fecha recepción</span>
+                  <div>{fmtFecha(data.recibido_at)}</div>
+                </div>
+              </>
+            )}
+            {data.observaciones && (
+              <div className="col-span-2">
+                <span className="text-slate-500 text-xs">Observaciones</span>
+                <div className="text-slate-400">{data.observaciones}</div>
+              </div>
+            )}
+          </div>
+
+          {data.detalles.length > 0 && (
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Líneas ({data.detalles.length})</p>
+              <table className="w-full text-xs border border-slate-800 rounded">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400">
+                    <th className="px-3 py-2 text-left">SKU</th>
+                    <th className="px-3 py-2 text-left">Descripción</th>
+                    <th className="px-3 py-2 text-right">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.detalles.map((d) => (
+                    <tr key={d.id} className="border-b border-slate-800/60">
+                      <td className="px-3 py-2 font-mono text-slate-400">{d.sku ?? '—'}</td>
+                      <td className="px-3 py-2">{d.descripcion ?? '—'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{d.cantidad}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+      <ModalFooter>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X className="h-3.5 w-3.5 mr-1" />
+          Cerrar
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Fila de remisión
+// ---------------------------------------------------------------------------
+
+interface RowProps {
+  item: RemisionItem;
+  onVerDetalle: (id: number) => void;
+  onRecepcion: (id: number, folio: string) => void;
+}
+
+function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
+  const recibida = item.recibido_at !== null;
+
+  return (
+    <DataTableRow>
+      <td className="px-4 py-3 font-mono text-xs text-accent-glow">{item.folio}</td>
+      <td className="px-4 py-3">
+        {item.orden_folio ? (
+          <a
+            href={`/ventas/cotizador?edit=${item.orden_venta_id}`}
+            className="text-accent-glow hover:underline text-xs font-mono"
+          >
+            {item.orden_folio}
+          </a>
+        ) : (
+          <span className="text-slate-500 italic text-xs">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-slate-300 text-sm">
+        {item.cliente_nombre ?? <span className="text-slate-500 italic">—</span>}
+      </td>
+      <td className="px-4 py-3 text-slate-400 text-xs">{fmtFecha(item.fecha_remision)}</td>
+      <td className="px-4 py-3">
+        <Badge variant={recibida ? 'emerald' : 'amber'}>
+          {recibida ? 'RECIBIDA' : 'PENDIENTE'}
+        </Badge>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 justify-end">
+          <Button
+            size="sm"
+            variant="secondary"
+            title="Ver detalle"
+            onClick={() => onVerDetalle(item.id)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Ver
+          </Button>
+          {!recibida && (
+            <Button
+              size="sm"
+              variant="outline"
+              title="Registrar recepción"
+              onClick={() => onRecepcion(item.id, item.folio)}
+              className="text-emerald-400 border-emerald-900 hover:bg-emerald-950 hover:text-emerald-300"
+            >
+              <CheckSquare className="h-3.5 w-3.5 mr-1" />
+              Recibir
+            </Button>
+          )}
+        </div>
+      </td>
+    </DataTableRow>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página principal
+// ---------------------------------------------------------------------------
+
+export function RemisionesPage() {
+  const [page, setPage] = useState(1);
+  const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [recepcionTarget, setRecepcionTarget] = useState<{ id: number; folio: string } | null>(null);
+
+  const { data, isLoading, isPlaceholderData } = useRemisiones(page);
+
+  const items = data?.items ?? [];
+  const hasMore = items.length === PAGE_SIZE;
+  const hasPrev = page > 1;
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Truck className="h-6 w-6 text-accent-glow" />
+          <h1 className="text-2xl font-semibold">Remisiones</h1>
+          {!isLoading && (
+            <span className="text-slate-500 text-sm">
+              ({items.length} {items.length === 1 ? 'remisión' : 'remisiones'}
+              {page > 1 ? ` en página ${page}` : ''})
+            </span>
+          )}
+        </div>
+        <Button
+          size="sm"
+          disabled
+          title="Crea la remisión desde el detalle de la orden de venta"
+        >
+          + Nueva remisión
+        </Button>
+      </header>
+
+      {/* Tabla */}
+      <DataTable>
+        <DataTableHead>
+          <tr>
+            <th className="px-4 py-3 text-left">Folio</th>
+            <th className="px-4 py-3 text-left">Orden venta</th>
+            <th className="px-4 py-3 text-left">Cliente</th>
+            <th className="px-4 py-3 text-left">Fecha</th>
+            <th className="px-4 py-3 text-left">Estatus</th>
+            <th className="px-4 py-3 text-right">Acciones</th>
+          </tr>
+        </DataTableHead>
+        <DataTableBody>
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
+          ) : items.length === 0 ? (
+            <DataTableEmpty colSpan={6}>
+              <div className="flex flex-col items-center gap-2 text-slate-500">
+                <Truck className="h-10 w-10 opacity-30" />
+                <p>No hay remisiones registradas</p>
+                <p className="text-xs">
+                  Las remisiones se crean desde el detalle de una orden de venta.
+                </p>
+              </div>
+            </DataTableEmpty>
+          ) : (
+            items.map((item) => (
+              <RemisionRow
+                key={item.id}
+                item={item}
+                onVerDetalle={(id) => setDetalleId(id)}
+                onRecepcion={(id, folio) => setRecepcionTarget({ id, folio })}
+              />
+            ))
+          )}
+        </DataTableBody>
+      </DataTable>
+
+      {/* Paginación */}
+      {(hasPrev || hasMore) && (
+        <div
+          className={`flex items-center justify-between text-sm text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasPrev || isPlaceholderData}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Anterior
+          </Button>
+          <span>
+            Página {page}
+            {hasMore ? ' — hay más registros' : ''}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasMore || isPlaceholderData}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Siguiente
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
+      {/* Modal detalle */}
+      {detalleId !== null && (
+        <DetalleModal remisionId={detalleId} onClose={() => setDetalleId(null)} />
+      )}
+
+      {/* Modal recepción */}
+      {recepcionTarget && (
+        <RecepcionModal
+          remisionId={recepcionTarget.id}
+          folio={recepcionTarget.folio}
+          onClose={() => setRecepcionTarget(null)}
+        />
+      )}
+    </div>
+  );
+}

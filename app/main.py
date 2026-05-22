@@ -165,24 +165,24 @@ async def view_login(request: Request) -> HTMLResponse:
 
 # Rutas protegidas
 _SSR_ROUTES = [
-    ("/dashboard",          "dashboard.html"),
-    # ("/ventas/cotizador",   "cotizador.html"),  # SPA Phase 1d — ver handler abajo
+    # ("/dashboard",          "dashboard.html"),    # SPA Phase 4 — ver handler abajo
+    # ("/ventas/cotizador",   "cotizador.html"),    # SPA Phase 1d — ver handler abajo
     # ("/seguimiento",        "seguimiento.html"),  # SPA Phase 2 — ver handler abajo
     # ("/borradores",         "borradores.html"),   # SPA Phase 2 — ver handler abajo
     # ("/inventario",         "inventario.html"),   # SPA Phase 3 — ver handler abajo
     ("/servicios",          "servicios.html"),
     # ("/clientes",           "clientes.html"),     # SPA Phase 3 — ver handler abajo
     ("/cuentas-por-cobrar", "cuentas_por_cobrar.html"),
-    ("/compras",            "compras.html"),
-    ("/gastos",             "gastos.html"),
-    ("/reportes",           "reportes.html"),
+    # ("/compras",            "compras.html"),      # SPA Phase 4 — ver handler abajo
+    # ("/gastos",             "gastos.html"),       # SPA Phase 4 — ver handler abajo
+    # ("/reportes",           "reportes.html"),     # SPA Phase 4 — ver handler abajo
     ("/usuarios",           "usuarios.html"),
     # ("/catalogos",          "catalogos.html"),    # SPA Phase 3 — ver handler abajo
-    # ("/fantasmas",          "fantasmas.html"),  # SPA Phase 2 — ver handler abajo
+    # ("/fantasmas",          "fantasmas.html"),    # SPA Phase 2 — ver handler abajo
     ("/fx",                 "fx.html"),
     ("/precios",            "precios.html"),
-    ("/remisiones",         "remisiones.html"),
-    ("/reportes-servicio",  "reportes_servicio.html"),
+    # ("/remisiones",         "remisiones.html"),   # SPA Phase 4 — ver handler abajo
+    # ("/reportes-servicio",  "reportes_servicio.html"),  # SPA Phase 4 — ver handler abajo
 ]
 
 for _path, _tmpl in _SSR_ROUTES:
@@ -268,6 +268,37 @@ async def view_clientes_spa(request: Request):
 
 @app.get("/catalogos", response_class=HTMLResponse, include_in_schema=False)
 async def view_catalogos_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+# Phase 4: /dashboard, /reportes, /reportes-servicio, /compras, /remisiones, /gastos → SPA
+@app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+async def view_dashboard_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/reportes", response_class=HTMLResponse, include_in_schema=False)
+async def view_reportes_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/reportes-servicio", response_class=HTMLResponse, include_in_schema=False)
+async def view_reportes_servicio_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/compras", response_class=HTMLResponse, include_in_schema=False)
+async def view_compras_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/remisiones", response_class=HTMLResponse, include_in_schema=False)
+async def view_remisiones_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/gastos", response_class=HTMLResponse, include_in_schema=False)
+async def view_gastos_spa(request: Request):
     return _serve_spa_protected(request)
 
 
