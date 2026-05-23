@@ -19,6 +19,12 @@ export function ProductSearch() {
   const [marcaNombre, setMarcaNombre] = useState<string | null>(null);
   const [categoriaNombre, setCategoriaNombre] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Container outer ref — necesario para el click-outside check porque la
+  // estructura DOM ya no es input dentro de 2 niveles de div: ahora hay un
+  // flex wrapper extra para el botón '+ Fantasma' (2026-05-23). El dropdown
+  // es sibling del flex wrapper, así que basar el check en parentElement
+  // chain del input bota el dropdown al primer click adentro.
+  const containerRef = useRef<HTMLDivElement>(null);
   const addProducto = useCotizador((s) => s.addProducto);
   const { data, isLoading, error } = useProductosSearch({
     q,
@@ -39,12 +45,13 @@ export function ProductSearch() {
     if (status === 401) window.location.href = '/spa/login';
   }, [error]);
 
-  // Close on outside click
+  // Close on outside click — check contra containerRef (incluye filtros,
+  // input, botón fantasma Y dropdown). Si target está dentro, no cerrar.
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (!inputRef.current?.parentElement?.parentElement?.contains(target)) {
+      if (!containerRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -72,7 +79,7 @@ export function ProductSearch() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <CatalogoFiltros
         tipo={tipo}
         onTipoChange={setTipo}
