@@ -84,7 +84,12 @@ class OrdenVentaCreate(BaseModel):
     detalles: List[DetalleOrdenCreate]
     observaciones: Optional[str] = None
     moneda: str = Field(default="MXN", min_length=3, max_length=3)
+    # Modelo TC Excel V_03 (2026-05-23): tipo_cambio se reinterpreta como
+    # "DOF" oficial. Los otros 2 son los TCs efectivos por dirección de
+    # conversión. Si frontend no los manda, backend deriva DOF±1.
     tipo_cambio: Optional[Decimal] = Field(default=None, gt=0)
+    tc_mn_a_usd: Optional[Decimal] = Field(default=None, gt=0)
+    tc_usd_a_mn: Optional[Decimal] = Field(default=None, gt=0)
     # Fechas editables: el editor de borradores puede sobreescribir la fecha
     # de creación y la fecha de vencimiento de la cotización.
     fecha_creacion: Optional[datetime] = None
@@ -106,6 +111,8 @@ class OrdenVentaResponse(BaseModel):
     estatus: EstatusOrden
     moneda: str
     tipo_cambio: Decimal
+    tc_mn_a_usd: Optional[Decimal] = None
+    tc_usd_a_mn: Optional[Decimal] = None
     total: Decimal
     vendedor_id: int
     cliente: ClienteResponse

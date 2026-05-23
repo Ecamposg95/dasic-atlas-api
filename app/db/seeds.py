@@ -347,6 +347,23 @@ _BACKFILL_DDL = [
         observaciones_linea TEXT
     )""",
     "CREATE INDEX IF NOT EXISTS ix_detalles_remision_remision_id ON detalles_remision(remision_id)",
+
+    # ====================================================================
+    # 20260523_01 — Modelo TC Excel V_03: tc_mn_a_usd + tc_usd_a_mn
+    # tipo_cambio se reinterpreta como "DOF" oficial; los otros 2 son los
+    # TCs efectivos por dirección de conversión (default DOF±1 peso, spread
+    # que cubre riesgo cambiario entre cotización y cobro). OC al proveedor
+    # usa tipo_cambio (DOF) puro.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS tc_mn_a_usd NUMERIC(12, 6)",
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS tc_usd_a_mn NUMERIC(12, 6)",
+    # Backfill total para cotizaciones legacy. Idempotente vía COALESCE +
+    # WHERE: ya seteados no se tocan, y el GREATEST evita negativos cuando
+    # tipo_cambio < 1 (poco probable pero defensivo).
+    """UPDATE ordenes_venta
+          SET tc_mn_a_usd = COALESCE(tc_mn_a_usd, GREATEST(tipo_cambio - 1, 0.000001)),
+              tc_usd_a_mn = COALESCE(tc_usd_a_mn, tipo_cambio + 1)
+        WHERE tc_mn_a_usd IS NULL OR tc_usd_a_mn IS NULL""",
 ]
 
 

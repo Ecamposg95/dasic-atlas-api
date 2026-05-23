@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
-import { lineImporte, convertCost } from '../lib/calc';
+import { lineImporte, convertCost, resolveDirectionalTcs } from '../lib/calc';
 import { StockBadge } from './StockBadge';
 import { EntregaChip } from './EntregaChip';
 import { MargenChip } from './MargenChip';
@@ -16,15 +16,18 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   const [menuOpen, setMenuOpen] = useState(false);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
+  const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
+  const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
   const expandedUids = useCotizador((s) => s.expandedUids);
   const toggleExpand = useCotizador((s) => s.toggleExpand);
   const updateLinea = useCotizador((s) => s.updateLinea);
   const removeLinea = useCotizador((s) => s.removeLinea);
   const rowRef = useRef<HTMLTableRowElement>(null);
   const expanded = expandedUids.has(item.uid);
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
 
-  const costoConvertido = convertCost(item.cost, item.productCurrency, moneda, tc);
-  const importe = lineImporte(item, moneda, tc);
+  const costoConvertido = convertCost(item.cost, item.productCurrency, moneda, tcs);
+  const importe = lineImporte(item, moneda, tcs);
   const esOverride =
     (item.sku_original != null && item.sku !== item.sku_original) ||
     (item.nom_original != null && item.nom !== item.nom_original) ||
@@ -60,7 +63,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           <span className="font-mono text-[11px] font-bold text-accent-glow">{item.sku}</span>
           {item.productCurrency !== moneda && (
             <span className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded">
-              {item.productCurrency} · TC {tc}
+              {item.productCurrency} · TC {(item.productCurrency === 'USD' && moneda === 'MXN' ? tcs.tc_usd_a_mn : tcs.tc_mn_a_usd).toFixed(4)}
             </span>
           )}
           {esOverride && (

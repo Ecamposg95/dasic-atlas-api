@@ -10,7 +10,12 @@ type CotizadorState = {
   // Header:
   cliente_id: number | null;
   moneda: Moneda;
+  // Modelo TC Excel V_03 (2026-05-23): `tc` representa el DOF (TC oficial
+  // Banxico). Los otros 2 son los TCs efectivos por dirección, default
+  // DOF±1 si están null. Ver `lib/calc.ts::resolveDirectionalTcs`.
   tc: number;
+  tc_mn_a_usd: number | null;
+  tc_usd_a_mn: number | null;
   fecha_creacion: string | null;
   fecha_vencimiento: string | null;
   observaciones: string;
@@ -34,6 +39,8 @@ type CotizadorState = {
   setCliente: (id: number | null) => void;
   setMoneda: (m: Moneda) => void;
   setTc: (tc: number) => void;
+  setTcMnAUsd: (v: number | null) => void;
+  setTcUsdAMn: (v: number | null) => void;
   setFechaCreacion: (d: string | null) => void;
   setFechaVencimiento: (d: string | null) => void;
   setObservaciones: (s: string) => void;
@@ -58,6 +65,8 @@ const initialState = {
   cliente_id: null as number | null,
   moneda: 'MXN' as Moneda,
   tc: 1,
+  tc_mn_a_usd: null as number | null,
+  tc_usd_a_mn: null as number | null,
   fecha_creacion: null as string | null,
   fecha_vencimiento: null as string | null,
   observaciones: '',
@@ -81,6 +90,8 @@ export const useCotizador = create<CotizadorState>((set) => ({
   setCliente: (cliente_id) => set({ cliente_id }),
   setMoneda: (moneda) => set({ moneda }),
   setTc: (tc) => set({ tc }),
+  setTcMnAUsd: (tc_mn_a_usd) => set({ tc_mn_a_usd }),
+  setTcUsdAMn: (tc_usd_a_mn) => set({ tc_usd_a_mn }),
   setFechaCreacion: (fecha_creacion) => set({ fecha_creacion }),
   setFechaVencimiento: (fecha_vencimiento) => set({ fecha_vencimiento }),
   setObservaciones: (observaciones) => set({ observaciones }),
@@ -205,6 +216,10 @@ export const useCotizador = create<CotizadorState>((set) => ({
         cliente_id: orden.cliente_id,
         moneda: monedaOrden,
         tc: Number(orden.tipo_cambio) || 1,
+        tc_mn_a_usd:
+          orden.tc_mn_a_usd != null ? Number(orden.tc_mn_a_usd) : null,
+        tc_usd_a_mn:
+          orden.tc_usd_a_mn != null ? Number(orden.tc_usd_a_mn) : null,
         fecha_creacion: orden.fecha_creacion?.slice(0, 10) ?? null,
         fecha_vencimiento: orden.fecha_vencimiento?.slice(0, 10) ?? null,
         observaciones: orden.observaciones ?? '',

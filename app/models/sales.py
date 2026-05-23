@@ -22,7 +22,15 @@ class OrdenVenta(Base):
 
     estatus = Column(Enum(EstatusOrden), default=EstatusOrden.COTIZACION)
     moneda = Column(String(3), nullable=False, default="MXN")
+    # Modelo TC Excel (V_03): tipo_cambio se reinterpreta como "DOF" (TC oficial
+    # Banxico). tc_mn_a_usd y tc_usd_a_mn son los TCs efectivos POR DIRECCIÓN
+    # (default DOF-1 y DOF+1 respectivamente — el "spread" cubre riesgo
+    # cambiario entre cotización y cobro). Si NULL al leer (cotizaciones
+    # legacy), el SPA los deriva de tipo_cambio. La OC generation usa
+    # tipo_cambio (DOF) puro, sin spread.
     tipo_cambio = Column(DECIMAL(12, 6), nullable=False, default=1.0)
+    tc_mn_a_usd = Column(DECIMAL(12, 6), nullable=True)
+    tc_usd_a_mn = Column(DECIMAL(12, 6), nullable=True)
     total = Column(DECIMAL(12, 2), default=0.00)
     observaciones = Column(Text, nullable=True)
     # Bloque editable de Condiciones Comerciales del PDF. Una línea = un <li>.

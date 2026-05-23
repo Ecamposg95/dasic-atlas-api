@@ -80,7 +80,12 @@ export type OrdenVentaDetail = {
   estatus: string;
   cliente_id: number | null;
   moneda: string;
+  // Modelo TC Excel V_03 (2026-05-23): tipo_cambio es el DOF. Los otros 2
+  // pueden ser null en cotizaciones legacy creadas antes del modelo nuevo;
+  // en ese caso el SPA los deriva de DOF±1 vía `resolveDirectionalTcs`.
   tipo_cambio: number | string;
+  tc_mn_a_usd: number | string | null;
+  tc_usd_a_mn: number | string | null;
   fecha_creacion: string | null;
   fecha_vencimiento: string | null;
   observaciones: string | null;
@@ -137,7 +142,11 @@ export type DetalleOrdenCreate = {
 export type OrdenVentaCreate = {
   cliente_id: number | null;
   moneda: Moneda;
+  // Modelo TC Excel V_03: tipo_cambio = DOF, los otros 2 son los direccionales.
+  // Si null, el backend los deriva.
   tipo_cambio: number;
+  tc_mn_a_usd: number | null;
+  tc_usd_a_mn: number | null;
   fecha_creacion: string | null;
   fecha_vencimiento: string | null;
   observaciones: string | null;

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert, Minus, Plus } from 'lucide-react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert, Minus, Plus, RotateCcw } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -7,12 +7,17 @@ import { useConfig } from '../hooks/useConfig';
 import { useAuth } from '@/stores/auth';
 import { FXBadge } from './FXBadge';
 import { UltimaCotHint } from './UltimaCotHint';
+import { resolveDirectionalTcs } from '../lib/calc';
 
 export function HeaderCotizacion() {
   const moneda = useCotizador((s) => s.moneda);
   const setMoneda = useCotizador((s) => s.setMoneda);
   const tc = useCotizador((s) => s.tc);
   const setTc = useCotizador((s) => s.setTc);
+  const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
+  const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
+  const setTcMnAUsd = useCotizador((s) => s.setTcMnAUsd);
+  const setTcUsdAMn = useCotizador((s) => s.setTcUsdAMn);
   const fechaCreacion = useCotizador((s) => s.fecha_creacion);
   const setFechaCreacion = useCotizador((s) => s.setFechaCreacion);
   const fechaVencimiento = useCotizador((s) => s.fecha_vencimiento);
@@ -40,6 +45,7 @@ export function HeaderCotizacion() {
   }, [editingId, fechaCreacion, fechaVencimiento, config.quote_validity_days, setFechaCreacion, setFechaVencimiento]);
 
   const tcVisible = moneda === 'USD';
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -70,14 +76,14 @@ export function HeaderCotizacion() {
         <div>
           <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
             <ArrowRightLeft className="h-3 w-3" />
-            TC (MXN/USD)
+            DOF (TC oficial)
           </label>
-          <div className={`flex items-center gap-1 ${tcVisible ? '' : 'opacity-60'}`}>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setTc(Math.max(0, +(tc - 1).toFixed(4)))}
               title="-1 peso"
-              aria-label="Restar 1 peso al TC"
+              aria-label="Restar 1 peso al DOF"
               className="h-8 w-7 inline-flex items-center justify-center rounded border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:border-accent-glow transition text-sm font-bold shrink-0"
             >
               <Minus className="h-3.5 w-3.5" />
@@ -89,12 +95,13 @@ export function HeaderCotizacion() {
               value={tc}
               onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
               className="h-8 text-xs text-right font-mono"
+              title="DOF (TC oficial Banxico)"
             />
             <button
               type="button"
               onClick={() => setTc(+(tc + 1).toFixed(4))}
               title="+1 peso"
-              aria-label="Sumar 1 peso al TC"
+              aria-label="Sumar 1 peso al DOF"
               className="h-8 w-7 inline-flex items-center justify-center rounded border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700 hover:border-accent-glow transition text-sm font-bold shrink-0"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -116,11 +123,72 @@ export function HeaderCotizacion() {
               )}
             </div>
           )}
-          {!tcVisible && (
-            <div className="text-[10px] text-slate-500 mt-1">
-              MXN: TC se respeta para líneas USD en el carrito.
-            </div>
-          )}
+        </div>
+      </div>
+
+      {/* TCs direccionales (modelo Excel V_03): default DOF±1. Editable
+          individualmente para overrides puntuales. Reset (↺) vuelve al
+          auto-derive desde DOF. */}
+      <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3" />
+            MN → USD
+            <span className="text-slate-600 normal-case tracking-normal font-normal">(default DOF − 1)</span>
+            {tcMnAUsd != null && (
+              <button
+                type="button"
+                onClick={() => setTcMnAUsd(null)}
+                title="Volver al default (DOF − 1)"
+                className="ml-auto text-slate-500 hover:text-accent-glow flex items-center gap-0.5"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+                <span className="text-[10px]">reset</span>
+              </button>
+            )}
+          </label>
+          <Input
+            type="number"
+            step="0.0001"
+            min="0"
+            value={tcs.tc_mn_a_usd}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              setTcMnAUsd(Number.isFinite(v) && v > 0 ? v : null);
+            }}
+            className={`h-8 text-xs text-right font-mono ${tcMnAUsd == null ? 'text-slate-500' : ''}`}
+            title={tcMnAUsd == null ? 'Auto: DOF − 1' : 'Sobreescrito manualmente'}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3" />
+            USD → MN
+            <span className="text-slate-600 normal-case tracking-normal font-normal">(default DOF + 1)</span>
+            {tcUsdAMn != null && (
+              <button
+                type="button"
+                onClick={() => setTcUsdAMn(null)}
+                title="Volver al default (DOF + 1)"
+                className="ml-auto text-slate-500 hover:text-accent-glow flex items-center gap-0.5"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+                <span className="text-[10px]">reset</span>
+              </button>
+            )}
+          </label>
+          <Input
+            type="number"
+            step="0.0001"
+            min="0"
+            value={tcs.tc_usd_a_mn}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              setTcUsdAMn(Number.isFinite(v) && v > 0 ? v : null);
+            }}
+            className={`h-8 text-xs text-right font-mono ${tcUsdAMn == null ? 'text-slate-500' : ''}`}
+            title={tcUsdAMn == null ? 'Auto: DOF + 1' : 'Sobreescrito manualmente'}
+          />
         </div>
       </div>
 

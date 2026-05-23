@@ -150,6 +150,31 @@ def _normalize_currency(moneda: str | None) -> str:
     return moneda_normalizada
 
 
+def _resolve_directional_tcs(
+    tipo_cambio: Decimal,
+    tc_mn_a_usd: Decimal | None,
+    tc_usd_a_mn: Decimal | None,
+) -> tuple[Decimal, Decimal]:
+    """Resuelve los 2 TCs direccionales (modelo Excel V_03, 2026-05-23).
+
+    - Si el payload manda los 2 (>0), se respetan ambos.
+    - Si vienen None/cero, se derivan de tipo_cambio (DOF): MN→USD = DOF-1,
+      USD→MN = DOF+1. Spread de ±1 peso cubre riesgo cambiario entre
+      cotización y cobro.
+    - MN→USD nunca puede ser ≤ 0 (división); usa GREATEST(DOF-1, 0.000001).
+    """
+    dof = Decimal(tipo_cambio)
+    if tc_mn_a_usd is None or Decimal(tc_mn_a_usd) <= 0:
+        tc_mn_a_usd_eff = max(dof - Decimal(1), Decimal("0.000001"))
+    else:
+        tc_mn_a_usd_eff = Decimal(tc_mn_a_usd)
+    if tc_usd_a_mn is None or Decimal(tc_usd_a_mn) <= 0:
+        tc_usd_a_mn_eff = dof + Decimal(1)
+    else:
+        tc_usd_a_mn_eff = Decimal(tc_usd_a_mn)
+    return tc_mn_a_usd_eff, tc_usd_a_mn_eff
+
+
 def _resolve_exchange_rate(moneda: str, tipo_cambio: Decimal | None) -> Decimal:
     """Resuelve el TC operativo de una cotización.
 
@@ -180,15 +205,26 @@ def _convert_cost_to_quote_currency(
     costo_compra: Decimal,
     moneda_compra: str,
     moneda_cotizacion: str,
-    tipo_cambio: Decimal,
+    tc_mn_a_usd: Decimal,
+    tc_usd_a_mn: Decimal,
 ) -> Decimal:
+    """Convierte costo del proveedor a la moneda de cotización usando los
+    TCs DIRECCIONALES (modelo Excel V_03).
+
+    - Source y target iguales → sin conversión
+    - USD → MXN: multiplica por tc_usd_a_mn (default DOF+1)
+    - MXN → USD: divide por tc_mn_a_usd (default DOF-1)
+
+    OC al proveedor usa tipo_cambio (DOF) puro vía
+    `_convertir_costo_compra` en compras.py — no usa esta función.
+    """
     moneda_origen = _normalize_currency(moneda_compra)
     if moneda_origen == moneda_cotizacion:
         return Decimal(costo_compra)
     if moneda_origen == "USD" and moneda_cotizacion == "MXN":
-        return Decimal(costo_compra) * tipo_cambio
+        return Decimal(costo_compra) * Decimal(tc_usd_a_mn)
     if moneda_origen == "MXN" and moneda_cotizacion == "USD":
-        return Decimal(costo_compra) / tipo_cambio
+        return Decimal(costo_compra) / Decimal(tc_mn_a_usd)
     raise HTTPException(400, "No se pudo convertir la moneda del producto")
 
 
@@ -530,6 +566,11 @@ def crear_orden(
 
     moneda_cotizacion = _normalize_currency(orden_data.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
+    tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
+        tipo_cambio,
+        orden_data.tc_mn_a_usd,
+        orden_data.tc_usd_a_mn,
+    )
 
     try:
         folio = _generar_folio(db, tipo_orden, current_user)
@@ -549,6 +590,8 @@ def crear_orden(
             observaciones=orden_data.observaciones,
             moneda=moneda_cotizacion,
             tipo_cambio=tipo_cambio,
+            tc_mn_a_usd=tc_mn_a_usd,
+            tc_usd_a_mn=tc_usd_a_mn,
             fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             total=0,
             terminos_condiciones=terminos,
@@ -645,7 +688,8 @@ def crear_orden(
                 costo_origen,
                 moneda_origen_linea,
                 moneda_cotizacion,
-                tipo_cambio,
+                tc_mn_a_usd,
+                tc_usd_a_mn,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
@@ -773,6 +817,11 @@ def actualizar_orden(
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_update.tipo_cambio)
     if not (Decimal("1.0") <= Decimal(tipo_cambio) <= Decimal("100.0")):
         raise HTTPException(400, "tipo_cambio fuera de rango (1.0 a 100.0)")
+    tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
+        tipo_cambio,
+        orden_update.tc_mn_a_usd,
+        orden_update.tc_usd_a_mn,
+    )
 
     try:
         # Actualizar cabecera
@@ -782,6 +831,8 @@ def actualizar_orden(
             orden.terminos_condiciones = orden_update.terminos_condiciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
+        orden.tc_mn_a_usd = tc_mn_a_usd
+        orden.tc_usd_a_mn = tc_usd_a_mn
         if orden_update.fecha_creacion is not None:
             orden.fecha_creacion = orden_update.fecha_creacion
         if orden_update.fecha_vencimiento is not None:
@@ -866,7 +917,8 @@ def actualizar_orden(
                 costo_origen,
                 moneda_origen_linea,
                 moneda_cotizacion,
-                tipo_cambio,
+                tc_mn_a_usd,
+                tc_usd_a_mn,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
@@ -998,6 +1050,8 @@ def recotizar(
         terminos_condiciones=origen.terminos_condiciones,
         moneda=origen.moneda,
         tipo_cambio=origen.tipo_cambio,
+        tc_mn_a_usd=origen.tc_mn_a_usd,
+        tc_usd_a_mn=origen.tc_usd_a_mn,
         total=origen.total,
         fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
         cotizacion_origen_id=raiz_id,
@@ -1358,6 +1412,8 @@ def obtener_detalle_orden(
         "observaciones": orden.observaciones,
         "moneda": orden.moneda,
         "tipo_cambio": float(orden.tipo_cambio or 1),
+        "tc_mn_a_usd": float(orden.tc_mn_a_usd) if orden.tc_mn_a_usd is not None else None,
+        "tc_usd_a_mn": float(orden.tc_usd_a_mn) if orden.tc_usd_a_mn is not None else None,
         "terminos_condiciones": orden.terminos_condiciones,
         "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
         "version": orden.version or 1,

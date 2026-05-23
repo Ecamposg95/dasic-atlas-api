@@ -1,10 +1,32 @@
+import { Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
+import { convertCostDOF } from '../lib/calc';
 import type { CartItem } from '../types';
+
+function fmt(n: number) {
+  return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export function RowExpanded({ item }: { item: CartItem }) {
   const moneda = useCotizador((s) => s.moneda);
+  const tc = useCotizador((s) => s.tc);
   const updateLinea = useCotizador((s) => s.updateLinea);
+
+  // Costo OC (lo que Dasic le paga al proveedor): usa DOF puro (sin spread)
+  // y aplica el descuento del proveedor sobre ese valor. Match exacto a
+  // CotProveedor!I6 del Excel (G6 * (1 - descuento_prov)).
+  // Nota: en el SPA actual `item.descuento` es el descuento al cliente, no
+  // al proveedor — por ahora reusamos el mismo campo (TODO: separar
+  // descuento_proveedor en una iteración futura).
+  const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento) / 100);
+  const costoOc = convertCostDOF(
+    costoOcOrigen,
+    item.productCurrency,
+    moneda,
+    tc,
+  );
+
   return (
     <tr className="bg-slate-900/50 border-b border-slate-800">
       <td colSpan={8} className="p-3">
@@ -45,7 +67,22 @@ export function RowExpanded({ item }: { item: CartItem }) {
               className="h-8 text-xs"
             />
           </div>
-          <div className="md:col-span-2">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Truck className="h-2.5 w-2.5" />
+              Costo OC (DOF)
+            </label>
+            <div
+              className="h-8 px-2 rounded border border-slate-700/60 bg-slate-950/50 flex items-center justify-end text-xs font-mono text-slate-300"
+              title="Costo a tipo de cambio DOF (sin spread) — lo que se le paga al proveedor cuando se genera la OC."
+            >
+              {moneda} ${fmt(costoOc)}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              Sin spread · descuento aplicado
+            </div>
+          </div>
+          <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
               Nota / texto al cliente
             </label>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useGuardarCotizacion } from '../hooks/useCotizacion';
-import { computeTotals } from '../lib/calc';
+import { computeTotals, resolveDirectionalTcs } from '../lib/calc';
 
 function fmtMoney(n: number, moneda: string) {
   return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -15,6 +15,8 @@ export function TotalsBar() {
   const cart = useCotizador((s) => s.cart);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
+  const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
+  const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
   const cliente_id = useCotizador((s) => s.cliente_id);
   const lineasNoSoportadas = useCotizador((s) => s.lineasNoSoportadas);
   const editingId = useCotizador((s) => s.editingId);
@@ -22,7 +24,8 @@ export function TotalsBar() {
   const { config } = useConfig();
   const guardar = useGuardarCotizacion();
 
-  const { subtotal, iva, total } = computeTotals(cart, moneda, tc, config.iva_rate);
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
+  const { subtotal, iva, total } = computeTotals(cart, moneda, tcs, config.iva_rate);
 
   const noEditable = !!editingEstatus && editingEstatus.toUpperCase() !== 'COTIZACION';
   const tieneNoSoportadas = lineasNoSoportadas.length > 0;
@@ -79,6 +82,8 @@ export function TotalsBar() {
         cliente_id: s.cliente_id,
         moneda: s.moneda,
         tc: s.tc,
+        tc_mn_a_usd: s.tc_mn_a_usd,
+        tc_usd_a_mn: s.tc_usd_a_mn,
         fecha_creacion: s.fecha_creacion,
         fecha_vencimiento: s.fecha_vencimiento,
         observaciones: s.observaciones,
