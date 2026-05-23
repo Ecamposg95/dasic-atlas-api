@@ -1,4 +1,4 @@
-import { Truck } from 'lucide-react';
+import { Truck, Coins } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { convertCostDOF } from '../lib/calc';
@@ -12,6 +12,11 @@ export function RowExpanded({ item }: { item: CartItem }) {
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
   const updateLinea = useCotizador((s) => s.updateLinea);
+
+  const fuente =
+    item.tipo_linea === 'producto_fantasma'
+      ? 'capturado al crear el fantasma'
+      : 'viene del catálogo del producto';
 
   // Costo OC (lo que Dasic le paga al proveedor): usa DOF puro (sin spread)
   // y aplica el descuento del proveedor sobre ese valor. Match exacto a
@@ -32,21 +37,21 @@ export function RowExpanded({ item }: { item: CartItem }) {
       <td colSpan={8} className="p-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Coins className="h-2.5 w-2.5" />
               Moneda origen
             </label>
-            <select
-              value={item.productCurrency}
-              onChange={(e) =>
-                updateLinea(item.uid, { productCurrency: e.target.value as 'MXN' | 'USD' })
-              }
-              className="w-full h-8 rounded border border-slate-700 bg-slate-900 px-2 text-xs"
+            <div
+              className="h-8 px-2 rounded border border-slate-700/60 bg-slate-950/50 flex items-center font-mono text-xs text-slate-300"
+              title={fuente}
             >
-              <option value="MXN">MXN</option>
-              <option value="USD">USD</option>
-            </select>
+              {item.productCurrency}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">{fuente}</div>
             {item.productCurrency !== moneda && (
-              <div className="text-[10px] text-amber-400 mt-1">Se aplica TC al guardar.</div>
+              <div className="text-[10px] text-amber-400 mt-0.5">
+                Se aplica TC automáticamente.
+              </div>
             )}
           </div>
           <div>

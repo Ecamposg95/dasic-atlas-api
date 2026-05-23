@@ -80,8 +80,11 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
             {item.sku}
           </span>
           {item.productCurrency !== moneda && (
-            <span className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded">
-              {item.productCurrency} · TC {(item.productCurrency === 'USD' && moneda === 'MXN' ? tcs.tc_usd_a_mn : tcs.tc_mn_a_usd).toFixed(4)}
+            <span
+              className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded"
+              title={`Línea en ${item.productCurrency} convertida a ${moneda} con TC automático del Banxico ±1 peso de spread`}
+            >
+              {item.productCurrency} → {moneda}
             </span>
           )}
           {esOverride && !esFantasma && (
