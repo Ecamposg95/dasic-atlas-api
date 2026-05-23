@@ -45,6 +45,12 @@ export type GrupoOC = {
 };
 
 function toItemPreview(it: CartItem): ItemPreviewOC {
+  // Caller (`agruparOCs`) ya filtra servicio_catalogo antes de llegar aquí,
+  // así que el cast es seguro. Si en el futuro se llamara con un servicio,
+  // el assert estrecharía mal — defensa: si llega servicio, lo mapeamos a
+  // fantasma (no debería pasar visualmente).
+  const tl =
+    it.tipo_linea === 'producto_fantasma' ? ('producto_fantasma' as const) : ('producto_catalogo' as const);
   return {
     uid: it.uid,
     sku: it.sku || '—',
@@ -52,7 +58,7 @@ function toItemPreview(it: CartItem): ItemPreviewOC {
     qty: Number(it.qty) || 0,
     cost: Number(it.cost) || 0,
     moneda: it.productCurrency,
-    tipo_linea: it.tipo_linea,
+    tipo_linea: tl,
   };
 }
 
@@ -82,6 +88,10 @@ export function agruparOCs(cart: CartItem[]): GrupoOC[] {
   const grupos = new Map<string, GrupoOC>();
 
   for (const it of cart) {
+    // Servicios del catálogo no generan OC al proveedor — son trabajo interno.
+    // Si se incluyeran, caerían en el bucket "sin proveedor" y confundirían al
+    // usuario haciéndole creer que faltan datos.
+    if (it.tipo_linea === 'servicio_catalogo') continue;
     const pid = it.proveedor_sugerido_id ?? null;
     const key = pid == null ? '__sin__' : String(pid);
     let g = grupos.get(key);

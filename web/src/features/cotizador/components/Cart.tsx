@@ -46,12 +46,12 @@ export function Cart() {
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-400" />
           <div>
             <div className="font-semibold mb-1">
-              Cotización con {lineasNoSoportadas.length} línea(s) de servicio
+              Cotización con {lineasNoSoportadas.length} línea(s) no soportadas en este editor
             </div>
             <p className="text-[11px] text-amber-300">
-              Servicios capturados en el cotizador clásico se ocultan aquí para
-              evitar borrarlos al guardar. Para editar la cotización con sus
-              servicios, ve a{' '}
+              Líneas con formato legacy que no se pueden hidratar al cart se
+              ocultan aquí para evitar borrarlas al guardar. Si necesitas
+              editarlas, abre la cotización en el cotizador clásico:{' '}
               <a
                 href={`/ventas/cotizador?edit=${useCotizador.getState().editingId}`}
                 className="underline"

@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import type { CartItem, LineaNoSoportada, Moneda, OrdenVentaDetail, Producto } from './types';
+import type {
+  CartItem,
+  LineaNoSoportada,
+  Moneda,
+  OrdenVentaDetail,
+  Producto,
+  Servicio,
+} from './types';
 
 // Payload para crear una línea fantasma (sin SKU del catálogo).
 // proveedor_sugerido_id es opcional pero recomendado: sin él, la línea
@@ -64,6 +71,7 @@ type CotizadorState = {
   // Cart ops:
   addProducto: (p: Producto, qty?: number, utilidadOverride?: number) => void;
   addLineaAdhoc: (input: AddFantasmaInput) => void;
+  addServicio: (s: Servicio, qty?: number) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
@@ -139,6 +147,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         uid: nextUid('nuevo'),
         tipo_linea: 'producto_catalogo',
         producto_id: p.id,
+        servicio_id: null,
         sku: snapshot.sku,
         nom: snapshot.nom,
         cost: snapshot.cost,
@@ -174,6 +183,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         uid: nextUid('fantasma'),
         tipo_linea: 'producto_fantasma',
         producto_id: null,
+        servicio_id: null,
         sku,
         nom: input.descripcion,
         cost: input.costo,
@@ -185,6 +195,49 @@ export const useCotizador = create<CotizadorState>((set) => ({
         proveedor_sugerido_id: input.proveedor_sugerido_id ?? null,
         qty,
         utilidad,
+        descuento: 0,
+        descuento_proveedor: 0,
+        entrega_min: null,
+        entrega_max: null,
+        entrega_unidad: null,
+        observaciones_linea: '',
+      };
+      return { cart: [...s.cart, nueva] };
+    }),
+
+  addServicio: (svc, qty = 1) =>
+    set((s) => {
+      // Cart-merge si el mismo servicio_id ya está → solo sumamos cantidad.
+      // Match con el comportamiento de addProducto. Si el override del costo
+      // ya está aplicado, se respeta — no lo regeneramos del catálogo.
+      const existente = s.cart.find(
+        (x) => x.tipo_linea === 'servicio_catalogo' && x.servicio_id === svc.id,
+      );
+      if (existente) {
+        return {
+          cart: s.cart.map((x) =>
+            x.uid === existente.uid ? { ...x, qty: x.qty + qty } : x,
+          ),
+        };
+      }
+      const costo = Number(svc.costo ?? 0);
+      const moneda = (svc.moneda || 'MXN').toUpperCase() as Moneda;
+      const nueva: CartItem = {
+        uid: nextUid('servicio'),
+        tipo_linea: 'servicio_catalogo',
+        producto_id: null,
+        servicio_id: svc.id,
+        sku: svc.codigo || '—',
+        nom: svc.nombre,
+        cost: costo,
+        productCurrency: moneda,
+        sku_original: svc.codigo || '',
+        nom_original: svc.nombre,
+        cost_original: costo,
+        max: 0, // servicios no tienen stock
+        proveedor_sugerido_id: null, // servicios son internos, sin OC al proveedor
+        qty,
+        utilidad: 30,
         descuento: 0,
         descuento_proveedor: 0,
         entrega_min: null,
@@ -226,10 +279,17 @@ export const useCotizador = create<CotizadorState>((set) => ({
   hydrateFromOrden: (orden) =>
     set(() => {
       const monedaOrden = (orden.moneda?.toUpperCase() || 'MXN') as Moneda;
-      // Servicios siguen sin entrar al cart (banner ámbar). Fantasmas SÍ
-      // entran desde 2026-05-23.
+      // Desde 2026-05-23: fantasmas y servicios_catalogo entran al cart.
+      // `lineasNoSoportadas` queda como fallback defensivo para detalles
+      // raros sin producto_id, sin servicio_id y sin descripcion_libre
+      // (improbable; no se debería ver en producción).
       const noSoportadas: LineaNoSoportada[] = orden.detalles
-        .filter((d) => d.servicio_id != null)
+        .filter(
+          (d) =>
+            d.producto_id == null &&
+            d.servicio_id == null &&
+            !d.descripcion_libre,
+        )
         .map((d) => ({
           detalle_id: d.id,
           descripcion: d.descripcion_libre || d.servicio?.nombre || '—',
@@ -248,6 +308,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
             detalle_id: d.id,
             tipo_linea: 'producto_catalogo' as const,
             producto_id: d.producto_id!,
+            servicio_id: null,
             sku: d.sku_libre || skuCat || '—',
             nom: d.descripcion_libre || nomCat || '—',
             cost: Number(d.costo_base_linea),
@@ -269,15 +330,58 @@ export const useCotizador = create<CotizadorState>((set) => ({
           };
         });
 
-      // Fantasmas: producto_id NULL Y servicio_id NULL. La descripción viene
-      // de descripcion_libre; el SKU del sku_libre si lo hay.
+      // Servicios del catálogo: servicio_id != null. La descripción y el
+      // SKU vienen del snapshot persistido (`sku_libre`/`descripcion_libre`),
+      // que el backend rellena con `servicio.codigo`/`servicio.nombre` al
+      // crear el detalle (ver app/routers/ventas.py:634-635).
+      const cartServicios: CartItem[] = orden.detalles
+        .filter((d) => d.servicio_id != null)
+        .map((d) => {
+          const skuSnap = d.sku_libre || d.servicio?.codigo || '—';
+          const nomSnap = d.descripcion_libre || d.servicio?.nombre || '—';
+          return {
+            uid: `linea-${d.id}`,
+            detalle_id: d.id,
+            tipo_linea: 'servicio_catalogo' as const,
+            producto_id: null,
+            servicio_id: d.servicio_id,
+            sku: skuSnap,
+            nom: nomSnap,
+            cost: Number(d.costo_base_linea),
+            productCurrency: ((d.moneda_origen_linea || monedaOrden).toUpperCase()) as Moneda,
+            sku_original: skuSnap,
+            nom_original: nomSnap,
+            cost_original: Number(d.costo_base_linea),
+            max: 0,
+            proveedor_sugerido_id: null,
+            qty: d.cantidad,
+            utilidad: Number(d.utilidad_aplicada),
+            descuento: Number(d.descuento_aplicado),
+            descuento_proveedor: Number(d.descuento_proveedor ?? 0),
+            entrega_min: d.entrega_min,
+            entrega_max: d.entrega_max,
+            entrega_unidad: (d.entrega_unidad === 'dias' || d.entrega_unidad === 'semanas'
+              ? d.entrega_unidad
+              : null) as 'dias' | 'semanas' | null,
+            observaciones_linea: d.observaciones_linea || '',
+          };
+        });
+
+      // Fantasmas: producto_id NULL Y servicio_id NULL Y hay descripcion_libre.
+      // La descripción viene de descripcion_libre; el SKU del sku_libre si lo hay.
       const cartFantasmas: CartItem[] = orden.detalles
-        .filter((d) => d.producto_id == null && d.servicio_id == null)
+        .filter(
+          (d) =>
+            d.producto_id == null &&
+            d.servicio_id == null &&
+            !!d.descripcion_libre,
+        )
         .map((d) => ({
           uid: `linea-${d.id}`,
           detalle_id: d.id,
           tipo_linea: 'producto_fantasma' as const,
           producto_id: null,
+          servicio_id: null,
           sku: d.sku_libre || '—',
           nom: d.descripcion_libre || '—',
           cost: Number(d.costo_base_linea),
@@ -300,11 +404,13 @@ export const useCotizador = create<CotizadorState>((set) => ({
         }));
 
       // Preservar orden original de la cotización (por detalle.id ascendente).
-      const cart: CartItem[] = [...cartCatalogo, ...cartFantasmas].sort((a, b) => {
-        const ai = a.detalle_id ?? Number.MAX_SAFE_INTEGER;
-        const bi = b.detalle_id ?? Number.MAX_SAFE_INTEGER;
-        return ai - bi;
-      });
+      const cart: CartItem[] = [...cartCatalogo, ...cartFantasmas, ...cartServicios].sort(
+        (a, b) => {
+          const ai = a.detalle_id ?? Number.MAX_SAFE_INTEGER;
+          const bi = b.detalle_id ?? Number.MAX_SAFE_INTEGER;
+          return ai - bi;
+        },
+      );
       return {
         editingId: orden.id,
         editingFolio: orden.folio,

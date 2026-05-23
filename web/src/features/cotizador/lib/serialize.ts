@@ -77,6 +77,31 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
           observaciones_linea: i.observaciones_linea || null,
         };
       }
+      if (i.tipo_linea === 'servicio_catalogo') {
+        // Servicios del catálogo: producto_id null, servicio_id es el ID
+        // del Servicio. El backend toma snapshot del nombre/código en
+        // `app/routers/ventas.py:634-635` cuando sku_libre/descripcion_libre
+        // van vacíos. Mandamos `costo_unitario: i.cost` para que el override
+        // de costo (si lo hubo en la cot) se respete en esta línea.
+        return {
+          producto_id: null,
+          servicio_id: i.servicio_id,
+          cantidad: i.qty,
+          utilidad: i.utilidad,
+          descuento: i.descuento,
+          descuento_proveedor: i.descuento_proveedor || 0,
+          moneda_origen: i.productCurrency,
+          sku_libre: null,
+          descripcion_libre: null,
+          costo_unitario: i.cost,
+          tipo_linea: 'servicio_catalogo' as const,
+          proveedor_sugerido_id: null,
+          entrega_min: i.entrega_min,
+          entrega_max: i.entrega_max,
+          entrega_unidad: i.entrega_unidad,
+          observaciones_linea: i.observaciones_linea || null,
+        };
+      }
       // Catálogo (default): producto_id set, libres solo si override.
       return {
         producto_id: i.producto_id,

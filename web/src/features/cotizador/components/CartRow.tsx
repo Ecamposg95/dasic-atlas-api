@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost } from 'lucide-react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { lineImporte, convertCost, resolveDirectionalTcs } from '../lib/calc';
@@ -48,15 +48,24 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   }
 
   const esFantasma = item.tipo_linea === 'producto_fantasma';
+  const esServicio = item.tipo_linea === 'servicio_catalogo';
+
+  // Color por tipo de línea. Fantasma=ámbar, Servicio=esmeralda, Producto=slate.
+  const rowClass = esServicio
+    ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500 hover:bg-emerald-950/45'
+    : esFantasma
+      ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
+      : 'hover:bg-slate-800/30';
+  const skuClass = esServicio
+    ? 'text-emerald-300'
+    : esFantasma
+      ? 'text-amber-300'
+      : 'text-accent-glow';
 
   return (
     <tr
       ref={rowRef}
-      className={`border-b border-slate-800 transition cursor-pointer ${
-        esFantasma
-          ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
-          : 'hover:bg-slate-800/30'
-      }`}
+      className={`border-b border-slate-800 transition cursor-pointer ${rowClass}`}
       onClick={(e) => {
         // No expandir cuando el click es sobre un input/select/button/textarea/anchor.
         const target = e.target as HTMLElement;
@@ -74,9 +83,15 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
               <Ghost className="h-2.5 w-2.5" /> Fantasma
             </span>
           )}
-          <span
-            className={`font-mono text-[11px] font-bold ${esFantasma ? 'text-amber-300' : 'text-accent-glow'}`}
-          >
+          {esServicio && (
+            <span
+              className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-emerald-950 px-1.5 py-0.5 rounded flex items-center gap-0.5"
+              title="Servicio del catálogo — sin stock, sin OC al proveedor"
+            >
+              <Wrench className="h-2.5 w-2.5" /> Servicio
+            </span>
+          )}
+          <span className={`font-mono text-[11px] font-bold ${skuClass}`}>
             {item.sku}
           </span>
           {item.productCurrency !== moneda && (
@@ -87,12 +102,12 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
               {item.productCurrency} → {moneda}
             </span>
           )}
-          {esOverride && !esFantasma && (
+          {esOverride && !esFantasma && !esServicio && (
             <span className="text-[10px] font-bold bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded uppercase">
               <Pen className="inline h-2.5 w-2.5 mr-0.5" /> Editado
             </span>
           )}
-          {!esFantasma && <StockBadge stock={item.max} qty={item.qty} />}
+          {!esFantasma && !esServicio && <StockBadge stock={item.max} qty={item.qty} />}
         </div>
         <div className="text-[11px] text-slate-300 mt-0.5">{item.nom}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">

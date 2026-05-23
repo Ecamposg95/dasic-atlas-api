@@ -20,6 +20,20 @@ export type Producto = {
   proveedor_principal_id?: number | null;
 };
 
+// Subset curado de `ServicioResponse` (app/schemas/services.py:47). El SPA
+// solo lee los campos que necesita para agregar al cart; los SAT/clave_unidad
+// se respetan en backend.
+export type Servicio = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  categoria_servicio?: string | null;
+  costo: number | string;
+  moneda: string;
+  activo?: boolean;
+};
+
 export type Cliente = {
   id: number;
   nombre_empresa: string;
@@ -41,21 +55,26 @@ export type Moneda = 'MXN' | 'USD';
 export type EntregaUnidad = 'dias' | 'semanas' | null;
 
 // Tipo de línea — corresponde al `_resolve_tipo_linea` del backend
-// (`app/routers/ventas.py:48`). 'servicio' todavía no entra al cart (banner
-// LineaNoSoportada). 'producto_fantasma' SÍ entra desde 2026-05-23.
-export type TipoLinea = 'producto_catalogo' | 'producto_fantasma';
+// (`app/routers/ventas.py:48`). 'servicio' ad-hoc legacy todavía no entra al
+// cart. 'producto_fantasma' entra desde 2026-05-23 y 'servicio_catalogo'
+// desde 2026-05-23 (mismo día).
+export type TipoLinea = 'producto_catalogo' | 'producto_fantasma' | 'servicio_catalogo';
 
 export type CartItem = {
   // UID local para keying en React. Si la línea viene del backend, usamos
   // `linea-<detalle_id>`. Si se agregó en sesión, `nuevo-<id-producto>-<random>`
-  // o `fantasma-<random>`.
+  // o `fantasma-<random>` o `servicio-<id>-<random>`.
   uid: string;
 
-  // Distingue catálogo de fantasma. Default 'producto_catalogo'.
+  // Distingue catálogo / fantasma / servicio_catalogo. Default 'producto_catalogo'.
   tipo_linea: TipoLinea;
 
-  // Catálogo: ID del Producto. NULL si tipo_linea = 'producto_fantasma'.
+  // Catálogo: ID del Producto. NULL si tipo_linea != 'producto_catalogo'.
   producto_id: number | null;
+
+  // Servicio del catálogo (tabla servicios). NULL salvo cuando
+  // tipo_linea === 'servicio_catalogo'.
+  servicio_id: number | null;
 
   // Snapshot del catálogo al agregar — usado para detectar overrides en
   // productos del catálogo. Para fantasmas: sku_original/nom_original son ''
@@ -87,9 +106,10 @@ export type CartItem = {
   detalle_id?: number;
 };
 
-// Línea NO soportada en el editor SPA. Antes incluía fantasmas; desde
-// 2026-05-23 fantasmas SÍ entran al cart, así que esto solo aplica a
-// servicios todavía. Banner ámbar arriba del cart bloquea Guardar.
+// Línea NO soportada en el editor SPA. Hasta 2026-05-23 incluía fantasmas
+// y servicios; desde entonces fantasmas y servicios_catalogo entran al cart.
+// Hoy es solo un fallback defensivo: detalles sin producto_id, sin servicio_id
+// y sin descripcion_libre (raro, pero no rompe el guardado si aparece).
 export type LineaNoSoportada = {
   detalle_id: number;
   descripcion: string;
@@ -145,12 +165,13 @@ export type OrdenVentaDetail = {
   }>;
 };
 
-// Payload para POST/PUT /api/ventas. Soporta líneas de catálogo Y fantasmas.
-// Backend (`_resolve_tipo_linea` en ventas.py:48) distingue por la
-// combinación de producto_id/servicio_id/tipo_linea/descripcion_libre.
+// Payload para POST/PUT /api/ventas. Soporta líneas de catálogo, fantasmas y
+// servicios_catalogo. Backend (`_resolve_tipo_linea` en ventas.py:48)
+// distingue por la combinación de producto_id/servicio_id/tipo_linea/
+// descripcion_libre.
 export type DetalleOrdenCreate = {
   producto_id: number | null;
-  servicio_id: null;
+  servicio_id: number | null;
   cantidad: number;
   utilidad: number;
   descuento: number;
@@ -158,12 +179,14 @@ export type DetalleOrdenCreate = {
   moneda_origen: Moneda;
   // Para catálogo: sku_libre y descripcion_libre solo si hay override.
   // Para fantasma: ambos son requeridos por el backend.
+  // Para servicio_catalogo: opcional; backend usa el snapshot del Servicio.
   sku_libre: string | null;
   descripcion_libre: string | null;
   // Para catálogo: costo_unitario solo si override (vs catálogo).
   // Para fantasma: requerido y > 0.
+  // Para servicio_catalogo: opcional; si null backend usa Servicio.costo.
   costo_unitario: number | null;
-  tipo_linea: 'producto_catalogo' | 'producto_fantasma';
+  tipo_linea: 'producto_catalogo' | 'producto_fantasma' | 'servicio_catalogo';
   proveedor_sugerido_id: number | null;
   entrega_min: number | null;
   entrega_max: number | null;

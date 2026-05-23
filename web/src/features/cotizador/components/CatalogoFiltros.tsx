@@ -60,14 +60,14 @@ export function CatalogoFiltros(props: Props) {
         </button>
         <button
           type="button"
-          disabled
-          title="Próximamente — el carrito aún no soporta líneas de servicio en este MVP"
-          className="px-3 py-1 text-xs border-b-2 border-transparent text-slate-600 cursor-not-allowed"
+          onClick={() => props.onTipoChange('servicio')}
+          className={`px-3 py-1 text-xs border-b-2 transition ${
+            props.tipo === 'servicio'
+              ? 'text-emerald-300 border-emerald-400'
+              : 'text-slate-400 border-transparent hover:text-slate-200'
+          }`}
         >
           Servicios
-          <span className="ml-1 text-[9px] uppercase bg-slate-800 text-slate-500 px-1 rounded">
-            Próx.
-          </span>
         </button>
       </div>
       {props.tipo === 'producto' && (

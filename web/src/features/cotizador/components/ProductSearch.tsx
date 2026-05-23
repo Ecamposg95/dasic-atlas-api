@@ -1,19 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Package, Sparkles, Ghost } from 'lucide-react';
+import { Search, Package, Sparkles, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { ApiError } from '@/lib/api';
 import { useProductosSearch } from '../hooks/useProductosSearch';
 import { fetchAutoUtilidad } from '../hooks/useAutoUtilidad';
 import { useCotizador } from '../store';
-import type { Producto } from '../types';
+import type { Producto, Servicio } from '../types';
 import { CatalogoFiltros } from './CatalogoFiltros';
 
 export function ProductSearch() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   // Phase 5 (Task 5.1): filtros para el scope de búsqueda.
-  // `tipo` queda fijo en 'producto' en MVP porque el store no soporta
-  // servicios todavía (CatalogoFiltros muestra la tab deshabilitada).
+  // Desde 2026-05-23 el store soporta `addServicio`, así que ambas tabs
+  // están activas. `tipo` se persiste en estado local del componente.
   const [tipo, setTipo] = useState<'producto' | 'servicio'>('producto');
   const [marcaId, setMarcaId] = useState<number | null>(null);
   const [marcaNombre, setMarcaNombre] = useState<string | null>(null);
@@ -26,6 +26,7 @@ export function ProductSearch() {
   // chain del input bota el dropdown al primer click adentro.
   const containerRef = useRef<HTMLDivElement>(null);
   const addProducto = useCotizador((s) => s.addProducto);
+  const addServicio = useCotizador((s) => s.addServicio);
   const { data, isLoading, error } = useProductosSearch({
     q,
     tipo,
@@ -35,6 +36,7 @@ export function ProductSearch() {
   });
 
   const items = data?.items ?? [];
+  const servicios = data?.servicios ?? [];
   const cantidadParseada = data?.cantidad ?? null;
 
   // Auth error en la búsqueda → bounce a login.
@@ -63,6 +65,13 @@ export function ProductSearch() {
     const cliente_id = useCotizador.getState().cliente_id;
     const util = await fetchAutoUtilidad(cliente_id, p.id);
     addProducto(p, cantidadParseada ?? 1, util ?? undefined);
+    setQ('');
+    setOpen(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function onSelectServicio(s: Servicio) {
+    addServicio(s, cantidadParseada ?? 1);
     setQ('');
     setOpen(false);
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -101,7 +110,11 @@ export function ProductSearch() {
             onChange={(e) => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
-            placeholder='Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
+            placeholder={
+              tipo === 'servicio'
+                ? 'Buscar servicio (ej. "instalación" o "SRV-0001")…'
+                : 'Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
+            }
             className="pl-7 h-8 text-xs"
             data-cot-search
           />
@@ -127,52 +140,89 @@ export function ProductSearch() {
       </div>
       {open && (
         <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-md shadow-xl z-20">
-          {(items.length > 0 || isLoading) && (
-            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
-              <span>{isLoading ? 'Buscando…' : `${items.length} resultado(s)`}</span>
-              {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
-            </div>
-          )}
-          {!isLoading && items.length === 0 && (
-            <div className="p-3 text-center space-y-2">
-              <div className="text-[11px] text-slate-500">Sin coincidencias en el catálogo</div>
-              {q.trim() && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(
-                      new CustomEvent('cot:open-add-fantasma', {
-                        detail: { initialDescripcion: q.trim() },
-                      }),
-                    );
-                    setOpen(false);
-                    setQ('');
-                  }}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
-                >
-                  <Ghost className="h-3 w-3" />
-                  Agregar como fantasma "{q.trim().length > 30 ? q.trim().slice(0, 30) + '…' : q.trim()}"
-                </button>
-              )}
-            </div>
-          )}
-          {items.map(({ producto: p }) => (
-            <button key={p.id} type="button" onClick={() => onSelect(p)}
-              className="w-full text-left px-2 py-1.5 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2">
-              <Package className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-mono text-[11px] font-bold text-accent-glow">{p.sku_comercial || p.sku}</span>
-                  {p.marca && <span className="text-[10px] text-slate-500">· {p.marca}</span>}
-                  {stockChip(p.stock_actual)}
+          {tipo === 'servicio' ? (
+            // Modo Servicios: render del catálogo de servicios.
+            <>
+              {(servicios.length > 0 || isLoading) && (
+                <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
+                  <span>{isLoading ? 'Buscando…' : `${servicios.length} servicio(s)`}</span>
+                  {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
                 </div>
-                <div className="text-[11px] text-slate-200 truncate">{p.nombre}</div>
-              </div>
-              <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
-                {fmtCost(Number(p.costo_compra ?? 0), p.moneda_compra || 'MXN')}
-              </div>
-            </button>
-          ))}
+              )}
+              {!isLoading && servicios.length === 0 && (
+                <div className="p-3 text-center">
+                  <div className="text-[11px] text-slate-500">Sin coincidencias en el catálogo de servicios</div>
+                </div>
+              )}
+              {servicios.map((s) => (
+                <button key={s.id} type="button" onClick={() => onSelectServicio(s)}
+                  className="w-full text-left px-2 py-1.5 hover:bg-emerald-950/30 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2">
+                  <Wrench className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-bold text-emerald-300">{s.codigo}</span>
+                      {s.categoria_servicio && (
+                        <span className="text-[10px] text-slate-500">· {s.categoria_servicio}</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-200 truncate">{s.nombre}</div>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+                    {fmtCost(Number(s.costo ?? 0), (s.moneda || 'MXN').toUpperCase())}
+                  </div>
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              {(items.length > 0 || isLoading) && (
+                <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
+                  <span>{isLoading ? 'Buscando…' : `${items.length} resultado(s)`}</span>
+                  {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
+                </div>
+              )}
+              {!isLoading && items.length === 0 && (
+                <div className="p-3 text-center space-y-2">
+                  <div className="text-[11px] text-slate-500">Sin coincidencias en el catálogo</div>
+                  {q.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(
+                          new CustomEvent('cot:open-add-fantasma', {
+                            detail: { initialDescripcion: q.trim() },
+                          }),
+                        );
+                        setOpen(false);
+                        setQ('');
+                      }}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
+                    >
+                      <Ghost className="h-3 w-3" />
+                      Agregar como fantasma "{q.trim().length > 30 ? q.trim().slice(0, 30) + '…' : q.trim()}"
+                    </button>
+                  )}
+                </div>
+              )}
+              {items.map(({ producto: p }) => (
+                <button key={p.id} type="button" onClick={() => onSelect(p)}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2">
+                  <Package className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono text-[11px] font-bold text-accent-glow">{p.sku_comercial || p.sku}</span>
+                      {p.marca && <span className="text-[10px] text-slate-500">· {p.marca}</span>}
+                      {stockChip(p.stock_actual)}
+                    </div>
+                    <div className="text-[11px] text-slate-200 truncate">{p.nombre}</div>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+                    {fmtCost(Number(p.costo_compra ?? 0), p.moneda_compra || 'MXN')}
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

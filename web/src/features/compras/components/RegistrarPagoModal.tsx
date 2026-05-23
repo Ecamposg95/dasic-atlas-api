@@ -72,14 +72,14 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
   return (
     <Modal title="Registrar pago a proveedor" onClose={onClose} size="sm">
       <div className="space-y-3 text-sm">
-        <p className="text-slate-400 text-xs">
-          OC: <span className="font-mono text-cyan-300">{orden.folio ?? `#${orden.id}`}</span> —{' '}
-          Proveedor: <span className="font-medium text-slate-200">{orden.proveedor}</span>
+        <p className="text-slate-600 dark:text-slate-400 text-xs">
+          OC: <span className="font-mono text-cyan-700 dark:text-cyan-300">{orden.folio ?? `#${orden.id}`}</span> —{' '}
+          Proveedor: <span className="font-medium text-slate-800 dark:text-slate-200">{orden.proveedor}</span>
         </p>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
-            Monto ({orden.moneda}) <span className="text-rose-400">*</span>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            Monto ({orden.moneda}) <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
             type="number"
@@ -92,7 +92,7 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
             Referencia / nota
           </label>
           <Input
@@ -103,7 +103,7 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
         </div>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300 rounded p-2">
             {err}
           </div>
         )}

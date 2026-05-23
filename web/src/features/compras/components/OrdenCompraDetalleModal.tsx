@@ -44,9 +44,9 @@ export function OrdenCompraDetalleModal({
 
   return (
     <Modal title="Detalle de Orden de Compra" onClose={onClose} size="xl">
-      {isLoading && <div className="text-slate-400 text-sm py-4">Cargando…</div>}
+      {isLoading && <div className="text-slate-600 dark:text-slate-400 text-sm py-4">Cargando…</div>}
       {error && (
-        <div className="text-rose-400 text-sm py-4">
+        <div className="text-rose-600 dark:text-rose-400 text-sm py-4">
           No se pudo cargar el detalle.
         </div>
       )}
@@ -56,7 +56,7 @@ export function OrdenCompraDetalleModal({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-xs text-slate-500 mb-0.5">Folio</div>
-              <div className="font-mono font-bold text-cyan-300">
+              <div className="font-mono font-bold text-cyan-700 dark:text-cyan-300">
                 {oc.folio ?? `#${oc.id}`}
               </div>
             </div>
@@ -85,7 +85,7 @@ export function OrdenCompraDetalleModal({
                 <div className="text-xs text-slate-500 mb-0.5">Cotización origen</div>
                 <a
                   href={`/ventas/cotizador?edit=${oc.cotizacion_id}`}
-                  className="text-cyan-400 hover:underline text-xs"
+                  className="text-cyan-600 hover:underline text-xs dark:text-cyan-400"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -102,7 +102,7 @@ export function OrdenCompraDetalleModal({
             </div>
             <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                   <th className="text-left py-1.5 pr-2">SKU / Descripción</th>
                   <th className="text-center py-1.5 px-2">Cant.</th>
                   <th className="text-right py-1.5 px-2">Costo unit.</th>
@@ -115,10 +115,10 @@ export function OrdenCompraDetalleModal({
                   const nombre = d.producto?.nombre ?? d.descripcion_libre ?? '—';
                   const importe = d.cantidad * d.costo_unitario;
                   return (
-                    <tr key={d.id} className="border-b border-slate-800/50">
+                    <tr key={d.id} className="border-b border-slate-200 dark:border-slate-800/50">
                       <td className="py-1.5 pr-2">
-                        <span className="font-mono text-slate-300">{sku}</span>{' '}
-                        <span className="text-slate-400">{nombre}</span>
+                        <span className="font-mono text-slate-700 dark:text-slate-300">{sku}</span>{' '}
+                        <span className="text-slate-600 dark:text-slate-400">{nombre}</span>
                       </td>
                       <td className="text-center py-1.5 px-2">{d.cantidad}</td>
                       <td className="text-right py-1.5 px-2 font-mono">
@@ -138,7 +138,7 @@ export function OrdenCompraDetalleModal({
           <div className="flex justify-end">
             <div className="text-right">
               <div className="text-xs text-slate-500 mb-0.5">Total OC</div>
-              <div className="text-lg font-bold text-cyan-300">
+              <div className="text-lg font-bold text-cyan-700 dark:text-cyan-300">
                 {fmtMoney(oc.total, oc.moneda)} {oc.moneda}
               </div>
             </div>
@@ -154,7 +154,7 @@ export function OrdenCompraDetalleModal({
             href={`/api/compras/${oc.id}/imprimir`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sm border border-slate-300 dark:border-slate-700"
           >
             Imprimir
           </a>

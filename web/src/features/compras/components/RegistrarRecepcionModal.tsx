@@ -44,12 +44,12 @@ export function RegistrarRecepcionModal({ id, folio, onClose }: Props) {
   return (
     <Modal title="Registrar recepción de OC" onClose={onClose} size="sm">
       <div className="space-y-3 text-sm">
-        <p className="text-slate-300">
+        <p className="text-slate-700 dark:text-slate-300">
           Vas a marcar la OC{' '}
-          <span className="font-mono font-bold text-cyan-300">{folio ?? `#${id}`}</span>{' '}
+          <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">{folio ?? `#${id}`}</span>{' '}
           como <span className="font-bold">recibida</span>.
         </p>
-        <p className="text-slate-400 text-xs">
+        <p className="text-slate-600 dark:text-slate-400 text-xs">
           Esto ingresará al almacén todos los productos de la OC como una ENTRADA de stock.
           Esta operación no se puede deshacer.
         </p>
@@ -60,7 +60,7 @@ export function RegistrarRecepcionModal({ id, folio, onClose }: Props) {
             onChange={(e) => setConfirmado(e.target.checked)}
             className="h-4 w-4 accent-cyan-400"
           />
-          <span className="text-xs text-slate-300">
+          <span className="text-xs text-slate-700 dark:text-slate-300">
             Confirmo que la mercancía fue recibida físicamente en almacén.
           </span>
         </label>

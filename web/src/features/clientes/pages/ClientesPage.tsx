@@ -128,7 +128,7 @@ export function ClientesPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -138,7 +138,7 @@ export function ClientesPage() {
         <select
           value={filtroMoneda}
           onChange={(e) => setFiltroMoneda(e.target.value as MonedaCredito | '')}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
         >
           <option value="">Cualquier moneda</option>
           <option value="MXN">MXN</option>
@@ -175,7 +175,7 @@ export function ClientesPage() {
           )}
           {!isLoading && filtrados.length === 0 && (
             <DataTableEmpty colSpan={8}>
-              <Users className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               {items.length === 0 ? 'Sin clientes registrados' : 'Sin coincidencias con la búsqueda'}
             </DataTableEmpty>
           )}
@@ -184,21 +184,21 @@ export function ClientesPage() {
             return (
               <DataTableRow key={c.id}>
                 <td className="p-3">
-                  <div className="font-medium text-slate-200 truncate max-w-[180px]" title={c.nombre_empresa}>
+                  <div className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[180px]" title={c.nombre_empresa}>
                     {c.nombre_empresa}
                   </div>
                 </td>
-                <td className="p-3 text-slate-400 text-xs">
-                  {c.contacto_nombre || <span className="text-slate-600">—</span>}
+                <td className="p-3 text-slate-600 dark:text-slate-400 text-xs">
+                  {c.contacto_nombre || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 font-mono text-xs text-slate-400">
-                  {c.rfc_tax_id || <span className="text-slate-600">—</span>}
+                <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                  {c.rfc_tax_id || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 text-xs text-slate-400">
-                  {c.telefono || <span className="text-slate-600">—</span>}
+                <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
+                  {c.telefono || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 text-xs text-slate-400 truncate max-w-[140px]">
-                  {c.email || <span className="text-slate-600">—</span>}
+                <td className="p-3 text-xs text-slate-600 dark:text-slate-400 truncate max-w-[140px]">
+                  {c.email || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <Badge variant="cyan">
@@ -212,7 +212,7 @@ export function ClientesPage() {
                   {saldo > 0 ? (
                     <Badge variant="rose">{fmtMoney(c.moneda_credito, c.saldo_actual)}</Badge>
                   ) : (
-                    <span className="text-xs text-slate-600">
+                    <span className="text-xs text-slate-400 dark:text-slate-600">
                       {fmtMoney(c.moneda_credito, c.saldo_actual)}
                     </span>
                   )}
@@ -221,7 +221,7 @@ export function ClientesPage() {
                   <button
                     onClick={() => setModalEditar(c)}
                     title="Editar"
-                    className="text-slate-300 hover:text-slate-100 px-1.5 text-xs"
+                    className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 px-1.5 text-xs"
                   >
                     Editar
                   </button>
@@ -229,7 +229,7 @@ export function ClientesPage() {
                     <button
                       onClick={() => onEliminar(c)}
                       title="Eliminar"
-                      className="text-rose-400 hover:text-rose-300 px-1.5 text-xs"
+                      className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 px-1.5 text-xs"
                       disabled={eliminarMut.isPending}
                     >
                       Eliminar

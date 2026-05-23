@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useSinonimos } from './useSinonimos';
 import { buildSearchVariants, levenshteinTruncated } from '../lib/search';
-import type { Producto } from '../types';
+import type { Producto, Servicio } from '../types';
 
 // Debounce 300ms. Si query < 2 chars y no es vacío, deshabilita.
 // Si vacío, devuelve los primeros 30 del catálogo (útil para mostrar algo
@@ -23,11 +23,11 @@ import type { Producto } from '../types';
 //  - El filtro de categoría se aplica CLIENT-side sobre la respuesta,
 //    contra `producto.categoria` (texto). Si en el futuro el backend acepta
 //    `categoria`, podemos quitar el filtro local.
-//  - Para servicios (`scope.tipo === 'servicio'`) usamos `/api/servicios` (que
-//    acepta `q`, `categoria`, `activo`). Sin embargo, el store actual sólo
-//    sabe `addProducto`, así que la UI deshabilita la tab de servicios en
-//    MVP — este hook devuelve un set vacío si llega tipo=servicio para evitar
-//    leaks de schema entre `Servicio` y `Producto`.
+//  - Para servicios (`scope.tipo === 'servicio'`) usamos `/api/servicios/buscar`
+//    cuando hay query y `/api/servicios/` con `activo=true` cuando no. Desde
+//    2026-05-23 el store soporta `addServicio`, así que devolvemos los
+//    resultados en el campo `servicios` (separado de `items` para no mezclar
+//    schemas Producto/Servicio).
 
 export type SearchResult = {
   producto: Producto;
@@ -36,6 +36,9 @@ export type SearchResult = {
 
 export type SearchData = {
   items: SearchResult[];
+  // Resultados del catálogo de servicios. Solo populado cuando
+  // `scope.tipo === 'servicio'`; en otros modos siempre vacío.
+  servicios: Servicio[];
   cantidad: number | null;
 };
 
@@ -70,15 +73,35 @@ export function useProductosSearch(scope: SearchScope) {
       !!sinonimos,
     ],
     queryFn: async () => {
-      // MVP: la tab de servicios está deshabilitada visualmente porque el
-      // store sólo soporta `addProducto(Producto)`. Si llega aquí igualmente,
-      // devolvemos vacío en vez de leakear schema diferente al cart.
-      if (scope.tipo === 'servicio') {
-        return { items: [], cantidad: null };
-      }
-
       const dict = sinonimos?.dict ?? {};
       const { cantidad, queries } = buildSearchVariants(debouncedQ, dict);
+
+      // Servicios: usamos `/api/servicios/` (lista filtrable) cuando no hay
+      // término, y `/api/servicios/buscar?q=…` cuando lo hay. El backend
+      // (`app/routers/servicios.py:99`) busca en codigo/nombre/descripcion.
+      // No reutilizamos sinónimos aquí — el set de servicios es chico y los
+      // typos no son tan comunes como en productos.
+      if (scope.tipo === 'servicio') {
+        const termino = (queries[0] ?? '').trim();
+        try {
+          let servicios: Servicio[];
+          if (termino) {
+            const p = new URLSearchParams();
+            p.set('q', termino);
+            p.set('limit', '30');
+            servicios = await api.get<Servicio[]>(`/api/servicios/buscar?${p.toString()}`);
+          } else {
+            const p = new URLSearchParams();
+            p.set('activo', 'true');
+            servicios = await api.get<Servicio[]>(`/api/servicios/?${p.toString()}`);
+          }
+          return { items: [], servicios, cantidad };
+        } catch (err) {
+          // 401 burbujea para que ProductSearch redirija a login; el resto
+          // tampoco lo silenciamos porque el usuario espera ver algo.
+          throw err;
+        }
+      }
 
       // Build base params. Sólo `marca` (texto) es filtro real server-side
       // para productos; los `*_id` van por compatibilidad future-proof.
@@ -103,6 +126,7 @@ export function useProductosSearch(scope: SearchScope) {
         return {
           cantidad,
           items: filtrarCategoria(items).map((producto) => ({ producto, score: 0.5 })),
+          servicios: [],
         };
       }
 
@@ -148,7 +172,7 @@ export function useProductosSearch(scope: SearchScope) {
       const items = Array.from(map.values())
         .sort((a, b) => b.score - a.score)
         .slice(0, 30);
-      return { cantidad, items };
+      return { cantidad, items, servicios: [] };
     },
     enabled: debouncedQ.length === 0 || debouncedQ.length >= 2,
     staleTime: 30_000,

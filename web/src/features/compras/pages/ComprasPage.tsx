@@ -121,7 +121,7 @@ export function ComprasPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -131,7 +131,7 @@ export function ComprasPage() {
         <select
           value={filtroEstatus}
           onChange={(e) => setFiltroEstatus(e.target.value as EstatusOC | '')}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
         >
           {ESTATUS_OPTS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -166,17 +166,17 @@ export function ComprasPage() {
           )}
           {!isLoading && filtradas.length === 0 && (
             <DataTableEmpty colSpan={7}>
-              <ShoppingCart className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <ShoppingCart className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               Sin órdenes que coincidan
             </DataTableEmpty>
           )}
           {filtradas.map((o) => (
             <DataTableRow key={o.id}>
-              <td className="p-3 font-mono text-xs text-cyan-300">
+              <td className="p-3 font-mono text-xs text-cyan-700 dark:text-cyan-300">
                 {o.folio ?? `#${o.id}`}
               </td>
               <td className="p-3 text-sm">{o.proveedor}</td>
-              <td className="p-3 text-xs text-slate-400">{fmtDate(o.fecha)}</td>
+              <td className="p-3 text-xs text-slate-600 dark:text-slate-400">{fmtDate(o.fecha)}</td>
               <td className="p-3 text-right font-mono text-sm">
                 {fmtMoney(o.total, o.moneda)}{' '}
                 <span className="text-xs text-slate-500">{o.moneda}</span>
@@ -186,12 +186,12 @@ export function ComprasPage() {
                 {o.cotizacion_id ? (
                   <a
                     href={`/ventas/cotizador?edit=${o.cotizacion_id}`}
-                    className="text-cyan-400 hover:underline"
+                    className="text-cyan-600 hover:underline dark:text-cyan-400"
                   >
                     #{o.cotizacion_id}
                   </a>
                 ) : (
-                  <span className="text-slate-600">—</span>
+                  <span className="text-slate-400 dark:text-slate-600">—</span>
                 )}
               </td>
               <td className="p-3 text-right whitespace-nowrap">
@@ -199,7 +199,7 @@ export function ComprasPage() {
                 <button
                   onClick={() => setModalDetalle(o.id)}
                   title="Ver detalle"
-                  className="text-cyan-400 hover:text-cyan-300 px-1"
+                  className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-1"
                 >
                   <Eye className="h-4 w-4 inline" />
                 </button>
@@ -210,7 +210,7 @@ export function ComprasPage() {
                   target="_blank"
                   rel="noreferrer"
                   title="Imprimir"
-                  className="text-slate-400 hover:text-slate-200 px-1"
+                  className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 px-1"
                 >
                   <Printer className="h-4 w-4 inline" />
                 </a>
@@ -220,7 +220,7 @@ export function ComprasPage() {
                   <button
                     onClick={() => setModalRecepcion(o)}
                     title="Registrar recepción"
-                    className="text-emerald-400 hover:text-emerald-300 px-1"
+                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 px-1"
                   >
                     <Package className="h-4 w-4 inline" />
                   </button>
@@ -231,7 +231,7 @@ export function ComprasPage() {
                   <button
                     onClick={() => setModalPago(o)}
                     title="Registrar pago"
-                    className="text-amber-400 hover:text-amber-300 px-1"
+                    className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 px-1"
                   >
                     <DollarSign className="h-4 w-4 inline" />
                   </button>
