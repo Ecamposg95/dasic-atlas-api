@@ -1423,7 +1423,7 @@ def obtener_detalle_orden(
         "enviada_at": orden.enviada_at.isoformat() if orden.enviada_at else None,
         "pdf_generado_at": orden.pdf_generado_at.isoformat() if orden.pdf_generado_at else None,
         "pdf_desactualizado": pdf_desactualizado,
-        "pdf_unificado": bool(orden.pdf_unificado),
+        "pdf_unificado": orden.pdf_unificado,
         "concepto_unificado": orden.concepto_unificado,
         "detalles": detalles,
     }

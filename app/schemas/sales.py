@@ -121,4 +121,6 @@ class OrdenVentaResponse(BaseModel):
     cotizacion_origen_id: Optional[int] = None
     observaciones: Optional[str] = None
     terminos_condiciones: Optional[str] = None
+    pdf_unificado: Optional[int] = None
+    concepto_unificado: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)

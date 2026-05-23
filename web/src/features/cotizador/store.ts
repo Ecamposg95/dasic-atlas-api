@@ -147,6 +147,11 @@ export const useCotizador = create<CotizadorState>((set) => ({
         nom_original: snapshot.nom,
         cost_original: snapshot.cost,
         max: p.stock_actual,
+        // Heredamos el proveedor principal del catálogo para que el
+        // Preview OC pueda agrupar la línea sin esperar a guardar la cot.
+        // Si el catálogo no tiene proveedor asignado, queda null → bucket
+        // "sin proveedor".
+        proveedor_sugerido_id: p.proveedor_principal_id ?? null,
         qty,
         utilidad,
         descuento: 0,

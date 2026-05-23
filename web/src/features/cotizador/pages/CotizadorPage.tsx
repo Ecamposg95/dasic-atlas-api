@@ -9,6 +9,7 @@ import {
   MessageSquare,
   FileOutput,
   Pencil,
+  Truck,
 } from 'lucide-react';
 import { HeaderCotizacion } from '../components/HeaderCotizacion';
 import { ProductSearch } from '../components/ProductSearch';
@@ -21,6 +22,7 @@ import { AtajosPopover } from '../components/AtajosPopover';
 import { PlantillasModal } from '../components/PlantillasModal';
 import { SuggestRelacionados } from '../components/SuggestRelacionados';
 import { DrawerBorradores } from '../components/DrawerBorradores';
+import { PreviewOCDrawer } from '../components/PreviewOCDrawer';
 import { ModalNotaLinea } from '../components/ModalNotaLinea';
 import { ModalTerminos } from '../components/ModalTerminos';
 import { ModalConceptoPDF } from '../components/ModalConceptoPDF';
@@ -218,6 +220,16 @@ export function CotizadorPage() {
             </button>
             <button
               type="button"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('cot:open-preview-oc'))
+              }
+              title="Preview de OCs que nacerán al guardar"
+              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+            >
+              <Truck className="h-3 w-3" /> Preview OC
+            </button>
+            <button
+              type="button"
               onClick={handleExport}
               title="Exportar borrador a JSON"
               className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
@@ -372,6 +384,7 @@ export function CotizadorPage() {
           disponibles incluso si el usuario cambia a "Historial" mientras hay un
           modal abierto. La apertura es vía window events. */}
       <DrawerBorradores />
+      <PreviewOCDrawer />
       <ModalNotaLinea />
       <ModalTerminos />
       <ModalConceptoPDF />

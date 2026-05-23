@@ -62,7 +62,7 @@ function KpiCard({
         <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">{label}</p>
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <CardTitle className={`text-2xl font-bold ${loading ? 'text-slate-600' : ''}`}>
+        <CardTitle className={`text-2xl font-bold ${loading ? 'text-slate-400 dark:text-slate-600' : ''}`}>
           {loading ? '—' : value}
         </CardTitle>
         {sub && (
@@ -238,12 +238,12 @@ export function DashboardPage() {
                   {!pipelineQ.isLoading && col && col.items.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {col.items.slice(0, 3).map((o) => (
-                        <li key={o.id} className="text-xs text-slate-400 truncate">
+                        <li key={o.id} className="text-xs text-slate-600 dark:text-slate-400 truncate">
                           {o.folio} · {o.cliente}
                         </li>
                       ))}
                       {col.count > 3 && (
-                        <li className="text-xs text-slate-600">+{col.count - 3} más</li>
+                        <li className="text-xs text-slate-400 dark:text-slate-600">+{col.count - 3} más</li>
                       )}
                     </ul>
                   )}
@@ -261,7 +261,7 @@ export function DashboardPage() {
           Alertas
         </h2>
         {alertasQ.isLoading ? (
-          <div className="text-slate-600 text-sm">Cargando alertas…</div>
+          <div className="text-slate-400 dark:text-slate-600 text-sm">Cargando alertas…</div>
         ) : alertItems.length === 0 ? (
           <p className="text-sm text-slate-500">Sin alertas activas.</p>
         ) : (
@@ -269,12 +269,12 @@ export function DashboardPage() {
             {alertItems.map((a) => (
               <div
                 key={a.key}
-                className="flex items-start gap-3 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2"
+                className="flex items-start gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2"
               >
                 <Badge variant={severityVariant(a.severity)} className="mt-0.5 shrink-0">
                   {severityLabel(a.severity)}
                 </Badge>
-                <span className="text-sm text-slate-300 flex-1 leading-snug">{a.text}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 leading-snug">{a.text}</span>
                 {a.link && (
                   <a
                     href={a.link}
@@ -305,17 +305,17 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4">
               {topsQ.isLoading ? (
-                <p className="text-slate-600 text-sm">Cargando…</p>
+                <p className="text-slate-400 dark:text-slate-600 text-sm">Cargando…</p>
               ) : !tops?.productos.length ? (
                 <p className="text-slate-500 text-sm">Sin datos</p>
               ) : (
                 <ol className="space-y-2">
                   {tops.productos.map((p, i) => (
                     <li key={p.id} className="flex items-start gap-2 text-sm">
-                      <span className="text-xs text-slate-600 w-4 pt-0.5">{i + 1}.</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-slate-200 truncate">{p.nombre}</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{p.nombre}</span>
                           {p.stock_riesgo && (
                             <Badge variant="rose">Stock bajo</Badge>
                           )}
@@ -344,21 +344,21 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="px-4 pb-4">
               {topsQ.isLoading ? (
-                <p className="text-slate-600 text-sm">Cargando…</p>
+                <p className="text-slate-400 dark:text-slate-600 text-sm">Cargando…</p>
               ) : !tops?.clientes.length ? (
                 <p className="text-slate-500 text-sm">Sin datos</p>
               ) : (
                 <ol className="space-y-2">
                   {tops.clientes.map((c, i) => (
                     <li key={c.id} className="flex items-start gap-2 text-sm">
-                      <span className="text-xs text-slate-600 w-4 pt-0.5">{i + 1}.</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-200 truncate">{c.empresa}</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200 truncate">{c.empresa}</p>
                         <p className="text-xs text-slate-500">
                           {fmtMoney(c.monto_mxn)} · {fmtInt(c.orden_count)} orden(es)
                         </p>
                         {c.saldo > 0 && (
-                          <p className="text-xs text-amber-400">Saldo: {fmtMoney(c.saldo)}</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-400">Saldo: {fmtMoney(c.saldo)}</p>
                         )}
                       </div>
                     </li>
@@ -379,16 +379,16 @@ export function DashboardPage() {
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 {topsQ.isLoading ? (
-                  <p className="text-slate-600 text-sm">Cargando…</p>
+                  <p className="text-slate-400 dark:text-slate-600 text-sm">Cargando…</p>
                 ) : !tops.vendedores.length ? (
                   <p className="text-slate-500 text-sm">Sin datos</p>
                 ) : (
                   <ol className="space-y-2">
                     {tops.vendedores.map((v, i) => (
                       <li key={v.id} className="flex items-start gap-2 text-sm">
-                        <span className="text-xs text-slate-600 w-4 pt-0.5">{i + 1}.</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-200">{v.nombre}</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-200">{v.nombre}</p>
                           <p className="text-xs text-slate-500">
                             {fmtMoney(v.monto_mxn)} · {fmtInt(v.orden_count)} venta(s)
                           </p>

@@ -14,6 +14,10 @@ export type Producto = {
   costo_compra: number;
   moneda_compra: 'MXN' | 'USD';
   stock_actual: number;
+  // FK al proveedor principal del catálogo. Lo usa el Preview OC para
+  // agrupar líneas de catálogo por proveedor sugerido en el cart. El
+  // backend (`ProductoBase`) ya lo expone en `/api/productos`.
+  proveedor_principal_id?: number | null;
 };
 
 export type Cliente = {
