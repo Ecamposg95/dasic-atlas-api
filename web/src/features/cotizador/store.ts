@@ -1,6 +1,19 @@
 import { create } from 'zustand';
 import type { CartItem, LineaNoSoportada, Moneda, OrdenVentaDetail, Producto } from './types';
 
+// Payload para crear una línea fantasma (sin SKU del catálogo).
+// proveedor_sugerido_id es opcional pero recomendado: sin él, la línea
+// cae en el bucket "sin proveedor" al generar OCs.
+export type AddFantasmaInput = {
+  descripcion: string;
+  sku_libre?: string;
+  costo: number;
+  moneda: Moneda;
+  proveedor_sugerido_id?: number | null;
+  utilidad?: number; // default 30
+  qty?: number;      // default 1
+};
+
 type CotizadorState = {
   // Modo:
   editingId: number | null;
@@ -50,6 +63,7 @@ type CotizadorState = {
 
   // Cart ops:
   addProducto: (p: Producto, qty?: number, utilidadOverride?: number) => void;
+  addLineaAdhoc: (input: AddFantasmaInput) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
@@ -101,9 +115,11 @@ export const useCotizador = create<CotizadorState>((set) => ({
 
   addProducto: (p, qty = 1, utilidadOverride) =>
     set((s) => {
-      // Si el producto ya está en el carrito, sumar cantidad en vez de duplicar.
-      // (No tocamos `utilidad` del existente — el override sólo aplica al primer add.)
-      const existente = s.cart.find((x) => x.producto_id === p.id);
+      // Cart-merge solo para líneas de catálogo del MISMO producto. Fantasmas
+      // (producto_id === null) nunca se mergean — cada fantasma es único.
+      const existente = s.cart.find(
+        (x) => x.tipo_linea === 'producto_catalogo' && x.producto_id === p.id,
+      );
       if (existente) {
         return {
           cart: s.cart.map((x) =>
@@ -121,6 +137,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         : 30;
       const nueva: CartItem = {
         uid: nextUid('nuevo'),
+        tipo_linea: 'producto_catalogo',
         producto_id: p.id,
         sku: snapshot.sku,
         nom: snapshot.nom,
@@ -130,6 +147,36 @@ export const useCotizador = create<CotizadorState>((set) => ({
         nom_original: snapshot.nom,
         cost_original: snapshot.cost,
         max: p.stock_actual,
+        qty,
+        utilidad,
+        descuento: 0,
+        entrega_min: null,
+        entrega_max: null,
+        entrega_unidad: null,
+        observaciones_linea: '',
+      };
+      return { cart: [...s.cart, nueva] };
+    }),
+
+  addLineaAdhoc: (input) =>
+    set((s) => {
+      const utilidad =
+        input.utilidad != null && Number.isFinite(input.utilidad) ? input.utilidad : 30;
+      const qty = input.qty ?? 1;
+      const sku = (input.sku_libre || '').trim() || '—';
+      const nueva: CartItem = {
+        uid: nextUid('fantasma'),
+        tipo_linea: 'producto_fantasma',
+        producto_id: null,
+        sku,
+        nom: input.descripcion,
+        cost: input.costo,
+        productCurrency: input.moneda,
+        sku_original: '',
+        nom_original: '',
+        cost_original: 0,
+        max: 0,
+        proveedor_sugerido_id: input.proveedor_sugerido_id ?? null,
         qty,
         utilidad,
         descuento: 0,
@@ -172,14 +219,17 @@ export const useCotizador = create<CotizadorState>((set) => ({
   hydrateFromOrden: (orden) =>
     set(() => {
       const monedaOrden = (orden.moneda?.toUpperCase() || 'MXN') as Moneda;
+      // Servicios siguen sin entrar al cart (banner ámbar). Fantasmas SÍ
+      // entran desde 2026-05-23.
       const noSoportadas: LineaNoSoportada[] = orden.detalles
-        .filter((d) => d.producto_id == null)
+        .filter((d) => d.servicio_id != null)
         .map((d) => ({
           detalle_id: d.id,
           descripcion: d.descripcion_libre || d.servicio?.nombre || '—',
           cantidad: d.cantidad,
         }));
-      const cart: CartItem[] = orden.detalles
+
+      const cartCatalogo: CartItem[] = orden.detalles
         .filter((d) => d.producto_id != null && d.producto != null)
         .map((d) => {
           const prod = d.producto!;
@@ -189,6 +239,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
           return {
             uid: `linea-${d.id}`,
             detalle_id: d.id,
+            tipo_linea: 'producto_catalogo' as const,
             producto_id: d.producto_id!,
             sku: d.sku_libre || skuCat || '—',
             nom: d.descripcion_libre || nomCat || '—',
@@ -209,6 +260,45 @@ export const useCotizador = create<CotizadorState>((set) => ({
             observaciones_linea: d.observaciones_linea || '',
           };
         });
+
+      // Fantasmas: producto_id NULL Y servicio_id NULL. La descripción viene
+      // de descripcion_libre; el SKU del sku_libre si lo hay.
+      const cartFantasmas: CartItem[] = orden.detalles
+        .filter((d) => d.producto_id == null && d.servicio_id == null)
+        .map((d) => ({
+          uid: `linea-${d.id}`,
+          detalle_id: d.id,
+          tipo_linea: 'producto_fantasma' as const,
+          producto_id: null,
+          sku: d.sku_libre || '—',
+          nom: d.descripcion_libre || '—',
+          cost: Number(d.costo_base_linea),
+          productCurrency: ((d.moneda_origen_linea || monedaOrden).toUpperCase()) as Moneda,
+          sku_original: '',
+          nom_original: '',
+          cost_original: 0,
+          max: 0,
+          // proveedor_sugerido_id no viene en OrdenVentaDetail (TODO backend).
+          // Por ahora null al hidratar; el usuario lo asigna desde el modal de
+          // editar fantasma o desde el módulo /spa/fantasmas.
+          proveedor_sugerido_id: null,
+          qty: d.cantidad,
+          utilidad: Number(d.utilidad_aplicada),
+          descuento: Number(d.descuento_aplicado),
+          entrega_min: d.entrega_min,
+          entrega_max: d.entrega_max,
+          entrega_unidad: (d.entrega_unidad === 'dias' || d.entrega_unidad === 'semanas'
+            ? d.entrega_unidad
+            : null) as 'dias' | 'semanas' | null,
+          observaciones_linea: d.observaciones_linea || '',
+        }));
+
+      // Preservar orden original de la cotización (por detalle.id ascendente).
+      const cart: CartItem[] = [...cartCatalogo, ...cartFantasmas].sort((a, b) => {
+        const ai = a.detalle_id ?? Number.MAX_SAFE_INTEGER;
+        const bi = b.detalle_id ?? Number.MAX_SAFE_INTEGER;
+        return ai - bi;
+      });
       return {
         editingId: orden.id,
         editingFolio: orden.folio,

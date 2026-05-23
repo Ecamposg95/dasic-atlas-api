@@ -42,9 +42,16 @@ export function PlantillasModal() {
       return;
     }
     try {
+      // Plantillas solo soportan líneas de catálogo (producto_id != null).
+      // Las fantasmas no se guardan en plantillas — son ad-hoc por naturaleza.
+      const lineasCatalogo = cart.filter((i): i is typeof i & { producto_id: number } => i.producto_id != null);
+      if (lineasCatalogo.length === 0) {
+        toast({ kind: 'error', title: 'Sin líneas guardables', description: 'Las plantillas solo soportan productos del catálogo. Agrega al menos uno.' });
+        return;
+      }
       await crear.mutateAsync({
         nombre: nombre.trim(),
-        lineas: cart.map((i) => ({
+        lineas: lineasCatalogo.map((i) => ({
           producto_id: i.producto_id,
           qty: i.qty,
           utilidad: i.utilidad,

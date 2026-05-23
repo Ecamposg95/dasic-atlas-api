@@ -25,6 +25,7 @@ import { ModalNotaLinea } from '../components/ModalNotaLinea';
 import { ModalTerminos } from '../components/ModalTerminos';
 import { ModalConceptoPDF } from '../components/ModalConceptoPDF';
 import { ModalPisarTC } from '../components/ModalPisarTC';
+import { AgregarFantasmaModal } from '../components/AgregarFantasmaModal';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
 import { useAtajos, type AtajoHandler } from '../hooks/useAtajos';
@@ -375,6 +376,7 @@ export function CotizadorPage() {
       <ModalTerminos />
       <ModalConceptoPDF />
       <ModalPisarTC />
+      <AgregarFantasmaModal />
       {tab === 'editor' && <AtajosPopover atajos={atajos} />}
     </div>
   );

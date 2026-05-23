@@ -50,22 +50,47 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
       ? (s.pdf_concepto_unificado || null)
       : null,
     pdf_concepto_enabled: s.pdf_concepto_enabled,
-    detalles: s.cart.map((i) => ({
-      producto_id: i.producto_id,
-      servicio_id: null,
-      cantidad: i.qty,
-      utilidad: i.utilidad,
-      descuento: i.descuento,
-      moneda_origen: i.productCurrency,
-      sku_libre: hayOverrideSku(i) ? i.sku : null,
-      descripcion_libre: hayOverrideNom(i) ? i.nom : null,
-      costo_unitario: hayOverrideCosto(i) ? i.cost : null,
-      tipo_linea: 'producto_catalogo' as const,
-      proveedor_sugerido_id: null,
-      entrega_min: i.entrega_min,
-      entrega_max: i.entrega_max,
-      entrega_unidad: i.entrega_unidad,
-      observaciones_linea: i.observaciones_linea || null,
-    })),
+    detalles: s.cart.map((i) => {
+      if (i.tipo_linea === 'producto_fantasma') {
+        // Fantasmas: producto_id NULL, sku/descripcion/costo SIEMPRE explícitos
+        // (no hay catálogo del cual derivarlos). proveedor_sugerido_id va
+        // adelante para que la línea cuente en sugerir-oc.
+        return {
+          producto_id: null,
+          servicio_id: null,
+          cantidad: i.qty,
+          utilidad: i.utilidad,
+          descuento: i.descuento,
+          moneda_origen: i.productCurrency,
+          sku_libre: i.sku && i.sku !== '—' ? i.sku : null,
+          descripcion_libre: i.nom,
+          costo_unitario: i.cost,
+          tipo_linea: 'producto_fantasma' as const,
+          proveedor_sugerido_id: i.proveedor_sugerido_id ?? null,
+          entrega_min: i.entrega_min,
+          entrega_max: i.entrega_max,
+          entrega_unidad: i.entrega_unidad,
+          observaciones_linea: i.observaciones_linea || null,
+        };
+      }
+      // Catálogo (default): producto_id set, libres solo si override.
+      return {
+        producto_id: i.producto_id,
+        servicio_id: null,
+        cantidad: i.qty,
+        utilidad: i.utilidad,
+        descuento: i.descuento,
+        moneda_origen: i.productCurrency,
+        sku_libre: hayOverrideSku(i) ? i.sku : null,
+        descripcion_libre: hayOverrideNom(i) ? i.nom : null,
+        costo_unitario: hayOverrideCosto(i) ? i.cost : null,
+        tipo_linea: 'producto_catalogo' as const,
+        proveedor_sugerido_id: null,
+        entrega_min: i.entrega_min,
+        entrega_max: i.entrega_max,
+        entrega_unidad: i.entrega_unidad,
+        observaciones_linea: i.observaciones_linea || null,
+      };
+    }),
   };
 }

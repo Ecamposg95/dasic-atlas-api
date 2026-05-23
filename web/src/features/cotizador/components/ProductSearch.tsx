@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Package, Sparkles } from 'lucide-react';
+import { Search, Package, Sparkles, Ghost } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { ApiError } from '@/lib/api';
 import { useProductosSearch } from '../hooks/useProductosSearch';
@@ -85,23 +85,38 @@ export function ProductSearch() {
         categoriaNombre={categoriaNombre}
         onCategoriaChange={setCategoriaNombre}
       />
-      <div className="relative">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-        <Input
-          ref={inputRef}
-          value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
-          placeholder='Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
-          className="pl-7 h-8 text-xs"
-          data-cot-search
-        />
-        {cantidadParseada != null && q.trim() && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded font-bold pointer-events-none flex items-center gap-1">
-            <Sparkles className="h-2.5 w-2.5" /> ×{cantidadParseada}
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+          <Input
+            ref={inputRef}
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+            placeholder='Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
+            className="pl-7 h-8 text-xs"
+            data-cot-search
+          />
+          {cantidadParseada != null && q.trim() && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded font-bold pointer-events-none flex items-center gap-1">
+              <Sparkles className="h-2.5 w-2.5" /> ×{cantidadParseada}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent('cot:open-add-fantasma', { detail: { initialDescripcion: '' } }),
+            )
+          }
+          title="Agregar producto que no está en el catálogo"
+          className="shrink-0 h-8 px-2.5 inline-flex items-center gap-1 text-[11px] font-medium rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
+        >
+          <Ghost className="h-3 w-3" />
+          <span className="hidden sm:inline">Fantasma</span>
+        </button>
       </div>
       {open && (
         <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700 rounded-md shadow-xl z-20">
@@ -112,7 +127,27 @@ export function ProductSearch() {
             </div>
           )}
           {!isLoading && items.length === 0 && (
-            <div className="px-2 py-3 text-[11px] text-slate-500 text-center">Sin coincidencias</div>
+            <div className="p-3 text-center space-y-2">
+              <div className="text-[11px] text-slate-500">Sin coincidencias en el catálogo</div>
+              {q.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent('cot:open-add-fantasma', {
+                        detail: { initialDescripcion: q.trim() },
+                      }),
+                    );
+                    setOpen(false);
+                    setQ('');
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
+                >
+                  <Ghost className="h-3 w-3" />
+                  Agregar como fantasma "{q.trim().length > 30 ? q.trim().slice(0, 30) + '…' : q.trim()}"
+                </button>
+              )}
+            </div>
           )}
           {items.map(({ producto: p }) => (
             <button key={p.id} type="button" onClick={() => onSelect(p)}

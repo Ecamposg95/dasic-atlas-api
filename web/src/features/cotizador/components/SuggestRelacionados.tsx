@@ -12,7 +12,11 @@ export function SuggestRelacionados() {
   const cart = useCotizador((s) => s.cart);
   const cliente_id = useCotizador((s) => s.cliente_id);
   const addProducto = useCotizador((s) => s.addProducto);
-  const ids = cart.map((c) => c.producto_id);
+  // Solo catálogo (fantasmas no tienen producto_id, no participan en
+  // sugerencias de "Suelen ir juntos" — el endpoint no las conoce).
+  const ids = cart
+    .map((c) => c.producto_id)
+    .filter((id): id is number => id != null);
   const { data } = useRelacionados(ids);
 
   if (cart.length === 0) return null;

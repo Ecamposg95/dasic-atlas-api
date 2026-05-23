@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { lineImporte, convertCost, resolveDirectionalTcs } from '../lib/calc';
@@ -47,10 +47,16 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
     setMenuOpen(false);
   }
 
+  const esFantasma = item.tipo_linea === 'producto_fantasma';
+
   return (
     <tr
       ref={rowRef}
-      className="border-b border-slate-800 hover:bg-slate-800/30 transition cursor-pointer"
+      className={`border-b border-slate-800 transition cursor-pointer ${
+        esFantasma
+          ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
+          : 'hover:bg-slate-800/30'
+      }`}
       onClick={(e) => {
         // No expandir cuando el click es sobre un input/select/button/textarea/anchor.
         const target = e.target as HTMLElement;
@@ -60,18 +66,30 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
     >
       <td className="p-2 align-top max-w-md">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-mono text-[11px] font-bold text-accent-glow">{item.sku}</span>
+          {esFantasma && (
+            <span
+              className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded flex items-center gap-0.5"
+              title="Producto fantasma — ad-hoc, no está en el catálogo"
+            >
+              <Ghost className="h-2.5 w-2.5" /> Fantasma
+            </span>
+          )}
+          <span
+            className={`font-mono text-[11px] font-bold ${esFantasma ? 'text-amber-300' : 'text-accent-glow'}`}
+          >
+            {item.sku}
+          </span>
           {item.productCurrency !== moneda && (
             <span className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded">
               {item.productCurrency} · TC {(item.productCurrency === 'USD' && moneda === 'MXN' ? tcs.tc_usd_a_mn : tcs.tc_mn_a_usd).toFixed(4)}
             </span>
           )}
-          {esOverride && (
+          {esOverride && !esFantasma && (
             <span className="text-[10px] font-bold bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded uppercase">
               <Pen className="inline h-2.5 w-2.5 mr-0.5" /> Editado
             </span>
           )}
-          <StockBadge stock={item.max} qty={item.qty} />
+          {!esFantasma && <StockBadge stock={item.max} qty={item.qty} />}
         </div>
         <div className="text-[11px] text-slate-300 mt-0.5">{item.nom}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">

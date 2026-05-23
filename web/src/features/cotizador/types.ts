@@ -36,13 +36,26 @@ export type CotizadorConfig = {
 export type Moneda = 'MXN' | 'USD';
 export type EntregaUnidad = 'dias' | 'semanas' | null;
 
+// Tipo de línea — corresponde al `_resolve_tipo_linea` del backend
+// (`app/routers/ventas.py:48`). 'servicio' todavía no entra al cart (banner
+// LineaNoSoportada). 'producto_fantasma' SÍ entra desde 2026-05-23.
+export type TipoLinea = 'producto_catalogo' | 'producto_fantasma';
+
 export type CartItem = {
   // UID local para keying en React. Si la línea viene del backend, usamos
-  // `linea-<detalle_id>`. Si se agregó en sesión, `nuevo-<id-producto>-<random>`.
+  // `linea-<detalle_id>`. Si se agregó en sesión, `nuevo-<id-producto>-<random>`
+  // o `fantasma-<random>`.
   uid: string;
 
-  // Snapshot del catálogo al agregar — usado para detectar overrides.
-  producto_id: number;
+  // Distingue catálogo de fantasma. Default 'producto_catalogo'.
+  tipo_linea: TipoLinea;
+
+  // Catálogo: ID del Producto. NULL si tipo_linea = 'producto_fantasma'.
+  producto_id: number | null;
+
+  // Snapshot del catálogo al agregar — usado para detectar overrides en
+  // productos del catálogo. Para fantasmas: sku_original/nom_original son ''
+  // y cost_original = 0; el chip 'Editado' no aplica.
   sku: string;
   nom: string;
   cost: number;
@@ -51,6 +64,10 @@ export type CartItem = {
   nom_original: string;
   cost_original: number;
   max: number; // stock_actual al momento de agregar (puede quedar stale)
+
+  // Solo para fantasmas: proveedor sugerido (opcional al crear, pero
+  // necesario para que sugerir-oc agrupe la línea con su proveedor real).
+  proveedor_sugerido_id?: number | null;
 
   // Campos editables por el usuario:
   qty: number;
@@ -65,8 +82,9 @@ export type CartItem = {
   detalle_id?: number;
 };
 
-// Una línea NO soportada en MVP (fantasma/servicio). Solo se preserva para mostrar
-// el banner; no entra en `cart`.
+// Línea NO soportada en el editor SPA. Antes incluía fantasmas; desde
+// 2026-05-23 fantasmas SÍ entran al cart, así que esto solo aplica a
+// servicios todavía. Banner ámbar arriba del cart bloquea Guardar.
 export type LineaNoSoportada = {
   detalle_id: number;
   descripcion: string;
@@ -120,19 +138,25 @@ export type OrdenVentaDetail = {
   }>;
 };
 
-// Payload para POST/PUT /api/ventas (subset MVP, solo líneas de catálogo).
+// Payload para POST/PUT /api/ventas. Soporta líneas de catálogo Y fantasmas.
+// Backend (`_resolve_tipo_linea` en ventas.py:48) distingue por la
+// combinación de producto_id/servicio_id/tipo_linea/descripcion_libre.
 export type DetalleOrdenCreate = {
-  producto_id: number;
+  producto_id: number | null;
   servicio_id: null;
   cantidad: number;
   utilidad: number;
   descuento: number;
   moneda_origen: Moneda;
+  // Para catálogo: sku_libre y descripcion_libre solo si hay override.
+  // Para fantasma: ambos son requeridos por el backend.
   sku_libre: string | null;
   descripcion_libre: string | null;
+  // Para catálogo: costo_unitario solo si override (vs catálogo).
+  // Para fantasma: requerido y > 0.
   costo_unitario: number | null;
-  tipo_linea: 'producto_catalogo';
-  proveedor_sugerido_id: null;
+  tipo_linea: 'producto_catalogo' | 'producto_fantasma';
+  proveedor_sugerido_id: number | null;
   entrega_min: number | null;
   entrega_max: number | null;
   entrega_unidad: EntregaUnidad;
