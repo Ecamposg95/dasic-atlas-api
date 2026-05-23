@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { useProductosSearch } from '../hooks/useProductosSearch';
-import type { CartItem, Producto } from '../types';
+import { ProveedorPicker } from './ProveedorPicker';
+import type { CartItem, Moneda, Producto } from '../types';
 
 export function EditLineModal() {
   const cart = useCotizador((s) => s.cart);
@@ -14,6 +15,8 @@ export function EditLineModal() {
   const [desc, setDesc] = useState('');
   const [sku, setSku] = useState('');
   const [cost, setCost] = useState('0');
+  const [moneda, setMoneda] = useState<Moneda>('MXN');
+  const [proveedorId, setProveedorId] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [showReplace, setShowReplace] = useState(false);
   const [searchQ, setSearchQ] = useState('');
@@ -35,6 +38,8 @@ export function EditLineModal() {
       setDesc(it.nom || '');
       setSku(it.sku || '');
       setCost(String(it.cost ?? 0));
+      setMoneda((it.productCurrency || 'MXN') as Moneda);
+      setProveedorId(it.proveedor_sugerido_id ?? null);
       setErr(null);
       setShowReplace(false);
       setSearchQ('');
@@ -45,6 +50,7 @@ export function EditLineModal() {
   }, []);
 
   const it: CartItem | undefined = cart.find((x) => x.uid === uid);
+  const esFantasma = !!it && it.tipo_linea === 'producto_fantasma';
   const esCatalogo = !!it && it.producto_id != null;
   const hayDatosCatalogo = !!it && (
     !!it.sku_original || !!it.nom_original || (it.cost_original != null && it.cost_original > 0)
@@ -69,7 +75,17 @@ export function EditLineModal() {
     const c = parseFloat(cost);
     if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
     if (!uid) return;
-    updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
+    if (esFantasma) {
+      updateLinea(uid, {
+        nom: desc.trim(),
+        sku: sku.trim() || it?.sku || '',
+        cost: c,
+        productCurrency: moneda,
+        proveedor_sugerido_id: proveedorId,
+      });
+    } else {
+      updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
+    }
     onClose();
   }
 
@@ -105,8 +121,14 @@ export function EditLineModal() {
           </button>
         </div>
 
-        <div className="inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 bg-cyan-900/30 text-cyan-300">
-          {esCatalogo ? `Catálogo · producto #${it.producto_id}` : 'Ad-hoc'}
+        <div className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 ${
+          esFantasma
+            ? 'bg-purple-900/30 text-purple-300'
+            : 'bg-cyan-900/30 text-cyan-300'
+        }`}>
+          {esFantasma
+            ? '👻 Fantasma'
+            : (esCatalogo ? `Catálogo · producto #${it.producto_id}` : 'Ad-hoc')}
         </div>
 
         {!showReplace ? (
@@ -130,7 +152,27 @@ export function EditLineModal() {
               </div>
             </div>
 
-            {esCatalogo && (
+            {esFantasma && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Moneda</label>
+                  <select
+                    value={moneda}
+                    onChange={(e) => setMoneda(e.target.value as Moneda)}
+                    className="w-full h-8 rounded border border-slate-700 bg-slate-900 text-xs px-2 focus:border-accent-glow outline-none"
+                  >
+                    <option value="MXN">MXN</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Proveedor sugerido</label>
+                  <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
+                </div>
+              </div>
+            )}
+
+            {!esFantasma && esCatalogo && (
               <div className="text-xs bg-amber-900/20 border border-amber-700/50 rounded p-2 mb-3 text-amber-300">
                 Override solo en esta cotización. El catálogo no se modifica.
               </div>
@@ -142,7 +184,7 @@ export function EditLineModal() {
               </div>
             )}
 
-            {esCatalogo && (
+            {!esFantasma && esCatalogo && (
               <div className="flex gap-2 mb-3">
                 <button
                   type="button"

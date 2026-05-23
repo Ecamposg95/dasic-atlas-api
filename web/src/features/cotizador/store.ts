@@ -278,10 +278,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
           nom_original: '',
           cost_original: 0,
           max: 0,
-          // proveedor_sugerido_id no viene en OrdenVentaDetail (TODO backend).
-          // Por ahora null al hidratar; el usuario lo asigna desde el modal de
-          // editar fantasma o desde el módulo /spa/fantasmas.
-          proveedor_sugerido_id: null,
+          proveedor_sugerido_id: d.proveedor_sugerido_id ?? null,
           qty: d.cantidad,
           utilidad: Number(d.utilidad_aplicada),
           descuento: Number(d.descuento_aplicado),

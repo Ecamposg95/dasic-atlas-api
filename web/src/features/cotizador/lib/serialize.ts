@@ -44,12 +44,15 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
     observaciones: s.observaciones || null,
     terminos_condiciones: s.terminos_condiciones || null,
     tipo: 'cotizacion',
-    // Sólo persistimos el texto si la opción está habilitada; si no, mandamos
-    // null para que el backend (cuando lo soporte) sepa que es un toggle off.
-    pdf_concepto_unificado: s.pdf_concepto_enabled
+    // Map store fields → backend schema (`app/schemas/sales.py:102-103`):
+    //   pdf_concepto_enabled (bool) → pdf_unificado (0|1 int)
+    //   pdf_concepto_unificado (string) → concepto_unificado (string|null)
+    // Cuando el toggle está OFF, concepto_unificado va null aunque el textarea
+    // tenga texto residual — el backend trata pdf_unificado=0 como "desglose".
+    pdf_unificado: s.pdf_concepto_enabled ? 1 : 0,
+    concepto_unificado: s.pdf_concepto_enabled
       ? (s.pdf_concepto_unificado || null)
       : null,
-    pdf_concepto_enabled: s.pdf_concepto_enabled,
     detalles: s.cart.map((i) => {
       if (i.tipo_linea === 'producto_fantasma') {
         // Fantasmas: producto_id NULL, sku/descripcion/costo SIEMPRE explícitos

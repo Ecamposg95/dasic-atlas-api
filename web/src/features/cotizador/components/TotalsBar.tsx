@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useGuardarCotizacion } from '../hooks/useCotizacion';
-import { computeTotals, resolveDirectionalTcs } from '../lib/calc';
+import { computeTotals, computeTotalsPorMoneda, resolveDirectionalTcs } from '../lib/calc';
 
 function fmtMoney(n: number, moneda: string) {
   return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,6 +26,16 @@ export function TotalsBar() {
 
   const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
   const { subtotal, iva, total } = computeTotals(cart, moneda, tcs, config.iva_rate);
+  const breakdown = useMemo(() => computeTotalsPorMoneda(cart), [cart]);
+  // Solo mostrar el desglose por moneda nativa cuando la cot tiene mix:
+  // hay líneas de las DOS monedas, o cualquier línea difiere de la moneda
+  // de la cotización. Si todo es de una sola moneda igual a la de la cot,
+  // el desglose sería redundante con el subtotal de arriba.
+  const hayMixDeMonedas = breakdown.mxn_count > 0 && breakdown.usd_count > 0;
+  const hayLineasEnOtraMoneda =
+    (moneda === 'MXN' && breakdown.usd_count > 0) ||
+    (moneda === 'USD' && breakdown.mxn_count > 0);
+  const showBreakdown = hayMixDeMonedas || hayLineasEnOtraMoneda;
 
   const noEditable = !!editingEstatus && editingEstatus.toUpperCase() !== 'COTIZACION';
   const tieneNoSoportadas = lineasNoSoportadas.length > 0;
@@ -134,6 +144,34 @@ export function TotalsBar() {
           {margenStats.criticas > 0
             ? `${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
             : `${margenStats.bajas} línea(s) con utilidad baja (<15 %)`}
+        </div>
+      )}
+      {showBreakdown && (
+        <div
+          className="mb-1 flex items-center gap-1.5 flex-wrap"
+          title="Subtotales antes de IVA, en la moneda nativa de cada línea (sin conversión por TC)"
+        >
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">
+            Por moneda nativa
+          </span>
+          {breakdown.usd_count > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-cyan-900/30 text-cyan-300 border-cyan-700/50">
+              USD {breakdown.usd_count} línea{breakdown.usd_count === 1 ? '' : 's'} · $
+              {breakdown.usd.toLocaleString('es-MX', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          )}
+          {breakdown.mxn_count > 0 && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-emerald-900/30 text-emerald-300 border-emerald-700/50">
+              MXN {breakdown.mxn_count} línea{breakdown.mxn_count === 1 ? '' : 's'} · $
+              {breakdown.mxn.toLocaleString('es-MX', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between gap-3 flex-wrap">

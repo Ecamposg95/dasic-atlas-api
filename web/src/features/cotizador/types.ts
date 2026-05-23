@@ -125,6 +125,7 @@ export type OrdenVentaDetail = {
     entrega_max: number | null;
     entrega_unidad: string | null;
     observaciones_linea: string | null;
+    proveedor_sugerido_id?: number | null;
     producto: {
       sku: string;
       sku_comercial: string | null;
@@ -176,12 +177,13 @@ export type OrdenVentaCreate = {
   observaciones: string | null;
   terminos_condiciones: string | null;
   tipo: 'cotizacion';
-  // Future-proof: el backend en `app/routers/ventas.py` (POST/PUT /api/ventas)
-  // todavía no acepta estos campos — Pydantic los ignora silenciosamente.
-  // Se envían para que cuando la columna exista en `orden_venta`, ya esté la
-  // pipa armada del front sin re-deploy.
-  pdf_concepto_unificado: string | null;
-  pdf_concepto_enabled: boolean;
+  // PDF unificado (sub-proyecto D). Nombres match con `app/schemas/sales.py:102-103`:
+  //   pdf_unificado: 0 = desglose por línea (default), 1 = concepto único
+  //   concepto_unificado: texto del concepto cuando pdf_unificado=1, null en caso contrario
+  // Nota interna: el store del SPA usa `pdf_concepto_enabled`/`pdf_concepto_unificado`
+  // como interfaz interna; el mapeo a los nombres del backend ocurre en `buildSavePayload`.
+  pdf_unificado: 0 | 1;
+  concepto_unificado: string | null;
   detalles: DetalleOrdenCreate[];
 };
 

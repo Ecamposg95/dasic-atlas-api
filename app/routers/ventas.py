@@ -1398,6 +1398,7 @@ def obtener_detalle_orden(
             "entrega_max": d.entrega_max,
             "entrega_unidad": d.entrega_unidad,
             "observaciones_linea": d.observaciones_linea,
+            "proveedor_sugerido_id": d.proveedor_sugerido_id,
         })
 
     pdf_desactualizado = (

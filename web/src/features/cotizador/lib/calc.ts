@@ -114,6 +114,47 @@ export function computeTotals(
 }
 
 /**
+ * Subtotales por moneda NATIVA — antes de IVA y SIN conversión por TC.
+ *
+ * Útil para que el usuario vea "esta cot tiene X líneas USD por $Y antes
+ * de convertir y Z líneas MXN por $W". El importe nativo por línea es:
+ *
+ *   importe_nativo = cost × qty × (1 + utilidad/100) × (1 − descuento/100)
+ *
+ * NO se aplica TC porque el objetivo es mostrar lo que el cliente cobra
+ * (o paga al proveedor) en la moneda original de cada línea, sin que el
+ * spread direccional distorsione el número.
+ */
+export type TotalsPorMoneda = {
+  mxn: number;
+  usd: number;
+  mxn_count: number;
+  usd_count: number;
+};
+
+export function computeTotalsPorMoneda(cart: CartItem[]): TotalsPorMoneda {
+  let mxn = 0;
+  let usd = 0;
+  let mxn_count = 0;
+  let usd_count = 0;
+  for (const item of cart) {
+    const importeNativo =
+      Number(item.cost) *
+      Number(item.qty) *
+      (1 + Number(item.utilidad) / 100) *
+      (1 - Number(item.descuento) / 100);
+    if (item.productCurrency === 'USD') {
+      usd += importeNativo;
+      usd_count += 1;
+    } else {
+      mxn += importeNativo;
+      mxn_count += 1;
+    }
+  }
+  return { mxn, usd, mxn_count, usd_count };
+}
+
+/**
  * Resuelve los 2 TCs direccionales a partir del DOF si no vienen seteados.
  * Mismo comportamiento que el helper backend `_resolve_directional_tcs`.
  */
