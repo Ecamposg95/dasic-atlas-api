@@ -28,10 +28,10 @@ function fmt(n: number): string {
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
-    <tr className="border-b border-slate-800">
+    <tr className="border-b border-slate-200 dark:border-slate-800">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-slate-100/40 dark:bg-slate-800/30 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -51,7 +51,7 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-slate-200">{title}</h2>
+      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
       {children}
     </section>
   );
@@ -111,16 +111,16 @@ function VentasMesSection({
           ) : (
             series.map((row) => (
               <DataTableRow key={row.mes}>
-                <td className="px-4 py-3 font-medium text-slate-200">
+                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
                   {row.label}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.cotizaciones_count}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   ${fmt(row.cotizaciones_mxn)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.ventas_count}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-accent-glow font-semibold">
@@ -174,24 +174,24 @@ function TopProductosSection({ dias }: { dias: number }) {
                   <span className="font-mono text-xs text-accent-glow">
                     {row.sku}
                   </span>
-                  <span className="ml-2 text-slate-300">{row.nombre}</span>
+                  <span className="ml-2 text-slate-700 dark:text-slate-300">{row.nombre}</span>
                   {row.marca && (
                     <span className="ml-1 text-slate-500 text-xs">
                       · {row.marca}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.cantidad_total}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.apariciones}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-200">
                   ${fmt(row.monto_mxn)}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="h-2 bg-slate-800 rounded overflow-hidden">
+                  <div className="h-2 bg-slate-100/40 dark:bg-slate-800/30 rounded overflow-hidden">
                     <div
                       className="h-full bg-cyan-500 rounded"
                       style={{
@@ -244,18 +244,18 @@ function TopClientesSection({ dias }: { dias: number }) {
             items.map((row, idx) => (
               <DataTableRow key={row.cliente_id}>
                 <td className="px-4 py-3 text-slate-500 text-xs">{idx + 1}</td>
-                <td className="px-4 py-3 text-slate-200">{row.empresa}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{row.empresa}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.orden_count}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-200">
                   ${fmt(row.monto_mxn)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-400">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-600 dark:text-slate-400">
                   ${fmt(row.saldo_actual)}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="h-2 bg-slate-800 rounded overflow-hidden">
+                  <div className="h-2 bg-slate-100/40 dark:bg-slate-800/30 rounded overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded"
                       style={{
@@ -320,19 +320,19 @@ function RankingVendedoresSection({ dias }: { dias: number }) {
               <DataTableRow key={row.usuario_id}>
                 <td className="px-4 py-3 text-slate-500 text-xs">{idx + 1}</td>
                 <td className="px-4 py-3">
-                  <span className="text-slate-200">{row.nombre}</span>
+                  <span className="text-slate-800 dark:text-slate-200">{row.nombre}</span>
                   <span className="ml-2 text-slate-500 text-xs">
                     {row.email}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
                   {row.orden_count}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-800 dark:text-slate-200">
                   ${fmt(row.monto_mxn)}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="h-2 bg-slate-800 rounded overflow-hidden">
+                  <div className="h-2 bg-slate-100/40 dark:bg-slate-800/30 rounded overflow-hidden">
                     <div
                       className="h-full bg-violet-500 rounded"
                       style={{
@@ -388,7 +388,7 @@ export function ReportesPage() {
               className={`px-3 py-1.5 rounded-lg text-sm transition ${
                 dias === r.value
                   ? 'bg-accent-glow/20 text-accent-glow font-semibold border border-accent-glow/40'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  : 'bg-slate-100/40 text-slate-600 hover:bg-slate-200/60 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
               }`}
             >
               {r.label}

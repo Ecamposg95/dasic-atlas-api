@@ -62,9 +62,9 @@ function KpiCard({ label, value, sub, Icon, color = 'text-accent-glow', loading 
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">{label}</p>
             {loading ? (
-              <div className="h-8 w-32 bg-slate-800 rounded animate-pulse" />
+              <div className="h-8 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
             ) : (
               <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
             )}
@@ -97,7 +97,7 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
 
   return (
     <DataTableRow>
-      <td className="px-4 py-3 text-slate-300 text-sm font-mono">
+      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm font-mono">
         {item.orden_venta_id ? (
           <a
             href={`/api/ventas/${item.orden_venta_id}/pdf`}
@@ -111,11 +111,11 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
           <span className="text-slate-500 italic">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-200 text-sm">{item.cliente ?? '—'}</td>
-      <td className="px-4 py-3 text-right tabular-nums text-slate-100 font-medium">
+      <td className="px-4 py-3 text-slate-800 dark:text-slate-200 text-sm">{item.cliente ?? '—'}</td>
+      <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100 font-medium">
         ${fmtMXN(item.saldo_pendiente)}
       </td>
-      <td className="px-4 py-3 text-slate-400 text-xs">{fmtFecha(item.fecha_vencimiento)}</td>
+      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{fmtFecha(item.fecha_vencimiento)}</td>
       <td className="px-4 py-3">{diasBadge}</td>
     </DataTableRow>
   );
@@ -127,10 +127,10 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-800">
+    <tr className="border-b border-slate-200 dark:border-slate-800">
       {Array.from({ length: 5 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -219,7 +219,7 @@ export function CuentasPorCobrarPage() {
           value={`$${fmtMXN(resumen?.total_vencido ?? 0)}`}
           sub="MXN"
           Icon={AlertTriangle}
-          color="text-rose-400"
+          color="text-rose-600 dark:text-rose-400"
           loading={loadingResumen}
         />
         <KpiCard
@@ -227,7 +227,7 @@ export function CuentasPorCobrarPage() {
           value={`$${fmtMXN(resumen?.por_vencer_7d ?? 0)}`}
           sub="MXN"
           Icon={Clock}
-          color="text-amber-400"
+          color="text-amber-600 dark:text-amber-400"
           loading={loadingResumen}
         />
         <KpiCard
@@ -235,14 +235,14 @@ export function CuentasPorCobrarPage() {
           value={String(resumen?.n_cargos_abiertos ?? 0)}
           sub="cargos abiertos"
           Icon={Users}
-          color="text-slate-300"
+          color="text-slate-700 dark:text-slate-300"
           loading={loadingResumen}
         />
       </div>
 
       {/* Tabla de vencimientos */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
           Vencimientos pendientes
         </h2>
         <DataTable>

@@ -62,6 +62,7 @@ from app.models.services import (  # noqa: F401
 from app.models.fantasmas import ProductoFantasma  # noqa: F401
 from app.models.precios import PrecioProveedor  # noqa: F401
 from app.models.remisiones import Remision, DetalleRemision  # noqa: F401
+from app.models.reportes_servicio import ReporteServicio  # noqa: F401
 
 __all__ = [
     "Base",
@@ -88,4 +89,5 @@ __all__ = [
     "ProductoFantasma",
     "PrecioProveedor",
     "Remision", "DetalleRemision",
+    "ReporteServicio",
 ]

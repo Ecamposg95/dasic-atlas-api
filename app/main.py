@@ -85,7 +85,7 @@ app.add_middleware(
 from app.routers import (  # noqa: E402
     admin, auth, catalogos, clientes, compras, cuentas_por_cobrar, dashboard,
     fantasmas, fx, gastos, inventario, precios, productos, remisiones, reportes,
-    sat, servicios, usuarios, ventas,
+    reportes_servicio_docs, sat, servicios, usuarios, ventas,
 )
 
 app.include_router(auth.router)
@@ -107,6 +107,7 @@ app.include_router(servicios.router)
 app.include_router(cuentas_por_cobrar.router)
 app.include_router(precios.router)
 app.include_router(remisiones.router)
+app.include_router(reportes_servicio_docs.router)
 
 # ---------------------------------------------------------------------------
 # Helper: obtener current_user opcional desde cookie (para SSR)
@@ -284,6 +285,11 @@ async def view_compras_spa(request: Request):
 
 @app.get("/remisiones", response_class=HTMLResponse, include_in_schema=False)
 async def view_remisiones_spa(request: Request):
+    return _serve_spa_protected(request)
+
+
+@app.get("/reportes-servicio-docs", response_class=HTMLResponse, include_in_schema=False)
+async def view_reportes_servicio_docs_spa(request: Request):
     return _serve_spa_protected(request)
 
 

@@ -372,6 +372,27 @@ _BACKFILL_DDL = [
     # quedan con 0 — semánticamente equivalente al comportamiento anterior.
     # ====================================================================
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS descuento_proveedor NUMERIC(5, 2) NOT NULL DEFAULT 0",
+
+    # ====================================================================
+    # 20260525_01 — reportes_servicio (acta de servicio ejecutado).
+    # Documento hijo de OrdenVenta análogo a remisiones, pero para líneas
+    # de tipo `servicio_catalogo`. Una cot con líneas servicio puede
+    # generar 1+ reportes (uno por intervención del técnico).
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS reportes_servicio (
+        id SERIAL PRIMARY KEY,
+        folio VARCHAR(40) UNIQUE,
+        orden_venta_id INTEGER NOT NULL REFERENCES ordenes_venta(id),
+        fecha_reporte TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        tecnico_nombre VARCHAR(150),
+        cliente_recibe_nombre VARCHAR(150),
+        recibido_at TIMESTAMP WITH TIME ZONE,
+        observaciones TEXT,
+        creado_por_id INTEGER REFERENCES usuarios(id),
+        creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_reportes_servicio_orden_venta_id ON reportes_servicio(orden_venta_id)",
+    "CREATE INDEX IF NOT EXISTS ix_reportes_servicio_folio ON reportes_servicio(folio)",
 ]
 
 

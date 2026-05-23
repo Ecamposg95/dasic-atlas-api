@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, BookMarked, Coins, FileClock, FileText, Ghost,
+  Activity, BarChart3, BookMarked, ClipboardCheck, Coins, FileClock, FileText, Ghost,
   LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Tags,
   Truck, UserCog, Users, Wallet, Wrench,
 } from 'lucide-react';
@@ -29,6 +29,7 @@ const SECTIONS: NavSection[] = [
       { to: '/spa/compras', label: 'Compras', Icon: ShoppingCart },
       { to: '/spa/fantasmas', label: 'Fantasmas', Icon: Ghost },
       { to: '/spa/remisiones', label: 'Remisiones', Icon: Truck },
+      { to: '/spa/reportes-servicio-docs', label: 'Reportes de servicio', Icon: ClipboardCheck },
       { to: '/spa/gastos', label: 'Gastos', Icon: Receipt },
     ],
   },

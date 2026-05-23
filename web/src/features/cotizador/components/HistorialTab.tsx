@@ -13,6 +13,7 @@ import {
   CalendarDays,
   GitBranch,
   Zap,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -273,6 +274,26 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
                           <Settings className="h-3 w-3 mr-1" /> Sugerir OC
                         </Button>
                       </>
+                    )}
+                    {(o.estatus === 'pendiente' || o.estatus === 'pagada') && (
+                      // El backend valida que la cot tenga al menos 1 línea de
+                      // servicio; si no, devuelve 400 y mostramos el detail.
+                      // Mantenemos el botón siempre visible en estatus venta
+                      // para no requerir un campo extra del backend.
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Generar reporte de servicio (acta)"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('cot:open-generar-reporte-servicio', {
+                              detail: { orden_venta_id: o.id, folio_cot: o.folio },
+                            }),
+                          )
+                        }
+                      >
+                        <ClipboardCheck className="h-3 w-3 mr-1" /> Reporte
+                      </Button>
                     )}
                   </div>
                 </td>

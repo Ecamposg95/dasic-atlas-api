@@ -102,6 +102,11 @@ from app.schemas.remisiones import (  # noqa: F401
     RemisionResponse,
 )
 
+from app.schemas.reportes_servicio import (  # noqa: F401
+    ReporteServicioCreate,
+    ReporteServicioResponse,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -135,4 +140,6 @@ __all__ = [
     "PrecioProveedorCreate", "PrecioProveedorResponse",
     # remisiones
     "DetalleRemisionInput", "RemisionCreate", "RemisionResponse",
+    # reportes_servicio (documento hijo de OrdenVenta)
+    "ReporteServicioCreate", "ReporteServicioResponse",
 ]

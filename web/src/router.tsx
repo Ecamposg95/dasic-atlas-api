@@ -29,6 +29,10 @@ const remisiones = lazyPage(() => import('@/features/remisiones/pages/Remisiones
 const gastos = lazyPage(() => import('@/features/gastos/pages/GastosPage'), 'GastosPage');
 const reportes = lazyPage(() => import('@/features/reportes/pages/ReportesPage'), 'ReportesPage');
 const reportesServicio = lazyPage(() => import('@/features/reportes_servicio/pages/ReportesServicioPage'), 'ReportesServicioPage');
+const reportesServicioDocs = lazyPage(
+  () => import('@/features/reportes_servicio_docs/pages/ReportesServicioDocsPage'),
+  'ReportesServicioDocsPage',
+);
 const cxc = lazyPage(() => import('@/features/cxc/pages/CuentasPorCobrarPage'), 'CuentasPorCobrarPage');
 const fx = lazyPage(() => import('@/features/fx/pages/FxPage'), 'FxPage');
 const precios = lazyPage(() => import('@/features/precios/pages/PreciosPage'), 'PreciosPage');
@@ -67,6 +71,7 @@ export const router = createBrowserRouter([
       { path: 'gastos', lazy: gastos },
       { path: 'reportes', lazy: reportes },
       { path: 'reportes-servicio', lazy: reportesServicio },
+      { path: 'reportes-servicio-docs', lazy: reportesServicioDocs },
       { path: 'cuentas-por-cobrar', lazy: cxc },
       { path: 'fx', lazy: fx },
       { path: 'precios', lazy: precios },
@@ -93,6 +98,7 @@ export const router = createBrowserRouter([
   legacyRoute('/gastos', gastos),
   legacyRoute('/reportes', reportes),
   legacyRoute('/reportes-servicio', reportesServicio),
+  legacyRoute('/reportes-servicio-docs', reportesServicioDocs),
   legacyRoute('/cuentas-por-cobrar', cxc),
   legacyRoute('/fx', fx),
   legacyRoute('/precios', precios),

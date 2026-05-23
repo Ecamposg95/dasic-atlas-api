@@ -56,8 +56,8 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
       <div className="space-y-3">
         {/* Categoría */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
-            Categoría <span className="text-rose-400">*</span>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            Categoría <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Select
             value={categoria}
@@ -75,8 +75,8 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
 
         {isNewCategoria && (
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Nueva categoría <span className="text-rose-400">*</span>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+              Nueva categoría <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
               value={categoriaCustom}
@@ -89,7 +89,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
 
         {/* Descripción */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Descripción</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
           <Input
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
@@ -100,8 +100,8 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
         {/* Monto + Moneda */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Monto <span className="text-rose-400">*</span>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+              Monto <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
               type="number"
@@ -113,7 +113,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Moneda</label>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
             <Select value={moneda} onChange={(e) => setMoneda(e.target.value)}>
               {MONEDAS.map((m) => (
                 <option key={m} value={m}>
@@ -125,7 +125,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
         </div>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-100 border border-rose-300 rounded p-2 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300">
             {err}
           </div>
         )}
