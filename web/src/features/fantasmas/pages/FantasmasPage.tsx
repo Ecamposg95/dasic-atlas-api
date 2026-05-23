@@ -211,7 +211,7 @@ export function FantasmasPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-4">
       <header className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Ghost className="h-5 w-5 text-violet-400" /> Productos Fantasma apilados
+          <Ghost className="h-5 w-5 text-violet-600 dark:text-violet-400" /> Productos Fantasma apilados
         </h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportarCSV}>
@@ -223,23 +223,34 @@ export function FantasmasPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        {ESTADOS.map((e) => (
-          <button
-            key={e.key}
-            type="button"
-            onClick={() => setFiltroEstado(filtroEstado === e.key ? '' : e.key)}
-            className={`p-3 rounded-lg border text-left transition ${
-              filtroEstado === e.key ? 'border-accent-glow ring-2 ring-accent-glow/40' : 'border-slate-800 hover:border-slate-700'
-            } bg-slate-900`}
-          >
-            <div className={`text-[10px] uppercase font-bold opacity-80`}>{e.label}</div>
-            <div className="text-2xl font-bold">{counts[e.key]}</div>
-          </button>
-        ))}
+        {ESTADOS.map((e) => {
+          const tone: Record<typeof e.variant, string> = {
+            amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+            cyan: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300',
+            emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300',
+            violet: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300',
+            slate: 'bg-slate-100 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300',
+          };
+          return (
+            <button
+              key={e.key}
+              type="button"
+              onClick={() => setFiltroEstado(filtroEstado === e.key ? '' : e.key)}
+              className={`p-3 rounded-lg border text-left transition ${
+                filtroEstado === e.key
+                  ? 'border-accent-glow ring-2 ring-accent-glow/40'
+                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+              } ${tone[e.variant]}`}
+            >
+              <div className="text-[10px] uppercase font-bold opacity-80">{e.label}</div>
+              <div className="text-2xl font-bold">{counts[e.key]}</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -249,7 +260,7 @@ export function FantasmasPage() {
         <select
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value as EstadoFantasma | '')}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
         >
           <option value="">Todos estados</option>
           {ESTADOS.map((e) => (
@@ -259,7 +270,7 @@ export function FantasmasPage() {
         <select
           value={filtroProveedor}
           onChange={(e) => setFiltroProveedor(e.target.value)}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm min-w-[160px]"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm min-w-[160px]"
         >
           <option value="">Todos proveedores</option>
           <option value="__sin_asignar__">— Sin asignar</option>
@@ -270,7 +281,7 @@ export function FantasmasPage() {
         <select
           value={filtroMoneda}
           onChange={(e) => setFiltroMoneda(e.target.value as Moneda | '')}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
         >
           <option value="">Cualquier moneda</option>
           <option value="MXN">MXN</option>
@@ -289,15 +300,15 @@ export function FantasmasPage() {
 
       {/* Bulk bar */}
       {seleccionados.size > 0 && (
-        <div className="bg-violet-900/20 border border-violet-700/50 rounded-lg p-3 flex items-center gap-3 text-sm">
-          <span className="font-medium text-violet-200">{seleccionados.size} seleccionado(s)</span>
-          <button onClick={onBulkDescartar} className="text-rose-400 hover:underline text-xs">
+        <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-300 dark:border-violet-700/50 rounded-lg p-3 flex items-center gap-3 text-sm">
+          <span className="font-medium text-violet-800 dark:text-violet-200">{seleccionados.size} seleccionado(s)</span>
+          <button onClick={onBulkDescartar} className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:underline text-xs">
             <X className="h-3 w-3 inline mr-0.5" /> Descartar
           </button>
-          <button onClick={() => setModalAsignar(true)} className="text-cyan-400 hover:underline text-xs">
+          <button onClick={() => setModalAsignar(true)} className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline text-xs">
             <Truck className="h-3 w-3 inline mr-0.5" /> Asignar proveedor
           </button>
-          <button onClick={clearSel} className="ml-auto text-slate-400 hover:underline text-xs">Cancelar</button>
+          <button onClick={clearSel} className="ml-auto text-slate-600 dark:text-slate-400 hover:underline text-xs">Cancelar</button>
         </div>
       )}
 
@@ -328,7 +339,7 @@ export function FantasmasPage() {
           )}
           {!isLoading && filtrados.length === 0 && (
             <DataTableEmpty colSpan={9}>
-              <Ghost className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <Ghost className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               Sin fantasmas que coincidan
             </DataTableEmpty>
           )}
@@ -342,14 +353,14 @@ export function FantasmasPage() {
                 />
               </td>
               <td className="p-3 max-w-xs">
-                <div className="truncate text-slate-200" title={f.descripcion}>{f.descripcion}</div>
+                <div className="truncate text-slate-800 dark:text-slate-200" title={f.descripcion}>{f.descripcion}</div>
               </td>
-              <td className="p-3 font-mono text-xs text-slate-400">{f.sku_libre || '—'}</td>
+              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{f.sku_libre || '—'}</td>
               <td className="p-3 text-xs">
                 {f.proveedor_sugerido_nombre || <span className="text-slate-500">Sin asignar</span>}
               </td>
               <td className="p-3 text-right">
-                <span className="inline-block min-w-[28px] px-1.5 py-0.5 rounded bg-slate-800 text-xs font-bold">
+                <span className="inline-block min-w-[28px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-xs font-bold">
                   {f.veces_solicitado}
                 </span>
               </td>
@@ -358,23 +369,23 @@ export function FantasmasPage() {
               <td className="p-3 text-xs text-slate-500">{fmtDate(f.ultimo_visto_en)}</td>
               <td className="p-3 text-right whitespace-nowrap">
                 <button onClick={() => setModalDetalle(f.id)} title="Ver detalle"
-                        className="text-cyan-400 hover:text-cyan-300 px-1">
+                        className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-1">
                   <Eye className="h-4 w-4 inline" />
                 </button>
                 {(f.estado === 'PENDIENTE' || f.estado === 'EN_OC' || f.estado === 'RECIBIDO') && (
                   <button onClick={() => setModalEditar(f)} title="Editar"
-                          className="text-slate-300 hover:text-slate-100 px-1">
+                          className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 px-1">
                     <Pen className="h-4 w-4 inline" />
                   </button>
                 )}
                 {f.estado === 'PENDIENTE' && (
                   <>
                     <button onClick={() => onPromover(f)} title="Promover a catálogo"
-                            className="text-violet-400 hover:text-violet-300 px-1">
+                            className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 px-1">
                       <ArrowUp className="h-4 w-4 inline" />
                     </button>
                     <button onClick={() => onDescartar(f)} title="Descartar"
-                            className="text-rose-400 hover:text-rose-300 px-1">
+                            className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 px-1">
                       <X className="h-4 w-4 inline" />
                     </button>
                   </>
@@ -437,8 +448,8 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
 
   return (
     <ModalShell title="Detalle fantasma" onClose={onClose}>
-      {err && <div className="text-rose-400 text-sm">{err}</div>}
-      {!d && !err && <div className="text-slate-400 text-sm">Cargando…</div>}
+      {err && <div className="text-rose-600 dark:text-rose-400 text-sm">{err}</div>}
+      {!d && !err && <div className="text-slate-600 dark:text-slate-400 text-sm">Cargando…</div>}
       {d && (
         <div className="text-sm space-y-2">
           <div><span className="text-slate-500">Descripción:</span> {d.descripcion}</div>
@@ -450,7 +461,7 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
             <div><span className="text-slate-500">Creado:</span> {fmtDate(d.creado_en)}</div>
             <div><span className="text-slate-500">Actividad:</span> {fmtDate(d.ultimo_visto_en)}</div>
           </div>
-          <hr className="border-slate-800" />
+          <hr className="border-slate-200 dark:border-slate-800" />
           <div>
             <div className="font-medium mb-1">Cotizaciones donde aparece ({d.cotizaciones.length}):</div>
             {d.cotizaciones.length === 0 ? (
@@ -459,9 +470,9 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
               <ul className="text-xs space-y-1">
                 {d.cotizaciones.map((c) => (
                   <li key={c.id}>
-                    <span className="font-mono text-cyan-400">{c.folio}</span>
+                    <span className="font-mono text-cyan-600 dark:text-cyan-400">{c.folio}</span>
                     <span className="text-slate-500"> ({c.estatus})</span>
-                    <span className="text-slate-400"> ×{c.cantidad}</span>
+                    <span className="text-slate-600 dark:text-slate-400"> ×{c.cantidad}</span>
                   </li>
                 ))}
               </ul>
@@ -505,45 +516,45 @@ function EditarModal({
 
   return (
     <ModalShell title="Editar fantasma" onClose={onClose}>
-      <label className="block text-xs text-slate-400 mb-1">Descripción</label>
+      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
       <textarea
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
         rows={3}
-        className="w-full text-sm rounded border border-slate-700 bg-slate-900 px-2 py-1.5 mb-3"
+        className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 mb-3"
       />
-      <label className="block text-xs text-slate-400 mb-1">SKU</label>
+      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU</label>
       <Input value={sku} onChange={(e) => setSku(e.target.value)} className="mb-3" />
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Costo ref</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Costo ref</label>
           <Input type="number" step="0.01" value={costo} onChange={(e) => setCosto(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Moneda</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
           <select
             value={moneda}
             onChange={(e) => setMoneda(e.target.value as Moneda)}
-            className="w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm"
+            className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
           >
             <option value="MXN">MXN</option>
             <option value="USD">USD</option>
           </select>
         </div>
       </div>
-      <label className="block text-xs text-slate-400 mb-1">Proveedor sugerido</label>
+      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor sugerido</label>
       <select
         value={provId}
         onChange={(e) => setProvId(e.target.value)}
-        className="w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm mb-3"
+        className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm mb-3"
       >
         <option value="">— Sin asignar —</option>
         {proveedores.map((p) => (
           <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
         ))}
       </select>
-      {err && <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 mb-3 text-rose-300">{err}</div>}
-      <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+      {err && <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 mb-3 text-rose-700 dark:text-rose-300">{err}</div>}
+      <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button size="sm" onClick={onSubmit} disabled={busy}>
           {busy ? 'Guardando…' : 'Guardar'}
@@ -590,14 +601,14 @@ function AsignarProveedorModal({
       <select
         value={provId}
         onChange={(e) => setProvId(e.target.value)}
-        className="w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm mb-3"
+        className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm mb-3"
       >
         <option value="">— Selecciona —</option>
         {proveedores.map((p) => (
           <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
         ))}
       </select>
-      <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+      <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button size="sm" onClick={onSubmit} disabled={busy}>
           {busy ? 'Asignando…' : 'Asignar'}
@@ -612,13 +623,13 @@ function ModalShell({
 }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-100">
+          <button type="button" onClick={onClose} className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -96,7 +96,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
         variant="ghost"
         size="icon"
         title="Ver PDF"
-        className="h-7 w-7 text-slate-400 hover:text-slate-100"
+        className="h-7 w-7 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
         onClick={() => window.open(`/api/ventas/${item.id}/pdf`, '_blank', 'noreferrer')}
       >
         <FileText className="h-3.5 w-3.5" />
@@ -108,7 +108,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
           variant="ghost"
           size="icon"
           title="Editar cotización"
-          className="h-7 w-7 text-slate-400 hover:text-slate-100"
+          className="h-7 w-7 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
           onClick={() => {
             window.location.href = `/ventas/cotizador?edit=${item.id}`;
           }}
@@ -123,7 +123,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
           variant="ghost"
           size="icon"
           title="Recotizar (nueva versión)"
-          className="h-7 w-7 text-slate-400 hover:text-cyan-300"
+          className="h-7 w-7 text-slate-600 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-300"
           disabled={isBusy}
           onClick={() => onRecotizar(item.id)}
         >
@@ -141,7 +141,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
           variant="ghost"
           size="icon"
           title="Convertir a venta"
-          className="h-7 w-7 text-slate-400 hover:text-emerald-300"
+          className="h-7 w-7 text-slate-600 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300"
           disabled={isBusy}
           onClick={() => onConvertir(item)}
         >
@@ -155,7 +155,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
           variant="ghost"
           size="icon"
           title="Cancelar cotización"
-          className="h-7 w-7 text-slate-400 hover:text-rose-400"
+          className="h-7 w-7 text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400"
           disabled={isBusy}
           onClick={() => onCancelar(item)}
         >
@@ -293,7 +293,7 @@ export function SeguimientoPage() {
 
         {/* Error banner */}
         {showError && (
-          <div className="text-sm bg-rose-900/20 border border-rose-700/50 text-rose-300 rounded-lg p-3">
+          <div className="text-sm bg-rose-100/60 border border-rose-300 text-rose-700 dark:bg-rose-900/20 dark:border-rose-700/50 dark:text-rose-300 rounded-lg p-3">
             {apiError?.detail ?? 'Error al cargar el historial.'}
           </div>
         )}
@@ -310,7 +310,7 @@ export function SeguimientoPage() {
           <select
             value={estatusFilter}
             onChange={(e) => setEstatusFilter(e.target.value as EstatusFilter)}
-            className="text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 focus:border-accent-glow outline-none"
+            className="text-sm rounded-md border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:border-accent-glow outline-none"
           >
             {ESTATUS_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
@@ -322,7 +322,7 @@ export function SeguimientoPage() {
           <select
             value={vencimientoFilter}
             onChange={(e) => setVencimientoFilter(e.target.value as VencimientoFilter)}
-            className="text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 focus:border-accent-glow outline-none"
+            className="text-sm rounded-md border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:border-accent-glow outline-none"
           >
             {VENCIMIENTO_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
@@ -340,7 +340,7 @@ export function SeguimientoPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-200 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-800 rounded-lg p-4">
             <Loader2 className="h-4 w-4 animate-spin" />
             Cargando historial…
           </div>
@@ -376,7 +376,7 @@ export function SeguimientoPage() {
                     <DataTableRow key={item.id}>
                       {/* Folio + badge versión */}
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-slate-100">{item.folio}</span>
+                        <span className="font-mono text-xs text-slate-900 dark:text-slate-100">{item.folio}</span>
                         {item.version > 1 && (
                           <Badge variant="amber" className="ml-1.5">
                             v{item.version}
@@ -385,19 +385,19 @@ export function SeguimientoPage() {
                       </td>
 
                       {/* Cliente */}
-                      <td className="px-4 py-3 text-sm text-slate-300 max-w-[180px] truncate">
+                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 max-w-[180px] truncate">
                         {item.cliente}
                       </td>
 
                       {/* Fecha */}
-                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
                         {formatDate(item.fecha)}
                       </td>
 
                       {/* Vencimiento */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {item.fecha_vencimiento == null ? (
-                          <span className="text-xs text-slate-600">—</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-600">—</span>
                         ) : item.esta_vencida ? (
                           <Badge variant="rose">Vencida</Badge>
                         ) : (
@@ -413,7 +413,7 @@ export function SeguimientoPage() {
                       </td>
 
                       {/* Total */}
-                      <td className="px-4 py-3 text-right text-sm font-mono text-slate-100 whitespace-nowrap">
+                      <td className="px-4 py-3 text-right text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">
                         {formatTotal(item)}
                       </td>
 
