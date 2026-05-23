@@ -98,6 +98,11 @@ class DetalleOrden(Base):
     precio_unitario = Column(DECIMAL(10, 2), nullable=False)
     utilidad_aplicada = Column(DECIMAL(10, 2), default=0.00)
     descuento_aplicado = Column(DECIMAL(10, 2), default=0.00)
+    # Descuento que el PROVEEDOR le da a Dasic (reduce costo OC). Match a
+    # CotProveedor!H6 del Excel V_03. Independiente de `descuento_aplicado`
+    # (que es el descuento al CLIENTE — match a N6). Default 0 = sin descuento
+    # del proveedor.
+    descuento_proveedor = Column(DECIMAL(5, 2), nullable=False, default=0)
     subtotal = Column(DECIMAL(12, 2), nullable=False)
 
     tipo_linea = Column(String(20), nullable=False, default="producto_catalogo")

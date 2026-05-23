@@ -75,8 +75,9 @@ export type CartItem = {
 
   // Campos editables por el usuario:
   qty: number;
-  utilidad: number;       // 0-99 (porcentaje)
-  descuento: number;      // 0-100 (porcentaje)
+  utilidad: number;             // 0-99 (porcentaje)
+  descuento: number;            // 0-100 (porcentaje) — descuento al CLIENTE (Excel N6)
+  descuento_proveedor: number;  // 0-100 (porcentaje) — descuento del PROVEEDOR a Dasic (Excel H6)
   entrega_min: number | null;
   entrega_max: number | null;
   entrega_unidad: EntregaUnidad;
@@ -124,6 +125,7 @@ export type OrdenVentaDetail = {
     cantidad: number;
     utilidad_aplicada: number | string;
     descuento_aplicado: number | string;
+    descuento_proveedor?: number | string | null;
     tipo_linea: string;
     entrega_min: number | null;
     entrega_max: number | null;
@@ -152,6 +154,7 @@ export type DetalleOrdenCreate = {
   cantidad: number;
   utilidad: number;
   descuento: number;
+  descuento_proveedor: number;
   moneda_origen: Moneda;
   // Para catálogo: sku_libre y descripcion_libre solo si hay override.
   // Para fantasma: ambos son requeridos por el backend.

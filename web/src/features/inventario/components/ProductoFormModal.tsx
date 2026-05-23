@@ -15,7 +15,7 @@ type Props = {
   onClose: () => void;
 };
 
-const SELECT_CLS = 'w-full h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-glow/40';
+const SELECT_CLS = 'w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-glow/40';
 
 export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Props) {
   const isEdit = producto != null;
@@ -123,11 +123,11 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Identificación</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">SKU interno</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU interno</label>
               <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU-001" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">SKU comercial</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU comercial</label>
               <Input value={skuComercial} onChange={(e) => setSkuComercial(e.target.value)} placeholder="SKU-COM-001" />
             </div>
           </div>
@@ -136,11 +136,11 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         <section>
           <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Nombre *</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Nombre *</label>
               <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del producto" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Descripción</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
               <Textarea
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
@@ -156,7 +156,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Clasificación</h4>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Marca</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Marca</label>
               <select value={marcaId} onChange={(e) => setMarcaId(e.target.value)} className={SELECT_CLS}>
                 <option value="">— Sin marca —</option>
                 {marcas.map((m) => (
@@ -165,11 +165,11 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Categoría</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Categoría</label>
               <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Ej. Lubricantes" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Unidad</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Unidad</label>
               <Input value={unidad} onChange={(e) => setUnidad(e.target.value)} placeholder="PZA" />
             </div>
           </div>
@@ -179,9 +179,9 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               type="checkbox"
               checked={esServicio}
               onChange={(e) => setEsServicio(e.target.checked)}
-              className="rounded border-slate-600 bg-slate-800"
+              className="rounded border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-800"
             />
-            <label htmlFor="es_servicio" className="text-sm text-slate-300 cursor-pointer">
+            <label htmlFor="es_servicio" className="text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
               Es servicio (no gestiona stock)
             </label>
           </div>
@@ -192,7 +192,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Stock</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Stock actual</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Stock actual</label>
               <Input
                 type="number"
                 value={stockActual}
@@ -201,7 +201,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Stock mínimo</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Stock mínimo</label>
               <Input
                 type="number"
                 value={stockMinimo}
@@ -217,7 +217,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Costos y precios</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Costo de compra *</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Costo de compra *</label>
               <Input
                 type="number"
                 step="0.01"
@@ -227,7 +227,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Moneda compra</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda compra</label>
               <select value={monedaCompra} onChange={(e) => setMonedaCompra(e.target.value as Moneda)} className={SELECT_CLS}>
                 <option value="MXN">MXN</option>
                 <option value="USD">USD</option>
@@ -236,7 +236,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           </div>
           <div className="grid grid-cols-3 gap-3 mt-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Precio público</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Precio público</label>
               <Input
                 type="number"
                 step="0.01"
@@ -246,7 +246,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Precio mayorista</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Precio mayorista</label>
               <Input
                 type="number"
                 step="0.01"
@@ -256,7 +256,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Precio distribuidor</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Precio distribuidor</label>
               <Input
                 type="number"
                 step="0.01"
@@ -273,7 +273,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Proveedores y logística</h4>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Proveedor principal</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor principal</label>
               <select value={provPrincipalId} onChange={(e) => setProvPrincipalId(e.target.value)} className={SELECT_CLS}>
                 <option value="">— Sin asignar —</option>
                 {proveedores.map((p) => (
@@ -282,7 +282,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Proveedor alterno</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor alterno</label>
               <select value={provAlternoId} onChange={(e) => setProvAlternoId(e.target.value)} className={SELECT_CLS}>
                 <option value="">— Sin asignar —</option>
                 {proveedores.map((p) => (
@@ -292,7 +292,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
             </div>
           </div>
           <div className="mt-3">
-            <label className="block text-xs text-slate-400 mb-1">Tiempo de entrega (días)</label>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Tiempo de entrega (días)</label>
             <Input
               type="number"
               value={tiempoEntrega}
@@ -304,7 +304,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         </section>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300 rounded p-2">
             {err}
           </div>
         )}

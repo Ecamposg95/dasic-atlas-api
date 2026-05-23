@@ -21,6 +21,9 @@ class DetalleOrdenCreate(BaseModel):
     cantidad: int = Field(..., gt=0)
     utilidad: Decimal = Field(default=Decimal("0"), ge=0, lt=100)
     descuento: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    # Descuento del proveedor a Dasic (reduce costo OC). Independiente del
+    # `descuento` arriba (que es el descuento al cliente). Match Excel H6.
+    descuento_proveedor: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     moneda_origen: Optional[str] = Field(default=None, min_length=3, max_length=3)
     # Productos fantasma / servicios ad-hoc
     sku_libre: Optional[str] = Field(default=None, max_length=80)
@@ -69,6 +72,7 @@ class DetalleOrdenResponse(BaseModel):
     precio_unitario: Decimal
     utilidad_aplicada: Decimal
     descuento_aplicado: Decimal
+    descuento_proveedor_aplicado: Optional[Decimal] = None
     subtotal: Decimal
     tipo_linea: Optional[str] = "producto_catalogo"
     proveedor_sugerido_id: Optional[int] = None

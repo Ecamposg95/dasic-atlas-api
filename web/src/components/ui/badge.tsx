@@ -7,13 +7,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-slate-800 text-slate-200',
-        cyan: 'border-cyan-700/50 bg-cyan-900/30 text-cyan-300',
-        amber: 'border-amber-700/50 bg-amber-900/30 text-amber-300',
-        emerald: 'border-emerald-700/50 bg-emerald-900/30 text-emerald-300',
-        rose: 'border-rose-700/50 bg-rose-900/30 text-rose-300',
-        violet: 'border-violet-700/50 bg-violet-900/30 text-violet-300',
-        slate: 'border-slate-700 bg-slate-800/50 text-slate-400',
+        default: 'border-transparent bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
+        cyan: 'border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-700/50 dark:bg-cyan-900/30 dark:text-cyan-300',
+        amber: 'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300',
+        emerald: 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-300',
+        rose: 'border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700/50 dark:bg-rose-900/30 dark:text-rose-300',
+        violet: 'border-violet-300 bg-violet-100 text-violet-700 dark:border-violet-700/50 dark:bg-violet-900/30 dark:text-violet-300',
+        slate: 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
       },
     },
     defaultVariants: { variant: 'default' },

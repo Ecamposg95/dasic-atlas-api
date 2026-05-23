@@ -155,6 +155,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         qty,
         utilidad,
         descuento: 0,
+        descuento_proveedor: 0,
         entrega_min: null,
         entrega_max: null,
         entrega_unidad: null,
@@ -185,6 +186,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         qty,
         utilidad,
         descuento: 0,
+        descuento_proveedor: 0,
         entrega_min: null,
         entrega_max: null,
         entrega_unidad: null,
@@ -257,6 +259,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
             qty: d.cantidad,
             utilidad: Number(d.utilidad_aplicada),
             descuento: Number(d.descuento_aplicado),
+            descuento_proveedor: Number(d.descuento_proveedor ?? 0),
             entrega_min: d.entrega_min,
             entrega_max: d.entrega_max,
             entrega_unidad: (d.entrega_unidad === 'dias' || d.entrega_unidad === 'semanas'
@@ -287,6 +290,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
           qty: d.cantidad,
           utilidad: Number(d.utilidad_aplicada),
           descuento: Number(d.descuento_aplicado),
+          descuento_proveedor: Number(d.descuento_proveedor ?? 0),
           entrega_min: d.entrega_min,
           entrega_max: d.entrega_max,
           entrega_unidad: (d.entrega_unidad === 'dias' || d.entrega_unidad === 'semanas'

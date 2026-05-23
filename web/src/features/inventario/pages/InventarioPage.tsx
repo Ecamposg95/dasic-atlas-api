@@ -21,7 +21,7 @@ import { AjusteStockModal } from '../components/AjusteStockModal';
 import { ProductoFormModal } from '../components/ProductoFormModal';
 import type { Producto } from '../types';
 
-const SELECT_CLS = 'h-10 rounded-md border border-slate-700 bg-slate-900 px-2 text-sm';
+const SELECT_CLS = 'h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm';
 
 function fmtMoney(n: number | undefined | null, moneda?: string) {
   if (n == null) return '—';
@@ -133,7 +133,7 @@ export function InventarioPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -160,12 +160,12 @@ export function InventarioPage() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <label className="flex items-center gap-1.5 text-sm text-slate-300 cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={soloBajoStock}
             onChange={(e) => setSoloBajoStock(e.target.checked)}
-            className="rounded border-slate-600 bg-slate-800"
+            className="rounded border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-800"
           />
           Solo bajo stock
         </label>
@@ -197,35 +197,35 @@ export function InventarioPage() {
           )}
           {!isLoading && filtrados.length === 0 && (
             <DataTableEmpty colSpan={isAdmin ? 9 : 8}>
-              <Package className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <Package className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               Sin productos que coincidan con los filtros
             </DataTableEmpty>
           )}
           {filtrados.map((p) => (
             <DataTableRow key={p.id}>
-              <td className="p-3 font-mono text-xs text-slate-400">{p.sku ?? '—'}</td>
-              <td className="p-3 font-mono text-xs text-slate-400">{p.sku_comercial ?? '—'}</td>
+              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
+              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{p.sku_comercial ?? '—'}</td>
               <td className="p-3 max-w-xs">
-                <div className="truncate text-slate-200 font-medium" title={p.nombre}>
+                <div className="truncate text-slate-800 dark:text-slate-200 font-medium" title={p.nombre}>
                   {p.nombre}
                 </div>
               </td>
-              <td className="p-3 text-xs text-slate-300">{p.marca ?? '—'}</td>
-              <td className="p-3 text-xs text-slate-300">{p.categoria ?? '—'}</td>
+              <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.marca ?? '—'}</td>
+              <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.categoria ?? '—'}</td>
               <td className="p-3 text-right">{stockBadge(p)}</td>
               {isAdmin && (
-                <td className="p-3 text-right font-mono text-xs text-slate-300">
+                <td className="p-3 text-right font-mono text-xs text-slate-700 dark:text-slate-300">
                   {fmtMoney(p.costo_compra, p.moneda_compra)}
                 </td>
               )}
-              <td className="p-3 text-right font-mono text-xs text-slate-300">
+              <td className="p-3 text-right font-mono text-xs text-slate-700 dark:text-slate-300">
                 {fmtMoney(p.precio_publico)}
               </td>
               <td className="p-3 text-right whitespace-nowrap">
                 <button
                   onClick={() => setModalEditar(p)}
                   title="Editar"
-                  className="text-slate-300 hover:text-slate-100 px-1"
+                  className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 px-1"
                 >
                   <Pencil className="h-4 w-4 inline" />
                 </button>
@@ -233,7 +233,7 @@ export function InventarioPage() {
                   <button
                     onClick={() => setModalAjuste(p)}
                     title="Ajustar stock"
-                    className="text-cyan-400 hover:text-cyan-300 px-1"
+                    className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-1"
                   >
                     <Sliders className="h-4 w-4 inline" />
                   </button>
@@ -242,7 +242,7 @@ export function InventarioPage() {
                   <button
                     onClick={() => onDelete(p)}
                     title="Eliminar"
-                    className="text-rose-400 hover:text-rose-300 px-1"
+                    className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 px-1"
                     disabled={deleteMut.isPending}
                   >
                     <Trash2 className="h-4 w-4 inline" />

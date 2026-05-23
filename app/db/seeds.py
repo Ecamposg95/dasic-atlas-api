@@ -364,6 +364,14 @@ _BACKFILL_DDL = [
           SET tc_mn_a_usd = COALESCE(tc_mn_a_usd, GREATEST(tipo_cambio - 1, 0.000001)),
               tc_usd_a_mn = COALESCE(tc_usd_a_mn, tipo_cambio + 1)
         WHERE tc_mn_a_usd IS NULL OR tc_usd_a_mn IS NULL""",
+
+    # ====================================================================
+    # 20260524_01 — descuento_proveedor en detalles_orden (Excel V_03 H6).
+    # Separa el descuento al cliente (descuento_aplicado, N6) del descuento
+    # del proveedor a Dasic (descuento_proveedor, H6). Filas existentes
+    # quedan con 0 — semánticamente equivalente al comportamiento anterior.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS descuento_proveedor NUMERIC(5, 2) NOT NULL DEFAULT 0",
 ]
 
 

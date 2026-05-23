@@ -69,18 +69,18 @@ export function AjusteStockModal({ producto, onClose }: Props) {
     <Modal title={`Ajustar stock — ${producto.nombre}`} onClose={onClose} size="sm">
       <div className="space-y-4">
         {/* Resumen actual */}
-        <div className="grid grid-cols-2 gap-3 p-3 bg-slate-800/50 rounded-lg text-sm">
+        <div className="grid grid-cols-2 gap-3 p-3 bg-slate-100/60 dark:bg-slate-800/50 rounded-lg text-sm">
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Stock actual</div>
-            <div className="text-xl font-bold text-slate-200">{producto.stock_actual}</div>
+            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">{producto.stock_actual}</div>
           </div>
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Stock proyectado</div>
             <div
               className={`text-xl font-bold ${
                 Number.isFinite(deltaNum) && deltaNum < 0 && nuevoStock < producto.stock_minimo
-                  ? 'text-rose-400'
-                  : 'text-emerald-400'
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
               }`}
             >
               {nuevoStock}
@@ -90,7 +90,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
 
         {/* Delta */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
             Ajuste (positivo = entrada, negativo = salida)
           </label>
           <Input
@@ -103,7 +103,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
 
         {/* Motivo */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Motivo *</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Motivo *</label>
           <Textarea
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
@@ -113,7 +113,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
         </div>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300 rounded p-2">
             {err}
           </div>
         )}

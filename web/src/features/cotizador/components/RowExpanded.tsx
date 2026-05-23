@@ -19,12 +19,11 @@ export function RowExpanded({ item }: { item: CartItem }) {
       : 'viene del catálogo del producto';
 
   // Costo OC (lo que Dasic le paga al proveedor): usa DOF puro (sin spread)
-  // y aplica el descuento del proveedor sobre ese valor. Match exacto a
-  // CotProveedor!I6 del Excel (G6 * (1 - descuento_prov)).
-  // Nota: en el SPA actual `item.descuento` es el descuento al cliente, no
-  // al proveedor — por ahora reusamos el mismo campo (TODO: separar
-  // descuento_proveedor en una iteración futura).
-  const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento) / 100);
+  // y aplica el descuento del PROVEEDOR sobre ese valor. Match exacto a
+  // CotProveedor!I6 del Excel (G6 * (1 - H6)). El descuento al CLIENTE
+  // (`item.descuento`, Excel N6) NO entra en este cálculo — solo afecta
+  // el precio de venta, no el costo OC.
+  const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento_proveedor || 0) / 100);
   const costoOc = convertCostDOF(
     costoOcOrigen,
     item.productCurrency,
@@ -35,7 +34,7 @@ export function RowExpanded({ item }: { item: CartItem }) {
   return (
     <tr className="bg-slate-900/50 border-b border-slate-800">
       <td colSpan={8} className="p-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
               <Coins className="h-2.5 w-2.5" />
@@ -56,7 +55,7 @@ export function RowExpanded({ item }: { item: CartItem }) {
           </div>
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
-              Descuento %
+              Descuento cliente %
             </label>
             <Input
               type="number"
@@ -70,6 +69,26 @@ export function RowExpanded({ item }: { item: CartItem }) {
                 })
               }
               className="h-8 text-xs"
+              title="Descuento aplicado al CLIENTE (reduce precio de venta). Excel N6."
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+              Descuento proveedor %
+            </label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.5"
+              value={item.descuento_proveedor}
+              onChange={(e) =>
+                updateLinea(item.uid, {
+                  descuento_proveedor: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
+                })
+              }
+              className="h-8 text-xs"
+              title="Descuento que el PROVEEDOR le da a Dasic (reduce costo OC). Excel H6."
             />
           </div>
           <div>
@@ -84,7 +103,7 @@ export function RowExpanded({ item }: { item: CartItem }) {
               {moneda} ${fmt(costoOc)}
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">
-              Sin spread · descuento aplicado
+              Sin spread · descuento proveedor aplicado
             </div>
           </div>
           <div>
