@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
-import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, ShieldAlert } from 'lucide-react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
-import { useIsAdmin } from '@/lib/permissions';
-import { FXBadge } from './FXBadge';
+import { TCMiniTable } from './TCMiniTable';
 import { UltimaCotHint } from './UltimaCotHint';
 
 export function HeaderCotizacion() {
@@ -21,7 +20,6 @@ export function HeaderCotizacion() {
   const editingId = useCotizador((s) => s.editingId);
   const clienteId = useCotizador((s) => s.cliente_id);
   const { config } = useConfig();
-  const esAdmin = useIsAdmin();
 
   // Defaults para cotización nueva: hoy + vigencia (config.quote_validity_days).
   useEffect(() => {
@@ -90,18 +88,7 @@ export function HeaderCotizacion() {
             className="h-8 text-xs text-right font-mono"
             title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
           />
-          <div className="mt-1 space-y-0.5">
-            <FXBadge />
-            {esAdmin && (
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('cot:open-pisartc'))}
-                className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
-              >
-                <ShieldAlert className="h-2.5 w-2.5" /> Pisar TC manualmente
-              </button>
-            )}
-          </div>
+          <TCMiniTable />
         </div>
       </div>
 
