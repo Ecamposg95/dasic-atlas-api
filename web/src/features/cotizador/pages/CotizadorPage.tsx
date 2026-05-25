@@ -26,7 +26,6 @@ import { PreviewOCDrawer } from '../components/PreviewOCDrawer';
 import { ModalNotaLinea } from '../components/ModalNotaLinea';
 import { ModalTerminos } from '../components/ModalTerminos';
 import { ModalConceptoPDF } from '../components/ModalConceptoPDF';
-import { ModalPisarTC } from '../components/ModalPisarTC';
 import { AgregarFantasmaModal } from '../components/AgregarFantasmaModal';
 import { GenerarReporteServicioModal } from '@/features/reportes_servicio_docs/components/GenerarReporteServicioModal';
 import { useCotizador } from '../store';
@@ -389,7 +388,6 @@ export function CotizadorPage() {
       <ModalNotaLinea />
       <ModalTerminos />
       <ModalConceptoPDF />
-      <ModalPisarTC />
       <AgregarFantasmaModal />
       <GenerarReporteServicioModal />
       {tab === 'editor' && <AtajosPopover atajos={atajos} />}

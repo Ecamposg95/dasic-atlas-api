@@ -1,9 +1,8 @@
 // web/src/features/cotizador/components/TCMiniTable.tsx
-import { RefreshCw, ArrowDown, ArrowUp, ShieldAlert } from 'lucide-react';
+import { RefreshCw, ArrowDown, ArrowUp } from 'lucide-react';
 import { useCotizador } from '../store';
 import { resolveDirectionalTcs } from '../lib/calc';
 import { useFX, useFXRefresh } from '../hooks/useFX';
-import { useIsAdmin } from '@/lib/permissions';
 import { toast } from '@/lib/toast';
 import type { ApiError } from '@/lib/api';
 
@@ -23,7 +22,6 @@ export function TCMiniTable() {
   const moneda = useCotizador((s) => s.moneda);
   const cart = useCotizador((s) => s.cart);
   const setTc = useCotizador((s) => s.setTc);
-  const esAdmin = useIsAdmin();
 
   const { data: fx } = useFX();
   const refresh = useFXRefresh();
@@ -70,7 +68,7 @@ export function TCMiniTable() {
 
   return (
     <div className={`mt-1 space-y-1 ${containerClass}`}>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-start gap-2">
         <button
           type="button"
           onClick={onRefresh}
@@ -85,16 +83,6 @@ export function TCMiniTable() {
               : 'Cargando TC…'}
           </span>
         </button>
-        {esAdmin && (
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('cot:open-pisartc'))}
-            className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
-            title="Pisar el TC solo para esta cotización"
-          >
-            <ShieldAlert className="h-2.5 w-2.5" /> Pisar TC
-          </button>
-        )}
       </div>
 
       <div
