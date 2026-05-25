@@ -99,11 +99,11 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
         {/* Categoría primero (en create dispara sugerencia de código) */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Categoría</label>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
             <select
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+              className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="">— Seleccionar —</option>
               {categorias.map((c) => (
@@ -116,7 +116,7 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
           </div>
           {categoria === '__custom__' && (
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Nueva categoría</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Nueva categoría</label>
               <Input
                 value={categoriaCustom}
                 onChange={(e) => setCategoriaCustom(e.target.value)}
@@ -128,8 +128,8 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Código <span className="text-rose-400">*</span>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              Código <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
               value={codigo}
@@ -139,8 +139,8 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Nombre <span className="text-rose-400">*</span>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              Nombre <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
               value={nombre}
@@ -151,20 +151,20 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Descripción</label>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Descripción</label>
           <textarea
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={2}
             placeholder="Descripción detallada del servicio"
-            className="w-full text-sm rounded-md border border-slate-700 bg-slate-900 px-3 py-2 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent-glow/40"
+            className="w-full text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 py-2 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent-glow/40"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              Costo <span className="text-rose-400">*</span>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              Costo <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
               type="number"
@@ -175,23 +175,23 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Moneda</label>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
             <select
               value={moneda}
               onChange={(e) => setMoneda(e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+              className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 text-sm"
             >
               <option value="MXN">MXN</option>
               <option value="USD">USD</option>
             </select>
           </div>
           <div className="flex items-end pb-1">
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={activo}
                 onChange={(e) => setActivo(e.target.checked)}
-                className="rounded border-slate-600"
+                className="rounded border-slate-400 dark:border-slate-600"
               />
               Activo
             </label>
@@ -199,7 +199,7 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
         </div>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 text-rose-700 dark:text-rose-300">
             {err}
           </div>
         )}

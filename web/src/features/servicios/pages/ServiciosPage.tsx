@@ -136,7 +136,7 @@ export function ServiciosPage() {
           <Wrench className="h-5 w-5 text-cyan-400" /> Servicios
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{items.length} servicio(s)</span>
+          <span className="text-xs text-slate-600 dark:text-slate-500">{items.length} servicio(s)</span>
           {isAdminOrAsistente && (
             <Button size="sm" onClick={() => setModalCrear(true)}>
               + Nuevo servicio
@@ -146,7 +146,7 @@ export function ServiciosPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -156,7 +156,7 @@ export function ServiciosPage() {
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 text-sm"
         >
           <option value="">Todas las categorías</option>
           {categorias.map((c) => (
@@ -197,7 +197,7 @@ export function ServiciosPage() {
           )}
           {!isLoading && items.length === 0 && (
             <DataTableEmpty colSpan={6}>
-              <Wrench className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <Wrench className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               {(servicios ?? []).length === 0
                 ? 'Sin servicios registrados'
                 : 'Sin coincidencias con la búsqueda'}
@@ -205,13 +205,13 @@ export function ServiciosPage() {
           )}
           {items.map((s) => (
             <DataTableRow key={s.id}>
-              <td className="p-3 font-mono text-xs text-cyan-300">{s.codigo}</td>
-              <td className="p-3 font-medium text-slate-200">{s.nombre}</td>
+              <td className="p-3 font-mono text-xs text-cyan-700 dark:text-cyan-300">{s.codigo}</td>
+              <td className="p-3 font-medium text-slate-900 dark:text-slate-200">{s.nombre}</td>
               <td className="p-3">
                 {s.categoria_servicio ? (
                   <Badge variant="violet">{s.categoria_servicio}</Badge>
                 ) : (
-                  <span className="text-slate-600 text-xs">—</span>
+                  <span className="text-slate-400 dark:text-slate-600 text-xs">—</span>
                 )}
               </td>
               <td className="p-3 text-right whitespace-nowrap">
@@ -228,7 +228,7 @@ export function ServiciosPage() {
                 {isAdminOrAsistente && (
                   <button
                     onClick={() => setModalEditar(s)}
-                    className="text-slate-300 hover:text-slate-100 px-1.5 text-xs"
+                    className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 px-1.5 text-xs"
                   >
                     Editar
                   </button>
@@ -237,7 +237,7 @@ export function ServiciosPage() {
                   <button
                     onClick={() => onEliminar(s)}
                     disabled={eliminarMut.isPending}
-                    className="text-rose-400 hover:text-rose-300 px-1.5 text-xs disabled:opacity-40"
+                    className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 px-1.5 text-xs disabled:opacity-40"
                   >
                     Eliminar
                   </button>

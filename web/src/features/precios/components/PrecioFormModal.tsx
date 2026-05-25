@@ -67,7 +67,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
       <div className="space-y-3">
         {/* Proveedor */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
             Proveedor <span className="text-rose-400">*</span>
           </label>
           <Select value={proveedorId} onChange={(e) => setProveedorId(e.target.value)}>
@@ -82,7 +82,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
 
         {/* Producto */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Producto (catálogo)</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Producto (catálogo)</label>
           <Select value={productoId} onChange={(e) => setProductoId(e.target.value)}>
             <option value="">— Selecciona o usa descripción libre —</option>
             {productos.map((p) => (
@@ -96,7 +96,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
         {/* Descripción libre */}
         {!productoId && (
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
               Descripción libre {!productoId && <span className="text-rose-400">*</span>}
             </label>
             <Input
@@ -110,7 +110,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
         {/* Precio + moneda */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
               Precio <span className="text-rose-400">*</span>
             </label>
             <Input
@@ -123,7 +123,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Moneda</label>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
             <Select value={moneda} onChange={(e) => setMoneda(e.target.value as Moneda)}>
               <option value="MXN">MXN</option>
               <option value="USD">USD</option>
@@ -134,7 +134,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
         {/* Vigencia */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Vigencia desde</label>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Vigencia desde</label>
             <Input
               type="date"
               value={vigDesde}
@@ -142,7 +142,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Vigencia hasta</label>
+            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Vigencia hasta</label>
             <Input
               type="date"
               value={vigHasta}
@@ -153,7 +153,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
 
         {/* Notas */}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Notas</label>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Notas</label>
           <Input
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
@@ -162,7 +162,7 @@ export function PrecioFormModal({ productos, proveedores, onSave, onClose, busy 
         </div>
 
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 text-rose-700 dark:text-rose-300">
             {err}
           </div>
         )}

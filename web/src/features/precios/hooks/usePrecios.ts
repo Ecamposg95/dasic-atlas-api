@@ -33,6 +33,22 @@ export function useComparativaPrecios(producto_id: number | null) {
   });
 }
 
+/**
+ * Comparador por texto libre (SKU o descripción). Usa el mismo endpoint
+ * que useComparativaPrecios pero con el parámetro `q` en lugar de `producto_id`.
+ * Pásale el query trimmed y no-vacío; en otro caso queda deshabilitado.
+ */
+export function useCompararPorTexto(q: string) {
+  const enabled = q.trim().length > 0;
+  return useQuery<ComparativaResponse>({
+    queryKey: ['precios-comparar-q', q.trim()],
+    queryFn: () =>
+      api.get<ComparativaResponse>(`/api/precios/comparar?q=${encodeURIComponent(q.trim())}`),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useCrearPrecio() {
   const qc = useQueryClient();
   return useMutation({

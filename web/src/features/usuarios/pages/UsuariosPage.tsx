@@ -133,7 +133,7 @@ export function UsuariosPage() {
           <UserCog className="h-5 w-5 text-cyan-400" /> Usuarios
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{items.length} usuario(s)</span>
+          <span className="text-xs text-slate-500 dark:text-slate-500">{items.length} usuario(s)</span>
           <Button size="sm" onClick={() => setModalCrear(true)}>
             + Nuevo usuario
           </Button>
@@ -156,14 +156,14 @@ export function UsuariosPage() {
           )}
           {!isLoading && items.length === 0 && (
             <DataTableEmpty colSpan={5}>
-              <UserCog className="h-8 w-8 mx-auto text-slate-700 mb-2" />
+              <UserCog className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               Sin usuarios registrados
             </DataTableEmpty>
           )}
           {items.map((u) => (
             <DataTableRow key={u.id}>
-              <td className="p-3 font-medium text-slate-200">{u.nombre}</td>
-              <td className="p-3 text-xs text-slate-400">{u.email}</td>
+              <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{u.nombre}</td>
+              <td className="p-3 text-xs text-slate-500 dark:text-slate-400">{u.email}</td>
               <td className="p-3">
                 <Badge variant="cyan">{ROL_LABELS[u.rol] ?? u.rol}</Badge>
               </td>
@@ -177,20 +177,20 @@ export function UsuariosPage() {
               <td className="p-3 text-right whitespace-nowrap space-x-1">
                 <button
                   onClick={() => setModalEditar(u)}
-                  className="text-slate-300 hover:text-slate-100 px-1.5 text-xs"
+                  className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 px-1.5 text-xs"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => setModalPassword(u)}
-                  className="text-amber-400 hover:text-amber-300 px-1.5 text-xs"
+                  className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 px-1.5 text-xs"
                 >
                   Contraseña
                 </button>
                 <button
                   onClick={() => onEliminar(u)}
                   disabled={eliminarMut.isPending || u.id === user?.id}
-                  className="text-rose-400 hover:text-rose-300 px-1.5 text-xs disabled:opacity-40"
+                  className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 px-1.5 text-xs disabled:opacity-40"
                   title={
                     u.id === user?.id
                       ? 'No puedes eliminarte a ti mismo'

@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookMarked } from 'lucide-react';
+import { BookMarked, Tags, Layers, Ruler, Wrench } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { ResumenCatalogo } from '../types';
 import { MarcasTab } from '../components/MarcasTab';
 import { CategoriasTab } from '../components/CategoriasTab';
 import { UnidadesTab } from '../components/UnidadesTab';
+import { CategoriasServicioTab } from '../components/CategoriasServicioTab';
 
-type Tab = 'marcas' | 'categorias' | 'unidades';
+type Tab = 'marcas' | 'categorias' | 'unidades' | 'categorias-servicio';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'marcas', label: 'Marcas' },
-  { key: 'categorias', label: 'Categorías' },
-  { key: 'unidades', label: 'Unidades' },
+const TABS: { key: Tab; label: string; Icon: typeof Tags }[] = [
+  { key: 'marcas', label: 'Marcas', Icon: Tags },
+  { key: 'categorias', label: 'Categorías de producto', Icon: Layers },
+  { key: 'unidades', label: 'Unidades', Icon: Ruler },
+  { key: 'categorias-servicio', label: 'Categorías de servicio', Icon: Wrench },
 ];
 
 export function CatalogosPage() {
@@ -61,18 +63,19 @@ export function CatalogosPage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 dark:border-slate-800 flex gap-1">
-        {TABS.map(({ key, label }) => (
+      <div className="border-b border-slate-200 dark:border-slate-800 flex gap-1 flex-wrap">
+        {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
+            className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px inline-flex items-center gap-1.5 ${
               tab === key
                 ? 'border-accent-glow text-accent-glow'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
+            <Icon className="h-3.5 w-3.5" />
             {label}
           </button>
         ))}
@@ -83,6 +86,7 @@ export function CatalogosPage() {
         {tab === 'marcas' && <MarcasTab />}
         {tab === 'categorias' && <CategoriasTab />}
         {tab === 'unidades' && <UnidadesTab />}
+        {tab === 'categorias-servicio' && <CategoriasServicioTab />}
       </div>
     </div>
   );

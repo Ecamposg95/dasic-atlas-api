@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, Pencil, Sliders, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,22 @@ import {
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useAuth } from '@/stores/auth';
-import { useProductos } from '../hooks/useProductos';
+import { useImportProductos, useProductos } from '../hooks/useProductos';
 import { useMarcas } from '../hooks/useMarcas';
 import { useProveedores } from '../hooks/useProveedores';
 import { AjusteStockModal } from '../components/AjusteStockModal';
 import { ProductoFormModal } from '../components/ProductoFormModal';
 import type { Producto } from '../types';
+
+// Banner de feedback de import. Mismo contrato que la versión Jinja:
+// text (resumen), type ('success'|'error'), hint (subtítulo), errores[] (lista
+// granular por fila, máx 50 visibles + contador "+N más").
+type ImportFeedback = {
+  text: string;
+  type: 'success' | 'error';
+  hint?: string;
+  errores: string[];
+};
 
 const SELECT_CLS = 'h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm';
 
@@ -48,6 +58,12 @@ export function InventarioPage() {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState<Producto | null>(null);
   const [modalAjuste, setModalAjuste] = useState<Producto | null>(null);
+
+  // Import Excel/CSV: ref al <input type=file> oculto + estado del banner.
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [importFeedback, setImportFeedback] = useState<ImportFeedback | null>(null);
+  const [expandErrores, setExpandErrores] = useState(false);
+  const importMut = useImportProductos();
 
   const { data: productos = [], isLoading, error } = useProductos();
   const { data: marcas = [] } = useMarcas();
@@ -117,6 +133,52 @@ export function InventarioPage() {
     setSoloBajoStock(false);
   }
 
+  // Click en "Importar Excel" → abre el file picker oculto.
+  function triggerImport() {
+    setImportFeedback(null);
+    importInputRef.current?.click();
+  }
+
+  // Cuando el usuario selecciona un archivo: lanza la mutation y monta el
+  // banner de feedback. Reset del input al final para permitir re-subir el
+  // mismo archivo (el browser no dispara change si el value no cambió).
+  function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExpandErrores(false);
+    setImportFeedback(null);
+    importMut.mutate(file, {
+      onSuccess: (data) => {
+        const omitidos = data.omitidos ?? 0;
+        const resumen = `Importación lista: ${data.creados} creados, ${data.actualizados} actualizados${omitidos ? `, ${omitidos} omitidos` : ''}.`;
+        const errores = Array.isArray(data.errores) ? data.errores : [];
+        const tieneErrores = errores.length > 0;
+        setImportFeedback({
+          text: resumen,
+          type: tieneErrores ? 'error' : 'success',
+          hint: tieneErrores
+            ? 'Stock se aplicó como REPLACE auditable (kardex en /inventario timeline).'
+            : 'Importación completa, sin errores. Stock auditado en kardex.',
+          errores,
+        });
+      },
+      onError: (err) => {
+        if (err.status === 401) { window.location.href = '/spa/login'; return; }
+        setImportFeedback({
+          text: err.mensaje,
+          type: 'error',
+          hint: err.columnas_compatibles && err.columnas_compatibles.length
+            ? `Plantilla base: ${err.columnas_compatibles.join(', ')}`
+            : 'Usa CSV UTF-8 o XLSX como formato de carga.',
+          errores: [],
+        });
+      },
+      onSettled: () => {
+        if (importInputRef.current) importInputRef.current.value = '';
+      },
+    });
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">
       {/* Header */}
@@ -129,8 +191,76 @@ export function InventarioPage() {
           <Button size="sm" onClick={() => setModalNuevo(true)}>
             <Plus className="h-4 w-4 mr-1" /> Nuevo producto
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={triggerImport}
+            disabled={importMut.isPending}
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            {importMut.isPending ? 'Importando…' : 'Importar Excel'}
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            className="hidden"
+            onChange={onImportFile}
+          />
         </div>
       </header>
+
+      {/* Banner de feedback del import. Verde si OK, rojo si hubo error o
+          errores granulares por fila. Permite expandir la lista de errores. */}
+      {importFeedback && (
+        <div
+          className={
+            'rounded-xl border px-4 py-3 text-sm ' +
+            (importFeedback.type === 'error'
+              ? 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200'
+              : 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200')
+          }
+        >
+          <div className="flex items-start justify-between gap-3">
+            <p className="flex-1 font-medium">{importFeedback.text}</p>
+            <button
+              type="button"
+              onClick={() => { setImportFeedback(null); setExpandErrores(false); }}
+              aria-label="Cerrar aviso"
+              className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          {importFeedback.hint && (
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{importFeedback.hint}</p>
+          )}
+          {importFeedback.errores.length > 0 && (
+            <div className="mt-2 border-t border-rose-300/40 dark:border-rose-500/20 pt-2">
+              <button
+                type="button"
+                onClick={() => setExpandErrores((v) => !v)}
+                className="text-[11px] text-rose-700 dark:text-rose-200 hover:text-rose-900 dark:hover:text-white font-bold uppercase tracking-wide flex items-center gap-1"
+              >
+                {expandErrores ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                Ver {importFeedback.errores.length} error(es) por fila
+              </button>
+              {expandErrores && (
+                <ul className="mt-2 space-y-1 text-[11px] font-mono">
+                  {importFeedback.errores.slice(0, 50).map((err, i) => (
+                    <li key={i} className="text-rose-700 dark:text-rose-200">{err}</li>
+                  ))}
+                  {importFeedback.errores.length > 50 && (
+                    <li className="text-slate-500 dark:text-slate-400 italic">
+                      (+{importFeedback.errores.length - 50} errores adicionales no mostrados)
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">

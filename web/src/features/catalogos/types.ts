@@ -42,6 +42,18 @@ export type UnidadesResponse = {
   sugeridas: string[];
 };
 
+// GET /api/catalogos/categorias-servicio → { en_uso: CategoriaServicio[], sugeridas: string[] }
+// Derivado de servicios.categoria_servicio (sin CRUD propio).
+export type CategoriaServicio = {
+  categoria: string;
+  n_servicios: number;
+};
+
+export type CategoriasServicioResponse = {
+  en_uso: CategoriaServicio[];
+  sugeridas: string[];
+};
+
 export type ResumenCatalogo = {
   total_marcas: number;
   total_productos: number;

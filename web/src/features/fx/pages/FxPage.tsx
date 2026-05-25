@@ -95,8 +95,8 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
     <Modal title="Override manual TC" onClose={onClose} size="sm">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
-            Fecha <span className="text-rose-400">*</span>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+            Fecha <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
             type="date"
@@ -105,8 +105,8 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
-            TC USD/MXN <span className="text-rose-400">*</span>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+            TC USD/MXN <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
             type="number"
@@ -119,7 +119,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Nota (opcional)</label>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Nota (opcional)</label>
           <Input
             value={nota}
             onChange={(e) => setNota(e.target.value)}
@@ -127,7 +127,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
           />
         </div>
         {err && (
-          <div className="text-xs bg-rose-900/30 border border-rose-700/50 rounded p-2 text-rose-300">
+          <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 text-rose-700 dark:text-rose-300">
             {err}
           </div>
         )}
@@ -190,9 +190,9 @@ export function FxPage() {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">TC Hoy</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">TC Hoy</p>
               {loadingHoy ? (
-                <div className="h-12 w-48 bg-slate-800 rounded animate-pulse" />
+                <div className="h-12 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               ) : (
                 <>
                   <p className="text-4xl font-bold tabular-nums text-accent-glow">
@@ -209,7 +209,7 @@ export function FxPage() {
                         <Badge variant={tcHoy.fuente === 'MANUAL' ? 'amber' : 'default'}>
                           {tcHoy.fuente}
                         </Badge>
-                        <span className="text-slate-500 text-xs">{fmtFecha(tcHoy.fecha)}</span>
+                        <span className="text-slate-600 dark:text-slate-500 text-xs">{fmtFecha(tcHoy.fecha)}</span>
                       </>
                     )}
                   </div>
@@ -239,7 +239,7 @@ export function FxPage() {
 
       {/* Historial */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
           Historial últimos 30 días
         </h2>
         <DataTable>
@@ -254,17 +254,17 @@ export function FxPage() {
           <DataTableBody>
             {loadingHist ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b border-slate-800">
+                <tr key={i} className="border-b border-slate-200 dark:border-slate-800">
                   {Array.from({ length: 4 }).map((__, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-slate-800 rounded animate-pulse" />
+                      <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : items.length === 0 ? (
               <DataTableEmpty colSpan={4}>
-                <div className="flex flex-col items-center gap-2 text-slate-500">
+                <div className="flex flex-col items-center gap-2 text-slate-600 dark:text-slate-500">
                   <Coins className="h-10 w-10 opacity-30" />
                   <p>Sin historial disponible</p>
                 </div>
@@ -272,8 +272,8 @@ export function FxPage() {
             ) : (
               items.map((row) => (
                 <DataTableRow key={row.fecha}>
-                  <td className="px-4 py-3 text-slate-400 text-sm">{fmtFecha(row.fecha)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-100 font-medium">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">{fmtFecha(row.fecha)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100 font-medium">
                     {Number(row.usd_mxn).toLocaleString('es-MX', {
                       minimumFractionDigits: 4,
                       maximumFractionDigits: 4,
@@ -284,7 +284,7 @@ export function FxPage() {
                       {row.fuente}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-500 text-xs">
                     {row.nota ?? '—'}
                   </td>
                 </DataTableRow>
