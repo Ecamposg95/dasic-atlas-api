@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock } from 'lucide-react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, AlertTriangle } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -43,7 +43,19 @@ export function HeaderCotizacion() {
   const hayLineasOtraMoneda = cart.some((i) => i.productCurrency && i.productCurrency !== moneda);
   const tcNecesario = moneda === 'USD' || hayLineasOtraMoneda;
 
+  // Banner aviso: hay líneas en el cart pero todavía no hay cliente.
+  // No bloquea — solo advierte para que el comercial sepa que la cot no
+  // se podrá guardar hasta seleccionar cliente.
+  const showClienteBanner = clienteId == null && cart.length > 0;
+
   return (
+    <>
+      {showClienteBanner && (
+        <div className="mb-2 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/50 text-amber-200 text-xs flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>Selecciona un cliente para que esta cotización pueda guardarse.</span>
+        </div>
+      )}
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
       <div className="md:col-span-2">
         <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
@@ -122,5 +134,6 @@ export function HeaderCotizacion() {
         Vigencia default: {config.quote_validity_days} días
       </div>
     </div>
+    </>
   );
 }
