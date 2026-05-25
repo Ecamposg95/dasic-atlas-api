@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileClock, Play, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBorradores } from '../hooks/useBorradores';
@@ -70,9 +71,10 @@ interface RowProps {
   item: BorradorItem;
   onDiscard: (id: number) => void;
   isDiscarding: boolean;
+  onContinuar: (id: number) => void;
 }
 
-function BorradorRow({ item, onDiscard, isDiscarding }: RowProps) {
+function BorradorRow({ item, onDiscard, isDiscarding, onContinuar }: RowProps) {
   return (
     <DataTableRow>
       <td className="px-4 py-3 font-mono text-xs text-accent-glow">{item.folio}</td>
@@ -89,9 +91,7 @@ function BorradorRow({ item, onDiscard, isDiscarding }: RowProps) {
             size="sm"
             variant="secondary"
             title="Continuar editando"
-            onClick={() => {
-              window.location.href = `/ventas/cotizador?edit=${item.id}`;
-            }}
+            onClick={() => onContinuar(item.id)}
           >
             <Play className="h-3.5 w-3.5 mr-1" />
             Continuar
@@ -119,6 +119,7 @@ function BorradorRow({ item, onDiscard, isDiscarding }: RowProps) {
 export function BorradoresPage() {
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading, isPlaceholderData } = useBorradores(page);
 
@@ -192,6 +193,7 @@ export function BorradoresPage() {
                 item={item}
                 onDiscard={handleDiscard}
                 isDiscarding={cancelar.isPending && cancelar.variables === item.id}
+                onContinuar={(id) => navigate(`/ventas/cotizador?edit=${id}`)}
               />
             ))
           )}

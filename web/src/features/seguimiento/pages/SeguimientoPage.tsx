@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ListChecks,
@@ -83,10 +84,11 @@ interface RowActionsProps {
   onRecotizar: (id: number) => void;
   onConvertir: (item: HistorialItem) => void;
   onCancelar: (item: HistorialItem) => void;
+  onEditar: (id: number) => void;
   loadingId: number | null;
 }
 
-function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: RowActionsProps) {
+function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, loadingId }: RowActionsProps) {
   const estatus = item.estatus.toUpperCase();
   const isBusy = loadingId === item.id;
 
@@ -115,9 +117,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
           size="icon"
           title="Editar cotización"
           className="h-7 w-7 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-          onClick={() => {
-            window.location.href = `/ventas/cotizador?edit=${item.id}`;
-          }}
+          onClick={() => onEditar(item.id)}
         >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -176,6 +176,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
 
 export function SeguimientoPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { data: historial, isLoading, error } = useHistorial(200);
 
   // Filtros
@@ -191,7 +192,7 @@ export function SeguimientoPage() {
     onSuccess: (data) => {
       toast({ kind: 'success', title: `Nueva versión creada: ${data.folio}` });
       qc.invalidateQueries({ queryKey: ['ventas'] });
-      window.location.href = `/ventas/cotizador?edit=${data.id}`;
+      navigate(`/ventas/cotizador?edit=${data.id}`);
     },
     onError: (err) => {
       toast({ kind: 'error', title: 'Error al recotizar', description: err.detail });
@@ -435,6 +436,7 @@ export function SeguimientoPage() {
                           onRecotizar={handleRecotizar}
                           onConvertir={handleConvertir}
                           onCancelar={handleCancelar}
+                          onEditar={(id) => navigate(`/ventas/cotizador?edit=${id}`)}
                           loadingId={loadingId}
                         />
                       </td>

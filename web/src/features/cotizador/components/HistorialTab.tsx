@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Search,
@@ -81,6 +82,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
     page_size: 25,
   });
   const [sugerirOpen, setSugerirOpen] = useState<{ cotId: number; folio: string; data: SugerirOCResponse } | null>(null);
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useHistorial();
   const convertir = useConvertir();
@@ -135,7 +137,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
     if (!confirm(`Crear nueva versión de ${orden.folio}? Te llevará al editor con los datos copiados.`)) return;
     try {
       const r = await recotizar.mutateAsync(orden.id);
-      window.location.href = `/ventas/cotizador?edit=${r.id}`;
+      navigate(`/ventas/cotizador?edit=${r.id}`);
     } catch (e) {
       const err = e as ApiError;
       toast({ kind: 'error', title: 'No se pudo recotizar', description: err.detail });

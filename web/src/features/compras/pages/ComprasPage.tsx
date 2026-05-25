@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Eye, Printer, Package, DollarSign, ShoppingCart,
 } from 'lucide-react';
@@ -8,12 +9,13 @@ import { Input } from '@/components/ui/input';
 import {
   DataTable, DataTableBody, DataTableEmpty, DataTableHead, DataTableRow,
 } from '@/components/ui/data-table';
-import { toast } from '@/lib/toast';
+import { useIsAdminOrGerente } from '@/lib/permissions';
 import { useOrdenesCompra } from '../hooks/useOrdenesCompra';
 import { OrdenCompraDetalleModal } from '../components/OrdenCompraDetalleModal';
 import { RegistrarRecepcionModal } from '../components/RegistrarRecepcionModal';
 import { RegistrarPagoModal } from '../components/RegistrarPagoModal';
 import { ProveedoresModal } from '../components/ProveedoresModal';
+import { OrdenCompraFormModal } from '../components/OrdenCompraFormModal';
 import type { EstatusOC, OrdenCompraListItem } from '../types';
 
 const ESTATUS_OPTS: { value: EstatusOC | ''; label: string }[] = [
@@ -67,6 +69,8 @@ function tieneSaldoPendiente(e: EstatusOC) {
 
 export function ComprasPage() {
   const { data: ordenes, isLoading, error } = useOrdenesCompra();
+  const navigate = useNavigate();
+  const puedeCrearOC = useIsAdminOrGerente();
 
   const [filtroQ, setFiltroQ] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState<EstatusOC | ''>('');
@@ -74,6 +78,7 @@ export function ComprasPage() {
   const [modalRecepcion, setModalRecepcion] = useState<OrdenCompraListItem | null>(null);
   const [modalPago, setModalPago] = useState<OrdenCompraListItem | null>(null);
   const [modalProveedores, setModalProveedores] = useState(false);
+  const [modalCrearOC, setModalCrearOC] = useState(false);
 
   // 401 → login
   useEffect(() => {
@@ -109,14 +114,14 @@ export function ComprasPage() {
           >
             Ver proveedores
           </Button>
-          <Button
-            size="sm"
-            onClick={() =>
-              toast({ kind: 'info', title: 'Próximamente', description: 'Crear OC manual — en desarrollo.' })
-            }
-          >
-            + Nueva OC manual
-          </Button>
+          {puedeCrearOC && (
+            <Button
+              size="sm"
+              onClick={() => setModalCrearOC(true)}
+            >
+              + Nueva OC manual
+            </Button>
+          )}
         </div>
       </header>
 
@@ -184,12 +189,13 @@ export function ComprasPage() {
               <td className="p-3 text-center">{badgeEstatus(o.estatus)}</td>
               <td className="p-3 text-xs">
                 {o.cotizacion_id ? (
-                  <a
-                    href={`/ventas/cotizador?edit=${o.cotizacion_id}`}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/ventas/cotizador?edit=${o.cotizacion_id}`)}
                     className="text-cyan-600 hover:underline dark:text-cyan-400"
                   >
                     #{o.cotizacion_id}
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-slate-400 dark:text-slate-600">—</span>
                 )}
@@ -267,6 +273,10 @@ export function ComprasPage() {
 
       {modalProveedores && (
         <ProveedoresModal onClose={() => setModalProveedores(false)} />
+      )}
+
+      {modalCrearOC && (
+        <OrdenCompraFormModal onClose={() => setModalCrearOC(false)} />
       )}
     </div>
   );

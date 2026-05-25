@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X } from 'lucide-react';
 import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hooks/useRemisiones';
 import { toast } from '@/lib/toast';
@@ -220,12 +221,12 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
       <td className="px-4 py-3 font-mono text-xs text-accent-glow">{item.folio}</td>
       <td className="px-4 py-3">
         {item.orden_folio ? (
-          <a
-            href={`/ventas/cotizador?edit=${item.orden_venta_id}`}
+          <Link
+            to={`/ventas/cotizador?edit=${item.orden_venta_id}`}
             className="text-accent-glow hover:underline text-xs font-mono"
           >
             {item.orden_folio}
-          </a>
+          </Link>
         ) : (
           <span className="text-slate-500 italic text-xs">—</span>
         )}
