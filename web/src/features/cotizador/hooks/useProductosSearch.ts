@@ -44,7 +44,7 @@ export type SearchData = {
 
 export type SearchScope = {
   q: string;
-  tipo: 'producto' | 'servicio';
+  tipo: 'producto' | 'servicio' | 'fantasma';
   marca_id?: number | null;
   marca_nombre?: string | null;
   categoria_id?: number | null;
@@ -75,6 +75,13 @@ export function useProductosSearch(scope: SearchScope) {
     queryFn: async () => {
       const dict = sinonimos?.dict ?? {};
       const { cantidad, queries } = buildSearchVariants(debouncedQ, dict);
+
+      // Fantasmas: este hook NO maneja el modo fantasma — la fuente de
+      // verdad es `useFantasmasSearch`. Devolvemos vacío para que
+      // ProductSearch ignore `data` cuando tipo === 'fantasma'.
+      if (scope.tipo === 'fantasma') {
+        return { items: [], servicios: [], cantidad };
+      }
 
       // Servicios: usamos `/api/servicios/` (lista filtrable) cuando no hay
       // término, y `/api/servicios/buscar?q=…` cuando lo hay. El backend

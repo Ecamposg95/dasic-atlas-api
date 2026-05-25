@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Ghost } from 'lucide-react';
 import { api } from '@/lib/api';
 
 // Shape real del backend (`app/routers/catalogos.py`):
@@ -21,8 +22,8 @@ type CategoriasResponse = {
 };
 
 type Props = {
-  tipo: 'producto' | 'servicio';
-  onTipoChange: (t: 'producto' | 'servicio') => void;
+  tipo: 'producto' | 'servicio' | 'fantasma';
+  onTipoChange: (t: 'producto' | 'servicio' | 'fantasma') => void;
   marcaId: number | null;
   marcaNombre: string | null;
   onMarcaChange: (id: number | null, nombre: string | null) => void;
@@ -68,6 +69,17 @@ export function CatalogoFiltros(props: Props) {
           }`}
         >
           Servicios
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onTipoChange('fantasma')}
+          className={`px-2.5 py-1 text-[11px] rounded transition flex items-center gap-1 ${
+            props.tipo === 'fantasma'
+              ? 'bg-slate-800 text-amber-300'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Ghost className="h-2.5 w-2.5" /> Fantasmas
         </button>
       </div>
       {props.tipo === 'producto' && (
