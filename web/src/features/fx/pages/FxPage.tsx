@@ -5,7 +5,7 @@ import { useTcHoy } from '../hooks/useTcHoy';
 import { useHistorialFx } from '../hooks/useHistorialFx';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -149,8 +149,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
 // ---------------------------------------------------------------------------
 
 export function FxPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
+  const isAdmin = useIsAdmin();
   const [showOverride, setShowOverride] = useState(false);
 
   const qc = useQueryClient();

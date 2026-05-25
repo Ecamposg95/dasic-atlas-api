@@ -4,7 +4,7 @@ import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { FXBadge } from './FXBadge';
 import { UltimaCotHint } from './UltimaCotHint';
 
@@ -21,8 +21,7 @@ export function HeaderCotizacion() {
   const editingId = useCotizador((s) => s.editingId);
   const clienteId = useCotizador((s) => s.cliente_id);
   const { config } = useConfig();
-  const user = useAuth((s) => s.user);
-  const esAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
+  const esAdmin = useIsAdmin();
 
   // Defaults para cotización nueva: hoy + vigencia (config.quote_validity_days).
   useEffect(() => {

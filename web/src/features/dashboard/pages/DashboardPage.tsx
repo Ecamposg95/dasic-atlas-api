@@ -127,7 +127,7 @@ export function DashboardPage() {
   const alertItems: AlertaItem[] = [];
 
   if (alertas) {
-    alertas.por_vencer_3d.forEach((o) => {
+    (alertas.por_vencer_3d ?? []).forEach((o) => {
       const dias = o.dias_restantes;
       const severity: Severity = dias !== null && dias <= 0 ? 'urgente' : dias !== null && dias <= 1 ? 'urgente' : 'warning';
       alertItems.push({
@@ -138,7 +138,7 @@ export function DashboardPage() {
       });
     });
 
-    alertas.stock_critico_cotizado.forEach((p) => {
+    (alertas.stock_critico_cotizado ?? []).forEach((p) => {
       alertItems.push({
         key: `stock-${p.producto_id}`,
         severity: 'warning',
@@ -147,7 +147,7 @@ export function DashboardPage() {
       });
     });
 
-    alertas.saldos_vencidos.forEach((c) => {
+    (alertas.saldos_vencidos ?? []).forEach((c) => {
       const severity: Severity = c.dias_sin_pago > 90 ? 'urgente' : 'warning';
       alertItems.push({
         key: `saldo-${c.id}`,
@@ -157,7 +157,7 @@ export function DashboardPage() {
       });
     });
 
-    alertas.oc_borrador.forEach((oc) => {
+    (alertas.oc_borrador ?? []).forEach((oc) => {
       alertItems.push({
         key: `oc-${oc.id}`,
         severity: 'info',

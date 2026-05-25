@@ -51,10 +51,10 @@ function estatusBadge(estatus: string): { label: string; variant: BadgeVariant }
   switch (estatus.toUpperCase()) {
     case 'COTIZACION':
       return { label: 'Cotización', variant: 'cyan' };
-    case 'VENTA':
-      return { label: 'Venta', variant: 'emerald' };
-    case 'ENVIADA':
-      return { label: 'Enviada', variant: 'violet' };
+    case 'PENDIENTE':
+      return { label: 'Pendiente de pago', variant: 'amber' };
+    case 'PAGADA':
+      return { label: 'Pagada', variant: 'emerald' };
     case 'CANCELADA':
       return { label: 'Cancelada', variant: 'rose' };
     default:
@@ -62,7 +62,13 @@ function estatusBadge(estatus: string): { label: string; variant: BadgeVariant }
   }
 }
 
-const ESTATUS_OPTIONS: EstatusFilter[] = ['TODOS', 'COTIZACION', 'VENTA', 'CANCELADA', 'ENVIADA'];
+const ESTATUS_OPTIONS: { value: EstatusFilter; label: string }[] = [
+  { value: 'TODOS', label: 'Todos los estatus' },
+  { value: 'COTIZACION', label: 'Cotización' },
+  { value: 'PENDIENTE', label: 'Pendiente de pago' },
+  { value: 'PAGADA', label: 'Pagada' },
+  { value: 'CANCELADA', label: 'Cancelada' },
+];
 const VENCIMIENTO_OPTIONS: { value: VencimientoFilter; label: string }[] = [
   { value: 'TODAS', label: 'Todas' },
   { value: 'vigente', label: 'Vigente' },
@@ -85,9 +91,9 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, loadingId }: R
   const isBusy = loadingId === item.id;
 
   const canEdit = estatus === 'COTIZACION';
-  const canRecotizar = estatus === 'COTIZACION' || estatus === 'CANCELADA' || estatus === 'ENVIADA';
+  const canRecotizar = estatus === 'COTIZACION' || estatus === 'CANCELADA';
   const canConvertir = estatus === 'COTIZACION';
-  const canCancelar = estatus === 'COTIZACION';
+  const canCancelar = estatus === 'COTIZACION' || estatus === 'PENDIENTE';
 
   return (
     <div className="flex items-center gap-1">
@@ -312,9 +318,9 @@ export function SeguimientoPage() {
             onChange={(e) => setEstatusFilter(e.target.value as EstatusFilter)}
             className="text-sm rounded-md border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:border-accent-glow outline-none"
           >
-            {ESTATUS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt === 'TODOS' ? 'Todos los estatus' : opt.charAt(0) + opt.slice(1).toLowerCase()}
+            {ESTATUS_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </select>

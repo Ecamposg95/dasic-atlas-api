@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 export function DataTable({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden dark:bg-slate-900 dark:border-slate-800">
       <table className={cn('w-full text-sm', className)} {...props} />
     </div>
   );
@@ -14,7 +14,7 @@ export function DataTable({ className, ...props }: React.HTMLAttributes<HTMLTabl
 
 export function DataTableHead({ children }: { children: React.ReactNode }) {
   return (
-    <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-wider">
+    <thead className="bg-slate-100 text-[10px] text-slate-500 uppercase tracking-wider dark:bg-slate-800/50 dark:text-slate-400">
       {children}
     </thead>
   );
@@ -30,7 +30,7 @@ export function DataTableRow({
 }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn('border-b border-slate-800 hover:bg-slate-800/30 transition', className)}
+      className={cn('border-b border-slate-200 hover:bg-slate-50 transition dark:border-slate-800 dark:hover:bg-slate-800/30', className)}
       {...props}
     />
   );
@@ -39,7 +39,7 @@ export function DataTableRow({
 export function DataTableEmpty({ children, colSpan }: { children: React.ReactNode; colSpan: number }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="p-12 text-center text-sm text-slate-500">
+      <td colSpan={colSpan} className="p-12 text-center text-sm text-slate-500 dark:text-slate-500">
         {children}
       </td>
     </tr>

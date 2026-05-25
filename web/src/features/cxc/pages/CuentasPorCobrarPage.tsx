@@ -4,7 +4,7 @@ import { useResumenCxC } from '../hooks/useResumenCxC';
 import { useVencimientosCxC } from '../hooks/useVencimientosCxC';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -142,9 +142,7 @@ function SkeletonRow() {
 // ---------------------------------------------------------------------------
 
 export function CuentasPorCobrarPage() {
-  const { user } = useAuth();
-  const isAdmin =
-    user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
+  const isAdmin = useIsAdmin();
 
   const qc = useQueryClient();
   const { data: resumen, isLoading: loadingResumen } = useResumenCxC();

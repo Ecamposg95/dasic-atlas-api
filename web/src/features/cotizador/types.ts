@@ -116,7 +116,11 @@ export type LineaNoSoportada = {
   cantidad: number;
 };
 
-// Respuesta del GET /api/ventas/{id} (subset MVP).
+// Respuesta del GET /api/ventas/{id}/detalle-json (subset MVP).
+// Shape REAL del backend (`app/routers/ventas.py:1354`). Nota: el endpoint NO
+// devuelve `id` por detalle — se sintetiza en el store a partir del índice
+// (ver hydrateFromOrden). TODO(backend): agregar `id` al payload del detalle
+// para keying estable.
 export type OrdenVentaDetail = {
   id: number;
   folio: string;
@@ -134,8 +138,13 @@ export type OrdenVentaDetail = {
   observaciones: string | null;
   terminos_condiciones: string | null;
   version: number;
+  // PDF unificado: el backend SÍ devuelve estos campos en /detalle-json
+  // (ver app/routers/ventas.py:1439-1440).
+  pdf_unificado?: 0 | 1 | null;
+  concepto_unificado?: string | null;
   detalles: Array<{
-    id: number;
+    // El backend NO incluye `id` aquí. El store usa el índice del array como
+    // fallback estable (ver hydrateFromOrden).
     producto_id: number | null;
     servicio_id: number | null;
     sku_libre: string | null;
@@ -152,15 +161,24 @@ export type OrdenVentaDetail = {
     entrega_unidad: string | null;
     observaciones_linea: string | null;
     proveedor_sugerido_id?: number | null;
+    // Shape REAL del producto en /detalle-json: el backend ya colapsa
+    // `sku` = sku_comercial || sku, y expone el interno como `sku_interno`.
     producto: {
+      id: number;
       sku: string;
-      sku_comercial: string | null;
+      sku_interno?: string | null;
       nombre: string;
+      moneda_compra?: string | null;
       costo_compra: number | string;
     } | null;
     servicio: {
+      id?: number;
       codigo: string;
       nombre: string;
+      moneda?: string | null;
+      costo?: number | string | null;
+      clave_prod_serv?: string | null;
+      clave_unidad_sat?: string | null;
     } | null;
   }>;
 };

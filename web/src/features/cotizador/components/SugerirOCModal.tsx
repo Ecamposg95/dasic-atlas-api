@@ -24,8 +24,10 @@ export function SugerirOCModal({
   onClose: () => void;
 }) {
   const generar = useGenerarOC();
-  const hayProveedores = data.por_proveedor.length > 0;
-  const haySinProveedor = data.sin_proveedor.length > 0;
+  const porProveedor = data.por_proveedor ?? [];
+  const sinProveedor = data.sin_proveedor ?? [];
+  const hayProveedores = porProveedor.length > 0;
+  const haySinProveedor = sinProveedor.length > 0;
   const stockSuficiente = !hayProveedores && !haySinProveedor;
 
   async function onGenerar() {
@@ -35,7 +37,7 @@ export function SugerirOCModal({
     }
     if (haySinProveedor) {
       const cont = confirm(
-        `Hay ${data.sin_proveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
+        `Hay ${sinProveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
       );
       if (!cont) return;
     }
@@ -71,44 +73,47 @@ export function SugerirOCModal({
         )}
 
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          {data.por_proveedor.map((prov) => (
-            <div key={prov.proveedor_id} className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="font-semibold text-sm flex-1">{prov.proveedor_empresa ?? `Proveedor #${prov.proveedor_id}`}</div>
-                <div className="font-mono text-sm text-accent-glow">
-                  {fmtMoney(prov.subtotal, prov.items[0]?.moneda ?? 'MXN')}
+          {porProveedor.map((prov) => {
+            const items = prov.items ?? [];
+            return (
+              <div key={prov.proveedor_id} className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="font-semibold text-sm flex-1">{prov.proveedor_empresa ?? `Proveedor #${prov.proveedor_id}`}</div>
+                  <div className="font-mono text-sm text-accent-glow">
+                    {fmtMoney(prov.subtotal, items[0]?.moneda ?? 'MXN')}
+                  </div>
                 </div>
-              </div>
-              <table className="w-full text-xs">
-                <thead className="text-[10px] text-slate-500 uppercase">
-                  <tr>
-                    <th className="text-left py-1">SKU</th>
-                    <th className="text-left py-1">Descripción</th>
-                    <th className="text-center py-1">Cantidad</th>
-                    <th className="text-right py-1">Costo unit.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {prov.items.map((l, idx) => (
-                    <tr key={`${prov.proveedor_id}-${l.producto_id ?? 'fantasma'}-${idx}`} className="border-t border-slate-800">
-                      <td className="py-1 font-mono text-cyan-400">{l.sku ?? '—'}</td>
-                      <td className="py-1 text-slate-300 truncate max-w-xs">{l.nombre}</td>
-                      <td className="py-1 text-center">{l.cantidad}</td>
-                      <td className="py-1 text-right font-mono">{fmtMoney(l.costo_unitario, l.moneda)}</td>
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] text-slate-500 uppercase">
+                    <tr>
+                      <th className="text-left py-1">SKU</th>
+                      <th className="text-left py-1">Descripción</th>
+                      <th className="text-center py-1">Cantidad</th>
+                      <th className="text-right py-1">Costo unit.</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                  </thead>
+                  <tbody>
+                    {items.map((l, idx) => (
+                      <tr key={`${prov.proveedor_id}-${l.producto_id ?? 'fantasma'}-${idx}`} className="border-t border-slate-800">
+                        <td className="py-1 font-mono text-cyan-400">{l.sku ?? '—'}</td>
+                        <td className="py-1 text-slate-300 truncate max-w-xs">{l.nombre}</td>
+                        <td className="py-1 text-center">{l.cantidad}</td>
+                        <td className="py-1 text-right font-mono">{fmtMoney(l.costo_unitario, l.moneda)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
 
           {haySinProveedor && (
             <div className="bg-amber-900/10 border border-amber-700/50 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2 text-amber-300 font-semibold text-sm">
-                <AlertTriangle className="h-4 w-4" /> Líneas sin proveedor asignado ({data.sin_proveedor.length})
+                <AlertTriangle className="h-4 w-4" /> Líneas sin proveedor asignado ({sinProveedor.length})
               </div>
               <ul className="text-xs text-amber-200/80 space-y-1">
-                {data.sin_proveedor.map((l, idx) => (
+                {sinProveedor.map((l, idx) => (
                   <li key={`${l.producto_id ?? 'fantasma'}-${idx}`}>
                     <span className="font-mono text-amber-300">{l.sku ?? '—'}</span> — {l.nombre} · faltan {l.faltante}
                   </li>
@@ -124,7 +129,7 @@ export function SugerirOCModal({
         <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-800">
           <Button variant="ghost" onClick={onClose} disabled={generar.isPending}>Cancelar</Button>
           <Button onClick={onGenerar} disabled={generar.isPending || !hayProveedores}>
-            {generar.isPending ? 'Generando…' : `Generar ${data.por_proveedor.length} OC(s)`}
+            {generar.isPending ? 'Generando…' : `Generar ${porProveedor.length} OC(s)`}
           </Button>
         </div>
       </div>

@@ -4,11 +4,14 @@ import { RouterProvider } from 'react-router-dom';
 import { queryClient } from '@/lib/queryClient';
 import { router } from '@/router';
 import { Toaster } from '@/components/ui/toaster';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
       <Toaster />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

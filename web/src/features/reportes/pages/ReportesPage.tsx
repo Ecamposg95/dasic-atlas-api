@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BarChart3 } from 'lucide-react';
-import { useAuth } from '@/stores/auth';
+import { useIsAdminOrGerente } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import {
   DataTable,
@@ -366,11 +366,8 @@ const RANGOS = [
 
 export function ReportesPage() {
   const [dias, setDias] = useState<number>(30);
-  const user = useAuth((s) => s.user);
-  const isAdmin =
-    user?.rol === 'ADMINISTRADOR' ||
-    user?.rol === 'ADMIN' ||
-    user?.rol === 'GERENTE_COMERCIAL';
+  // Reportes muestra totales de ventas/utilidad a admin + gerente comercial.
+  const isAdmin = useIsAdminOrGerente();
 
   return (
     <div className="p-6 max-w-7xl mx-auto w-full space-y-8">

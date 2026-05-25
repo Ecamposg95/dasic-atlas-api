@@ -7,7 +7,7 @@ export interface HistorialItem {
   total: number | string;
   moneda: string;
   tipo_cambio: number | string;
-  estatus: string; // 'COTIZACION' | 'VENTA' | 'CANCELADA' | 'ENVIADA' | etc.
+  estatus: string; // backend EstatusOrden: 'cotizacion' | 'pendiente' | 'pagada' | 'cancelada'
   version: number;
   cotizacion_origen_id: number | null;
   edad_dias: number;
@@ -15,7 +15,7 @@ export interface HistorialItem {
   esta_vencida: boolean;
 }
 
-export type EstatusFilter = 'TODOS' | 'COTIZACION' | 'VENTA' | 'CANCELADA' | 'ENVIADA';
+export type EstatusFilter = 'TODOS' | 'COTIZACION' | 'PENDIENTE' | 'PAGADA' | 'CANCELADA';
 export type VencimientoFilter = 'TODAS' | 'vigente' | 'vencida' | 'sin_fecha';
 
 export interface RecotizarResult {

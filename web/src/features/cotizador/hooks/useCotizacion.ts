@@ -7,7 +7,9 @@ import type { OrdenVentaDetail } from '../types';
 export function useCotizacionLoader(id: number | null) {
   return useQuery<OrdenVentaDetail>({
     queryKey: ['orden', id],
-    queryFn: () => api.get<OrdenVentaDetail>(`/api/ventas/${id}`),
+    // El backend NO expone `GET /api/ventas/{id}` plano; el detalle completo
+    // para el editor vive en `/detalle-json` (app/routers/ventas.py:1354).
+    queryFn: () => api.get<OrdenVentaDetail>(`/api/ventas/${id}/detalle-json`),
     enabled: id != null,
     staleTime: 0,
   });

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/data-table';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { useClientes } from '../hooks/useClientes';
 import { ClienteFormModal } from '../components/ClienteFormModal';
 import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../types';
@@ -30,7 +30,6 @@ export function ClientesPage() {
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
 
   const { data: clientes, isLoading, error } = useClientes();
-  const user = useAuth((s) => s.user);
   const qc = useQueryClient();
 
   // 401 → login
@@ -108,10 +107,7 @@ export function ClientesPage() {
     }
   }
 
-  const isAdmin =
-    user?.rol === 'ADMINISTRADOR' ||
-    user?.rol === 'ADMIN' ||
-    user?.rol === 'ASISTENTE';
+  const isAdmin = useIsAdmin();
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">

@@ -4,7 +4,7 @@ import { usePrecios, useComparativaPrecios, useCrearPrecio, useEliminarPrecio } 
 import { useProductos } from '@/features/inventario/hooks/useProductos';
 import { useProveedores } from '@/features/inventario/hooks/useProveedores';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -126,8 +126,7 @@ function SkeletonRow() {
 // ---------------------------------------------------------------------------
 
 export function PreciosPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.rol === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
+  const isAdmin = useIsAdmin();
 
   const [showModal, setShowModal] = useState(false);
   const [filtroProducto, setFiltroProducto] = useState<string>('');

@@ -1,5 +1,7 @@
 // POST /api/compras/registrar-pago?proveedor_id=X&monto=Y&ref=Z
-// El endpoint usa query params (no JSON body).
+// El endpoint usa query params (no JSON body) y requiere el proveedor_id real
+// (NO el id de la OC). Como el listado /historial no expone proveedor_id, lo
+// obtenemos del detalle GET /api/compras/{id}/json antes de habilitar el submit.
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { useOrdenCompraDetalle } from '../hooks/useOrdenCompraDetalle';
 import type { OrdenCompraListItem, PagoResponse } from '../types';
 
 type Props = {
@@ -21,26 +24,31 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
   const [ref, setRef] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
+  // Necesitamos el proveedor_id real de la OC. El listado solo trae el nombre,
+  // así que pedimos el detalle al abrir el modal.
+  const { data: detalle, isLoading: cargandoDetalle, error: errorDetalle } =
+    useOrdenCompraDetalle(orden.id);
+
+  const proveedorId = detalle?.proveedor_id ?? null;
+  const proveedorNombre = detalle?.proveedor ?? orden.proveedor;
+
   const mutation = useMutation<PagoResponse, { status?: number; detail?: string }>({
     mutationFn: () => {
       const montoNum = parseFloat(monto);
       if (!Number.isFinite(montoNum) || montoNum <= 0) throw new Error('Monto inválido');
+      if (proveedorId == null) {
+        throw new Error('No se pudo determinar el proveedor de la OC');
+      }
       const params = new URLSearchParams({
-        proveedor_id: String(orden.id), // NOTE: el endpoint recibe proveedor_id, no oc id.
-        // El backend en registrar-pago pide proveedor_id como query param.
-        // Sin embargo no tenemos proveedor_id en OrdenCompraListItem (solo nombre).
-        // TODO: cuando se extienda el listado con proveedor_id, usar ese campo.
-        // Por ahora se registra como workaround pasando la OC id. Si esto es un
-        // problema, ver endpoint real.
+        proveedor_id: String(proveedorId),
         monto: String(montoNum),
         ref: ref.trim() || `Pago OC ${orden.folio ?? orden.id}`,
       });
-      // El backend espera proveedor_id no oc id. Marcar como pendiente en MVP.
-      // La mutación está construida pero el proveedor_id real requiere el detalle.
       return api.post<PagoResponse>(`/api/compras/registrar-pago?${params.toString()}`);
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['ordenesCompra'] });
+      qc.invalidateQueries({ queryKey: ['ordenCompraDetalle', orden.id] });
       toast({
         kind: 'success',
         title: 'Pago registrado',
@@ -61,6 +69,10 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
 
   function onSubmit() {
     setErr(null);
+    if (proveedorId == null) {
+      setErr('Aún no se ha cargado el proveedor de la OC.');
+      return;
+    }
     const montoNum = parseFloat(monto);
     if (!Number.isFinite(montoNum) || montoNum <= 0) {
       setErr('El monto debe ser mayor que 0.');
@@ -69,13 +81,30 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
     mutation.mutate();
   }
 
+  const detalleStatus = (errorDetalle as { status?: number } | null)?.status;
+  const fallaDetalle =
+    !!errorDetalle && detalleStatus !== 401 && detalleStatus !== 403;
+  const submitDeshabilitado =
+    mutation.isPending || cargandoDetalle || proveedorId == null;
+
   return (
     <Modal title="Registrar pago a proveedor" onClose={onClose} size="sm">
       <div className="space-y-3 text-sm">
         <p className="text-slate-600 dark:text-slate-400 text-xs">
           OC: <span className="font-mono text-cyan-700 dark:text-cyan-300">{orden.folio ?? `#${orden.id}`}</span> —{' '}
-          Proveedor: <span className="font-medium text-slate-800 dark:text-slate-200">{orden.proveedor}</span>
+          Proveedor:{' '}
+          {cargandoDetalle ? (
+            <span className="inline-block h-3 w-24 align-middle bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+          ) : (
+            <span className="font-medium text-slate-800 dark:text-slate-200">{proveedorNombre}</span>
+          )}
         </p>
+
+        {fallaDetalle && (
+          <div className="text-xs bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300 rounded p-2">
+            No se pudo cargar el proveedor de la OC. Cierra y vuelve a intentar.
+          </div>
+        )}
 
         <div>
           <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
@@ -112,8 +141,12 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
         <Button variant="ghost" size="sm" onClick={onClose} disabled={mutation.isPending}>
           Cancelar
         </Button>
-        <Button size="sm" onClick={onSubmit} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Registrando…' : 'Registrar pago'}
+        <Button size="sm" onClick={onSubmit} disabled={submitDeshabilitado}>
+          {mutation.isPending
+            ? 'Registrando…'
+            : cargandoDetalle
+              ? 'Cargando OC…'
+              : 'Registrar pago'}
         </Button>
       </ModalFooter>
     </Modal>

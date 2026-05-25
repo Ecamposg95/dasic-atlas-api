@@ -11,7 +11,9 @@ export type ApiError = {
 // FastAPI 422 manda `detail` como array de objetos Pydantic v2
 // {type, loc, msg, input, ctx}. Si lo dejamos como objeto crudo y un
 // componente lo pinta como children de React → error #31.
-function normalizeDetail(detail: unknown, fallback: string): string {
+// Exportado para que call-sites que bypasean `api.*` (p.ej. login con
+// form-urlencoded) puedan normalizar el detail con la misma lógica.
+export function normalizeDetail(detail: unknown, fallback: string): string {
   if (detail == null) return fallback;
   if (typeof detail === 'string') return detail;
   if (Array.isArray(detail)) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, normalizeDetail } from '@/lib/api';
 import { useAuth, type User } from '@/stores/auth';
 
 export function LoginPage() {
@@ -37,6 +37,11 @@ export function LoginPage() {
     setError(null);
     setBusy(true);
     try {
+      // El endpoint /api/auth/login espera form-urlencoded (OAuth2PasswordRequestForm),
+      // no JSON. El wrapper `api.post` hardcodea Content-Type: application/json,
+      // así que aquí usamos `fetch` directo y normalizamos el detail con la
+      // misma función que el wrapper para evitar React #31 cuando 422 trae
+      // un array de errores Pydantic.
       const r = await fetch('/api/auth/login', {
         method: 'POST',
         credentials: 'include',
@@ -44,8 +49,8 @@ export function LoginPage() {
         body: new URLSearchParams({ username: email, password }).toString(),
       });
       if (!r.ok) {
-        const d = (await r.json().catch(() => ({}))) as { detail?: string };
-        setError(d.detail ?? 'Credenciales incorrectas');
+        const body = (await r.json().catch(() => ({}))) as { detail?: unknown };
+        setError(normalizeDetail(body.detail, 'Credenciales incorrectas'));
         setBusy(false);
         return;
       }

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/data-table';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/stores/auth';
+import { useIsAdmin } from '@/lib/permissions';
 import { useImportProductos, useProductos } from '../hooks/useProductos';
 import { useMarcas } from '../hooks/useMarcas';
 import { useProveedores } from '../hooks/useProveedores';
@@ -68,8 +68,7 @@ export function InventarioPage() {
   const { data: productos = [], isLoading, error } = useProductos();
   const { data: marcas = [] } = useMarcas();
   const { data: proveedores = [] } = useProveedores();
-  const user = useAuth((s) => s.user);
-  const isAdmin = user?.rol_label === 'ADMINISTRADOR' || user?.rol === 'ADMIN';
+  const isAdmin = useIsAdmin();
 
   const qc = useQueryClient();
 

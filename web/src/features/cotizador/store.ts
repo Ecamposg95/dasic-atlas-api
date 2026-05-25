@@ -279,33 +279,43 @@ export const useCotizador = create<CotizadorState>((set) => ({
   hydrateFromOrden: (orden) =>
     set(() => {
       const monedaOrden = (orden.moneda?.toUpperCase() || 'MXN') as Moneda;
+      // El endpoint /detalle-json NO devuelve `id` por detalle. Usamos el
+      // índice del array como id sintético — estable dentro de la sesión de
+      // edición y suficiente para keying React + ordenamiento.
+      // TODO(backend): exponer `detalle.id` en /detalle-json para preservar
+      // el id real entre saves (útil si el editor algún día hace PATCH por
+      // línea en lugar de PUT completo).
+      const indexed = orden.detalles.map((d, i) => ({ d, idx: i }));
+
       // Desde 2026-05-23: fantasmas y servicios_catalogo entran al cart.
       // `lineasNoSoportadas` queda como fallback defensivo para detalles
       // raros sin producto_id, sin servicio_id y sin descripcion_libre
       // (improbable; no se debería ver en producción).
-      const noSoportadas: LineaNoSoportada[] = orden.detalles
+      const noSoportadas: LineaNoSoportada[] = indexed
         .filter(
-          (d) =>
+          ({ d }) =>
             d.producto_id == null &&
             d.servicio_id == null &&
             !d.descripcion_libre,
         )
-        .map((d) => ({
-          detalle_id: d.id,
+        .map(({ d, idx }) => ({
+          detalle_id: idx,
           descripcion: d.descripcion_libre || d.servicio?.nombre || '—',
           cantidad: d.cantidad,
         }));
 
-      const cartCatalogo: CartItem[] = orden.detalles
-        .filter((d) => d.producto_id != null && d.producto != null)
-        .map((d) => {
+      const cartCatalogo: CartItem[] = indexed
+        .filter(({ d }) => d.producto_id != null && d.producto != null)
+        .map(({ d, idx }) => {
           const prod = d.producto!;
-          const skuCat = prod.sku_comercial || prod.sku || '';
+          // /detalle-json ya colapsa sku = sku_comercial || sku; no expone
+          // `sku_comercial` por separado.
+          const skuCat = prod.sku || '';
           const nomCat = prod.nombre || '';
           const costCat = Number(prod.costo_compra ?? 0);
           return {
-            uid: `linea-${d.id}`,
-            detalle_id: d.id,
+            uid: `linea-${idx}`,
+            detalle_id: idx,
             tipo_linea: 'producto_catalogo' as const,
             producto_id: d.producto_id!,
             servicio_id: null,
@@ -334,14 +344,14 @@ export const useCotizador = create<CotizadorState>((set) => ({
       // SKU vienen del snapshot persistido (`sku_libre`/`descripcion_libre`),
       // que el backend rellena con `servicio.codigo`/`servicio.nombre` al
       // crear el detalle (ver app/routers/ventas.py:634-635).
-      const cartServicios: CartItem[] = orden.detalles
-        .filter((d) => d.servicio_id != null)
-        .map((d) => {
+      const cartServicios: CartItem[] = indexed
+        .filter(({ d }) => d.servicio_id != null)
+        .map(({ d, idx }) => {
           const skuSnap = d.sku_libre || d.servicio?.codigo || '—';
           const nomSnap = d.descripcion_libre || d.servicio?.nombre || '—';
           return {
-            uid: `linea-${d.id}`,
-            detalle_id: d.id,
+            uid: `linea-${idx}`,
+            detalle_id: idx,
             tipo_linea: 'servicio_catalogo' as const,
             producto_id: null,
             servicio_id: d.servicio_id,
@@ -369,16 +379,16 @@ export const useCotizador = create<CotizadorState>((set) => ({
 
       // Fantasmas: producto_id NULL Y servicio_id NULL Y hay descripcion_libre.
       // La descripción viene de descripcion_libre; el SKU del sku_libre si lo hay.
-      const cartFantasmas: CartItem[] = orden.detalles
+      const cartFantasmas: CartItem[] = indexed
         .filter(
-          (d) =>
+          ({ d }) =>
             d.producto_id == null &&
             d.servicio_id == null &&
             !!d.descripcion_libre,
         )
-        .map((d) => ({
-          uid: `linea-${d.id}`,
-          detalle_id: d.id,
+        .map(({ d, idx }) => ({
+          uid: `linea-${idx}`,
+          detalle_id: idx,
           tipo_linea: 'producto_fantasma' as const,
           producto_id: null,
           servicio_id: null,
@@ -426,12 +436,11 @@ export const useCotizador = create<CotizadorState>((set) => ({
         fecha_vencimiento: orden.fecha_vencimiento?.slice(0, 10) ?? null,
         observaciones: orden.observaciones ?? '',
         terminos_condiciones: orden.terminos_condiciones ?? '',
-        // El backend aún no devuelve estos campos en `OrdenVentaDetail`; los
-        // leemos con cast defensivo para hidratar cuando estén disponibles.
-        pdf_concepto_unificado:
-          (orden as { pdf_concepto_unificado?: string | null }).pdf_concepto_unificado ?? '',
-        pdf_concepto_enabled: !!(orden as { pdf_concepto_enabled?: boolean })
-          .pdf_concepto_enabled,
+        // El backend expone estos campos como `pdf_unificado`/`concepto_unificado`
+        // en /detalle-json (ver app/routers/ventas.py:1439-1440). El store usa
+        // el alias interno `pdf_concepto_*` (mapeado en buildSavePayload).
+        pdf_concepto_unificado: orden.concepto_unificado ?? '',
+        pdf_concepto_enabled: orden.pdf_unificado === 1,
         cart,
         lineasNoSoportadas: noSoportadas,
         expandedUids: new Set<string>(),
