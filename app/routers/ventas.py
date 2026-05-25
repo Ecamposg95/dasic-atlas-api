@@ -4,7 +4,7 @@ from pathlib import Path as _P
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, select, text
+from sqlalchemy import desc, func, select, text
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone
@@ -127,19 +127,28 @@ def _generar_folio(
     yymm = ahora.strftime("%y%m")
     es_cot = tipo_orden == models.EstatusOrden.COTIZACION
     prefijo = "C" if es_cot else "V"
-    inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     # Advisory lock transaccional: serializa el cómputo del consecutivo por
-    # (prefijo, mes) entre llamadas concurrentes. Sin esto, count()+1 sufre
-    # race y dos cotizaciones del mismo minuto pueden colisionar en folio.
+    # (prefijo, mes) entre llamadas concurrentes.
     lock_key = f"folio:{prefijo}:{yymm}"
     db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": lock_key})
 
-    q = db.query(models.OrdenVenta).filter(
-        models.OrdenVenta.fecha_creacion >= inicio_mes,
-        models.OrdenVenta.folio.like(f"{prefijo}-%"),
+    # La fuente de verdad del consecutivo es el folio mismo (no fecha_creacion,
+    # que puede estar desincronizada por zonas horarias o edición manual).
+    # MAX en lugar de COUNT tolera gaps por borrados o renumeraciones.
+    patron = f"{prefijo}-{yymm}%"
+    ultimo = (
+        db.query(func.max(models.OrdenVenta.folio))
+        .filter(models.OrdenVenta.folio.like(patron))
+        .scalar()
     )
-    consecutivo = q.count() + 1
+    consecutivo = 1
+    if ultimo:
+        try:
+            sufijo = ultimo.split(f"{prefijo}-{yymm}", 1)[1]
+            consecutivo = int(sufijo) + 1
+        except (IndexError, ValueError):
+            consecutivo = 1
     return f"{prefijo}-{yymm}{consecutivo:03d}"
 
 
