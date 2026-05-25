@@ -125,7 +125,7 @@ export function TotalsBar() {
         : 'bg-emerald-900/30 text-emerald-300 border-emerald-700/50';
 
   return (
-    <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-4 py-2">
+    <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-4 py-3">
       {err && (
         <div className="mb-2 text-[11px] bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-2 py-1.5 flex items-center gap-1.5">
           <AlertTriangle className="h-3 w-3 shrink-0" />
@@ -175,25 +175,28 @@ export function TotalsBar() {
         </div>
       )}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-4 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <Sigma className="h-3.5 w-3.5 text-slate-500" />
-            <span className="text-slate-500">Subtotal</span>
-            <span className="font-mono">{fmtMoney(subtotal, moneda)}</span>
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <Sigma className="h-3 w-3" /> Subtotal
+            </span>
+            <span className="font-mono text-2xl font-semibold text-slate-100">{fmtMoney(subtotal, moneda)}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Percent className="h-3.5 w-3.5 text-slate-500" />
-            <span className="text-slate-500">IVA ({config.iva_pct_label})</span>
-            <span className="font-mono">{fmtMoney(iva, moneda)}</span>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})
+            </span>
+            <span className="font-mono text-xs text-slate-400">{fmtMoney(iva, moneda)}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Coins className="h-3.5 w-3.5 text-accent-glow" />
-            <span className="text-slate-500">Total</span>
-            <span className="font-mono font-bold text-accent-glow">{fmtMoney(total, moneda)}</span>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <Coins className="h-3 w-3 text-accent-glow" /> Total
+            </span>
+            <span className="font-mono text-2xl font-bold text-accent-glow">{fmtMoney(total, moneda)}</span>
           </div>
           {cart.length > 0 && (
             <span
-              className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}
+              className={`self-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}
               title="Utilidad promedio del carrito"
             >
               <TrendingUp className="h-2.5 w-2.5" />
