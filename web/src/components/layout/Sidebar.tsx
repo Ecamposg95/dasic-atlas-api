@@ -68,9 +68,9 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-sidebar text-sidebar-text border-r border-slate-800 flex flex-col">
       <div className="px-4 pt-4 pb-3 shrink-0 border-b border-slate-800/60">
-        <div className="text-xl font-bold leading-tight">Atlas ONE</div>
+        <div className="text-xl font-bold leading-tight">DASIC</div>
         <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-0.5">
-          DASIC <span className="text-accent-glow">·</span> Sistema Industrial
+          Atlas ONE <span className="text-accent-glow">·</span> Sistema Industrial
         </div>
       </div>
 

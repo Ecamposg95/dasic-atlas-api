@@ -57,7 +57,7 @@ export function HeaderCotizacion() {
         </div>
       )}
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div className="md:col-span-2">
+      <div>
         <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
           <User className="h-3 w-3" />
           Cliente
@@ -66,7 +66,7 @@ export function HeaderCotizacion() {
         <UltimaCotHint clienteId={clienteId} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="md:col-span-2 grid grid-cols-2 gap-2">
         <div>
           <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
             <Coins className="h-3 w-3" />
