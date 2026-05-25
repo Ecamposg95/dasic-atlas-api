@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardCheck, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, CheckSquare, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -143,6 +143,15 @@ function ReporteRow({ item, onRecepcion }: RowProps) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            title="Descargar PDF"
+            onClick={() => window.open(`/api/reportes-servicio-docs/${item.id}/pdf`, '_blank', 'noreferrer')}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            PDF
+          </Button>
           {!recibido && item.folio && (
             <Button
               size="sm"
