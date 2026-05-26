@@ -134,20 +134,29 @@ def actualizar_fantasma(
         raise HTTPException(404, "Fantasma no encontrado")
     if f.estado in ("PROMOVIDO", "DESCARTADO"):
         raise HTTPException(409, f"Fantasma en estado {f.estado} es solo lectura")
-    if payload.descripcion_original is not None:
-        f.descripcion_original = payload.descripcion_original
-        f.descripcion_normalizada = (payload.descripcion_original or "").strip().lower()
-    if payload.sku_libre is not None:
-        f.sku_libre = payload.sku_libre
-    if payload.costo_referencia is not None:
-        f.costo_referencia = payload.costo_referencia
-    if payload.moneda_referencia is not None:
-        f.moneda_referencia = payload.moneda_referencia.upper()
-    if payload.proveedor_sugerido_id is not None:
-        f.proveedor_sugerido_id = payload.proveedor_sugerido_id
-    db.commit()
-    db.refresh(f)
-    return {"id": f.id, "estado": f.estado}
+
+    try:
+        if payload.descripcion_original is not None:
+            f.descripcion_original = payload.descripcion_original
+            f.descripcion_normalizada = (payload.descripcion_original or "").strip().lower()
+        if payload.sku_libre is not None:
+            f.sku_libre = payload.sku_libre
+        if payload.costo_referencia is not None:
+            f.costo_referencia = payload.costo_referencia
+        if payload.moneda_referencia is not None:
+            f.moneda_referencia = payload.moneda_referencia.upper()
+        if payload.proveedor_sugerido_id is not None:
+            f.proveedor_sugerido_id = payload.proveedor_sugerido_id
+        db.commit()
+        db.refresh(f)
+        return {"id": f.id, "estado": f.estado}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("fantasmas.actualizar_fantasma falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.post("/{id}/descartar", dependencies=[Depends(allow_admin)])
@@ -157,9 +166,18 @@ def descartar_fantasma(id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Fantasma no encontrado")
     if f.estado in ("PROMOVIDO", "DESCARTADO"):
         raise HTTPException(409, f"Fantasma ya está en estado {f.estado}")
-    f.estado = "DESCARTADO"
-    db.commit()
-    return {"id": f.id, "estado": f.estado}
+
+    try:
+        f.estado = "DESCARTADO"
+        db.commit()
+        return {"id": f.id, "estado": f.estado}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("fantasmas.descartar_fantasma falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.post("/{id}/promover", dependencies=[Depends(allow_admin)])
@@ -179,19 +197,27 @@ def promover_fantasma(
     if not f.sku_libre:
         raise HTTPException(400, "Asigna un SKU al fantasma antes de promoverlo")
 
-    # Crea producto del catálogo con campos mínimos requeridos.
-    nuevo = models.Producto(
-        sku=f.sku_libre,
-        nombre=f.descripcion_original[:150],
-        descripcion=f.descripcion_original,
-        costo_compra=f.costo_referencia,
-        moneda_compra=f.moneda_referencia,
-        stock_actual=0,
-        proveedor_principal_id=f.proveedor_sugerido_id,
-    )
-    db.add(nuevo)
-    db.flush()
-    f.estado = "PROMOVIDO"
-    f.promovido_a_producto_id = nuevo.id
-    db.commit()
-    return {"fantasma_id": f.id, "producto_id": nuevo.id, "sku": nuevo.sku}
+    try:
+        # Crea producto del catálogo con campos mínimos requeridos.
+        nuevo = models.Producto(
+            sku=f.sku_libre,
+            nombre=f.descripcion_original[:150],
+            descripcion=f.descripcion_original,
+            costo_compra=f.costo_referencia,
+            moneda_compra=f.moneda_referencia,
+            stock_actual=0,
+            proveedor_principal_id=f.proveedor_sugerido_id,
+        )
+        db.add(nuevo)
+        db.flush()
+        f.estado = "PROMOVIDO"
+        f.promovido_a_producto_id = nuevo.id
+        db.commit()
+        return {"fantasma_id": f.id, "producto_id": nuevo.id, "sku": nuevo.sku}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("fantasmas.promover_fantasma falló (fantasma_id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")

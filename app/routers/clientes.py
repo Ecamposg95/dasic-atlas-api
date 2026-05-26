@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -12,6 +14,8 @@ from app import schemas
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff, get_current_user
 from app.security.permissions import is_owner_scoped, require
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/clientes", tags=["Clientes y Cobranza"])
 
@@ -62,11 +66,19 @@ def crear_cliente(
         if existing:
             raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
 
-    nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
-    db.add(nuevo_cliente)
-    db.commit()
-    db.refresh(nuevo_cliente)
-    return nuevo_cliente
+    try:
+        nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
+        db.add(nuevo_cliente)
+        db.commit()
+        db.refresh(nuevo_cliente)
+        return nuevo_cliente
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.crear_cliente falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 2.5 EDITAR CLIENTE ---
@@ -94,11 +106,19 @@ def editar_cliente(
         if otro:
             raise HTTPException(status_code=400, detail="Ya existe otro cliente con este email")
 
-    for k, v in data.items():
-        setattr(cliente, k, v)
-    db.commit()
-    db.refresh(cliente)
-    return cliente
+    try:
+        for k, v in data.items():
+            setattr(cliente, k, v)
+        db.commit()
+        db.refresh(cliente)
+        return cliente
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.editar_cliente falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 2.6 ELIMINAR CLIENTE (admin) ---
@@ -146,9 +166,17 @@ def eliminar_cliente(
             ),
         )
 
-    db.delete(cliente)
-    db.commit()
-    return {"mensaje": "Cliente eliminado", "id": cliente_id}
+    try:
+        db.delete(cliente)
+        db.commit()
+        return {"mensaje": "Cliente eliminado", "id": cliente_id}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.eliminar_cliente falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 3. OBTENER DETALLE CLIENTE ---
 @router.get("/{cliente_id}", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
@@ -254,9 +282,13 @@ def registrar_pago_cliente(
             "transaccion_id": nuevo_abono.id
         }
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        raise e
+        logger.exception("clientes.registrar_pago_cliente falló")
+        raise HTTPException(500, detail=f"{type(e).__name__}: {e}")
 
 
 # --- 4. RECONCILIACIÓN DE SALDO ---
@@ -309,21 +341,29 @@ def aplicar_reconciliacion(
     if not cliente:
         raise HTTPException(404, "Cliente no encontrado")
 
-    saldo_calculado = Decimal("0")
-    for t in cliente.transacciones:
-        if t.tipo == models.TipoMovimiento.CARGO:
-            saldo_calculado += Decimal(t.monto or 0)
-        elif t.tipo == models.TipoMovimiento.ABONO:
-            saldo_calculado -= Decimal(t.monto or 0)
+    try:
+        saldo_calculado = Decimal("0")
+        for t in cliente.transacciones:
+            if t.tipo == models.TipoMovimiento.CARGO:
+                saldo_calculado += Decimal(t.monto or 0)
+            elif t.tipo == models.TipoMovimiento.ABONO:
+                saldo_calculado -= Decimal(t.monto or 0)
 
-    saldo_anterior = cliente.saldo_actual
-    cliente.saldo_actual = saldo_calculado.quantize(Decimal("0.01"))
-    db.commit()
-    return {
-        "cliente_id": cliente.id,
-        "saldo_anterior": saldo_anterior,
-        "saldo_nuevo": cliente.saldo_actual,
-    }
+        saldo_anterior = cliente.saldo_actual
+        cliente.saldo_actual = saldo_calculado.quantize(Decimal("0.01"))
+        db.commit()
+        return {
+            "cliente_id": cliente.id,
+            "saldo_anterior": saldo_anterior,
+            "saldo_nuevo": cliente.saldo_actual,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.aplicar_reconciliacion falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
     # Plantilla HTML para Estado de Cuenta

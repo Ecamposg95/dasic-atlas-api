@@ -160,22 +160,30 @@ def crear_marca(payload: schemas.MarcaCreate, db: Session = Depends(get_db)):
     if existente:
         raise HTTPException(409, f"Abreviatura '{abrev}' ya existe (marca: {existente.nombre})")
 
-    m = models.Marca(
-        abreviatura=abrev,
-        nombre=nombre,
-        categoria=(payload.categoria or "").strip() or None,
-    )
-    db.add(m)
-    db.commit()
-    db.refresh(m)
-    return schemas.MarcaResponse(
-        id=m.id,
-        abreviatura=m.abreviatura,
-        nombre=m.nombre,
-        categoria=m.categoria,
-        n_productos=0,
-        siguiente_sku=siguiente_sku_para(db, m.abreviatura),
-    )
+    try:
+        m = models.Marca(
+            abreviatura=abrev,
+            nombre=nombre,
+            categoria=(payload.categoria or "").strip() or None,
+        )
+        db.add(m)
+        db.commit()
+        db.refresh(m)
+        return schemas.MarcaResponse(
+            id=m.id,
+            abreviatura=m.abreviatura,
+            nombre=m.nombre,
+            categoria=m.categoria,
+            n_productos=0,
+            siguiente_sku=siguiente_sku_para(db, m.abreviatura),
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.crear_marca falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 4. EDITAR MARCA (no permite cambiar abreviatura) ---
@@ -190,24 +198,32 @@ def editar_marca(
     if not m:
         raise HTTPException(404, f"Marca '{abrev}' no encontrada")
 
-    if payload.nombre is not None:
-        new_nombre = payload.nombre.strip()
-        if not new_nombre:
-            raise HTTPException(400, "nombre no puede quedar vacío")
-        m.nombre = new_nombre
-    if payload.categoria is not None:
-        m.categoria = payload.categoria.strip() or None
+    try:
+        if payload.nombre is not None:
+            new_nombre = payload.nombre.strip()
+            if not new_nombre:
+                raise HTTPException(400, "nombre no puede quedar vacío")
+            m.nombre = new_nombre
+        if payload.categoria is not None:
+            m.categoria = payload.categoria.strip() or None
 
-    db.commit()
-    db.refresh(m)
-    return schemas.MarcaResponse(
-        id=m.id,
-        abreviatura=m.abreviatura,
-        nombre=m.nombre,
-        categoria=m.categoria,
-        n_productos=_contar_productos_por_marca(db, m.nombre, m.abreviatura),
-        siguiente_sku=siguiente_sku_para(db, m.abreviatura),
-    )
+        db.commit()
+        db.refresh(m)
+        return schemas.MarcaResponse(
+            id=m.id,
+            abreviatura=m.abreviatura,
+            nombre=m.nombre,
+            categoria=m.categoria,
+            n_productos=_contar_productos_por_marca(db, m.nombre, m.abreviatura),
+            siguiente_sku=siguiente_sku_para(db, m.abreviatura),
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.editar_marca falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 5. ELIMINAR MARCA (bloquea si hay productos) ---
@@ -226,9 +242,17 @@ def eliminar_marca(abreviatura: str, db: Session = Depends(get_db)):
             "Reasigna o elimina los productos primero.",
         )
 
-    db.delete(m)
-    db.commit()
-    return {"mensaje": f"Marca '{abrev}' eliminada"}
+    try:
+        db.delete(m)
+        db.commit()
+        return {"mensaje": f"Marca '{abrev}' eliminada"}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.eliminar_marca falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 6. SUGERIR SIGUIENTE SKU (preview, sin reservar) ---
@@ -327,13 +351,21 @@ def renombrar_categoria_producto(payload: dict, db: Session = Depends(get_db)):
     if antiguo == nuevo:
         return {"actualizados": 0, "nota": "Nombres iguales, nada que hacer."}
 
-    n = (
-        db.query(models.Producto)
-        .filter(models.Producto.categoria == antiguo)
-        .update({"categoria": nuevo}, synchronize_session=False)
-    )
-    db.commit()
-    return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+    try:
+        n = (
+            db.query(models.Producto)
+            .filter(models.Producto.categoria == antiguo)
+            .update({"categoria": nuevo}, synchronize_session=False)
+        )
+        db.commit()
+        return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.renombrar_categoria_producto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.delete("/categorias-producto/{nombre}", dependencies=[Depends(allow_admin_asistente)])
@@ -345,13 +377,22 @@ def eliminar_categoria_producto(nombre: str, db: Session = Depends(get_db)):
     nombre_lim = _normalizar_nombre(nombre)
     if not nombre_lim:
         raise HTTPException(400, "Nombre vacío.")
-    n = (
-        db.query(models.Producto)
-        .filter(models.Producto.categoria == nombre_lim)
-        .update({"categoria": None}, synchronize_session=False)
-    )
-    db.commit()
-    return {"desasignados": int(n), "categoria": nombre_lim}
+
+    try:
+        n = (
+            db.query(models.Producto)
+            .filter(models.Producto.categoria == nombre_lim)
+            .update({"categoria": None}, synchronize_session=False)
+        )
+        db.commit()
+        return {"desasignados": int(n), "categoria": nombre_lim}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.eliminar_categoria_producto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -390,13 +431,22 @@ def renombrar_unidad(payload: dict, db: Session = Depends(get_db)):
         raise HTTPException(400, "Se requieren 'antiguo' y 'nuevo'.")
     if antiguo == nuevo:
         return {"actualizados": 0}
-    n = (
-        db.query(models.Producto)
-        .filter(models.Producto.unidad == antiguo)
-        .update({"unidad": nuevo}, synchronize_session=False)
-    )
-    db.commit()
-    return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+
+    try:
+        n = (
+            db.query(models.Producto)
+            .filter(models.Producto.unidad == antiguo)
+            .update({"unidad": nuevo}, synchronize_session=False)
+        )
+        db.commit()
+        return {"actualizados": int(n), "antiguo": antiguo, "nuevo": nuevo}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("catalogos.renombrar_unidad falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # ---------------------------------------------------------------------------

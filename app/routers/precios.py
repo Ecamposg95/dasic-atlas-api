@@ -1,5 +1,6 @@
 """Endpoints para precios de proveedor (comparador)."""
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,6 +11,8 @@ from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.security.jwt import allow_admin
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/precios", tags=["Precios"])
 
@@ -86,23 +89,31 @@ def crear_precio(
     if not payload.producto_id and not payload.descripcion_busqueda:
         raise HTTPException(400, "Especifica producto_id o descripcion_busqueda")
 
-    fila = models.PrecioProveedor(
-        proveedor_id=payload.proveedor_id,
-        producto_id=payload.producto_id,
-        descripcion_busqueda=(payload.descripcion_busqueda or "").strip().lower() or None,
-        sku_libre=payload.sku_libre,
-        precio=payload.precio,
-        moneda=(payload.moneda or "MXN").upper(),
-        fecha_vigencia_desde=payload.fecha_vigencia_desde,
-        fecha_vigencia_hasta=payload.fecha_vigencia_hasta,
-        notas=payload.notas,
-        fuente="MANUAL",
-        creado_por_id=current_user.id,
-    )
-    db.add(fila)
-    db.commit()
-    db.refresh(fila)
-    return {"id": fila.id}
+    try:
+        fila = models.PrecioProveedor(
+            proveedor_id=payload.proveedor_id,
+            producto_id=payload.producto_id,
+            descripcion_busqueda=(payload.descripcion_busqueda or "").strip().lower() or None,
+            sku_libre=payload.sku_libre,
+            precio=payload.precio,
+            moneda=(payload.moneda or "MXN").upper(),
+            fecha_vigencia_desde=payload.fecha_vigencia_desde,
+            fecha_vigencia_hasta=payload.fecha_vigencia_hasta,
+            notas=payload.notas,
+            fuente="MANUAL",
+            creado_por_id=current_user.id,
+        )
+        db.add(fila)
+        db.commit()
+        db.refresh(fila)
+        return {"id": fila.id}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("precios.crear_precio falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.delete("/{precio_id}", dependencies=[Depends(allow_admin)])

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -9,6 +11,8 @@ from typing import List, Optional
 from app import models
 from app.db import get_db
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/gastos", tags=["Gastos Operativos"])
 
@@ -65,21 +69,29 @@ def registrar_gasto(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    nuevo = models.Gasto(
-        categoria=gasto.categoria.strip(),
-        descripcion=(gasto.descripcion or "").strip() or None,
-        monto=gasto.monto,
-        moneda=(gasto.moneda or "MXN").upper(),
-        usuario_id=current_user.id,
-    )
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return GastoResponse(
-        id=nuevo.id, categoria=nuevo.categoria, descripcion=nuevo.descripcion,
-        monto=nuevo.monto, moneda=nuevo.moneda, fecha=nuevo.fecha,
-        usuario=current_user.nombre, usuario_id=current_user.id,
-    )
+    try:
+        nuevo = models.Gasto(
+            categoria=gasto.categoria.strip(),
+            descripcion=(gasto.descripcion or "").strip() or None,
+            monto=gasto.monto,
+            moneda=(gasto.moneda or "MXN").upper(),
+            usuario_id=current_user.id,
+        )
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+        return GastoResponse(
+            id=nuevo.id, categoria=nuevo.categoria, descripcion=nuevo.descripcion,
+            monto=nuevo.monto, moneda=nuevo.moneda, fecha=nuevo.fecha,
+            usuario=current_user.nombre, usuario_id=current_user.id,
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("gastos.registrar_gasto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.put("/{id}", response_model=GastoResponse, dependencies=[Depends(allow_admin_asistente)])
@@ -87,19 +99,28 @@ def editar_gasto(id: int, payload: GastoUpdate, db: Session = Depends(get_db)):
     g = db.query(models.Gasto).filter(models.Gasto.id == id).first()
     if not g:
         raise HTTPException(404, "Gasto no encontrado")
-    data = payload.model_dump(exclude_unset=True)
-    if "moneda" in data and data["moneda"]:
-        data["moneda"] = data["moneda"].upper()
-    for k, v in data.items():
-        setattr(g, k, v)
-    db.commit()
-    db.refresh(g)
-    return GastoResponse(
-        id=g.id, categoria=g.categoria, descripcion=g.descripcion,
-        monto=g.monto, moneda=g.moneda or "MXN", fecha=g.fecha,
-        usuario=g.usuario.nombre if g.usuario else "Sistema",
-        usuario_id=g.usuario_id,
-    )
+
+    try:
+        data = payload.model_dump(exclude_unset=True)
+        if "moneda" in data and data["moneda"]:
+            data["moneda"] = data["moneda"].upper()
+        for k, v in data.items():
+            setattr(g, k, v)
+        db.commit()
+        db.refresh(g)
+        return GastoResponse(
+            id=g.id, categoria=g.categoria, descripcion=g.descripcion,
+            monto=g.monto, moneda=g.moneda or "MXN", fecha=g.fecha,
+            usuario=g.usuario.nombre if g.usuario else "Sistema",
+            usuario_id=g.usuario_id,
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("gastos.editar_gasto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.delete("/{id}", dependencies=[Depends(allow_admin)])

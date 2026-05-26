@@ -7,15 +7,19 @@ materiales, se suman como líneas adicionales de productos del catálogo.
 SAT defaults aplicados en backend: clave_prod_serv=81111500, clave_unidad=E48.
 """
 
+import logging
 from decimal import Decimal
 from typing import Optional
 
+import sqlalchemy
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.db import get_db
+
+logger = logging.getLogger(__name__)
 from app.models.services import (
     SERVICIO_SAT_DEFAULT_OBJETO_IMP,
     SERVICIO_SAT_DEFAULT_PROD_SERV,
@@ -173,11 +177,19 @@ def crear_servicio(
     if existing:
         raise HTTPException(400, f"Ya existe un servicio con código '{data['codigo']}'.")
 
-    nuevo = models.Servicio(**data, creado_por_id=current_user.id)
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
+    try:
+        nuevo = models.Servicio(**data, creado_por_id=current_user.id)
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+        return nuevo
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("servicios.crear_servicio falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- ACTUALIZAR ---
@@ -192,31 +204,39 @@ def actualizar_servicio(
     if not s:
         raise HTTPException(404, "Servicio no encontrado")
 
-    data = payload.model_dump(exclude_unset=True)
-    # Si el body trae código nuevo, validar unicidad.
-    if "codigo" in data and data["codigo"]:
-        data["codigo"] = data["codigo"].strip().upper()
-        clash = (
-            db.query(models.Servicio)
-            .filter(models.Servicio.codigo == data["codigo"])
-            .filter(models.Servicio.id != id)
-            .first()
-        )
-        if clash:
-            raise HTTPException(400, f"Ya existe otro servicio con código '{data['codigo']}'.")
+    try:
+        data = payload.model_dump(exclude_unset=True)
+        # Si el body trae código nuevo, validar unicidad.
+        if "codigo" in data and data["codigo"]:
+            data["codigo"] = data["codigo"].strip().upper()
+            clash = (
+                db.query(models.Servicio)
+                .filter(models.Servicio.codigo == data["codigo"])
+                .filter(models.Servicio.id != id)
+                .first()
+            )
+            if clash:
+                raise HTTPException(400, f"Ya existe otro servicio con código '{data['codigo']}'.")
 
-    if "clave_unidad_sat" in data and data["clave_unidad_sat"]:
-        data["clave_unidad_sat"] = data["clave_unidad_sat"].strip().upper()
-    if "clave_prod_serv" in data and data["clave_prod_serv"]:
-        data["clave_prod_serv"] = data["clave_prod_serv"].strip()
-    if "moneda" in data and data["moneda"]:
-        data["moneda"] = data["moneda"].strip().upper()
+        if "clave_unidad_sat" in data and data["clave_unidad_sat"]:
+            data["clave_unidad_sat"] = data["clave_unidad_sat"].strip().upper()
+        if "clave_prod_serv" in data and data["clave_prod_serv"]:
+            data["clave_prod_serv"] = data["clave_prod_serv"].strip()
+        if "moneda" in data and data["moneda"]:
+            data["moneda"] = data["moneda"].strip().upper()
 
-    for k, v in data.items():
-        setattr(s, k, v)
-    db.commit()
-    db.refresh(s)
-    return s
+        for k, v in data.items():
+            setattr(s, k, v)
+        db.commit()
+        db.refresh(s)
+        return s
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("servicios.actualizar_servicio falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- ELIMINAR ---
@@ -230,13 +250,17 @@ def eliminar_servicio(id: int, db: Session = Depends(get_db)):
 
     # Check referencias en DetalleOrden (servicio_id se agrega en Fase 4;
     # mientras tanto la columna puede no existir, así que envolvemos en try).
+    # CRÍTICO: solo silenciamos OperationalError/ProgrammingError (columna no
+    # existe pre-Fase 4). Otras excepciones deben propagar — si por ej. el
+    # query falla por otra razón, no queremos asumir "sin referencias" y borrar
+    # servicios que sí estén siendo usados.
     try:
         en_uso = (
             db.query(models.DetalleOrden.id)
             .filter(models.DetalleOrden.servicio_id == id)  # type: ignore[attr-defined]
             .first()
         )
-    except Exception:
+    except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError):
         en_uso = None
 
     if en_uso:

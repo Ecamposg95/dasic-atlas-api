@@ -1,5 +1,6 @@
 """Endpoints de remisiones."""
 
+import logging
 import re
 from datetime import datetime
 from typing import Optional
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/remisiones", tags=["Remisiones"])
 
@@ -124,9 +127,10 @@ def crear_remision(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(500, "Error al crear remisión")
+        logger.exception("remisiones.crear_remision falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.get("/{id}", dependencies=[Depends(allow_all_staff)])
@@ -169,7 +173,16 @@ def registrar_recepcion(
         raise HTTPException(404, "Remisión no encontrada")
     if rem.recibido_at:
         raise HTTPException(409, "Remisión ya tiene recepción registrada")
-    rem.recibido_por = recibido_por
-    rem.recibido_at = datetime.utcnow()
-    db.commit()
-    return {"id": rem.id, "recibido_at": rem.recibido_at.isoformat(), "recibido_por": rem.recibido_por}
+
+    try:
+        rem.recibido_por = recibido_por
+        rem.recibido_at = datetime.utcnow()
+        db.commit()
+        return {"id": rem.id, "recibido_at": rem.recibido_at.isoformat(), "recibido_por": rem.recibido_por}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("remisiones.registrar_recepcion falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")

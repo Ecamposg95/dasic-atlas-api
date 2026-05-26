@@ -260,11 +260,19 @@ def listar_proveedores(
 
 @router.post("/proveedores", response_model=schemas.ProveedorResponse)
 def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(get_db)):
-    nuevo = models.Proveedor(**proveedor.model_dump())
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
+    try:
+        nuevo = models.Proveedor(**proveedor.model_dump())
+        db.add(nuevo)
+        db.commit()
+        db.refresh(nuevo)
+        return nuevo
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("compras.crear_proveedor falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 # Listar Historial (alias en "/" para compat con clientes con caché viejo)
 @router.get("/")
@@ -565,10 +573,10 @@ def confirmar_ocs_desde_cotizacion(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("compras.confirmar_ocs_desde_cotizacion falló (quote_id=%s)", quote_id)
-        raise HTTPException(500, "Error al persistir OCs")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.post("/cotizacion/{quote_id}/orden", dependencies=[Depends(allow_admin_asistente)])
@@ -678,10 +686,10 @@ def crear_oc_desde_cotizacion(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("compras.crear_oc_desde_cotizacion falló (quote_id=%s)", quote_id)
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.post("/registrar-entrada", dependencies=[Depends(allow_admin_asistente)])
@@ -739,10 +747,10 @@ def registrar_compra(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("compras.registrar_compra falló")
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 @router.post("/registrar-pago", dependencies=[Depends(allow_admin_asistente)])
 def pagar_proveedor(
@@ -761,15 +769,23 @@ def pagar_proveedor(
     )
     if not prov: raise HTTPException(404, "Proveedor no encontrado")
 
-    db.add(models.TransaccionProveedor(
-        proveedor_id=prov.id,
-        tipo=models.TipoMovimiento.ABONO,
-        monto=monto,
-        descripcion=f"PAGO: {ref}",
-    ))
-    prov.saldo_actual -= monto
-    db.commit()
-    return {"mensaje": "Pago registrado", "nuevo_saldo": prov.saldo_actual}
+    try:
+        db.add(models.TransaccionProveedor(
+            proveedor_id=prov.id,
+            tipo=models.TipoMovimiento.ABONO,
+            monto=monto,
+            descripcion=f"PAGO: {ref}",
+        ))
+        prov.saldo_actual -= monto
+        db.commit()
+        return {"mensaje": "Pago registrado", "nuevo_saldo": prov.saldo_actual}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("compras.pagar_proveedor falló (proveedor_id=%s)", proveedor_id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 @router.get("/{id}/imprimir", response_class=HTMLResponse)
 def imprimir_oc(id: int, db: Session = Depends(get_db)):
@@ -811,32 +827,40 @@ def recibir_oc(
     if not detalles:
         raise HTTPException(400, "OC sin detalles, nada que recibir")
 
-    procesados = 0
-    for det in detalles:
-        if not det.producto_id:
-            continue
-        producto = db.get(models.Producto, det.producto_id)
-        if not producto:
-            continue
-        aplicar_movimiento(
-            db,
-            producto=producto,
-            tipo=TipoMovimientoStock.ENTRADA.value,
-            cantidad=int(det.cantidad),
-            referencia_tipo="oc",
-            referencia_id=orden.id,
-            motivo=f"Recepción OC {orden.folio or '#'+str(orden.id)}",
-            usuario=current_user,
-        )
-        procesados += 1
+    try:
+        procesados = 0
+        for det in detalles:
+            if not det.producto_id:
+                continue
+            producto = db.get(models.Producto, det.producto_id)
+            if not producto:
+                continue
+            aplicar_movimiento(
+                db,
+                producto=producto,
+                tipo=TipoMovimientoStock.ENTRADA.value,
+                cantidad=int(det.cantidad),
+                referencia_tipo="oc",
+                referencia_id=orden.id,
+                motivo=f"Recepción OC {orden.folio or '#'+str(orden.id)}",
+                usuario=current_user,
+            )
+            procesados += 1
 
-    orden.estatus = "recibido"
-    db.commit()
-    return {
-        "ok": True,
-        "folio": orden.folio,
-        "productos_ingresados": procesados,
-    }
+        orden.estatus = "recibido"
+        db.commit()
+        return {
+            "ok": True,
+            "folio": orden.folio,
+            "productos_ingresados": procesados,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("compras.recibir_oc falló (id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- EDITOR DE OC (Fase 5) ---
@@ -965,10 +989,10 @@ def crear_oc_editor(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("compras.crear_oc_editor falló")
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.put("/{id}", dependencies=[Depends(allow_admin_asistente)])
@@ -1041,7 +1065,7 @@ def actualizar_oc_editor(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("compras.actualizar_oc_editor falló (id=%s)", id)
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")

@@ -7,6 +7,7 @@ from typing import List, Optional, Union
 import csv
 import io
 import json
+import logging
 import secrets
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,8 @@ from app.db import get_db
 from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
 from app.services.stock_service import aplicar_movimiento
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/productos", tags=["Productos"])
 
@@ -365,60 +368,68 @@ def crear_producto(
         marca_texto=producto.marca,
     )
 
-    raw_sku = (producto.sku or "").strip()
-    sku = (
-        _normalize_sku(raw_sku)
-        if raw_sku
-        else _generate_internal_sku(db, marca=marca_texto_final, marca_id=marca_id_final)
-    )
-
-    # Verificar si el SKU ya existe
-    db_producto = db.query(models.Producto).filter(models.Producto.sku == sku).first()
-    if db_producto:
-        raise HTTPException(status_code=400, detail=f"El SKU '{sku}' ya existe.")
-
-    payload = producto.model_dump()
-    payload["sku"] = sku
-    sku_comercial_norm = _normalize_optional_text(producto.sku_comercial)
-    payload["sku_comercial"] = sku_comercial_norm or sku  # autocompleta con interno
-    payload["moneda_compra"] = _normalize_currency(producto.moneda_compra)
-    payload["marca"] = marca_texto_final
-    payload["marca_id"] = marca_id_final
-    payload["unidad"] = _normalize_optional_text(producto.unidad) or DEFAULT_UNIDAD
-    if payload.get("precio_publico") is None:
-        payload.pop("precio_publico", None)
-
-    # Normaliza claves SAT (uppercase) y categoría
-    if payload.get("clave_unidad_sat"):
-        payload["clave_unidad_sat"] = payload["clave_unidad_sat"].strip().upper()
-    if payload.get("clave_prod_serv"):
-        payload["clave_prod_serv"] = payload["clave_prod_serv"].strip()
-    if payload.get("categoria"):
-        payload["categoria"] = payload["categoria"].strip()
-
-    # El stock inicial entra al producto vía aplicar_movimiento (ENTRADA auditable).
-    # Nace con 0 y se ajusta abajo, garantizando kardex completo desde día 1.
-    stock_inicial = int(payload.pop("stock_actual", 0) or 0)
-    payload["stock_actual"] = 0
-
-    nuevo_producto = models.Producto(**payload)
-    db.add(nuevo_producto)
-    db.flush()
-
-    if stock_inicial > 0:
-        aplicar_movimiento(
-            db,
-            producto=nuevo_producto,
-            tipo=TipoMovimientoStock.ENTRADA.value,
-            cantidad=stock_inicial,
-            referencia_tipo="stock_inicial",
-            motivo="alta de producto con stock inicial",
-            usuario=current_user,
+    try:
+        raw_sku = (producto.sku or "").strip()
+        sku = (
+            _normalize_sku(raw_sku)
+            if raw_sku
+            else _generate_internal_sku(db, marca=marca_texto_final, marca_id=marca_id_final)
         )
 
-    db.commit()
-    db.refresh(nuevo_producto)
-    return nuevo_producto
+        # Verificar si el SKU ya existe
+        db_producto = db.query(models.Producto).filter(models.Producto.sku == sku).first()
+        if db_producto:
+            raise HTTPException(status_code=400, detail=f"El SKU '{sku}' ya existe.")
+
+        payload = producto.model_dump()
+        payload["sku"] = sku
+        sku_comercial_norm = _normalize_optional_text(producto.sku_comercial)
+        payload["sku_comercial"] = sku_comercial_norm or sku  # autocompleta con interno
+        payload["moneda_compra"] = _normalize_currency(producto.moneda_compra)
+        payload["marca"] = marca_texto_final
+        payload["marca_id"] = marca_id_final
+        payload["unidad"] = _normalize_optional_text(producto.unidad) or DEFAULT_UNIDAD
+        if payload.get("precio_publico") is None:
+            payload.pop("precio_publico", None)
+
+        # Normaliza claves SAT (uppercase) y categoría
+        if payload.get("clave_unidad_sat"):
+            payload["clave_unidad_sat"] = payload["clave_unidad_sat"].strip().upper()
+        if payload.get("clave_prod_serv"):
+            payload["clave_prod_serv"] = payload["clave_prod_serv"].strip()
+        if payload.get("categoria"):
+            payload["categoria"] = payload["categoria"].strip()
+
+        # El stock inicial entra al producto vía aplicar_movimiento (ENTRADA auditable).
+        # Nace con 0 y se ajusta abajo, garantizando kardex completo desde día 1.
+        stock_inicial = int(payload.pop("stock_actual", 0) or 0)
+        payload["stock_actual"] = 0
+
+        nuevo_producto = models.Producto(**payload)
+        db.add(nuevo_producto)
+        db.flush()
+
+        if stock_inicial > 0:
+            aplicar_movimiento(
+                db,
+                producto=nuevo_producto,
+                tipo=TipoMovimientoStock.ENTRADA.value,
+                cantidad=stock_inicial,
+                referencia_tipo="stock_inicial",
+                motivo="alta de producto con stock inicial",
+                usuario=current_user,
+            )
+
+        db.commit()
+        db.refresh(nuevo_producto)
+        return nuevo_producto
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("productos.crear_producto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 4. ACTUALIZAR PRODUCTO ---
 @router.put("/{id}", response_model=schemas.ProductoResponseAdmin, dependencies=[Depends(allow_admin_asistente)])
@@ -438,62 +449,70 @@ def actualizar_producto(
         alterno_id=producto_update.proveedor_alterno_id,
     )
 
-    # Actualizamos solo los campos enviados.
-    update_data = producto_update.model_dump(exclude_unset=True)
-    # stock_actual sale del setattr loop: lo procesamos al final como AJUSTE auditable.
-    nuevo_stock = update_data.pop("stock_actual", None)
+    try:
+        # Actualizamos solo los campos enviados.
+        update_data = producto_update.model_dump(exclude_unset=True)
+        # stock_actual sale del setattr loop: lo procesamos al final como AJUSTE auditable.
+        nuevo_stock = update_data.pop("stock_actual", None)
 
-    if "sku_comercial" in update_data:
-        update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
+        if "sku_comercial" in update_data:
+            update_data["sku_comercial"] = _normalize_optional_text(update_data["sku_comercial"])
 
-    # Si el body trajo marca y/o marca_id, normalizamos ambos juntos.
-    if "marca" in update_data or "marca_id" in update_data:
-        marca_id_in = update_data.get("marca_id", db_producto.marca_id)
-        marca_texto_in = update_data.get("marca", db_producto.marca)
-        marca_id_final, marca_texto_final = _resolve_marca(
-            db, marca_id=marca_id_in, marca_texto=marca_texto_in
-        )
-        update_data["marca_id"] = marca_id_final
-        update_data["marca"] = marca_texto_final
+        # Si el body trajo marca y/o marca_id, normalizamos ambos juntos.
+        if "marca" in update_data or "marca_id" in update_data:
+            marca_id_in = update_data.get("marca_id", db_producto.marca_id)
+            marca_texto_in = update_data.get("marca", db_producto.marca)
+            marca_id_final, marca_texto_final = _resolve_marca(
+                db, marca_id=marca_id_in, marca_texto=marca_texto_in
+            )
+            update_data["marca_id"] = marca_id_final
+            update_data["marca"] = marca_texto_final
 
-    if "unidad" in update_data:
-        update_data["unidad"] = _normalize_optional_text(update_data["unidad"]) or DEFAULT_UNIDAD
-    if "moneda_compra" in update_data:
-        update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
+        if "unidad" in update_data:
+            update_data["unidad"] = _normalize_optional_text(update_data["unidad"]) or DEFAULT_UNIDAD
+        if "moneda_compra" in update_data:
+            update_data["moneda_compra"] = _normalize_currency(update_data["moneda_compra"])
 
-    # Normalizaciones SAT + clasificación
-    if "clave_unidad_sat" in update_data and update_data["clave_unidad_sat"]:
-        update_data["clave_unidad_sat"] = update_data["clave_unidad_sat"].strip().upper()
-    if "clave_prod_serv" in update_data and update_data["clave_prod_serv"]:
-        update_data["clave_prod_serv"] = update_data["clave_prod_serv"].strip()
-    if "categoria" in update_data and update_data["categoria"]:
-        update_data["categoria"] = update_data["categoria"].strip()
+        # Normalizaciones SAT + clasificación
+        if "clave_unidad_sat" in update_data and update_data["clave_unidad_sat"]:
+            update_data["clave_unidad_sat"] = update_data["clave_unidad_sat"].strip().upper()
+        if "clave_prod_serv" in update_data and update_data["clave_prod_serv"]:
+            update_data["clave_prod_serv"] = update_data["clave_prod_serv"].strip()
+        if "categoria" in update_data and update_data["categoria"]:
+            update_data["categoria"] = update_data["categoria"].strip()
 
-    for key, value in update_data.items():
-        setattr(db_producto, key, value)
+        for key, value in update_data.items():
+            setattr(db_producto, key, value)
 
-    # Si el body trajo stock_actual y cambia, emitimos un AJUSTE por el delta.
-    # Esto preserva kardex aún cuando el cambio entra por el PUT y no por /ajustar-stock.
-    if nuevo_stock is not None:
-        delta = int(nuevo_stock) - int(db_producto.stock_actual or 0)
-        if delta != 0:
-            try:
-                aplicar_movimiento(
-                    db,
-                    producto=db_producto,
-                    tipo=TipoMovimientoStock.AJUSTE.value,
-                    cantidad=delta,
-                    referencia_tipo="put_producto",
-                    motivo="ajuste vía edición de producto",
-                    usuario=current_user,
-                )
-            except ValueError as exc:
-                db.rollback()
-                raise HTTPException(status_code=400, detail=str(exc))
+        # Si el body trajo stock_actual y cambia, emitimos un AJUSTE por el delta.
+        # Esto preserva kardex aún cuando el cambio entra por el PUT y no por /ajustar-stock.
+        if nuevo_stock is not None:
+            delta = int(nuevo_stock) - int(db_producto.stock_actual or 0)
+            if delta != 0:
+                try:
+                    aplicar_movimiento(
+                        db,
+                        producto=db_producto,
+                        tipo=TipoMovimientoStock.AJUSTE.value,
+                        cantidad=delta,
+                        referencia_tipo="put_producto",
+                        motivo="ajuste vía edición de producto",
+                        usuario=current_user,
+                    )
+                except ValueError as exc:
+                    db.rollback()
+                    raise HTTPException(status_code=400, detail=str(exc))
 
-    db.commit()
-    db.refresh(db_producto)
-    return db_producto
+        db.commit()
+        db.refresh(db_producto)
+        return db_producto
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("productos.actualizar_producto falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 5. ELIMINAR PRODUCTO (SOLO ADMIN) ---
 @router.delete("/{id}", dependencies=[Depends(allow_admin)])

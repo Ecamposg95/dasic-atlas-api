@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -10,6 +12,8 @@ from app.models.enums import RolUsuario
 from app.security import get_current_user
 from app.security.jwt import allow_user_admin
 from app.services import UserService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/usuarios", tags=["Administración de Usuarios"])
 
@@ -42,8 +46,16 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     # Validar correo único
     if UserService.get_user_by_email(db, usuario.email):
         raise HTTPException(status_code=400, detail="El correo ya está registrado")
-    
-    return UserService.create_user(db, usuario)
+
+    try:
+        return UserService.create_user(db, usuario)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("usuarios.crear_usuario falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 @router.put("/{user_id}", response_model=schemas.UsuarioResponse, dependencies=[Depends(allow_user_admin)])
 def actualizar_usuario(
@@ -54,15 +66,24 @@ def actualizar_usuario(
     user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
     if not user:
         raise HTTPException(404, "Usuario no encontrado")
-    data = payload.model_dump(exclude_unset=True)
-    if "email" in data and data["email"] and data["email"] != user.email:
-        if UserService.get_user_by_email(db, data["email"]):
-            raise HTTPException(400, "El correo ya está registrado")
-    for k, v in data.items():
-        setattr(user, k, v)
-    db.commit()
-    db.refresh(user)
-    return user
+
+    try:
+        data = payload.model_dump(exclude_unset=True)
+        if "email" in data and data["email"] and data["email"] != user.email:
+            if UserService.get_user_by_email(db, data["email"]):
+                raise HTTPException(400, "El correo ya está registrado")
+        for k, v in data.items():
+            setattr(user, k, v)
+        db.commit()
+        db.refresh(user)
+        return user
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("usuarios.actualizar_usuario falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.post("/{user_id}/password", dependencies=[Depends(allow_user_admin)])
@@ -76,14 +97,23 @@ def reset_password(
     user = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
     if not user:
         raise HTTPException(404, "Usuario no encontrado")
-    user.password_hash = UserService.get_password_hash(payload.password)
-    db.commit()
-    return {
-        "ok": True,
-        "user_id": user.id,
-        "email": user.email,
-        "actualizado_por": current_user.email,
-    }
+
+    try:
+        user.password_hash = UserService.get_password_hash(payload.password)
+        db.commit()
+        return {
+            "ok": True,
+            "user_id": user.id,
+            "email": user.email,
+            "actualizado_por": current_user.email,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("usuarios.reset_password falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.delete("/{user_id}", dependencies=[Depends(allow_user_admin)])
@@ -95,10 +125,18 @@ def eliminar_usuario(
     user_to_delete = db.query(models.Usuario).filter(models.Usuario.id == user_id).first()
     if not user_to_delete:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
+
     if user_to_delete.id == current_user.id:
         raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo")
-        
-    db.delete(user_to_delete)
-    db.commit()
-    return {"mensaje": "Usuario eliminado"}
+
+    try:
+        db.delete(user_to_delete)
+        db.commit()
+        return {"mensaje": "Usuario eliminado"}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("usuarios.eliminar_usuario falló")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")

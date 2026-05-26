@@ -1,5 +1,6 @@
 """Endpoints de inventario: movimientos, ajustes manuales, disponibilidad, liberación."""
 
+import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -15,6 +16,8 @@ from app.services.stock_service import (
     disponibilidad,
     liberar_reservas_cotizacion,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/inventario", tags=["Inventario"])
 
@@ -86,26 +89,34 @@ def liberar_vencidas(
     current_user: models.Usuario = Depends(get_current_user),
 ):
     """Libera reservas de cotizaciones cuya fecha_vencimiento ya pasó. Idempotente."""
-    ahora = datetime.utcnow()
-    candidatas = (
-        db.query(models.OrdenVenta)
-        .filter(
-            models.OrdenVenta.estatus == EstatusOrden.COTIZACION,
-            models.OrdenVenta.fecha_vencimiento.is_not(None),
-            models.OrdenVenta.fecha_vencimiento < ahora,
+    try:
+        ahora = datetime.utcnow()
+        candidatas = (
+            db.query(models.OrdenVenta)
+            .filter(
+                models.OrdenVenta.estatus == EstatusOrden.COTIZACION,
+                models.OrdenVenta.fecha_vencimiento.is_not(None),
+                models.OrdenVenta.fecha_vencimiento < ahora,
+            )
+            .all()
         )
-        .all()
-    )
-    total_liberadas = 0
-    for cot in candidatas:
-        total_liberadas += liberar_reservas_cotizacion(
-            db,
-            cotizacion_id=cot.id,
-            motivo="vencimiento automático",
-            usuario=current_user,
-        )
-    db.commit()
-    return {
-        "cotizaciones_revisadas": len(candidatas),
-        "productos_liberados": total_liberadas,
-    }
+        total_liberadas = 0
+        for cot in candidatas:
+            total_liberadas += liberar_reservas_cotizacion(
+                db,
+                cotizacion_id=cot.id,
+                motivo="vencimiento automático",
+                usuario=current_user,
+            )
+        db.commit()
+        return {
+            "cotizaciones_revisadas": len(candidatas),
+            "productos_liberados": total_liberadas,
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("inventario.liberar_vencidas falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")

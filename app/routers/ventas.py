@@ -783,10 +783,10 @@ def crear_orden(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("ventas.crear_orden falló")
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 2. EDITAR COTIZACIÓN (PUT) ---
 @router.put("/{id}", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
@@ -1014,10 +1014,10 @@ def actualizar_orden(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("ventas.actualizar_orden falló (id=%s)", id)
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 2.5 RECOTIZAR (CREAR NUEVA VERSIÓN) ---
 @router.post("/{id}/recotizar", response_model=schemas.OrdenVentaResponse, dependencies=[Depends(allow_all_staff)])
@@ -1040,108 +1040,116 @@ def recotizar(
     if origen.estatus not in (models.EstatusOrden.COTIZACION, models.EstatusOrden.CANCELADA):
         raise HTTPException(400, "Sólo cotizaciones se pueden recotizar")
 
-    raiz_id = origen.cotizacion_origen_id or origen.id
+    try:
+        raiz_id = origen.cotizacion_origen_id or origen.id
 
-    # Advisory lock transaccional: serializa el cómputo de `siguiente_version`
-    # por raíz. Sin esto, dos recotizaciones concurrentes del mismo origen
-    # computarían el mismo N+1 e intentarían insertar el mismo folio
-    # versionado (`...V{N+1}`), causando UniqueViolation.
-    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"folio:recotizar:{raiz_id}"})
+        # Advisory lock transaccional: serializa el cómputo de `siguiente_version`
+        # por raíz. Sin esto, dos recotizaciones concurrentes del mismo origen
+        # computarían el mismo N+1 e intentarían insertar el mismo folio
+        # versionado (`...V{N+1}`), causando UniqueViolation.
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"folio:recotizar:{raiz_id}"})
 
-    siguiente_version = (
-        db.query(models.OrdenVenta)
-        .filter(
-            ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
+        siguiente_version = (
+            db.query(models.OrdenVenta)
+            .filter(
+                ((models.OrdenVenta.cotizacion_origen_id == raiz_id) | (models.OrdenVenta.id == raiz_id)),
+            )
+            .count()
+            + 1
         )
-        .count()
-        + 1
-    )
 
-    # Folio versionado se deriva del folio RAÍZ (no consume slot del consecutivo
-    # mensual). Si el origen ya es versionado (ej. C-2605001V2), se recorta el
-    # sufijo V<n> y se reconstruye con la versión actual.
-    folio_raiz = re.sub(r"V\d+$", "", origen.folio or "")
-    folio_versionado = f"{folio_raiz}V{siguiente_version}"
+        # Folio versionado se deriva del folio RAÍZ (no consume slot del consecutivo
+        # mensual). Si el origen ya es versionado (ej. C-2605001V2), se recorta el
+        # sufijo V<n> y se reconstruye con la versión actual.
+        folio_raiz = re.sub(r"V\d+$", "", origen.folio or "")
+        folio_versionado = f"{folio_raiz}V{siguiente_version}"
 
-    nueva = models.OrdenVenta(
-        folio=folio_versionado,
-        cliente_id=origen.cliente_id,
-        vendedor_id=current_user.id,
-        estatus=models.EstatusOrden.COTIZACION,
-        observaciones=origen.observaciones,
-        terminos_condiciones=origen.terminos_condiciones,
-        moneda=origen.moneda,
-        tipo_cambio=origen.tipo_cambio,
-        tc_mn_a_usd=origen.tc_mn_a_usd,
-        tc_usd_a_mn=origen.tc_usd_a_mn,
-        total=origen.total,
-        fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
-        cotizacion_origen_id=raiz_id,
-        version=siguiente_version,
-        enviada_at=None,
-        pdf_generado_at=None,
-    )
-    db.add(nueva)
-    db.flush()
+        nueva = models.OrdenVenta(
+            folio=folio_versionado,
+            cliente_id=origen.cliente_id,
+            vendedor_id=current_user.id,
+            estatus=models.EstatusOrden.COTIZACION,
+            observaciones=origen.observaciones,
+            terminos_condiciones=origen.terminos_condiciones,
+            moneda=origen.moneda,
+            tipo_cambio=origen.tipo_cambio,
+            tc_mn_a_usd=origen.tc_mn_a_usd,
+            tc_usd_a_mn=origen.tc_usd_a_mn,
+            total=origen.total,
+            fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
+            cotizacion_origen_id=raiz_id,
+            version=siguiente_version,
+            enviada_at=None,
+            pdf_generado_at=None,
+        )
+        db.add(nueva)
+        db.flush()
 
-    for det in origen.detalles:
-        db.add(models.DetalleOrden(
+        for det in origen.detalles:
+            db.add(models.DetalleOrden(
+                orden_id=nueva.id,
+                producto_id=det.producto_id,
+                servicio_id=det.servicio_id,
+                sku_libre=det.sku_libre,
+                descripcion_libre=det.descripcion_libre,
+                moneda_origen_linea=det.moneda_origen_linea,
+                costo_base_linea=det.costo_base_linea,
+                cantidad=det.cantidad,
+                precio_unitario=det.precio_unitario,
+                utilidad_aplicada=det.utilidad_aplicada,
+                descuento_aplicado=det.descuento_aplicado,
+                descuento_proveedor=det.descuento_proveedor or Decimal("0"),
+                subtotal=det.subtotal,
+                tipo_linea=det.tipo_linea,
+                proveedor_sugerido_id=det.proveedor_sugerido_id,
+                entrega_min=det.entrega_min,
+                entrega_max=det.entrega_max,
+                entrega_unidad=det.entrega_unidad,
+                observaciones_linea=det.observaciones_linea,
+            ))
+
+        # Audit: registrar evento en origen y en hija
+        db.add(models.QuoteEvent(
+            orden_id=origen.id,
+            canal="NOTE",
+            direccion="INTERNAL",
+            estatus="LOGGED",
+            asunto="RECOTIZADA",
+            cuerpo="",
+            metadata_json=_cr_json.dumps({
+                "accion": "origen_clonada",
+                "hija_id": nueva.id,
+                "hija_folio": folio_versionado,
+                "version": siguiente_version,
+            }),
+            creado_por_id=current_user.id,
+        ))
+        db.add(models.QuoteEvent(
             orden_id=nueva.id,
-            producto_id=det.producto_id,
-            servicio_id=det.servicio_id,
-            sku_libre=det.sku_libre,
-            descripcion_libre=det.descripcion_libre,
-            moneda_origen_linea=det.moneda_origen_linea,
-            costo_base_linea=det.costo_base_linea,
-            cantidad=det.cantidad,
-            precio_unitario=det.precio_unitario,
-            utilidad_aplicada=det.utilidad_aplicada,
-            descuento_aplicado=det.descuento_aplicado,
-            descuento_proveedor=det.descuento_proveedor or Decimal("0"),
-            subtotal=det.subtotal,
-            tipo_linea=det.tipo_linea,
-            proveedor_sugerido_id=det.proveedor_sugerido_id,
-            entrega_min=det.entrega_min,
-            entrega_max=det.entrega_max,
-            entrega_unidad=det.entrega_unidad,
-            observaciones_linea=det.observaciones_linea,
+            canal="NOTE",
+            direccion="INTERNAL",
+            estatus="LOGGED",
+            asunto="RECOTIZADA",
+            cuerpo="",
+            metadata_json=_cr_json.dumps({
+                "accion": "clonada_de",
+                "origen_id": origen.id,
+                "origen_folio": origen.folio,
+                "version": siguiente_version,
+            }),
+            creado_por_id=current_user.id,
         ))
 
-    # Audit: registrar evento en origen y en hija
-    db.add(models.QuoteEvent(
-        orden_id=origen.id,
-        canal="NOTE",
-        direccion="INTERNAL",
-        estatus="LOGGED",
-        asunto="RECOTIZADA",
-        cuerpo="",
-        metadata_json=_cr_json.dumps({
-            "accion": "origen_clonada",
-            "hija_id": nueva.id,
-            "hija_folio": folio_versionado,
-            "version": siguiente_version,
-        }),
-        creado_por_id=current_user.id,
-    ))
-    db.add(models.QuoteEvent(
-        orden_id=nueva.id,
-        canal="NOTE",
-        direccion="INTERNAL",
-        estatus="LOGGED",
-        asunto="RECOTIZADA",
-        cuerpo="",
-        metadata_json=_cr_json.dumps({
-            "accion": "clonada_de",
-            "origen_id": origen.id,
-            "origen_folio": origen.folio,
-            "version": siguiente_version,
-        }),
-        creado_por_id=current_user.id,
-    ))
-
-    db.commit()
-    db.refresh(nueva)
-    return nueva
+        db.commit()
+        db.refresh(nueva)
+        return nueva
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("ventas.recotizar falló (id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.get("/{id}/versiones", dependencies=[Depends(allow_all_staff)])
@@ -1256,10 +1264,10 @@ def convertir_cotizacion(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
         logger.exception("ventas.convertir_cotizacion falló (id=%s)", id)
-        raise
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 # --- 4. LISTAR HISTORIAL ---
 @router.get("/historial", dependencies=[Depends(allow_all_staff)])
@@ -1836,15 +1844,23 @@ def cancelar_cotizacion(
         raise HTTPException(400, "Sólo se cancelan cotizaciones abiertas")
     _check_owner_or_403(orden, current_user, action="cancel")
 
-    liberadas = liberar_reservas_cotizacion(
-        db,
-        cotizacion_id=orden.id,
-        motivo="cancelación manual",
-        usuario=current_user,
-    )
-    orden.estatus = models.EstatusOrden.CANCELADA
-    db.commit()
-    return {"ok": True, "folio": orden.folio, "productos_liberados": liberadas}
+    try:
+        liberadas = liberar_reservas_cotizacion(
+            db,
+            cotizacion_id=orden.id,
+            motivo="cancelación manual",
+            usuario=current_user,
+        )
+        orden.estatus = models.EstatusOrden.CANCELADA
+        db.commit()
+        return {"ok": True, "folio": orden.folio, "productos_liberados": liberadas}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("ventas.cancelar_cotizacion falló (id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # --- 8. AUTO-OC: sugerir + generar ---
@@ -1869,7 +1885,15 @@ def generar_oc_endpoint(
     )
     if not orden:
         raise HTTPException(404, "Cotización no encontrada")
-    return {"ocs": generar_ocs(db, orden, usuario=current_user)}
+    try:
+        return {"ocs": generar_ocs(db, orden, usuario=current_user)}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("ventas.generar_oc_endpoint falló (id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 # ============================================================

@@ -6,6 +6,7 @@ OrdenVenta — análogo a Remision pero para líneas de tipo servicio.
 Prefix `/api/reportes-servicio-docs` para evitar colisión semántica.
 """
 
+import logging
 import re
 from datetime import datetime
 from io import BytesIO
@@ -20,6 +21,8 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
+
+logger = logging.getLogger(__name__)
 
 
 def _txt(value: Optional[str]) -> str:
@@ -145,9 +148,10 @@ def crear(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(500, "Error al crear reporte de servicio")
+        logger.exception("reportes_servicio_docs.crear falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
 @router.get("/{id}", dependencies=[Depends(allow_all_staff)])
@@ -322,8 +326,17 @@ def registrar_recepcion(
         raise HTTPException(404, "Reporte no encontrado")
     if r.recibido_at:
         raise HTTPException(409, "El reporte ya tiene recepción registrada")
-    r.cliente_recibe_nombre = cliente_recibe_nombre
-    r.recibido_at = datetime.utcnow()
-    db.commit()
-    db.refresh(r)
-    return _serializar(r)
+
+    try:
+        r.cliente_recibe_nombre = cliente_recibe_nombre
+        r.recibido_at = datetime.utcnow()
+        db.commit()
+        db.refresh(r)
+        return _serializar(r)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("reportes_servicio_docs.registrar_recepcion falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
