@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path as _P
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -142,13 +143,14 @@ def _generar_folio(
         .filter(models.OrdenVenta.folio.like(patron))
         .scalar()
     )
+    # Extraer SOLO los dígitos del consecutivo. MAX lex puede regresar un folio
+    # versionado tipo `C-2605001V2` (recotizar); un `int("001V2")` truena y el
+    # fallback a 1 garantizaba colisión contra `C-2605001` que ya existía.
     consecutivo = 1
     if ultimo:
-        try:
-            sufijo = ultimo.split(f"{prefijo}-{yymm}", 1)[1]
-            consecutivo = int(sufijo) + 1
-        except (IndexError, ValueError):
-            consecutivo = 1
+        m = re.match(rf"{re.escape(prefijo)}-{re.escape(yymm)}(\d+)", ultimo)
+        if m:
+            consecutivo = int(m.group(1)) + 1
     return f"{prefijo}-{yymm}{consecutivo:03d}"
 
 
@@ -1048,9 +1050,11 @@ def recotizar(
         + 1
     )
 
-    folio_nuevo = _generar_folio(db, models.EstatusOrden.COTIZACION, current_user)
-    # Formato versionado alineado al folio real DASIC: C-YYMMNNN + V<n>  (ej. C-2604227V2)
-    folio_versionado = f"{folio_nuevo}V{siguiente_version}"
+    # Folio versionado se deriva del folio RAÍZ (no consume slot del consecutivo
+    # mensual). Si el origen ya es versionado (ej. C-2605001V2), se recorta el
+    # sufijo V<n> y se reconstruye con la versión actual.
+    folio_raiz = re.sub(r"V\d+$", "", origen.folio or "")
+    folio_versionado = f"{folio_raiz}V{siguiente_version}"
 
     nueva = models.OrdenVenta(
         folio=folio_versionado,
