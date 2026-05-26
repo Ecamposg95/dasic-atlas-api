@@ -10,7 +10,7 @@ Reportes disponibles:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 import csv
@@ -428,7 +428,10 @@ def ordenes_pendientes_entrega(
     logger = logging.getLogger(__name__)
 
     try:
-        ahora = datetime.utcnow()
+        # `ahora` debe ser AWARE: `fecha_creacion` viene de columna con
+        # timezone=True, mezclar con `utcnow()` (naive) revienta con
+        # "can't subtract offset-naive and offset-aware datetimes".
+        ahora = datetime.now(timezone.utc)
         q = (
             db.query(models.OrdenVenta)
             .filter(
@@ -444,13 +447,20 @@ def ordenes_pendientes_entrega(
         for r in db.query(models.Remision).all():
             remisiones_por_orden[r.orden_venta_id] = remisiones_por_orden.get(r.orden_venta_id, 0) + 1
 
+        def _aware(dt):
+            """Defensiva: normaliza a UTC si la fila vino naive desde la DB."""
+            if dt is None:
+                return None
+            return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
         pendientes = [o for o in ordenes if remisiones_por_orden.get(o.id, 0) == 0]
-        pendientes.sort(key=lambda o: o.fecha_creacion or ahora, reverse=False)
+        pendientes.sort(key=lambda o: _aware(o.fecha_creacion) or ahora, reverse=False)
 
         items = []
         for o in pendientes:
             try:
-                dias_desde = (ahora - o.fecha_creacion).days if o.fecha_creacion else None
+                fc = _aware(o.fecha_creacion)
+                dias_desde = (ahora - fc).days if fc else None
                 cliente_nombre = o.cliente.nombre_empresa if o.cliente else None
                 estatus_val = o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus)
                 items.append({

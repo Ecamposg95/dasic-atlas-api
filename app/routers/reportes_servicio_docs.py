@@ -6,6 +6,7 @@ OrdenVenta — análogo a Remision pero para líneas de tipo servicio.
 Prefix `/api/reportes-servicio-docs` para evitar colisión semántica.
 """
 
+import re
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
@@ -13,7 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from fpdf import FPDF
-from sqlalchemy import desc
+from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -34,15 +35,31 @@ router = APIRouter(
 
 
 def _generar_folio_rs(db: Session) -> str:
-    """Folio RS-YYYYMM-NNNN con NNNN contador del mes."""
+    """Folio RS-YYYYMM-<NNNN> con consecutivo global por mes.
+
+    Mismo patrón validado en `ventas.py::_generar_folio`: advisory lock
+    transaccional + MAX(folio) + regex (tolera gaps y sufijos versionados).
+    """
     hoy = datetime.utcnow()
-    prefijo = f"RS-{hoy.strftime('%Y%m')}-"
-    count = (
-        db.query(models.ReporteServicio)
-        .filter(models.ReporteServicio.folio.like(f"{prefijo}%"))
-        .count()
+    yyyymm = hoy.strftime("%Y%m")
+    prefijo = "RS"
+
+    # Advisory lock transaccional: serializa el cómputo entre llamadas concurrentes.
+    lock_key = f"folio:{prefijo}:{yyyymm}"
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": lock_key})
+
+    patron = f"{prefijo}-{yyyymm}-%"
+    ultimo = (
+        db.query(func.max(models.ReporteServicio.folio))
+        .filter(models.ReporteServicio.folio.like(patron))
+        .scalar()
     )
-    return f"{prefijo}{count + 1:04d}"
+    consecutivo = 1
+    if ultimo:
+        m = re.match(rf"{re.escape(prefijo)}-{re.escape(yyyymm)}-(\d+)", ultimo)
+        if m:
+            consecutivo = int(m.group(1)) + 1
+    return f"{prefijo}-{yyyymm}-{consecutivo:04d}"
 
 
 def _serializar(r: models.ReporteServicio) -> dict:

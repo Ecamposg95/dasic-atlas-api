@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/fantasmas", tags=["Fantasmas"])
 def _serialize_fantasma_row(f) -> dict:
     """Defensiva contra rows con FK rotos o campos NULL inesperados."""
     try:
-        proveedor_nombre = f.proveedor_sugerido.nombre if f.proveedor_sugerido else None
+        proveedor_nombre = f.proveedor_sugerido.nombre_empresa if f.proveedor_sugerido else None
     except Exception as e:  # noqa: BLE001
         logger.warning("fantasma %s: error cargando proveedor_sugerido: %s", f.id, e)
         proveedor_nombre = None

@@ -1,11 +1,12 @@
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, text
+from sqlalchemy import desc, func, text
 from typing import List
 from decimal import Decimal
 from datetime import datetime
@@ -216,27 +217,30 @@ def _generar_folio_oc(db: Session, vendedor: "models.Usuario | None" = None) -> 
 
     Usa advisory_xact_lock para serializar el cómputo del consecutivo y
     evitar colisión entre OCs creadas concurrentemente en el mismo mes.
-    Mismo patrón que `ventas._generar_folio`.
+    Mismo patrón que `ventas._generar_folio`: MAX sobre el folio (gap-tolerant)
+    en lugar de COUNT (gap-blind, reusa folios si se borra una OC del mes).
     """
     ahora = datetime.utcnow()
     yymm = ahora.strftime("%y%m")
-    inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    prefijo = "OC"
 
     db.execute(
         text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
-        {"k": f"folio:OC:{yymm}"},
+        {"k": f"folio:{prefijo}:{yymm}"},
     )
 
-    consecutivo = (
-        db.query(models.OrdenCompra)
-        .filter(
-            models.OrdenCompra.fecha >= inicio_mes,
-            models.OrdenCompra.folio.like("OC-%"),
-        )
-        .count()
-        + 1
+    patron = f"{prefijo}-{yymm}%"
+    ultimo = (
+        db.query(func.max(models.OrdenCompra.folio))
+        .filter(models.OrdenCompra.folio.like(patron))
+        .scalar()
     )
-    return f"OC-{yymm}{consecutivo:03d}"
+    consecutivo = 1
+    if ultimo:
+        m = re.match(rf"{re.escape(prefijo)}-{re.escape(yymm)}(\d+)", ultimo)
+        if m:
+            consecutivo = int(m.group(1)) + 1
+    return f"{prefijo}-{yymm}{consecutivo:03d}"
 
 # --- ENDPOINTS ---
 

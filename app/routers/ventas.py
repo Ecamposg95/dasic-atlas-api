@@ -1041,6 +1041,13 @@ def recotizar(
         raise HTTPException(400, "Sólo cotizaciones se pueden recotizar")
 
     raiz_id = origen.cotizacion_origen_id or origen.id
+
+    # Advisory lock transaccional: serializa el cómputo de `siguiente_version`
+    # por raíz. Sin esto, dos recotizaciones concurrentes del mismo origen
+    # computarían el mismo N+1 e intentarían insertar el mismo folio
+    # versionado (`...V{N+1}`), causando UniqueViolation.
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": f"folio:recotizar:{raiz_id}"})
+
     siguiente_version = (
         db.query(models.OrdenVenta)
         .filter(

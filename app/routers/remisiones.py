@@ -1,10 +1,11 @@
 """Endpoints de remisiones."""
 
+import re
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import desc
+from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -15,16 +16,32 @@ router = APIRouter(prefix="/api/remisiones", tags=["Remisiones"])
 
 
 def _generar_folio_remision(db: Session) -> str:
-    """Folio R-YYMMNNNN con NNNN como contador del mes."""
+    """Folio R-YYMM<NNNN> con consecutivo global por mes.
+
+    Mismo patrón validado en `ventas.py::_generar_folio`: advisory lock
+    transaccional + MAX(folio) + regex para extraer el consecutivo (tolera
+    gaps por borrados y sufijos versionados).
+    """
     hoy = datetime.utcnow()
-    prefijo = f"R-{hoy.strftime('%y%m')}"
-    # Contar remisiones existentes del mes
-    count = (
-        db.query(models.Remision)
-        .filter(models.Remision.folio.like(f"{prefijo}%"))
-        .count()
+    yymm = hoy.strftime("%y%m")
+    prefijo = "R"
+
+    # Advisory lock transaccional: serializa el cómputo entre llamadas concurrentes.
+    lock_key = f"folio:{prefijo}:{yymm}"
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": lock_key})
+
+    patron = f"{prefijo}-{yymm}%"
+    ultimo = (
+        db.query(func.max(models.Remision.folio))
+        .filter(models.Remision.folio.like(patron))
+        .scalar()
     )
-    return f"{prefijo}{count + 1:04d}"
+    consecutivo = 1
+    if ultimo:
+        m = re.match(rf"{re.escape(prefijo)}-{re.escape(yymm)}(\d+)", ultimo)
+        if m:
+            consecutivo = int(m.group(1)) + 1
+    return f"{prefijo}-{yymm}{consecutivo:04d}"
 
 
 @router.get("/", dependencies=[Depends(allow_all_staff)])
