@@ -1411,6 +1411,7 @@ def obtener_detalle_orden(
                 "clave_unidad_sat": d.servicio.clave_unidad_sat,
             }
         detalles.append({
+            "id": d.id,
             "producto": prod,
             "producto_id": d.producto_id,
             "servicio": servicio,
@@ -1431,6 +1432,7 @@ def obtener_detalle_orden(
             "entrega_unidad": d.entrega_unidad,
             "observaciones_linea": d.observaciones_linea,
             "proveedor_sugerido_id": d.proveedor_sugerido_id,
+            "fantasma_id": d.fantasma_id,
         })
 
     pdf_desactualizado = (
@@ -1451,6 +1453,7 @@ def obtener_detalle_orden(
         "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
         "version": orden.version or 1,
         "fecha_creacion": orden.fecha_creacion.isoformat() if orden.fecha_creacion else None,
+        "actualizado_en": orden.actualizado_en.isoformat() if orden.actualizado_en else None,
         "fecha_vencimiento": orden.fecha_vencimiento.isoformat() if orden.fecha_vencimiento else None,
         "enviada_at": orden.enviada_at.isoformat() if orden.enviada_at else None,
         "pdf_generado_at": orden.pdf_generado_at.isoformat() if orden.pdf_generado_at else None,

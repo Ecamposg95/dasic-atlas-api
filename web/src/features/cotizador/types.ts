@@ -117,10 +117,9 @@ export type LineaNoSoportada = {
 };
 
 // Respuesta del GET /api/ventas/{id}/detalle-json (subset MVP).
-// Shape REAL del backend (`app/routers/ventas.py:1354`). Nota: el endpoint NO
-// devuelve `id` por detalle — se sintetiza en el store a partir del índice
-// (ver hydrateFromOrden). TODO(backend): agregar `id` al payload del detalle
-// para keying estable.
+// Shape REAL del backend (`app/routers/ventas.py:1354`).
+// Wave C (2026-05-25): el backend ya expone `id` por detalle. El store ahora
+// lo prefiere y solo cae al índice como fallback defensivo (ver hydrateFromOrden).
 export type OrdenVentaDetail = {
   id: number;
   folio: string;
@@ -138,13 +137,21 @@ export type OrdenVentaDetail = {
   observaciones: string | null;
   terminos_condiciones: string | null;
   version: number;
+  // Lifecycle (commits 410f805, 4bc3889): el backend los expone en
+  // /detalle-json. El SPA puede mostrarlos como "última edición",
+  // "enviada al cliente", "PDF desactualizado".
+  enviada_at?: string | null;
+  pdf_generado_at?: string | null;
+  pdf_desactualizado?: boolean;
+  actualizado_en?: string | null;
   // PDF unificado: el backend SÍ devuelve estos campos en /detalle-json
   // (ver app/routers/ventas.py:1439-1440).
   pdf_unificado?: 0 | 1 | null;
   concepto_unificado?: string | null;
   detalles: Array<{
-    // El backend NO incluye `id` aquí. El store usa el índice del array como
-    // fallback estable (ver hydrateFromOrden).
+    // PK del detalle. Backend lo provee desde 2026-05-25 (Wave C audit).
+    // Antes el store sintetizaba por índice — ahora preferimos el real.
+    id?: number;
     producto_id: number | null;
     servicio_id: number | null;
     sku_libre: string | null;
@@ -152,15 +159,18 @@ export type OrdenVentaDetail = {
     moneda_origen_linea: string | null;
     costo_base_linea: number | string;
     cantidad: number;
+    precio_unitario?: number | string;
     utilidad_aplicada: number | string;
     descuento_aplicado: number | string;
     descuento_proveedor?: number | string | null;
+    subtotal?: number | string;
     tipo_linea: string;
     entrega_min: number | null;
     entrega_max: number | null;
     entrega_unidad: string | null;
     observaciones_linea: string | null;
     proveedor_sugerido_id?: number | null;
+    fantasma_id?: number | null;
     // Shape REAL del producto en /detalle-json: el backend ya colapsa
     // `sku` = sku_comercial || sku, y expone el interno como `sku_interno`.
     producto: {
@@ -224,7 +234,6 @@ export type OrdenVentaCreate = {
   fecha_vencimiento: string | null;
   observaciones: string | null;
   terminos_condiciones: string | null;
-  tipo: 'cotizacion';
   // PDF unificado (sub-proyecto D). Nombres match con `app/schemas/sales.py:102-103`:
   //   pdf_unificado: 0 = desglose por línea (default), 1 = concepto único
   //   concepto_unificado: texto del concepto cuando pdf_unificado=1, null en caso contrario

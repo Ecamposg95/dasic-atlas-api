@@ -299,7 +299,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
             !d.descripcion_libre,
         )
         .map(({ d, idx }) => ({
-          detalle_id: idx,
+          detalle_id: (d as any).id ?? idx,
           descripcion: d.descripcion_libre || d.servicio?.nombre || '—',
           cantidad: d.cantidad,
         }));
@@ -315,7 +315,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
           const costCat = Number(prod.costo_compra ?? 0);
           return {
             uid: `linea-${idx}`,
-            detalle_id: idx,
+            detalle_id: (d as any).id ?? idx,
             tipo_linea: 'producto_catalogo' as const,
             producto_id: d.producto_id!,
             servicio_id: null,
@@ -351,7 +351,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
           const nomSnap = d.descripcion_libre || d.servicio?.nombre || '—';
           return {
             uid: `linea-${idx}`,
-            detalle_id: idx,
+            detalle_id: (d as any).id ?? idx,
             tipo_linea: 'servicio_catalogo' as const,
             producto_id: null,
             servicio_id: d.servicio_id,
@@ -388,7 +388,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         )
         .map(({ d, idx }) => ({
           uid: `linea-${idx}`,
-          detalle_id: idx,
+          detalle_id: (d as any).id ?? idx,
           tipo_linea: 'producto_fantasma' as const,
           producto_id: null,
           servicio_id: null,

@@ -43,7 +43,6 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
     fecha_vencimiento: s.fecha_vencimiento ? `${s.fecha_vencimiento}T00:00:00` : null,
     observaciones: s.observaciones || null,
     terminos_condiciones: s.terminos_condiciones || null,
-    tipo: 'cotizacion',
     // Map store fields → backend schema (`app/schemas/sales.py:102-103`):
     //   pdf_concepto_enabled (bool) → pdf_unificado (0|1 int)
     //   pdf_concepto_unificado (string) → concepto_unificado (string|null)
