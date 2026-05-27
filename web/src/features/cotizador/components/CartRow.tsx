@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
-import { lineImporte, convertCost, resolveDirectionalTcs } from '../lib/calc';
+import { lineImporte, convertCostDOF, resolveDirectionalTcs } from '../lib/calc';
 import { StockBadge } from './StockBadge';
 import { EntregaChip } from './EntregaChip';
 import { MargenChip } from './MargenChip';
@@ -27,7 +27,12 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   const expanded = expandedUids.has(item.uid);
   const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
 
-  const costoConvertido = convertCost(item.cost, item.productCurrency, moneda, tcs);
+  // Costo OC: lo que Dasic le paga al proveedor — DOF puro + descuento proveedor.
+  // Misma fórmula que RowExpanded.tsx:26-32 (match Excel CotProveedor!I6).
+  const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento_proveedor || 0) / 100);
+  const costoOc = convertCostDOF(costoOcOrigen, item.productCurrency, moneda, tc);
+  const mostrarOrigen =
+    item.productCurrency !== moneda || Number(item.descuento_proveedor || 0) > 0;
   const importe = lineImporte(item, moneda, tcs);
   const esOverride =
     (item.sku_original != null && item.sku !== item.sku_original) ||
@@ -131,8 +136,22 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-2 align-top text-right font-mono text-xs text-slate-300 w-28">
-        ${fmt(costoConvertido)}
+      <td className="p-2 align-top text-right font-mono w-28">
+        {mostrarOrigen && (
+          <div
+            className="text-[10px] text-slate-500 leading-tight"
+            title="Costo crudo del catálogo en su moneda nativa (sin TC, sin descuentos)"
+          >
+            {item.productCurrency} ${fmt(Number(item.cost))}
+          </div>
+        )}
+        <div
+          className="text-xs text-slate-300 leading-tight"
+          title="Costo OC: lo que Dasic paga al proveedor (DOF puro, con descuento proveedor aplicado)"
+        >
+          ${fmt(costoOc)}
+          <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500">OC</span>
+        </div>
       </td>
       <td className="p-2 align-top text-center w-16">
         <Input
