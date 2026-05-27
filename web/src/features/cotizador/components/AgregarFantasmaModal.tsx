@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Ghost, X, Building2, DollarSign, Hash, Percent } from 'lucide-react';
+import { Ghost, X, Building2, DollarSign, Hash, Percent, Recycle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { ProveedorPicker } from './ProveedorPicker';
+import { useFantasmasSearch, type FantasmaPrevio } from '../hooks/useFantasmasSearch';
 import type { Moneda } from '../types';
 
 /**
@@ -27,9 +28,23 @@ export function AgregarFantasmaModal() {
   const [utilidad, setUtilidad] = useState('30');
   const [qty, setQty] = useState('1');
   const [err, setErr] = useState<string | null>(null);
+  // Cuando el usuario hace click en un fantasma sugerido, guardamos el id
+  // para mostrar el banner "Reusando fantasma #N". Cualquier edición posterior
+  // a la descripción limpia el flag (porque la coincidencia ya no aplica).
+  const [reusingFantasma, setReusingFantasma] = useState<FantasmaPrevio | null>(null);
 
   const addLineaAdhoc = useCotizador((s) => s.addLineaAdhoc);
   const monedaCot = useCotizador((s) => s.moneda);
+
+  // Lookup en vivo: cada keystroke en descripción (debounceado en el hook)
+  // busca fantasmas previos con descripción/SKU similar. Si hay matches
+  // el panel debajo del textarea ofrece reusar en lugar de capturar.
+  const lookup = useFantasmasSearch(descripcion);
+  const sugerencias: FantasmaPrevio[] = lookup.items.slice(0, 5);
+  // Filtrar al fantasma ya reusado para no mostrarlo como sugerencia.
+  const sugerenciasMostradas = reusingFantasma
+    ? sugerencias.filter((f) => f.id !== reusingFantasma.id)
+    : sugerencias;
 
   useEffect(() => {
     function onOpen(e: Event) {
@@ -42,6 +57,7 @@ export function AgregarFantasmaModal() {
       setUtilidad('30');
       setQty('1');
       setErr(null);
+      setReusingFantasma(null);
       setOpen(true);
     }
     function onEsc(e: KeyboardEvent) {
@@ -54,6 +70,27 @@ export function AgregarFantasmaModal() {
       document.removeEventListener('keydown', onEsc);
     };
   }, [monedaCot]);
+
+  function onPickSugerencia(f: FantasmaPrevio) {
+    // Rellenar form con todos los datos del fantasma previo. El usuario
+    // puede ajustar cualquiera antes de guardar — el upsert backend
+    // consolidará por descripción normalizada igual.
+    setDescripcion(f.descripcion);
+    setSkuLibre(f.sku_libre ?? '');
+    setCosto(String(f.costo_referencia ?? 0));
+    setMoneda((f.moneda || 'MXN').toUpperCase() === 'USD' ? 'USD' : 'MXN');
+    setProveedorId(f.proveedor_sugerido_id ?? null);
+    setReusingFantasma(f);
+    setErr(null);
+  }
+
+  function onDescripcionChange(v: string) {
+    setDescripcion(v);
+    // Si el usuario edita y se desvía del fantasma reusado, romper el reuse.
+    if (reusingFantasma && v.trim() !== reusingFantasma.descripcion.trim()) {
+      setReusingFantasma(null);
+    }
+  }
 
   function onSave() {
     setErr(null);
@@ -88,19 +125,46 @@ export function AgregarFantasmaModal() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Ghost className="h-4 w-4 text-amber-400" />
-            Agregar producto fantasma
+            {reusingFantasma ? 'Reusar fantasma previo' : 'Agregar producto fantasma'}
           </h3>
           <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="text-[11px] text-amber-300/80 mb-4 bg-amber-900/10 border border-amber-700/30 rounded p-2">
-          Producto que no está en el catálogo (todavía). Al guardar la cotización,
-          se apila en el pool de fantasmas y queda disponible para generar OC al
-          proveedor que asignes aquí. Más tarde se puede "promover" a producto
-          del catálogo desde el módulo Fantasmas.
-        </p>
+        {reusingFantasma ? (
+          <div className="text-[11px] text-emerald-300/90 mb-4 bg-emerald-900/15 border border-emerald-700/40 rounded p-2 flex items-start gap-2">
+            <Recycle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold">
+                Reusando fantasma #{reusingFantasma.id}
+                {reusingFantasma.veces_solicitado > 1 && (
+                  <span className="ml-1 font-normal opacity-80">
+                    · pedido {reusingFantasma.veces_solicitado} veces antes
+                  </span>
+                )}
+              </div>
+              <div className="opacity-80">
+                Puedes ajustar cualquier campo; el sistema consolida automáticamente.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReusingFantasma(null)}
+              className="text-emerald-300/70 hover:text-emerald-200 text-[10px] underline"
+              title="Descartar reuse y crear uno nuevo con esta descripción"
+            >
+              cancelar
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-amber-300/80 mb-4 bg-amber-900/10 border border-amber-700/30 rounded p-2">
+            Producto que no está en el catálogo (todavía). Al guardar la cotización,
+            se apila en el pool de fantasmas y queda disponible para generar OC al
+            proveedor que asignes aquí. Si ya existe un fantasma similar, aparecerá
+            como sugerencia debajo del campo descripción.
+          </p>
+        )}
 
         <div className="space-y-3">
           <div>
@@ -109,12 +173,51 @@ export function AgregarFantasmaModal() {
             </label>
             <textarea
               value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              onChange={(e) => onDescripcionChange(e.target.value)}
               rows={2}
               placeholder='Ej. "Sensor inductivo M12 24VDC PNP NA marca Balluff"'
               autoFocus
               className="w-full text-sm rounded border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none resize-none"
             />
+            {sugerenciasMostradas.length > 0 && (
+              <div className="mt-2 border border-amber-700/40 bg-amber-950/30 rounded-md overflow-hidden">
+                <div className="px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-amber-300/80 bg-amber-900/30 border-b border-amber-700/30 flex items-center gap-1">
+                  <Ghost className="h-2.5 w-2.5" />
+                  {lookup.isFetching ? 'Buscando…' : `${sugerenciasMostradas.length} fantasma(s) previo(s) similares — click para reusar`}
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  {sugerenciasMostradas.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => onPickSugerencia(f)}
+                      className="w-full text-left px-2 py-1.5 hover:bg-amber-900/40 transition border-b border-amber-700/20 last:border-b-0 flex items-center gap-2"
+                    >
+                      <Recycle className="h-3 w-3 text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {f.sku_libre && (
+                            <span className="font-mono text-[11px] font-bold text-amber-300">{f.sku_libre}</span>
+                          )}
+                          {f.proveedor_sugerido_nombre && (
+                            <span className="text-[10px] text-slate-400">· {f.proveedor_sugerido_nombre}</span>
+                          )}
+                          {f.veces_solicitado > 1 && (
+                            <span className="text-[10px] bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded">
+                              ×{f.veces_solicitado}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-200 truncate">{f.descripcion}</div>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+                        {(f.moneda || 'MXN').toUpperCase()} ${Number(f.costo_referencia).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -204,7 +307,15 @@ export function AgregarFantasmaModal() {
         <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-800">
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button size="sm" onClick={onSave} className="bg-amber-600 hover:bg-amber-700 text-white">
-            <Ghost className="h-3 w-3 mr-1" /> Agregar al carrito
+            {reusingFantasma ? (
+              <>
+                <Recycle className="h-3 w-3 mr-1" /> Reusar fantasma
+              </>
+            ) : (
+              <>
+                <Ghost className="h-3 w-3 mr-1" /> Agregar al carrito
+              </>
+            )}
           </Button>
         </div>
       </div>

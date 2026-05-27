@@ -132,6 +132,52 @@ export type TotalsPorMoneda = {
   usd_count: number;
 };
 
+/**
+ * Costo total y margen de ganancia FINAL de la cotización.
+ *
+ * "Costo" = lo que Dasic efectivamente paga al proveedor, por lo que se
+ * convierte con DOF puro (no con los TCs direccionales con spread) y se
+ * aplica el `descuento_proveedor` de cada línea (descuento que el proveedor
+ * da a Dasic, columna H6 del Excel — independiente del descuento al cliente).
+ *
+ *   costo_linea = costo_origen × qty × (1 − descuento_proveedor / 100)
+ *   costo_total = Σ convertCostDOF(costo_linea, …)
+ *
+ * Margen $ = subtotal (lo que cobra al cliente, ya con TC spread) − costo_total
+ * Margen % = (margen / subtotal) × 100  — margen sobre venta (gross margin)
+ *
+ * Esta es la "ganancia real" porque incluye TANTO la utilidad explícita por
+ * línea COMO el spread del TC (DOF±tolerancia) que el cotizador cobra al
+ * cliente pero NO le paga al proveedor.
+ */
+export type CostosResumen = {
+  costo: number;     // costo total en moneda cotización (vía DOF puro)
+  margen: number;    // subtotal − costo
+  margenPct: number; // (margen / subtotal) × 100; 0 si subtotal = 0
+};
+
+export function computeCostos(
+  cart: CartItem[],
+  monedaCotizacion: Moneda,
+  tcs: TcSet,
+  subtotal: number,
+): CostosResumen {
+  const costo = cart.reduce((acc, item) => {
+    const descProv = Number(item.descuento_proveedor) || 0;
+    const costoNetoOrigen = Number(item.cost) * (1 - descProv / 100);
+    const costoConvertido = convertCostDOF(
+      costoNetoOrigen,
+      item.productCurrency,
+      monedaCotizacion,
+      tcs.tc_dof,
+    );
+    return acc + costoConvertido * Number(item.qty);
+  }, 0);
+  const margen = subtotal - costo;
+  const margenPct = subtotal > 0 ? (margen / subtotal) * 100 : 0;
+  return { costo, margen, margenPct };
+}
+
 export function computeTotalsPorMoneda(cart: CartItem[]): TotalsPorMoneda {
   let mxn = 0;
   let usd = 0;
@@ -157,19 +203,23 @@ export function computeTotalsPorMoneda(cart: CartItem[]): TotalsPorMoneda {
 /**
  * Resuelve los 2 TCs direccionales a partir del DOF si no vienen seteados.
  * Mismo comportamiento que el helper backend `_resolve_directional_tcs`.
+ * `tolerancia` define el spread simétrico (DOF±tolerancia); default 1.0
+ * preserva el comportamiento legacy.
  */
 export function resolveDirectionalTcs(
   tc_dof: number,
   tc_mn_a_usd: number | null,
   tc_usd_a_mn: number | null,
+  tolerancia: number = 1,
 ): TcSet {
+  const t = Number.isFinite(tolerancia) && tolerancia > 0 ? tolerancia : 1;
   return {
     tc_dof,
     tc_mn_a_usd:
       tc_mn_a_usd != null && tc_mn_a_usd > 0
         ? tc_mn_a_usd
-        : Math.max(tc_dof - 1, 0.000001),
+        : Math.max(tc_dof - t, 0.000001),
     tc_usd_a_mn:
-      tc_usd_a_mn != null && tc_usd_a_mn > 0 ? tc_usd_a_mn : tc_dof + 1,
+      tc_usd_a_mn != null && tc_usd_a_mn > 0 ? tc_usd_a_mn : tc_dof + t,
   };
 }

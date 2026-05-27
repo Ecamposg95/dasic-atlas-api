@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Sigma, Percent, Coins, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useGuardarCotizacion } from '../hooks/useCotizacion';
-import { computeTotals, computeTotalsPorMoneda, resolveDirectionalTcs } from '../lib/calc';
+import {
+  computeCostos,
+  computeTotals,
+  computeTotalsPorMoneda,
+  resolveDirectionalTcs,
+} from '../lib/calc';
 
 function fmtMoney(n: number, moneda: string) {
   return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -17,6 +22,7 @@ export function TotalsBar() {
   const tc = useCotizador((s) => s.tc);
   const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
   const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
+  const toleranciaTc = useCotizador((s) => s.tolerancia_tc);
   const cliente_id = useCotizador((s) => s.cliente_id);
   const lineasNoSoportadas = useCotizador((s) => s.lineasNoSoportadas);
   const editingId = useCotizador((s) => s.editingId);
@@ -24,8 +30,12 @@ export function TotalsBar() {
   const { config } = useConfig();
   const guardar = useGuardarCotizacion();
 
-  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
   const { subtotal, iva, total } = computeTotals(cart, moneda, tcs, config.iva_rate);
+  // Costo y margen "real": costo con DOF puro (lo que Dasic paga al proveedor)
+  // vs subtotal (lo que cobra al cliente, ya con spread del TC). El margen
+  // incluye tanto la utilidad explícita por línea como el spread del TC.
+  const { costo, margen, margenPct } = computeCostos(cart, moneda, tcs, subtotal);
   const breakdown = useMemo(() => computeTotalsPorMoneda(cart), [cart]);
   // Solo mostrar el desglose por moneda nativa cuando la cot tiene mix:
   // hay líneas de las DOS monedas, o cualquier línea difiere de la moneda
@@ -94,6 +104,7 @@ export function TotalsBar() {
         tc: s.tc,
         tc_mn_a_usd: s.tc_mn_a_usd,
         tc_usd_a_mn: s.tc_usd_a_mn,
+        tolerancia_tc: s.tolerancia_tc,
         fecha_creacion: s.fecha_creacion,
         fecha_vencimiento: s.fecha_vencimiento,
         observaciones: s.observaciones,
@@ -181,6 +192,37 @@ export function TotalsBar() {
               <Sigma className="h-3 w-3" /> Subtotal
             </span>
             <span className="font-mono text-2xl font-semibold text-slate-100">{fmtMoney(subtotal, moneda)}</span>
+          </div>
+          <div
+            className="flex flex-col"
+            title="Costo total que Dasic le paga al proveedor (con DOF puro, aplicando descuento del proveedor por línea). No incluye el spread del TC."
+          >
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <Wallet className="h-3 w-3" /> Costo
+            </span>
+            <span className="font-mono text-xs text-slate-400">{fmtMoney(costo, moneda)}</span>
+          </div>
+          <div
+            className="flex flex-col"
+            title="Margen de ganancia final = Subtotal − Costo. Incluye la utilidad explícita por línea y el spread del TC (DOF ± tolerancia)."
+          >
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 text-emerald-400" /> Margen
+            </span>
+            <span
+              className={`font-mono text-sm font-semibold ${
+                margen < 0
+                  ? 'text-rose-400'
+                  : margenPct < 15
+                    ? 'text-amber-300'
+                    : 'text-emerald-300'
+              }`}
+            >
+              {fmtMoney(margen, moneda)}
+              <span className="ml-1 text-[10px] font-normal opacity-80">
+                ({margenPct.toFixed(1)}%)
+              </span>
+            </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">

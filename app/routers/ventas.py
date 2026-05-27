@@ -165,22 +165,25 @@ def _resolve_directional_tcs(
     tipo_cambio: Decimal,
     tc_mn_a_usd: Decimal | None,
     tc_usd_a_mn: Decimal | None,
+    tolerancia: Decimal = Decimal("1.0"),
 ) -> tuple[Decimal, Decimal]:
     """Resuelve los 2 TCs direccionales (modelo Excel V_03, 2026-05-23).
 
     - Si el payload manda los 2 (>0), se respetan ambos.
-    - Si vienen None/cero, se derivan de tipo_cambio (DOF): MN→USD = DOF-1,
-      USD→MN = DOF+1. Spread de ±1 peso cubre riesgo cambiario entre
+    - Si vienen None/cero, se derivan de tipo_cambio (DOF): MN→USD = DOF-T,
+      USD→MN = DOF+T, donde T es la tolerancia (default 1.0; configurable
+      0.1-1.0 por cotización). El spread cubre riesgo cambiario entre
       cotización y cobro.
-    - MN→USD nunca puede ser ≤ 0 (división); usa GREATEST(DOF-1, 0.000001).
+    - MN→USD nunca puede ser ≤ 0 (división); usa GREATEST(DOF-T, 0.000001).
     """
     dof = Decimal(tipo_cambio)
+    t = Decimal(tolerancia)
     if tc_mn_a_usd is None or Decimal(tc_mn_a_usd) <= 0:
-        tc_mn_a_usd_eff = max(dof - Decimal(1), Decimal("0.000001"))
+        tc_mn_a_usd_eff = max(dof - t, Decimal("0.000001"))
     else:
         tc_mn_a_usd_eff = Decimal(tc_mn_a_usd)
     if tc_usd_a_mn is None or Decimal(tc_usd_a_mn) <= 0:
-        tc_usd_a_mn_eff = dof + Decimal(1)
+        tc_usd_a_mn_eff = dof + t
     else:
         tc_usd_a_mn_eff = Decimal(tc_usd_a_mn)
     return tc_mn_a_usd_eff, tc_usd_a_mn_eff
@@ -577,10 +580,16 @@ def crear_orden(
 
     moneda_cotizacion = _normalize_currency(orden_data.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
+    tolerancia_tc = (
+        Decimal(orden_data.tolerancia_tc)
+        if orden_data.tolerancia_tc is not None
+        else Decimal("1.0")
+    )
     tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
         tipo_cambio,
         orden_data.tc_mn_a_usd,
         orden_data.tc_usd_a_mn,
+        tolerancia_tc,
     )
 
     try:
@@ -603,6 +612,7 @@ def crear_orden(
             tipo_cambio=tipo_cambio,
             tc_mn_a_usd=tc_mn_a_usd,
             tc_usd_a_mn=tc_usd_a_mn,
+            tolerancia_tc=tolerancia_tc,
             fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             total=0,
             terminos_condiciones=terminos,
@@ -829,10 +839,16 @@ def actualizar_orden(
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_update.tipo_cambio)
     if not (Decimal("1.0") <= Decimal(tipo_cambio) <= Decimal("100.0")):
         raise HTTPException(400, "tipo_cambio fuera de rango (1.0 a 100.0)")
+    tolerancia_tc = (
+        Decimal(orden_update.tolerancia_tc)
+        if orden_update.tolerancia_tc is not None
+        else Decimal("1.0")
+    )
     tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
         tipo_cambio,
         orden_update.tc_mn_a_usd,
         orden_update.tc_usd_a_mn,
+        tolerancia_tc,
     )
 
     try:
@@ -845,6 +861,7 @@ def actualizar_orden(
         orden.tipo_cambio = tipo_cambio
         orden.tc_mn_a_usd = tc_mn_a_usd
         orden.tc_usd_a_mn = tc_usd_a_mn
+        orden.tolerancia_tc = tolerancia_tc
         if orden_update.fecha_creacion is not None:
             orden.fecha_creacion = orden_update.fecha_creacion
         if orden_update.fecha_vencimiento is not None:
@@ -1075,6 +1092,7 @@ def recotizar(
             tipo_cambio=origen.tipo_cambio,
             tc_mn_a_usd=origen.tc_mn_a_usd,
             tc_usd_a_mn=origen.tc_usd_a_mn,
+            tolerancia_tc=origen.tolerancia_tc,
             total=origen.total,
             fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
             cotizacion_origen_id=raiz_id,
@@ -1449,6 +1467,7 @@ def obtener_detalle_orden(
         "tipo_cambio": float(orden.tipo_cambio or 1),
         "tc_mn_a_usd": float(orden.tc_mn_a_usd) if orden.tc_mn_a_usd is not None else None,
         "tc_usd_a_mn": float(orden.tc_usd_a_mn) if orden.tc_usd_a_mn is not None else None,
+        "tolerancia_tc": float(orden.tolerancia_tc) if orden.tolerancia_tc is not None else 1.0,
         "terminos_condiciones": orden.terminos_condiciones,
         "estatus": orden.estatus.value if hasattr(orden.estatus, "value") else str(orden.estatus),
         "version": orden.version or 1,

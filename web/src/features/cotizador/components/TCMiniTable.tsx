@@ -19,6 +19,8 @@ export function TCMiniTable() {
   const tc = useCotizador((s) => s.tc);
   const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
   const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
+  const toleranciaTc = useCotizador((s) => s.tolerancia_tc);
+  const setToleranciaTc = useCotizador((s) => s.setToleranciaTc);
   const moneda = useCotizador((s) => s.moneda);
   const cart = useCotizador((s) => s.cart);
   const setTc = useCotizador((s) => s.setTc);
@@ -28,10 +30,10 @@ export function TCMiniTable() {
 
   // Single source of truth: los mismos valores que CartRow/TotalsBar usan
   // para convertir líneas. Si los direccionales no se override-aron en
-  // la cot, salen DOF±1.
-  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
-  const deltaMnAUsd = tcs.tc_mn_a_usd - tc;   // típicamente −1
-  const deltaUsdAMn = tcs.tc_usd_a_mn - tc;   // típicamente +1
+  // la cot, salen DOF±tolerancia_tc.
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
+  const deltaMnAUsd = tcs.tc_mn_a_usd - tc;   // = −tolerancia_tc
+  const deltaUsdAMn = tcs.tc_usd_a_mn - tc;   // = +tolerancia_tc
 
   // Columna "activa" = la que se aplica al cart actual.
   const hayLineasOtraMoneda = cart.some((i) => i.productCurrency && i.productCurrency !== moneda);
@@ -68,7 +70,7 @@ export function TCMiniTable() {
 
   return (
     <div className={`mt-1 space-y-1 ${containerClass}`}>
-      <div className="flex items-center justify-start gap-2">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={onRefresh}
@@ -83,11 +85,26 @@ export function TCMiniTable() {
               : 'Cargando TC…'}
           </span>
         </button>
+        <label
+          className="text-[10px] flex items-center gap-1 text-slate-400"
+          title="Tolerancia simétrica del spread DOF±X. Rango 0.1 a 1.0 (step 0.1). Aplica solo cuando una línea está en divisa distinta a la cotización."
+        >
+          <span>Tolerancia ±</span>
+          <input
+            type="number"
+            min="0.1"
+            max="1.0"
+            step="0.1"
+            value={toleranciaTc}
+            onChange={(e) => setToleranciaTc(parseFloat(e.target.value) || 1)}
+            className="w-12 h-5 px-1 text-[11px] font-mono tabular-nums rounded border border-slate-700 bg-slate-900 text-slate-100 focus:outline-none focus:border-accent-glow"
+          />
+        </label>
       </div>
 
       <div
         className="grid grid-cols-3 gap-1"
-        title="Spread ±1 peso. Aplica solo cuando una línea está en divisa distinta a la cotización. Protege a Dasic de variación cambiaria. La OC al proveedor usa el DOF puro (sin spread)."
+        title={`Spread ±${toleranciaTc} peso${toleranciaTc === 1 ? '' : 's'}. Aplica solo cuando una línea está en divisa distinta a la cotización. Protege a Dasic de variación cambiaria. La OC al proveedor usa el DOF puro (sin spread).`}
       >
         {/* DOF */}
         <div className={`rounded border px-1.5 py-1 ${idleColClass}`}>

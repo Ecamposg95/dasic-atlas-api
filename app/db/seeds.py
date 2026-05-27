@@ -393,6 +393,14 @@ _BACKFILL_DDL = [
     )""",
     "CREATE INDEX IF NOT EXISTS ix_reportes_servicio_orden_venta_id ON reportes_servicio(orden_venta_id)",
     "CREATE INDEX IF NOT EXISTS ix_reportes_servicio_folio ON reportes_servicio(folio)",
+
+    # ====================================================================
+    # 20260526_01 — tolerancia_tc: spread configurable del TC USD/MXN
+    # Reemplaza el ±1 hardcoded por valor configurable por cotización
+    # (rango efectivo 0.1-1.0 validado en Pydantic/Zod). Postgres backfilea
+    # filas existentes con 1.0 vía server_default → comportamiento previo.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS tolerancia_tc NUMERIC(3,2) NOT NULL DEFAULT 1.0",
 ]
 
 

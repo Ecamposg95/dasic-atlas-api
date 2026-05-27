@@ -18,13 +18,14 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   const tc = useCotizador((s) => s.tc);
   const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
   const tcUsdAMn = useCotizador((s) => s.tc_usd_a_mn);
+  const toleranciaTc = useCotizador((s) => s.tolerancia_tc);
   const expandedUids = useCotizador((s) => s.expandedUids);
   const toggleExpand = useCotizador((s) => s.toggleExpand);
   const updateLinea = useCotizador((s) => s.updateLinea);
   const removeLinea = useCotizador((s) => s.removeLinea);
   const rowRef = useRef<HTMLTableRowElement>(null);
   const expanded = expandedUids.has(item.uid);
-  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn);
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
 
   const costoConvertido = convertCost(item.cost, item.productCurrency, moneda, tcs);
   const importe = lineImporte(item, moneda, tcs);
@@ -97,7 +98,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           {item.productCurrency !== moneda && (
             <span
               className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded"
-              title={`Línea en ${item.productCurrency} convertida a ${moneda} con TC automático del Banxico ±1 peso de spread`}
+              title={`Línea en ${item.productCurrency} convertida a ${moneda} con TC del Banxico ±${toleranciaTc} de tolerancia`}
             >
               {item.productCurrency} → {moneda}
             </span>

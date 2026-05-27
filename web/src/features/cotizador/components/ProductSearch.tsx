@@ -13,9 +13,10 @@ export function ProductSearch() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   // Phase 5 (Task 5.1): filtros para el scope de búsqueda.
-  // Desde 2026-05-23 el store soporta `addServicio`, así que ambas tabs
-  // están activas. `tipo` se persiste en estado local del componente.
-  const [tipo, setTipo] = useState<'producto' | 'servicio' | 'fantasma'>('producto');
+  // Desde 2026-05-26 el modo 'producto' busca en paralelo el catálogo Y los
+  // fantasmas previos, mostrando todo en una sola lista mezclada. La tab
+  // 'Fantasma' independiente se eliminó — solo queda Productos / Servicios.
+  const [tipo, setTipo] = useState<'producto' | 'servicio'>('producto');
   const [marcaId, setMarcaId] = useState<number | null>(null);
   const [marcaNombre, setMarcaNombre] = useState<string | null>(null);
   const [categoriaNombre, setCategoriaNombre] = useState<string | null>(null);
@@ -40,9 +41,12 @@ export function ProductSearch() {
   const servicios = data?.servicios ?? [];
   const cantidadParseada = data?.cantidad ?? null;
 
-  const fantasmasQuery = useFantasmasSearch(tipo === 'fantasma' ? q : '');
-  const fantasmas: FantasmaPrevio[] = tipo === 'fantasma' ? fantasmasQuery.items : [];
-  const fantasmasLoading = tipo === 'fantasma' && fantasmasQuery.isLoading;
+  // En modo producto, traemos también fantasmas previos para mostrarlos
+  // mezclados debajo de los productos del catálogo. En modo servicio no
+  // tiene sentido — los servicios son su propio dominio.
+  const fantasmasQuery = useFantasmasSearch(tipo === 'producto' ? q : '');
+  const fantasmas: FantasmaPrevio[] = tipo === 'producto' ? fantasmasQuery.items : [];
+  const fantasmasLoading = tipo === 'producto' && fantasmasQuery.isLoading;
 
   // Auth error en la búsqueda → bounce a login.
   // CotizadorPage solo redirige por errores de useCotizacionLoader; el primary
@@ -134,9 +138,7 @@ export function ProductSearch() {
             placeholder={
               tipo === 'servicio'
                 ? 'Buscar servicio (ej. "instalación" o "SRV-0001")…'
-                : tipo === 'fantasma'
-                  ? 'Buscar fantasma previo (descripción o SKU libre)…'
-                  : 'Buscar producto (ej. "5 GV2ME14" o "rodamiento")…'
+                : 'Buscar producto o fantasma previo (ej. "5 GV2ME14" o "rodamiento")…'
             }
             className="pl-7 h-8 text-xs"
             data-cot-search
@@ -196,116 +198,127 @@ export function ProductSearch() {
                 </button>
               ))}
             </>
-          ) : tipo === 'fantasma' ? (
-            <>
-              {(fantasmas.length > 0 || fantasmasLoading) && (
-                <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
-                  <span>{fantasmasLoading ? 'Buscando…' : `${fantasmas.length} fantasma(s) previo(s)`}</span>
-                  {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
-                </div>
-              )}
-              {!fantasmasLoading && fantasmas.length === 0 && (
-                <div className="p-3 text-center space-y-2">
-                  <div className="text-[11px] text-slate-500">
-                    Sin fantasmas previos para "{q.trim() || 'tu búsqueda'}"
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.dispatchEvent(
-                        new CustomEvent('cot:open-add-fantasma', {
-                          detail: { initialDescripcion: q.trim() },
-                        }),
-                      );
-                      setOpen(false);
-                      setQ('');
-                    }}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
-                  >
-                    <Ghost className="h-3 w-3" />
-                    Capturar nuevo fantasma
-                  </button>
-                </div>
-              )}
-              {fantasmas.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => onSelectFantasma(f)}
-                  className="w-full text-left px-2 py-1.5 hover:bg-amber-950/30 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2"
-                >
-                  <Ghost className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {f.sku_libre && (
-                        <span className="font-mono text-[11px] font-bold text-amber-300">{f.sku_libre}</span>
-                      )}
-                      {f.proveedor_sugerido_nombre && (
-                        <span className="text-[10px] text-slate-500">· {f.proveedor_sugerido_nombre}</span>
-                      )}
-                      {f.veces_solicitado > 1 && (
-                        <span className="text-[10px] bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded">
-                          ×{f.veces_solicitado}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-slate-200 truncate">{f.descripcion}</div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
-                    {(f.moneda || 'MXN').toUpperCase()} ${Number(f.costo_referencia).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                  </div>
-                </button>
-              ))}
-            </>
           ) : (
-            <>
-              {(items.length > 0 || isLoading) && (
-                <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
-                  <span>{isLoading ? 'Buscando…' : `${items.length} resultado(s)`}</span>
-                  {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
-                </div>
-              )}
-              {!isLoading && items.length === 0 && (
-                <div className="p-3 text-center space-y-2">
-                  <div className="text-[11px] text-slate-500">Sin coincidencias en el catálogo</div>
-                  {q.trim() && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.dispatchEvent(
-                          new CustomEvent('cot:open-add-fantasma', {
-                            detail: { initialDescripcion: q.trim() },
-                          }),
-                        );
-                        setOpen(false);
-                        setQ('');
-                      }}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
-                    >
-                      <Ghost className="h-3 w-3" />
-                      Agregar como fantasma "{q.trim().length > 30 ? q.trim().slice(0, 30) + '…' : q.trim()}"
-                    </button>
-                  )}
-                </div>
-              )}
-              {items.map(({ producto: p }) => (
-                <button key={p.id} type="button" onClick={() => onSelect(p)}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2">
-                  <Package className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-mono text-[11px] font-bold text-accent-glow">{p.sku_comercial || p.sku}</span>
-                      {p.marca && <span className="text-[10px] text-slate-500">· {p.marca}</span>}
-                      {stockChip(p.stock_actual)}
+            // Modo producto unificado (2026-05-26): catálogo + fantasmas previos
+            // en una sola lista. Productos primero (más prioritario), fantasmas
+            // debajo con su badge ámbar y `×veces_solicitado`. Empty state ofrece
+            // capturar fantasma nuevo solo cuando ambas búsquedas regresan vacío.
+            (() => {
+              const totalCount = items.length + fantasmas.length;
+              const anyLoading = isLoading || fantasmasLoading;
+              const bothEmpty = !anyLoading && totalCount === 0;
+              return (
+                <>
+                  {(totalCount > 0 || anyLoading) && (
+                    <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 flex items-center justify-between">
+                      <span>
+                        {anyLoading
+                          ? 'Buscando…'
+                          : `${items.length} producto(s)${fantasmas.length > 0 ? ` · ${fantasmas.length} fantasma(s) previo(s)` : ''}`}
+                      </span>
+                      {cantidadParseada != null && (
+                        <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-slate-200 truncate">{p.nombre}</div>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
-                    {fmtCost(Number(p.costo_compra ?? 0), p.moneda_compra || 'MXN')}
-                  </div>
-                </button>
-              ))}
-            </>
+                  )}
+                  {bothEmpty && (
+                    <div className="p-3 text-center space-y-2">
+                      <div className="text-[11px] text-slate-500">
+                        Sin coincidencias en el catálogo ni en fantasmas previos
+                      </div>
+                      {q.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.dispatchEvent(
+                              new CustomEvent('cot:open-add-fantasma', {
+                                detail: { initialDescripcion: q.trim() },
+                              }),
+                            );
+                            setOpen(false);
+                            setQ('');
+                          }}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
+                        >
+                          <Ghost className="h-3 w-3" />
+                          Agregar como fantasma "{q.trim().length > 30 ? q.trim().slice(0, 30) + '…' : q.trim()}"
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {items.map(({ producto: p }) => (
+                    <button
+                      key={`p-${p.id}`}
+                      type="button"
+                      onClick={() => onSelect(p)}
+                      className="w-full text-left px-2 py-1.5 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2"
+                    >
+                      <Package className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[11px] font-bold text-accent-glow">
+                            {p.sku_comercial || p.sku}
+                          </span>
+                          {p.marca && <span className="text-[10px] text-slate-500">· {p.marca}</span>}
+                          {stockChip(p.stock_actual)}
+                        </div>
+                        <div className="text-[11px] text-slate-200 truncate">{p.nombre}</div>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+                        {fmtCost(Number(p.costo_compra ?? 0), p.moneda_compra || 'MXN')}
+                      </div>
+                    </button>
+                  ))}
+                  {fantasmas.length > 0 && items.length > 0 && (
+                    <div className="sticky z-[5] bg-amber-950/30 border-y border-amber-700/30 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-amber-300/80 flex items-center gap-1">
+                      <Ghost className="h-2.5 w-2.5" /> Fantasmas previos
+                    </div>
+                  )}
+                  {fantasmas.map((f) => (
+                    <button
+                      key={`f-${f.id}`}
+                      type="button"
+                      onClick={() => onSelectFantasma(f)}
+                      className="w-full text-left px-2 py-1.5 hover:bg-amber-950/30 transition border-b border-slate-800 last:border-b-0 flex items-center gap-2"
+                    >
+                      <Ghost className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-700/50">
+                            Fantasma
+                          </span>
+                          {f.sku_libre && (
+                            <span className="font-mono text-[11px] font-bold text-amber-300">
+                              {f.sku_libre}
+                            </span>
+                          )}
+                          {f.proveedor_sugerido_nombre && (
+                            <span className="text-[10px] text-slate-500">
+                              · {f.proveedor_sugerido_nombre}
+                            </span>
+                          )}
+                          {f.veces_solicitado > 1 && (
+                            <span
+                              className="text-[10px] bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded"
+                              title={`Solicitado ${f.veces_solicitado} veces previamente`}
+                            >
+                              ×{f.veces_solicitado}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-200 truncate">{f.descripcion}</div>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+                        {(f.moneda || 'MXN').toUpperCase()} $
+                        {Number(f.costo_referencia).toLocaleString('es-MX', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </button>
+                  ))}
+                </>
+              );
+            })()
           )}
         </div>
       )}
