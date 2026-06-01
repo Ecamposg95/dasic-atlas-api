@@ -42,6 +42,11 @@ export type OrdenCompraLinea = {
   costo_base_linea: number;
   cantidad: number;
   costo_unitario: number;
+  marca?: string | null;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
+  cantidad_recibida: number;
+  fecha_recepcion: string | null;
 };
 
 export type OrdenCompra = {
@@ -81,6 +86,19 @@ export type RecepcionResponse = {
   ok: boolean;
   folio: string;
   productos_ingresados: number;
+};
+
+// ── POST /api/compras/{id}/recibir-parcial ────────────────────────────────────
+export type RecepcionParcialPayload = {
+  lineas: { detalle_compra_id: number; cantidad: number }[];
+  fecha?: string | null;
+};
+
+export type RecepcionParcialResponse = {
+  ok: boolean;
+  folio: string | null;
+  estatus: EstatusOC;
+  procesados: number;
 };
 
 // ── POST /api/compras/registrar-pago ─────────────────────────────────────────
