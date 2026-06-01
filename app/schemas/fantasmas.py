@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProductoFantasmaBase(BaseModel):
@@ -11,6 +11,11 @@ class ProductoFantasmaBase(BaseModel):
     costo_referencia: Decimal
     moneda_referencia: str = "MXN"
     proveedor_sugerido_id: Optional[int] = None
+    marca: Optional[str] = None
+    marca_id: Optional[int] = None
+    clave_prod_serv: Optional[str] = Field(None, max_length=8)
+    clave_unidad_sat: Optional[str] = Field(None, max_length=10)
+    observaciones: Optional[str] = None
 
 
 class ProductoFantasmaResponse(ProductoFantasmaBase):
@@ -32,3 +37,8 @@ class ProductoFantasmaUpdate(BaseModel):
     costo_referencia: Optional[Decimal] = None
     moneda_referencia: Optional[str] = None
     proveedor_sugerido_id: Optional[int] = None
+    marca: Optional[str] = None
+    marca_id: Optional[int] = None
+    clave_prod_serv: Optional[str] = Field(None, max_length=8)
+    clave_unidad_sat: Optional[str] = Field(None, max_length=10)
+    observaciones: Optional[str] = None
