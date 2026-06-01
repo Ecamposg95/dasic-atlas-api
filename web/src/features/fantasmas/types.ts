@@ -70,3 +70,18 @@ export type FantasmaFiltros = {
   moneda: Moneda | '';
   sinAsignar: boolean;
 };
+
+export type PromoverInput = {
+  sku: string;
+  cantidad: number;
+  stock_minimo: number | null;
+};
+
+export type PromoverResponse = {
+  fantasma_id: number;
+  producto_id: number;
+  sku: string;
+  stock_inicial: number;
+};
+
+export type SugerirSkuResponse = { sku_sugerido: string };
