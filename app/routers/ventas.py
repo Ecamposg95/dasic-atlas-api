@@ -314,6 +314,7 @@ PDF_TEMPLATE_VENTA = """
   .item-desc { color:#0f172a; white-space: pre-line; }
   .item-nota { font-size: 9px; color:#64748b; font-style: italic; margin-top: 3px; padding-left: 5px; border-left: 2px solid #cbd5e1; white-space: pre-line; line-height: 1.3; }
   .item-sat { font-size: 7pt; color: #666; margin-top: 2px; }
+  .item-marca { font-size: 9px; color:#334155; font-weight: 600; margin-top: 2px; }
   .tespv-tag { display: inline-block; font-size: 8.5px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 0px 3px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
   table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 6px 7px; border-bottom: 2px solid #fff; }
 
@@ -473,6 +474,8 @@ PDF_TEMPLATE_VENTA = """
         <td><div class="item-cat">{{ item.sku_libre or (item.producto.sku_comercial if item.producto else None) or (item.producto.sku if item.producto else "—") }}</div></td>
         <td>
           <div class="item-desc">{{ item.descripcion_libre or (item.producto.nombre if item.producto else None) or "Producto especial" }}</div>
+          {% set _marca = item.marca or (item.producto.marca if item.producto else None) %}
+          {% if item.mostrar_marca and _marca %}<div class="item-marca">Marca: {{ _marca }}</div>{% endif %}
           {% set _csat = item.clave_prod_serv or (item.producto.clave_prod_serv if item.producto else None) %}
           {% set _usat = item.clave_unidad_sat or (item.producto.clave_unidad_sat if item.producto else None) %}
           {% if _csat or _usat %}<div class="item-sat">SAT: {{ _csat or '—' }} · Unidad: {{ _usat or '—' }}</div>{% endif %}
@@ -745,12 +748,17 @@ def crear_orden(
 
             # Snapshot SAT por línea (US-006/008): catálogo copia de Producto;
             # fantasma usa lo capturado en el modal; servicio queda sin SAT.
+            # Marca por línea (US-013/014): mismo origen; mostrar_marca es el
+            # flag por producto que decide si la marca sale en el PDF.
             if producto is not None:
                 _clave_prod = producto.clave_prod_serv
                 _clave_unidad = producto.clave_unidad_sat
+                _marca = getattr(item, "marca", None) or producto.marca
             else:
                 _clave_prod = getattr(item, "clave_prod_serv", None)
                 _clave_unidad = getattr(item, "clave_unidad_sat", None)
+                _marca = getattr(item, "marca", None)
+            _mostrar_marca = bool(getattr(item, "mostrar_marca", False))
 
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
@@ -763,6 +771,8 @@ def crear_orden(
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 clave_prod_serv=_clave_prod,
                 clave_unidad_sat=_clave_unidad,
+                marca=_marca,
+                mostrar_marca=_mostrar_marca,
                 cantidad=item.cantidad,
                 # precio_unitario = bruto pre-descuento (lo que el cliente ve por unidad).
                 # subtotal ya incluye el descuento aplicado.
@@ -998,12 +1008,17 @@ def actualizar_orden(
 
             # Snapshot SAT por línea (US-006/008): catálogo copia de Producto;
             # fantasma usa lo capturado en el modal; servicio queda sin SAT.
+            # Marca por línea (US-013/014): mismo origen; mostrar_marca es el
+            # flag por producto que decide si la marca sale en el PDF.
             if producto is not None:
                 _clave_prod = producto.clave_prod_serv
                 _clave_unidad = producto.clave_unidad_sat
+                _marca = getattr(item, "marca", None) or producto.marca
             else:
                 _clave_prod = getattr(item, "clave_prod_serv", None)
                 _clave_unidad = getattr(item, "clave_unidad_sat", None)
+                _marca = getattr(item, "marca", None)
+            _mostrar_marca = bool(getattr(item, "mostrar_marca", False))
 
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
@@ -1016,6 +1031,8 @@ def actualizar_orden(
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
                 clave_prod_serv=_clave_prod,
                 clave_unidad_sat=_clave_unidad,
+                marca=_marca,
+                mostrar_marca=_mostrar_marca,
                 cantidad=item.cantidad,
                 precio_unitario=precio_unit_bruto.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
@@ -1148,6 +1165,10 @@ def recotizar(
                 descripcion_libre=det.descripcion_libre,
                 moneda_origen_linea=det.moneda_origen_linea,
                 costo_base_linea=det.costo_base_linea,
+                clave_prod_serv=det.clave_prod_serv,
+                clave_unidad_sat=det.clave_unidad_sat,
+                marca=det.marca,
+                mostrar_marca=det.mostrar_marca,
                 cantidad=det.cantidad,
                 precio_unitario=det.precio_unitario,
                 utilidad_aplicada=det.utilidad_aplicada,
@@ -1450,6 +1471,7 @@ def obtener_detalle_orden(
                 "sku": d.producto.sku_comercial or d.producto.sku or "—",
                 "sku_interno": d.producto.sku,
                 "nombre": d.producto.nombre,
+                "marca": d.producto.marca,
                 "moneda_compra": d.producto.moneda_compra,
                 "costo_compra": float(d.producto.costo_compra or 0),
             }
@@ -1487,6 +1509,10 @@ def obtener_detalle_orden(
             "observaciones_linea": d.observaciones_linea,
             "proveedor_sugerido_id": d.proveedor_sugerido_id,
             "fantasma_id": d.fantasma_id,
+            "marca": d.marca,
+            "mostrar_marca": bool(d.mostrar_marca),
+            "clave_prod_serv": d.clave_prod_serv,
+            "clave_unidad_sat": d.clave_unidad_sat,
         })
 
     pdf_desactualizado = (

@@ -50,6 +50,8 @@ class DetalleOrdenCreate(BaseModel):
     clave_prod_serv: Optional[str] = Field(default=None, max_length=8)
     clave_unidad_sat: Optional[str] = Field(default=None, max_length=10)
     observaciones: Optional[str] = Field(default=None)
+    # US-013/014: checkbox por producto que controla si la marca sale en el PDF.
+    mostrar_marca: bool = False
 
     @model_validator(mode="after")
     def _validar_entrega(self) -> "DetalleOrdenCreate":

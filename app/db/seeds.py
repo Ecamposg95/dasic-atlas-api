@@ -415,6 +415,15 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS observaciones TEXT",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
+
+    # ====================================================================
+    # 20260601_02 — EPIC 04 / US-013-014: snapshot de marca por línea +
+    # flag mostrar_marca (checkbox por producto que controla si la marca
+    # aparece en el PDF de cotización). mostrar_marca default FALSE → PDFs
+    # existentes sin cambios.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS marca VARCHAR(80)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS mostrar_marca BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
 

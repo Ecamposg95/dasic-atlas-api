@@ -2,7 +2,7 @@
 Sales models: OrdenVenta, DetalleOrden.
 """
 
-from sqlalchemy import Column, DateTime, DECIMAL, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, DECIMAL, Enum, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -101,6 +101,11 @@ class DetalleOrden(Base):
     # desde aquí para quedar estables ante cambios posteriores del catálogo.
     clave_prod_serv = Column(String(8), nullable=True)
     clave_unidad_sat = Column(String(10), nullable=True)
+    # Marca por línea (US-013/014): snapshot de la marca (de Producto para
+    # catálogo, del modal para fantasma) + flag por producto que controla si
+    # la marca se concatena en el PDF. mostrar_marca default False.
+    marca = Column(String(80), nullable=True)
+    mostrar_marca = Column(Boolean, nullable=False, server_default=text("false"))
 
     cantidad = Column(Integer, nullable=False)
     precio_unitario = Column(DECIMAL(10, 2), nullable=False)
