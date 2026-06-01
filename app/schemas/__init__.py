@@ -89,6 +89,7 @@ from app.schemas.fantasmas import (  # noqa: F401
     ProductoFantasmaBase,
     ProductoFantasmaResponse,
     ProductoFantasmaUpdate,
+    PromoverFantasmaInput,
 )
 
 from app.schemas.precios import (  # noqa: F401
@@ -136,6 +137,7 @@ __all__ = [
     "ServicioBase", "ServicioCreate", "ServicioUpdate", "ServicioResponse",
     # fantasmas
     "ProductoFantasmaBase", "ProductoFantasmaResponse", "ProductoFantasmaUpdate",
+    "PromoverFantasmaInput",
     # precios
     "PrecioProveedorCreate", "PrecioProveedorResponse",
     # remisiones
