@@ -424,6 +424,16 @@ _BACKFILL_DDL = [
     # ====================================================================
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS marca VARCHAR(80)",
     "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS mostrar_marca BOOLEAN NOT NULL DEFAULT FALSE",
+
+    # ====================================================================
+    # 20260601_03 — EPIC 06: creación de remisiones. Snapshot de precio/
+    # unidad SAT por línea + moneda y toggle mostrar_precios por remisión.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS remisiones ADD COLUMN IF NOT EXISTS moneda VARCHAR(3)",
+    "ALTER TABLE IF EXISTS remisiones ADD COLUMN IF NOT EXISTS mostrar_precios BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
+    "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS precio_unitario NUMERIC(10,2)",
+    "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS subtotal NUMERIC(12,2)",
 ]
 
 
