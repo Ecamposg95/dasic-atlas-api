@@ -27,6 +27,10 @@ export function AgregarFantasmaModal() {
   const [proveedorId, setProveedorId] = useState<number | null>(null);
   const [utilidad, setUtilidad] = useState('30');
   const [qty, setQty] = useState('1');
+  const [marca, setMarca] = useState('');
+  const [claveProdServ, setClaveProdServ] = useState('');
+  const [claveUnidadSat, setClaveUnidadSat] = useState('');
+  const [observaciones, setObservaciones] = useState('');
   const [err, setErr] = useState<string | null>(null);
   // Cuando el usuario hace click en un fantasma sugerido, guardamos el id
   // para mostrar el banner "Reusando fantasma #N". Cualquier edición posterior
@@ -58,6 +62,10 @@ export function AgregarFantasmaModal() {
       setProveedorId(null);
       setUtilidad('30');
       setQty('1');
+      setMarca('');
+      setClaveProdServ('');
+      setClaveUnidadSat('');
+      setObservaciones('');
       setErr(null);
       setReusingFantasma(null);
       setOpen(true);
@@ -114,6 +122,10 @@ export function AgregarFantasmaModal() {
       proveedor_sugerido_id: proveedorId,
       utilidad: Number.isFinite(u) ? Math.max(0, Math.min(99, u)) : 30,
       qty: q,
+      marca: marca.trim() || undefined,
+      clave_prod_serv: claveProdServ.trim() || undefined,
+      clave_unidad_sat: claveUnidadSat.trim() || undefined,
+      observaciones: observaciones.trim() || undefined,
     });
     setOpen(false);
   }
@@ -128,6 +140,10 @@ export function AgregarFantasmaModal() {
       proveedorId !== null ||
       utilidad !== '30' ||
       qty !== '1' ||
+      marca.trim() !== '' ||
+      claveProdServ.trim() !== '' ||
+      claveUnidadSat.trim() !== '' ||
+      observaciones.trim() !== '' ||
       reusingFantasma !== null
     );
   }
@@ -332,6 +348,27 @@ export function AgregarFantasmaModal() {
             <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
             <div className="text-[11px] text-slate-500 mt-1">
               Sin proveedor, esta línea quedará en el bucket "sin proveedor" al generar OCs.
+            </div>
+          </div>
+
+          {/* US-008: marca + claves SAT + notas del fantasma (opcionales). Se
+              apilan en el pool de fantasmas y se snapshotean en la línea. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Marca</label>
+              <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del producto" className="h-8 text-xs" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Clave prod/serv SAT</label>
+              <Input value={claveProdServ} onChange={(e) => setClaveProdServ(e.target.value)} maxLength={8} placeholder="Ej. 31181701" className="h-8 text-xs font-mono" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Clave unidad SAT</label>
+              <Input value={claveUnidadSat} onChange={(e) => setClaveUnidadSat(e.target.value)} maxLength={10} placeholder="Ej. H87" className="h-8 text-xs font-mono" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Observaciones</label>
+              <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Notas" className="h-8 text-xs" />
             </div>
           </div>
         </div>

@@ -76,6 +76,11 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
           entrega_max: i.entrega_max,
           entrega_unidad: i.entrega_unidad,
           observaciones_linea: i.observaciones_linea || null,
+          marca: i.marca ?? null,
+          marca_id: i.marca_id ?? null,
+          clave_prod_serv: i.clave_prod_serv ?? null,
+          clave_unidad_sat: i.clave_unidad_sat ?? null,
+          observaciones: i.observaciones ?? null,
         };
       }
       if (i.tipo_linea === 'servicio_catalogo') {

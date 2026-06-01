@@ -19,6 +19,12 @@ export type AddFantasmaInput = {
   proveedor_sugerido_id?: number | null;
   utilidad?: number; // default 30
   qty?: number;      // default 1
+  // US-008: marca + claves SAT + notas del fantasma (todos opcionales).
+  marca?: string | null;
+  marca_id?: number | null;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
+  observaciones?: string | null;
 };
 
 type CotizadorState = {
@@ -202,6 +208,11 @@ export const useCotizador = create<CotizadorState>((set) => ({
         cost_original: 0,
         max: 0,
         proveedor_sugerido_id: input.proveedor_sugerido_id ?? null,
+        marca: input.marca ?? null,
+        marca_id: input.marca_id ?? null,
+        clave_prod_serv: input.clave_prod_serv ?? null,
+        clave_unidad_sat: input.clave_unidad_sat ?? null,
+        observaciones: input.observaciones ?? null,
         qty,
         utilidad,
         descuento: 0,

@@ -92,6 +92,15 @@ export type CartItem = {
   // necesario para que sugerir-oc agrupe la línea con su proveedor real).
   proveedor_sugerido_id?: number | null;
 
+  // Solo para fantasmas (US-008): marca + claves SAT + notas del fantasma.
+  // Alimentan el upsert del pool y el snapshot SAT de la línea. snake_case
+  // para alinear con los demás campos ad-hoc.
+  marca?: string | null;
+  marca_id?: number | null;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
+  observaciones?: string | null;
+
   // Campos editables por el usuario:
   qty: number;
   utilidad: number;             // 0-99 (porcentaje)
@@ -222,6 +231,12 @@ export type DetalleOrdenCreate = {
   entrega_max: number | null;
   entrega_unidad: EntregaUnidad;
   observaciones_linea: string | null;
+  // US-008: marca + claves SAT + notas del fantasma (solo líneas ad-hoc).
+  marca?: string | null;
+  marca_id?: number | null;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
+  observaciones?: string | null;
 };
 
 export type OrdenVentaCreate = {
