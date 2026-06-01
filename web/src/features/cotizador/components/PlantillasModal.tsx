@@ -120,7 +120,7 @@ export function PlantillasModal() {
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-xl w-full p-5">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Folder className="h-4 w-4 text-accent-glow" /> Plantillas
@@ -157,7 +157,7 @@ export function PlantillasModal() {
               <div key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-800 border border-slate-800">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.nombre}</div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[11px] text-slate-500">
                     {p.n_lineas} línea(s) · {p.es_global ? 'Global' : 'Personal'}
                     {p.descripcion ? ` · ${p.descripcion}` : ''}
                   </div>

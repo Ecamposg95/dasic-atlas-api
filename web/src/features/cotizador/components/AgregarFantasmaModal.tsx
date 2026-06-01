@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ghost, X, Building2, DollarSign, Hash, Percent, Recycle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -48,9 +48,11 @@ export function AgregarFantasmaModal() {
 
   useEffect(() => {
     function onOpen(e: Event) {
-      const ce = e as CustomEvent<{ initialDescripcion?: string }>;
+      const ce = e as CustomEvent<{ initialDescripcion?: string; initialSku?: string }>;
+      // US-002: el texto buscado se arrastra al SKU libre (campo superior).
+      // `initialDescripcion` se mantiene por compatibilidad con otros disparadores.
       setDescripcion(ce.detail?.initialDescripcion ?? '');
-      setSkuLibre('');
+      setSkuLibre(ce.detail?.initialSku ?? '');
       setCosto('0');
       setMoneda(monedaCot); // default = moneda de la cotización
       setProveedorId(null);
@@ -61,7 +63,9 @@ export function AgregarFantasmaModal() {
       setOpen(true);
     }
     function onEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      // Esc cuenta como intento de cierre: pasa por la guarda de datos
+      // capturados (vía ref para no leer estado obsoleto del closure).
+      if (e.key === 'Escape') requestCloseRef.current();
     }
     window.addEventListener('cot:open-add-fantasma', onOpen);
     document.addEventListener('keydown', onEsc);
@@ -114,24 +118,58 @@ export function AgregarFantasmaModal() {
     setOpen(false);
   }
 
+  // ¿El usuario capturó algo que perdería al cerrar? Comparamos contra los
+  // defaults con que se abre el modal (costo '0', utilidad '30', qty '1').
+  function formIsDirty() {
+    return (
+      descripcion.trim() !== '' ||
+      skuLibre.trim() !== '' ||
+      (costo !== '' && costo !== '0') ||
+      proveedorId !== null ||
+      utilidad !== '30' ||
+      qty !== '1' ||
+      reusingFantasma !== null
+    );
+  }
+
+  // Único punto de salida intencional (Esc / X / Cancelar). El click-fuera ya
+  // no cierra. Si hay datos capturados, pedimos confirmación antes de descartar.
+  function requestClose() {
+    if (!open) return;
+    if (formIsDirty() && !window.confirm('Tienes datos capturados en el producto fantasma. ¿Descartarlos y cerrar?')) {
+      return;
+    }
+    setOpen(false);
+  }
+
+  // El listener de Esc vive en un effect con deps estables; usamos un ref para
+  // que siempre invoque la versión más reciente de requestClose (con el estado
+  // actual del formulario), sin re-registrar el listener en cada keystroke.
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
+
   if (!open) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      // El click fuera NO cierra: evita perder datos capturados por accidente.
+      // El cierre solo ocurre vía Esc / X / Cancelar (con guarda) o Guardar.
     >
-      <div className="bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-xl w-full p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col">
+        {/* US-004: header y footer fijos (shrink-0), cuerpo scrolleable. El
+            modal nunca excede 90vh y los botones quedan siempre visibles. */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0 border-b border-slate-800">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Ghost className="h-4 w-4 text-amber-400" />
             {reusingFantasma ? 'Reusar fantasma previo' : 'Agregar producto fantasma'}
           </h3>
-          <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-100">
+          <button type="button" onClick={requestClose} className="text-slate-400 hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
 
+        <div className="flex-1 overflow-y-auto px-5 py-4">
         {reusingFantasma ? (
           <div className="text-[11px] text-emerald-300/90 mb-4 bg-emerald-900/15 border border-emerald-700/40 rounded p-2 flex items-start gap-2">
             <Recycle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -151,7 +189,7 @@ export function AgregarFantasmaModal() {
             <button
               type="button"
               onClick={() => setReusingFantasma(null)}
-              className="text-emerald-300/70 hover:text-emerald-200 text-[10px] underline"
+              className="text-emerald-300/70 hover:text-emerald-200 text-[11px] underline"
               title="Descartar reuse y crear uno nuevo con esta descripción"
             >
               cancelar
@@ -167,8 +205,22 @@ export function AgregarFantasmaModal() {
         )}
 
         <div className="space-y-3">
+          {/* US-002: SKU como primer campo. Recibe el texto buscado arrastrado
+              desde el buscador; editable antes de guardar. */}
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-slate-600 normal-case">(opcional)</span>
+            </label>
+            <Input
+              value={skuLibre}
+              onChange={(e) => setSkuLibre(e.target.value)}
+              placeholder="Catalog # del proveedor o texto buscado"
+              className="h-8 text-xs font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">
               Descripción <span className="text-rose-400">*</span>
             </label>
             <textarea
@@ -181,7 +233,7 @@ export function AgregarFantasmaModal() {
             />
             {sugerenciasMostradas.length > 0 && (
               <div className="mt-2 border border-amber-700/40 bg-amber-950/30 rounded-md overflow-hidden">
-                <div className="px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-amber-300/80 bg-amber-900/30 border-b border-amber-700/30 flex items-center gap-1">
+                <div className="px-2 py-1 text-[11px] uppercase tracking-[0.15em] text-amber-300/80 bg-amber-900/30 border-b border-amber-700/30 flex items-center gap-1">
                   <Ghost className="h-2.5 w-2.5" />
                   {lookup.isFetching ? 'Buscando…' : `${sugerenciasMostradas.length} fantasma(s) previo(s) similares — click para reusar`}
                 </div>
@@ -200,10 +252,10 @@ export function AgregarFantasmaModal() {
                             <span className="font-mono text-[11px] font-bold text-amber-300">{f.sku_libre}</span>
                           )}
                           {f.proveedor_sugerido_nombre && (
-                            <span className="text-[10px] text-slate-400">· {f.proveedor_sugerido_nombre}</span>
+                            <span className="text-[11px] text-slate-400">· {f.proveedor_sugerido_nombre}</span>
                           )}
                           {f.veces_solicitado > 1 && (
-                            <span className="text-[10px] bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded">
+                            <span className="text-[11px] bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded">
                               ×{f.veces_solicitado}
                             </span>
                           )}
@@ -220,35 +272,9 @@ export function AgregarFantasmaModal() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
-                <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-slate-600 normal-case">(opcional)</span>
-              </label>
-              <Input
-                value={skuLibre}
-                onChange={(e) => setSkuLibre(e.target.value)}
-                placeholder="Catalog # del proveedor"
-                className="h-8 text-xs font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
-                Cantidad <span className="text-rose-400">*</span>
-              </label>
-              <Input
-                type="number"
-                min="1"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                className="h-8 text-xs text-right"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
                 <DollarSign className="h-2.5 w-2.5" /> Costo unit. <span className="text-rose-400">*</span>
               </label>
               <Input
@@ -261,7 +287,7 @@ export function AgregarFantasmaModal() {
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">Moneda costo</label>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Moneda costo</label>
               <select
                 value={moneda}
                 onChange={(e) => setMoneda(e.target.value as Moneda)}
@@ -272,7 +298,7 @@ export function AgregarFantasmaModal() {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
                 <Percent className="h-2.5 w-2.5" /> Utilidad %
               </label>
               <Input
@@ -284,15 +310,27 @@ export function AgregarFantasmaModal() {
                 className="h-8 text-xs text-right"
               />
             </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">
+                Cantidad <span className="text-rose-400">*</span>
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                className="h-8 text-xs text-right"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+            <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
               <Building2 className="h-2.5 w-2.5" />
               Proveedor sugerido <span className="text-slate-600 normal-case">(opcional pero recomendado)</span>
             </label>
             <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
-            <div className="text-[10px] text-slate-500 mt-1">
+            <div className="text-[11px] text-slate-500 mt-1">
               Sin proveedor, esta línea quedará en el bucket "sin proveedor" al generar OCs.
             </div>
           </div>
@@ -303,9 +341,10 @@ export function AgregarFantasmaModal() {
             {err}
           </div>
         )}
+        </div>
 
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-800">
-          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
+        <div className="flex justify-end gap-2 px-5 py-4 shrink-0 border-t border-slate-800">
+          <Button variant="ghost" size="sm" onClick={requestClose}>Cancelar</Button>
           <Button size="sm" onClick={onSave} className="bg-amber-600 hover:bg-amber-700 text-white">
             {reusingFantasma ? (
               <>

@@ -111,7 +111,7 @@ export function EditLineModal() {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Pen className="h-4 w-4 text-accent-glow" /> Editar línea
@@ -121,7 +121,7 @@ export function EditLineModal() {
           </button>
         </div>
 
-        <div className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded mb-3 ${
+        <div className={`inline-block text-[11px] font-bold uppercase px-2 py-0.5 rounded mb-3 ${
           esFantasma
             ? 'bg-purple-900/30 text-purple-300'
             : 'bg-cyan-900/30 text-cyan-300'
@@ -253,7 +253,7 @@ export function EditLineModal() {
                     {p.sku_comercial || p.sku || '—'}
                   </div>
                   <div className="text-xs text-slate-200 truncate">{p.nombre}</div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[11px] text-slate-500">
                     {p.moneda_compra || 'MXN'} ${Number(p.costo_compra ?? 0).toFixed(2)} · Stock {p.stock_actual ?? 0}
                   </div>
                 </button>

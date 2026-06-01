@@ -83,46 +83,49 @@ export function Cart() {
           </p>
         </div>
       ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
+        // US-004: overflow-x-auto + min-w en la tabla → en laptops chicas la
+        // tabla scrollea horizontalmente en vez de aplastar/cortar columnas.
+        // US-003: base text-[13px] (antes text-xs) para mejor legibilidad.
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+          <table className="w-full text-[13px] min-w-[680px]">
+            <thead className="bg-slate-800/50 text-[11px] text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
               <tr>
-                <th className="p-2 text-left">
+                <th className="p-2.5 text-left">
                   <span className="inline-flex items-center gap-1">
                     <Tag className="h-3 w-3 text-slate-500" /> SKU / Descripción
                   </span>
                 </th>
-                <th className="p-2 text-center w-20">
+                <th className="p-2.5 text-center w-20">
                   <span className="inline-flex items-center gap-1">
                     <Hash className="h-3 w-3 text-slate-500" /> Cant
                   </span>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2.5 text-right w-28">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <DollarSign className="h-3 w-3 text-slate-500" /> Costo
                   </span>
                 </th>
-                <th className="p-2 text-center w-16">
+                <th className="p-2.5 text-center w-16">
                   <span className="inline-flex items-center gap-1">
                     <Percent className="h-3 w-3 text-slate-500" /> Util
                   </span>
                 </th>
-                <th className="p-2 text-center w-16">
+                <th className="p-2.5 text-center w-16">
                   <span className="inline-flex items-center gap-1">
                     <Minus className="h-3 w-3 text-slate-500" /> Desc
                   </span>
                 </th>
-                <th className="p-2 text-center w-40">
+                <th className="p-2.5 text-center w-40">
                   <span className="inline-flex items-center gap-1">
                     <Truck className="h-3 w-3 text-slate-500" /> Entrega
                   </span>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2.5 text-right w-28">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <Calculator className="h-3 w-3 text-slate-500" /> Importe
                   </span>
                 </th>
-                <th className="p-2 text-center w-8"></th>
+                <th className="p-2.5 text-center w-8"></th>
               </tr>
             </thead>
             <tbody>

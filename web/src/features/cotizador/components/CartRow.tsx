@@ -79,7 +79,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
         toggleExpand(item.uid);
       }}
     >
-      <td className="p-2 align-top max-w-md">
+      <td className="p-2.5 align-top max-w-md">
         <div className="flex items-center gap-1.5 flex-wrap">
           {esFantasma && (
             <span
@@ -97,7 +97,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
               <Wrench className="h-2.5 w-2.5" /> Servicio
             </span>
           )}
-          <span className={`font-mono text-[11px] font-bold ${skuClass}`}>
+          <span className={`font-mono text-xs font-bold ${skuClass}`}>
             {item.sku}
           </span>
           {item.productCurrency !== moneda && (
@@ -115,7 +115,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           )}
           {!esFantasma && !esServicio && <StockBadge stock={item.max} qty={item.qty} />}
         </div>
-        <div className="text-[11px] text-slate-300 mt-0.5">{item.nom}</div>
+        <div className="text-[13px] text-slate-300 mt-0.5">{item.nom}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <EntregaChip min={item.entrega_min} max={item.entrega_max} unidad={item.entrega_unidad} />
           <MargenChip utilidad={item.utilidad} />
@@ -125,7 +125,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           </span>
         </div>
       </td>
-      <td className="p-2 align-top text-center w-20">
+      <td className="p-2.5 align-top text-center w-20">
         <Input
           type="number"
           min="1"
@@ -136,7 +136,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-2 align-top text-right font-mono w-28">
+      <td className="p-2.5 align-top text-right font-mono w-28">
         {mostrarOrigen && (
           <div
             className="text-[10px] text-slate-500 leading-tight"
@@ -146,14 +146,14 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           </div>
         )}
         <div
-          className="text-xs text-slate-300 leading-tight"
+          className="text-[13px] text-slate-300 leading-tight"
           title="Costo OC: lo que Dasic paga al proveedor (DOF puro, con descuento proveedor aplicado)"
         >
           ${fmt(costoOc)}
           <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500">OC</span>
         </div>
       </td>
-      <td className="p-2 align-top text-center w-16">
+      <td className="p-2.5 align-top text-center w-16">
         <Input
           type="number"
           min="0"
@@ -167,7 +167,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-2 align-top text-center w-16">
+      <td className="p-2.5 align-top text-center w-16">
         <Input
           type="number"
           min="0"
@@ -182,7 +182,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           className="h-7 text-center text-xs px-1"
         />
       </td>
-      <td className="p-2 align-top text-center w-40">
+      <td className="p-2.5 align-top text-center w-40">
         <div className="flex items-center gap-1">
           <Input
             type="number"
@@ -227,8 +227,8 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           </select>
         </div>
       </td>
-      <td className="p-2 align-top text-right font-mono font-bold text-xs w-28">${fmt(importe)}</td>
-      <td className="p-2 align-top text-center w-8 relative">
+      <td className="p-2.5 align-top text-right font-mono font-bold text-[13px] w-28">${fmt(importe)}</td>
+      <td className="p-2.5 align-top text-center w-8 relative">
         <button
           type="button"
           onClick={(e) => {

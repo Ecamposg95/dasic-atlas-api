@@ -232,7 +232,10 @@ export function ProductSearch() {
                           onClick={() => {
                             window.dispatchEvent(
                               new CustomEvent('cot:open-add-fantasma', {
-                                detail: { initialDescripcion: q.trim() },
+                                // US-002: el texto buscado se arrastra al SKU
+                                // libre (no a la descripción). El usuario lo
+                                // edita arriba antes de guardar.
+                                detail: { initialSku: q.trim() },
                               }),
                             );
                             setOpen(false);
