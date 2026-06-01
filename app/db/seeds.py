@@ -401,6 +401,20 @@ _BACKFILL_DDL = [
     # filas existentes con 1.0 vía server_default → comportamiento previo.
     # ====================================================================
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS tolerancia_tc NUMERIC(3,2) NOT NULL DEFAULT 1.0",
+
+    # ====================================================================
+    # 20260601_01 — EPIC 02 / Spec (a): homologación fantasma + snapshot SAT
+    # en línea. Homologa productos_fantasma con producto (marca + claves SAT +
+    # observaciones) y guarda snapshot SAT por línea para PDFs estables.
+    # Todas NULL → filas existentes intactas.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS marca VARCHAR(80)",
+    "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS marca_id INTEGER REFERENCES marcas(id) ON DELETE SET NULL",
+    "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
+    "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
+    "ALTER TABLE IF EXISTS productos_fantasma ADD COLUMN IF NOT EXISTS observaciones TEXT",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
+    "ALTER TABLE IF EXISTS detalles_orden ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
 ]
 
 
