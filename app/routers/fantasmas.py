@@ -12,6 +12,9 @@ from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 from app.security.jwt import allow_admin
+from app.models.enums import TipoMovimientoStock
+from app.routers.catalogos import siguiente_sku_para
+from app.services.stock_service import aplicar_movimiento
 
 logger = logging.getLogger(__name__)
 
@@ -199,40 +202,89 @@ def descartar_fantasma(id: int, db: Session = Depends(get_db)):
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
+@router.get("/{id}/sugerir-sku", dependencies=[Depends(allow_all_staff)])
+def sugerir_sku_fantasma(id: int, db: Session = Depends(get_db)):
+    """Sugiere un SKU para promover: usa sku_libre si existe; si no y hay
+    marca con abreviatura, genera {ABREV}-NNNN; si no, cadena vacía."""
+    f = db.query(models.ProductoFantasma).filter(models.ProductoFantasma.id == id).first()
+    if not f:
+        raise HTTPException(404, "Fantasma no encontrado")
+    if f.sku_libre:
+        return {"sku_sugerido": f.sku_libre}
+    abrev = None
+    if f.marca_id and f.marca_rel and f.marca_rel.abreviatura:
+        abrev = f.marca_rel.abreviatura
+    if abrev:
+        return {"sku_sugerido": siguiente_sku_para(db, abrev)}
+    return {"sku_sugerido": ""}
+
+
 @router.post("/{id}/promover", dependencies=[Depends(allow_admin)])
 def promover_fantasma(
     id: int,
+    payload: schemas.PromoverFantasmaInput,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Convierte un fantasma a Producto del catálogo. Marca el fantasma como
-    PROMOVIDO y deja referencia al producto creado. Las líneas de cotización
-    no se mutan (siguen apuntando al fantasma para auditoría)."""
+    """Convierte un fantasma a Producto del catálogo. Copia los campos del
+    fantasma (incl. marca/SAT), valida SKU único y registra la entrada de
+    stock vía kardex (aplicar_movimiento) si cantidad > 0. Marca el fantasma
+    como PROMOVIDO y deja referencia al producto creado."""
     f = db.query(models.ProductoFantasma).filter(models.ProductoFantasma.id == id).first()
     if not f:
         raise HTTPException(404, "Fantasma no encontrado")
     if f.estado in ("PROMOVIDO", "DESCARTADO"):
         raise HTTPException(409, f"Fantasma ya está en estado {f.estado}")
-    if not f.sku_libre:
-        raise HTTPException(400, "Asigna un SKU al fantasma antes de promoverlo")
+
+    sku = (payload.sku or "").strip()
+    if not sku:
+        raise HTTPException(400, "El SKU es obligatorio para promover")
+    if payload.cantidad < 0:
+        raise HTTPException(400, "La cantidad no puede ser negativa")
+    existe = db.query(models.Producto).filter(models.Producto.sku == sku).first()
+    if existe:
+        raise HTTPException(409, f"Ya existe un producto con el SKU {sku}")
 
     try:
-        # Crea producto del catálogo con campos mínimos requeridos.
         nuevo = models.Producto(
-            sku=f.sku_libre,
+            sku=sku,
             nombre=f.descripcion_original[:150],
             descripcion=f.descripcion_original,
             costo_compra=f.costo_referencia,
             moneda_compra=f.moneda_referencia,
+            marca=f.marca,
+            marca_id=f.marca_id,
+            clave_prod_serv=f.clave_prod_serv,
+            clave_unidad_sat=f.clave_unidad_sat,
             stock_actual=0,
             proveedor_principal_id=f.proveedor_sugerido_id,
         )
+        if payload.stock_minimo is not None:
+            nuevo.stock_minimo = payload.stock_minimo
         db.add(nuevo)
         db.flush()
+
+        if payload.cantidad > 0:
+            aplicar_movimiento(
+                db,
+                producto=nuevo,
+                tipo=TipoMovimientoStock.ENTRADA.value,
+                cantidad=int(payload.cantidad),
+                referencia_tipo="promocion_fantasma",
+                referencia_id=f.id,
+                motivo=f"Promoción fantasma → {sku}",
+                usuario=current_user,
+            )
+
         f.estado = "PROMOVIDO"
         f.promovido_a_producto_id = nuevo.id
         db.commit()
-        return {"fantasma_id": f.id, "producto_id": nuevo.id, "sku": nuevo.sku}
+        return {
+            "fantasma_id": f.id,
+            "producto_id": nuevo.id,
+            "sku": nuevo.sku,
+            "stock_inicial": int(payload.cantidad),
+        }
     except HTTPException:
         db.rollback()
         raise
