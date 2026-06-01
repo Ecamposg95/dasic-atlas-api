@@ -312,6 +312,7 @@ export function InventarioPage() {
             <th className="p-3 text-left">Nombre</th>
             <th className="p-3 text-left">Marca</th>
             <th className="p-3 text-left">Categoría</th>
+            <th className="p-3 text-left">SAT</th>
             <th className="p-3 text-right">Stock</th>
             {isAdmin && <th className="p-3 text-right">Costo</th>}
             <th className="p-3 text-right">Precio público</th>
@@ -320,12 +321,12 @@ export function InventarioPage() {
         </DataTableHead>
         <DataTableBody>
           {isLoading && (
-            <DataTableEmpty colSpan={isAdmin ? 9 : 8}>
+            <DataTableEmpty colSpan={isAdmin ? 10 : 9}>
               Cargando inventario…
             </DataTableEmpty>
           )}
           {!isLoading && filtrados.length === 0 && (
-            <DataTableEmpty colSpan={isAdmin ? 9 : 8}>
+            <DataTableEmpty colSpan={isAdmin ? 10 : 9}>
               <Package className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               Sin productos que coincidan con los filtros
             </DataTableEmpty>
@@ -341,6 +342,18 @@ export function InventarioPage() {
               </td>
               <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.marca ?? '—'}</td>
               <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.categoria ?? '—'}</td>
+              <td className="p-3 text-xs font-mono">
+                {p.clave_prod_serv ? (
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {p.clave_prod_serv}
+                    {p.clave_unidad_sat && (
+                      <span className="block text-[10px] text-slate-500 dark:text-slate-500">{p.clave_unidad_sat}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 dark:text-slate-600">—</span>
+                )}
+              </td>
               <td className="p-3 text-right">{stockBadge(p)}</td>
               {isAdmin && (
                 <td className="p-3 text-right font-mono text-xs text-slate-700 dark:text-slate-300">

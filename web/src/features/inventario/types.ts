@@ -24,6 +24,8 @@ export type Producto = {
   precio_publico: number | null;
   precio_mayorista: number;
   precio_distribuidor: number;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
 };
 
 export type ProductoCreate = {
@@ -45,6 +47,8 @@ export type ProductoCreate = {
   precio_publico?: number | null;
   precio_mayorista?: number;
   precio_distribuidor?: number;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
 };
 
 export type ProductoUpdate = {
@@ -66,6 +70,8 @@ export type ProductoUpdate = {
   precio_publico?: number | null;
   precio_mayorista?: number;
   precio_distribuidor?: number;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
 };
 
 export type Marca = {

@@ -43,6 +43,8 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
   );
   const [tiempoEntrega, setTiempoEntrega] = useState(String(producto?.tiempo_entrega_dias ?? 0));
   const [esServicio, setEsServicio] = useState(producto?.es_servicio ?? false);
+  const [claveProdServ, setClaveProdServ] = useState(producto?.clave_prod_serv ?? '');
+  const [claveUnidadSat, setClaveUnidadSat] = useState(producto?.clave_unidad_sat ?? '');
   const [err, setErr] = useState<string | null>(null);
 
   const qc = useQueryClient();
@@ -106,6 +108,8 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
       proveedor_alterno_id: provAlternoId ? parseInt(provAlternoId, 10) : null,
       tiempo_entrega_dias: parseInt(tiempoEntrega, 10) || 0,
       es_servicio: esServicio,
+      clave_prod_serv: claveProdServ.trim() || null,
+      clave_unidad_sat: claveUnidadSat.trim() || null,
     };
 
     mut.mutate(payload);
@@ -171,6 +175,17 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Unidad</label>
               <Input value={unidad} onChange={(e) => setUnidad(e.target.value)} placeholder="PZA" />
+            </div>
+          </div>
+          {/* SAT (CFDI 4.0) — opcionales hasta facturar */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave producto/servicio SAT</label>
+              <Input value={claveProdServ} onChange={(e) => setClaveProdServ(e.target.value)} maxLength={8} placeholder="Ej. 31181701" className="font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave unidad SAT</label>
+              <Input value={claveUnidadSat} onChange={(e) => setClaveUnidadSat(e.target.value)} maxLength={10} placeholder="Ej. H87" className="font-mono" />
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2">
