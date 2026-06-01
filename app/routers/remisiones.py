@@ -215,6 +215,8 @@ def detalle_remision(id: int, db: Session = Depends(get_db)):
         "recibido_por": rem.recibido_por,
         "recibido_at": rem.recibido_at.isoformat() if rem.recibido_at else None,
         "observaciones": rem.observaciones,
+        "moneda": rem.moneda,
+        "mostrar_precios": bool(rem.mostrar_precios),
         "detalles": [
             {
                 "id": d.id,
@@ -222,6 +224,9 @@ def detalle_remision(id: int, db: Session = Depends(get_db)):
                 "sku": d.sku,
                 "cantidad": d.cantidad,
                 "observaciones_linea": d.observaciones_linea,
+                "clave_unidad_sat": d.clave_unidad_sat,
+                "precio_unitario": float(d.precio_unitario) if d.precio_unitario is not None else None,
+                "subtotal": float(d.subtotal) if d.subtotal is not None else None,
             }
             for d in rem.detalles
         ],
