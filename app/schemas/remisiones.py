@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -10,12 +11,17 @@ class DetalleRemisionInput(BaseModel):
     sku: Optional[str] = None
     cantidad: int
     observaciones_linea: Optional[str] = None
+    # Solo se usan para líneas fantasma ad-hoc (detalle_orden_id is None).
+    # Para líneas de orden, el backend re-lee estos valores de DetalleOrden.
+    clave_unidad_sat: Optional[str] = None
+    precio_unitario: Optional[Decimal] = None
 
 
 class RemisionCreate(BaseModel):
     orden_venta_id: int
     transportista: Optional[str] = None
     observaciones: Optional[str] = None
+    mostrar_precios: bool = False
     detalles: List[DetalleRemisionInput]
 
 
