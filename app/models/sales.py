@@ -96,6 +96,11 @@ class DetalleOrden(Base):
     descripcion_libre = Column(Text, nullable=True)
     moneda_origen_linea = Column(String(3), nullable=True)
     costo_base_linea = Column(DECIMAL(12, 2), nullable=True)
+    # Snapshot SAT por línea (US-006/008): se copia al guardar la cotización,
+    # de Producto para catálogo y del modal para fantasma. Los PDFs renderizan
+    # desde aquí para quedar estables ante cambios posteriores del catálogo.
+    clave_prod_serv = Column(String(8), nullable=True)
+    clave_unidad_sat = Column(String(10), nullable=True)
 
     cantidad = Column(Integer, nullable=False)
     precio_unitario = Column(DECIMAL(10, 2), nullable=False)
