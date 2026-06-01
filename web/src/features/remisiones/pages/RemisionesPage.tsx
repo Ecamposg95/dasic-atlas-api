@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X, Plus, FileText } from 'lucide-react';
 import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hooks/useRemisiones';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -251,6 +251,15 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
             <Eye className="h-3.5 w-3.5 mr-1" />
             Ver
           </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            title="Imprimir PDF"
+            onClick={() => window.open(`/api/remisiones/${item.id}/imprimir`, '_blank')}
+          >
+            <FileText className="h-3.5 w-3.5 mr-1" />
+            PDF
+          </Button>
           {!recibida && (
             <Button
               size="sm"
@@ -274,6 +283,7 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
 // ---------------------------------------------------------------------------
 
 export function RemisionesPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [recepcionTarget, setRecepcionTarget] = useState<{ id: number; folio: string } | null>(null);
@@ -298,12 +308,9 @@ export function RemisionesPage() {
             </span>
           )}
         </div>
-        <Button
-          size="sm"
-          disabled
-          title="Crea la remisión desde el detalle de la orden de venta"
-        >
-          + Nueva remisión
+        <Button size="sm" onClick={() => navigate('/spa/remisiones-nueva')}>
+          <Plus className="h-4 w-4 mr-1" />
+          Nueva remisión
         </Button>
       </header>
 
