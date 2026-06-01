@@ -1,0 +1,1 @@
+import{u as e}from"./index-86pFhLoa.js";function t(r){return(r??"").toLowerCase()}function i(){const r=e(o=>o.user),n=t(r==null?void 0:r.rol);return n==="administrador"||n==="superadmin"||n==="admin"}function a(){const r=e(o=>o.user),n=t(r==null?void 0:r.rol);return n==="administrador"||n==="superadmin"||n==="admin"||n==="gerente_comercial"}export{a,i as u};
