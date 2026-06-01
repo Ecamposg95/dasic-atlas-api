@@ -807,6 +807,58 @@ def imprimir_oc(id: int, db: Session = Depends(get_db)):
     )
 
 
+class RecepcionLineaInput(BaseModel):
+    detalle_compra_id: int
+    cantidad: int  # cuánto llegó AHORA (delta), no el acumulado
+
+
+class RecepcionParcialInput(BaseModel):
+    lineas: List[RecepcionLineaInput]
+    fecha: Optional[datetime] = None
+
+
+def _aplicar_recepcion(db: Session, orden, deltas: dict, fecha, usuario) -> dict:
+    """Aplica recepción incremental sobre las líneas de la OC.
+
+    deltas: {detalle_compra_id: cantidad_que_llego_ahora}. Por cada línea con
+    delta>0 valida que cantidad_recibida+delta<=cantidad, acumula
+    cantidad_recibida, fija fecha_recepcion, y para líneas de CATÁLOGO
+    (producto_id no nulo) emite ENTRADA por el delta. Las líneas fantasma
+    (producto_id nulo) solo registran (sin stock; el stock entra al promover).
+    Recalcula el estatus de la OC. Retorna {procesados, estatus}."""
+    procesados = 0
+    for det in orden.detalles:
+        delta = int(deltas.get(det.id, 0) or 0)
+        if delta <= 0:
+            continue
+        if (det.cantidad_recibida or 0) + delta > det.cantidad:
+            raise HTTPException(400, f"La línea {det.id} excede la cantidad pedida ({det.cantidad})")
+        if det.producto_id:
+            producto = db.get(models.Producto, det.producto_id)
+            if producto:
+                aplicar_movimiento(
+                    db,
+                    producto=producto,
+                    tipo=TipoMovimientoStock.ENTRADA.value,
+                    cantidad=delta,
+                    referencia_tipo="oc",
+                    referencia_id=orden.id,
+                    motivo=f"Recepción OC {orden.folio or '#'+str(orden.id)}",
+                    usuario=usuario,
+                )
+        det.cantidad_recibida = (det.cantidad_recibida or 0) + delta
+        det.fecha_recepcion = fecha or datetime.utcnow()
+        procesados += 1
+
+    completas = all((d.cantidad_recibida or 0) >= d.cantidad for d in orden.detalles)
+    alguna = any((d.cantidad_recibida or 0) > 0 for d in orden.detalles)
+    if completas:
+        orden.estatus = "recibido"
+    elif alguna:
+        orden.estatus = "recibida_parcial"
+    return {"procesados": procesados, "estatus": orden.estatus}
+
+
 @router.post("/{id}/recibir", dependencies=[Depends(allow_admin_asistente)])
 def recibir_oc(
     id: int,
