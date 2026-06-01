@@ -42,3 +42,9 @@ class ProductoFantasmaUpdate(BaseModel):
     clave_prod_serv: Optional[str] = Field(None, max_length=8)
     clave_unidad_sat: Optional[str] = Field(None, max_length=10)
     observaciones: Optional[str] = None
+
+
+class PromoverFantasmaInput(BaseModel):
+    sku: str
+    cantidad: int = 0          # entrada inicial de stock; 0 = solo crear catálogo
+    stock_minimo: Optional[int] = None
