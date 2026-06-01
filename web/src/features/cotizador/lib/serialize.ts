@@ -81,6 +81,7 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
           clave_prod_serv: i.clave_prod_serv ?? null,
           clave_unidad_sat: i.clave_unidad_sat ?? null,
           observaciones: i.observaciones ?? null,
+          mostrar_marca: i.mostrar_marca ?? false,
         };
       }
       if (i.tipo_linea === 'servicio_catalogo') {
@@ -106,6 +107,7 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
           entrega_max: i.entrega_max,
           entrega_unidad: i.entrega_unidad,
           observaciones_linea: i.observaciones_linea || null,
+          mostrar_marca: i.mostrar_marca ?? false,
         };
       }
       // Catálogo (default): producto_id set, libres solo si override.
@@ -126,6 +128,8 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
         entrega_max: i.entrega_max,
         entrega_unidad: i.entrega_unidad,
         observaciones_linea: i.observaciones_linea || null,
+        marca: i.marca ?? null,
+        mostrar_marca: i.mostrar_marca ?? false,
       };
     }),
   };

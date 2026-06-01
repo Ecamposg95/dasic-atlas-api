@@ -117,6 +117,26 @@ export function RowExpanded({ item }: { item: CartItem }) {
               className="w-full text-xs rounded border border-slate-700 bg-slate-900 px-2 py-1 focus:border-accent-glow outline-none resize-none"
             />
           </div>
+          {/* US-013/014: checkbox por producto — concatena la marca en el PDF. */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1">
+              Marca en PDF
+            </label>
+            <label
+              className="h-8 px-2 rounded border border-slate-700/60 bg-slate-950/50 flex items-center gap-2 cursor-pointer"
+              title="Si está activo, la marca se imprime debajo de la descripción en el PDF de cotización."
+            >
+              <input
+                type="checkbox"
+                checked={item.mostrar_marca ?? false}
+                onChange={(e) => updateLinea(item.uid, { mostrar_marca: e.target.checked })}
+                className="rounded border-slate-600 bg-slate-800"
+              />
+              <span className="text-xs text-slate-300 truncate">
+                {item.marca ? item.marca : <span className="text-slate-500">Sin marca</span>}
+              </span>
+            </label>
+          </div>
         </div>
       </td>
     </tr>
