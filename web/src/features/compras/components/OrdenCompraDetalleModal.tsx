@@ -105,6 +105,7 @@ export function OrdenCompraDetalleModal({
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                   <th className="text-left py-1.5 pr-2">SKU / Descripción</th>
                   <th className="text-center py-1.5 px-2">Cant.</th>
+                  <th className="text-center py-1.5 px-2">Recibido</th>
                   <th className="text-right py-1.5 px-2">Costo unit.</th>
                   <th className="text-right py-1.5 pl-2">Importe</th>
                 </tr>
@@ -119,8 +120,12 @@ export function OrdenCompraDetalleModal({
                       <td className="py-1.5 pr-2">
                         <span className="font-mono text-slate-700 dark:text-slate-300">{sku}</span>{' '}
                         <span className="text-slate-600 dark:text-slate-400">{nombre}</span>
+                        {(d.clave_unidad_sat || d.clave_prod_serv) && (
+                          <div className="text-[10px] font-mono text-slate-400">SAT {d.clave_prod_serv ?? '—'} · {d.clave_unidad_sat ?? '—'}</div>
+                        )}
                       </td>
                       <td className="text-center py-1.5 px-2">{d.cantidad}</td>
+                      <td className="text-center py-1.5 px-2">{d.cantidad_recibida ?? 0}/{d.cantidad}</td>
                       <td className="text-right py-1.5 px-2 font-mono">
                         {fmtMoney(d.costo_unitario, oc.moneda)}
                       </td>
