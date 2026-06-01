@@ -542,6 +542,9 @@ def confirmar_ocs_desde_cotizacion(
                     descripcion_libre=det.descripcion_libre if not det.producto_id else None,
                     moneda_origen_linea=det.moneda_origen_linea,
                     costo_base_linea=det.costo_base_linea,
+                    marca=det.marca,
+                    clave_prod_serv=det.clave_prod_serv,
+                    clave_unidad_sat=det.clave_unidad_sat,
                 ))
 
                 if det.fantasma_id:
@@ -904,6 +907,11 @@ def _serializar_oc(oc: models.OrdenCompra) -> dict:
                 "costo_base_linea": float(d.costo_base_linea or 0),
                 "cantidad": d.cantidad,
                 "costo_unitario": float(d.costo_unitario or 0),
+                "marca": d.marca,
+                "clave_prod_serv": d.clave_prod_serv,
+                "clave_unidad_sat": d.clave_unidad_sat,
+                "cantidad_recibida": d.cantidad_recibida or 0,
+                "fecha_recepcion": d.fecha_recepcion.isoformat() if d.fecha_recepcion else None,
             }
             for d in oc.detalles
         ],
