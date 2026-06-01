@@ -257,3 +257,72 @@ def registrar_recepcion(
         db.rollback()
         logger.exception("remisiones.registrar_recepcion falló")
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+PDF_TEMPLATE_REMISION = """<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Remisión {{ rem.folio }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color:#0f172a; font-size:12px; margin:24px; }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:12px; }
+  .title { font-size:20px; font-weight:800; letter-spacing:1px; }
+  .folio { font-family:monospace; font-size:14px; color:#b45309; font-weight:700; }
+  .meta { margin:8px 0 14px; font-size:11px; color:#334155; line-height:1.5; }
+  table { width:100%; border-collapse:collapse; }
+  th { background:#0f172a; color:#fff; font-size:10px; text-transform:uppercase; padding:6px 8px; text-align:left; }
+  td { border-bottom:1px solid #e2e8f0; padding:6px 8px; vertical-align:top; }
+  .right { text-align:right; }
+  .center { text-align:center; }
+  .nota { font-size:9px; color:#64748b; font-style:italic; margin-top:2px; }
+  tfoot td { font-weight:700; border-top:2px solid #0f172a; }
+  .obs { margin-top:16px; font-size:11px; color:#334155; white-space:pre-line; }
+  .firma { margin-top:48px; display:flex; justify-content:space-between; }
+  .firma div { width:45%; border-top:1px solid #64748b; padding-top:4px; text-align:center; font-size:10px; color:#64748b; }
+</style></head><body>
+  <div class="head">
+    <div><div class="title">REMISIÓN</div><div class="meta">DASIC Industrial</div></div>
+    <div style="text-align:right">
+      <div class="folio">{{ rem.folio }}</div>
+      <div class="meta">Orden: {{ rem.orden_venta.folio if rem.orden_venta else '—' }}<br>Fecha: {{ rem.fecha_remision.strftime('%d/%m/%Y') if rem.fecha_remision else '' }}</div>
+    </div>
+  </div>
+  <div class="meta">
+    <strong>Cliente:</strong> {{ rem.orden_venta.cliente.nombre_empresa if rem.orden_venta and rem.orden_venta.cliente else '—' }}<br>
+    {% if rem.transportista %}<strong>Transportista:</strong> {{ rem.transportista }}{% endif %}
+  </div>
+  <table>
+    <thead><tr>
+      <th class="center" style="width:30px">#</th>
+      <th>Descripción</th>
+      <th class="center" style="width:90px">Cantidad</th>
+      {% if rem.mostrar_precios %}<th class="right" style="width:90px">P. Unit</th><th class="right" style="width:100px">Subtotal</th>{% endif %}
+    </tr></thead>
+    <tbody>
+      {% for d in rem.detalles %}
+      <tr>
+        <td class="center">{{ loop.index }}</td>
+        <td>{{ d.descripcion }}{% if d.sku %} <span style="color:#64748b;font-family:monospace">({{ d.sku }})</span>{% endif %}{% if d.observaciones_linea %}<div class="nota">{{ d.observaciones_linea }}</div>{% endif %}</td>
+        <td class="center">{{ d.cantidad }} ({{ d.clave_unidad_sat or 'PZA' }})</td>
+        {% if rem.mostrar_precios %}<td class="right">{{ rem.moneda or '' }} {{ "{:,.2f}".format(d.precio_unitario or 0) }}</td><td class="right">{{ rem.moneda or '' }} {{ "{:,.2f}".format(d.subtotal or 0) }}</td>{% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if rem.mostrar_precios %}
+    <tfoot><tr>
+      <td colspan="4" class="right">Total</td>
+      <td class="right">{{ rem.moneda or '' }} {{ "{:,.2f}".format(rem.detalles | sum(attribute='subtotal') or 0) }}</td>
+    </tr></tfoot>
+    {% endif %}
+  </table>
+  {% if rem.observaciones %}<div class="obs"><strong>Observaciones:</strong> {{ rem.observaciones }}</div>{% endif %}
+  <div class="firma"><div>Entregó</div><div>Recibió</div></div>
+</body></html>"""
+
+
+@router.get("/{id}/imprimir", response_class=HTMLResponse, dependencies=[Depends(allow_all_staff)])
+def imprimir_remision(id: int, db: Session = Depends(get_db)):
+    rem = db.query(models.Remision).filter(models.Remision.id == id).first()
+    if not rem:
+        raise HTTPException(404, "Remisión no encontrada")
+    env = Environment(loader=BaseLoader())
+    return env.from_string(PDF_TEMPLATE_REMISION).render(rem=rem)
