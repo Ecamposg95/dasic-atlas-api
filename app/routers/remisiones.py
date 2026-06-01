@@ -139,11 +139,16 @@ def crear_remision(
     if not payload.detalles:
         raise HTTPException(400, "Debe incluir al menos una línea")
 
+    # Index de las líneas de la orden para re-leer precio/unidad/desc snapshot.
+    det_orden = {d.id: d for d in orden.detalles}
+
     folio = _generar_folio_remision(db)
     try:
         rem = models.Remision(
             folio=folio,
             orden_venta_id=orden.id,
+            moneda=orden.moneda,
+            mostrar_precios=payload.mostrar_precios,
             transportista=payload.transportista,
             observaciones=payload.observaciones,
             creado_por_id=current_user.id,
@@ -151,13 +156,36 @@ def crear_remision(
         db.add(rem)
         db.flush()
         for d in payload.detalles:
+            if d.cantidad <= 0:
+                raise HTTPException(400, "La cantidad de cada línea debe ser > 0")
+            if d.detalle_orden_id is not None:
+                base = det_orden.get(d.detalle_orden_id)
+                if base is None:
+                    raise HTTPException(400, f"La línea {d.detalle_orden_id} no pertenece a la orden")
+                if d.cantidad > base.cantidad:
+                    raise HTTPException(400, f"No se puede remisionar más de lo vendido en la línea {d.detalle_orden_id}")
+                prod = base.producto
+                descripcion = base.descripcion_libre or (prod.nombre if prod else None) or "Producto"
+                sku = base.sku_libre or (prod.sku_comercial if prod else None) or (prod.sku if prod else None)
+                clave_unidad = base.clave_unidad_sat or (prod.clave_unidad_sat if prod else None)
+                precio = base.precio_unitario or Decimal("0")
+            else:
+                # Línea fantasma ad-hoc capturada en la remisión (US-024).
+                descripcion = d.descripcion
+                sku = d.sku
+                clave_unidad = d.clave_unidad_sat
+                precio = d.precio_unitario or Decimal("0")
+            subtotal = (precio * d.cantidad).quantize(Decimal("0.01"))
             db.add(models.DetalleRemision(
                 remision_id=rem.id,
                 detalle_orden_id=d.detalle_orden_id,
-                descripcion=d.descripcion,
-                sku=d.sku,
+                descripcion=descripcion,
+                sku=sku,
                 cantidad=d.cantidad,
                 observaciones_linea=d.observaciones_linea,
+                clave_unidad_sat=clave_unidad,
+                precio_unitario=precio,
+                subtotal=subtotal,
             ))
         db.commit()
         db.refresh(rem)
