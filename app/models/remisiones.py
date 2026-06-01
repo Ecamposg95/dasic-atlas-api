@@ -1,6 +1,6 @@
 """Remision y DetalleRemision — comprobantes de entrega física."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, DECIMAL, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -18,6 +18,8 @@ class Remision(Base):
     recibido_por = Column(String(150), nullable=True)
     recibido_at = Column(DateTime(timezone=True), nullable=True)
     observaciones = Column(Text, nullable=True)
+    moneda = Column(String(3), nullable=True)
+    mostrar_precios = Column(Boolean, nullable=False, server_default=text("false"))
     creado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     creado_en = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -36,5 +38,8 @@ class DetalleRemision(Base):
     sku = Column(String(80), nullable=True)
     cantidad = Column(Integer, nullable=False)
     observaciones_linea = Column(Text, nullable=True)
+    clave_unidad_sat = Column(String(10), nullable=True)
+    precio_unitario = Column(DECIMAL(10, 2), nullable=True)
+    subtotal = Column(DECIMAL(12, 2), nullable=True)
 
     remision = relationship("Remision", back_populates="detalles")
