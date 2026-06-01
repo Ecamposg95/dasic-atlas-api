@@ -25,6 +25,10 @@ def _serialize_fantasma_row(f) -> dict:
     except Exception as e:  # noqa: BLE001
         logger.warning("fantasma %s: error cargando proveedor_sugerido: %s", f.id, e)
         proveedor_nombre = None
+    try:
+        marca_nombre = f.marca_rel.nombre if f.marca_id and f.marca_rel else (f.marca or None)
+    except Exception:  # noqa: BLE001
+        marca_nombre = f.marca or None
     return {
         "id": f.id,
         "descripcion": f.descripcion_original or "",
@@ -33,6 +37,11 @@ def _serialize_fantasma_row(f) -> dict:
         "moneda": f.moneda_referencia or "MXN",
         "proveedor_sugerido_id": f.proveedor_sugerido_id,
         "proveedor_sugerido_nombre": proveedor_nombre,
+        "marca": marca_nombre,
+        "marca_id": f.marca_id,
+        "clave_prod_serv": f.clave_prod_serv,
+        "clave_unidad_sat": f.clave_unidad_sat,
+        "observaciones": f.observaciones,
         "estado": f.estado or "PENDIENTE",
         "veces_solicitado": f.veces_solicitado or 0,
         "creado_en": f.creado_en.isoformat() if f.creado_en else None,
@@ -147,6 +156,16 @@ def actualizar_fantasma(
             f.moneda_referencia = payload.moneda_referencia.upper()
         if payload.proveedor_sugerido_id is not None:
             f.proveedor_sugerido_id = payload.proveedor_sugerido_id
+        if payload.marca is not None:
+            f.marca = payload.marca or None
+        if payload.marca_id is not None:
+            f.marca_id = payload.marca_id
+        if payload.clave_prod_serv is not None:
+            f.clave_prod_serv = payload.clave_prod_serv or None
+        if payload.clave_unidad_sat is not None:
+            f.clave_unidad_sat = payload.clave_unidad_sat or None
+        if payload.observaciones is not None:
+            f.observaciones = payload.observaciones or None
         db.commit()
         db.refresh(f)
         return {"id": f.id, "estado": f.estado}
