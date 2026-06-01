@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useFantasmas } from '../hooks/useFantasmas';
 import { useProveedores } from '../hooks/useProveedores';
+import { PromoverModal } from '../components/PromoverModal';
 import type {
   EstadoFantasma, Fantasma, FantasmaDetalle, FantasmaUpdatePayload, Moneda,
 } from '../types';
@@ -47,6 +48,7 @@ export function FantasmasPage() {
   const [modalDetalle, setModalDetalle] = useState<number | null>(null);
   const [modalEditar, setModalEditar] = useState<Fantasma | null>(null);
   const [modalAsignar, setModalAsignar] = useState(false);
+  const [promoverTarget, setPromoverTarget] = useState<Fantasma | null>(null);
 
   const { data: resp, isLoading, error } = useFantasmas();
   const { data: proveedores } = useProveedores();
@@ -113,18 +115,6 @@ export function FantasmasPage() {
     },
   });
 
-  const promoverMut = useMutation<{ sku: string }, { status?: number; detail?: string }, number>({
-    mutationFn: (id) => api.post<{ sku: string }>(`/api/fantasmas/${id}/promover`),
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['fantasmas'] });
-      toast({ kind: 'success', title: 'Promovido a catálogo', description: `Nuevo SKU: ${data.sku}` });
-    },
-    onError: (e) => {
-      if (e.status === 403) toast({ kind: 'error', title: 'Solo admin' });
-      else toast({ kind: 'error', title: 'No se pudo promover', description: e.detail });
-    },
-  });
-
   const editarMut = useMutation<Fantasma, { status?: number; detail?: string }, { id: number; payload: FantasmaUpdatePayload }>({
     mutationFn: ({ id, payload }) => api.patch<Fantasma>(`/api/fantasmas/${id}`, payload),
     onSuccess: () => {
@@ -135,13 +125,7 @@ export function FantasmasPage() {
   });
 
   function onPromover(f: Fantasma) {
-    if (!f.sku_libre) {
-      toast({ kind: 'warning', title: 'Asigna un SKU primero', description: 'El catálogo requiere SKU. Edita el fantasma antes de promover.' });
-      return;
-    }
-    if (window.confirm(`¿Promover "${f.descripcion}" a producto del catálogo?`)) {
-      promoverMut.mutate(f.id);
-    }
+    setPromoverTarget(f);
   }
 
   function onDescartar(f: Fantasma) {
@@ -436,6 +420,10 @@ export function FantasmasPage() {
             qc.invalidateQueries({ queryKey: ['fantasmas'] });
           }}
         />
+      )}
+
+      {promoverTarget && (
+        <PromoverModal fantasma={promoverTarget} onClose={() => setPromoverTarget(null)} />
       )}
     </div>
   );
