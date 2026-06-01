@@ -2,7 +2,7 @@
 Purchases models: OrdenCompra, DetalleCompra.
 """
 
-from sqlalchemy import Column, DateTime, DECIMAL, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, DECIMAL, ForeignKey, Integer, String, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -47,6 +47,15 @@ class DetalleCompra(Base):
 
     cantidad = Column(Integer, nullable=False)
     costo_unitario = Column(DECIMAL(10, 2), nullable=False)
+    # Snapshot SAT/marca de la línea (US-026): para conservar los datos del
+    # fantasma/producto cotizado en la OC.
+    marca = Column(String(80), nullable=True)
+    clave_prod_serv = Column(String(8), nullable=True)
+    clave_unidad_sat = Column(String(10), nullable=True)
+    # Recepción parcial incremental (US-027): cantidad acumulada recibida y
+    # fecha de la última recepción de esta línea.
+    cantidad_recibida = Column(Integer, nullable=False, server_default=text("0"))
+    fecha_recepcion = Column(DateTime(timezone=True), nullable=True)
 
     orden = relationship("OrdenCompra", back_populates="detalles")
     producto = relationship("Producto", back_populates="detalles_compra")
