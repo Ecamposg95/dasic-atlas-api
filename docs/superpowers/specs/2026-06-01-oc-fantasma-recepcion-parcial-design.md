@@ -54,7 +54,7 @@ Espejo obligatorio en `app/db/seeds.py::_BACKFILL_DDL`. Todo NULL/default → OC
 
 **Refactor** `POST /api/compras/{id}/recibir` (total): construye `deltas = {det.id: det.cantidad - det.cantidad_recibida}` para líneas con pendiente > 0 y llama al mismo helper → "recibir todo lo pendiente", idempotente y sin doble conteo. Mantiene compatibilidad con el botón actual.
 
-**Schema:** `RecepcionParcialInput` (+ línea anidada) en `app/schemas/purchases.py`, **re-exportada en `app/schemas/__init__.py`** (import + `__all__`) — ver [[feedback-schemas-reexport]].
+**Schema:** `RecepcionParcialInput` (+ `RecepcionLineaInput` anidada) se definen **inline en `compras.py`**, igual que los demás schemas de ese router (`_ConfirmarOCsInput`, `OCDesdeCotizacionInput`, etc.). No existe `app/schemas/purchases.py` y los schemas inline no se usan vía `schemas.X`, así que **no** requieren re-export en `__init__.py` (esto evita el gotcha de [[feedback-schemas-reexport]] por construcción).
 
 ### 4. Frontend (`web/src/features/compras/`)
 
