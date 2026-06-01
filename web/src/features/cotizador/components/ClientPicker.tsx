@@ -25,7 +25,8 @@ export function ClientPicker() {
         (c) =>
           c.nombre_empresa.toLowerCase().includes(needle) ||
           (c.rfc_tax_id ?? '').toLowerCase().includes(needle) ||
-          (c.contacto_nombre ?? '').toLowerCase().includes(needle),
+          (c.contacto_nombre ?? '').toLowerCase().includes(needle) ||
+          (c.email ?? '').toLowerCase().includes(needle),
       )
       .slice(0, 50);
   }, [clientes, q]);
@@ -54,9 +55,10 @@ export function ClientPicker() {
           className="w-full text-left px-3 py-2 border border-slate-700 rounded-md bg-slate-900 hover:border-accent-glow transition"
         >
           <div className="text-sm font-medium">{selected.nombre_empresa}</div>
-          {selected.rfc_tax_id && (
-            <div className="text-xs text-slate-500 font-mono">{selected.rfc_tax_id}</div>
-          )}
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            {selected.rfc_tax_id && <span className="font-mono">{selected.rfc_tax_id}</span>}
+            {selected.email && <span className="truncate">{selected.email}</span>}
+          </div>
         </button>
       ) : (
         <div>
@@ -66,7 +68,7 @@ export function ClientPicker() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onFocus={() => setOpen(true)}
-              placeholder="Buscar cliente por nombre, RFC, contacto…"
+              placeholder="Buscar cliente por nombre, RFC, contacto, correo…"
               className="pl-8"
               autoFocus={open}
             />
@@ -90,9 +92,10 @@ export function ClientPicker() {
                     className="w-full text-left px-3 py-2 hover:bg-slate-800 transition border-b border-slate-800 last:border-b-0"
                   >
                     <div className="text-sm">{c.nombre_empresa}</div>
-                    {c.rfc_tax_id && (
-                      <div className="text-[11px] text-slate-500 font-mono">{c.rfc_tax_id}</div>
-                    )}
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      {c.rfc_tax_id && <span className="font-mono">{c.rfc_tax_id}</span>}
+                      {c.email && <span className="truncate">{c.email}</span>}
+                    </div>
                   </button>
                 ))
               )}

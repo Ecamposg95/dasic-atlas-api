@@ -39,6 +39,7 @@ export type Cliente = {
   nombre_empresa: string;
   contacto_nombre: string | null;
   rfc_tax_id: string | null;
+  email: string | null;
 };
 
 export type CotizadorConfig = {
@@ -100,6 +101,10 @@ export type CartItem = {
   clave_prod_serv?: string | null;
   clave_unidad_sat?: string | null;
   observaciones?: string | null;
+
+  // US-013/014: checkbox por producto que decide si la marca sale en el PDF.
+  // marca arriba aplica también a catálogo (snapshot de Producto.marca).
+  mostrar_marca?: boolean;
 
   // Campos editables por el usuario:
   qty: number;
@@ -182,6 +187,11 @@ export type OrdenVentaDetail = {
     observaciones_linea: string | null;
     proveedor_sugerido_id?: number | null;
     fantasma_id?: number | null;
+    // US-013/014: snapshot de marca + flag de visibilidad en PDF por línea.
+    marca?: string | null;
+    mostrar_marca?: boolean | null;
+    clave_prod_serv?: string | null;
+    clave_unidad_sat?: string | null;
     // Shape REAL del producto en /detalle-json: el backend ya colapsa
     // `sku` = sku_comercial || sku, y expone el interno como `sku_interno`.
     producto: {
@@ -189,6 +199,7 @@ export type OrdenVentaDetail = {
       sku: string;
       sku_interno?: string | null;
       nombre: string;
+      marca?: string | null;
       moneda_compra?: string | null;
       costo_compra: number | string;
     } | null;
@@ -237,6 +248,8 @@ export type DetalleOrdenCreate = {
   clave_prod_serv?: string | null;
   clave_unidad_sat?: string | null;
   observaciones?: string | null;
+  // US-013/014: flag por línea para concatenar la marca en el PDF.
+  mostrar_marca?: boolean;
 };
 
 export type OrdenVentaCreate = {
