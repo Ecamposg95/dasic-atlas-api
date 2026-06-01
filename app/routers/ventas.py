@@ -313,6 +313,7 @@ PDF_TEMPLATE_VENTA = """
   .item-cat { font-weight: 700; color:#0f172a; }
   .item-desc { color:#0f172a; white-space: pre-line; }
   .item-nota { font-size: 9px; color:#64748b; font-style: italic; margin-top: 3px; padding-left: 5px; border-left: 2px solid #cbd5e1; white-space: pre-line; line-height: 1.3; }
+  .item-sat { font-size: 7pt; color: #666; margin-top: 2px; }
   .tespv-tag { display: inline-block; font-size: 8.5px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 0px 3px; border-radius: 3px; margin-left: 2px; letter-spacing: 0.3px; }
   table.items tfoot td { background:#cfe2f3; font-weight: 700; padding: 6px 7px; border-bottom: 2px solid #fff; }
 
@@ -472,6 +473,9 @@ PDF_TEMPLATE_VENTA = """
         <td><div class="item-cat">{{ item.sku_libre or (item.producto.sku_comercial if item.producto else None) or (item.producto.sku if item.producto else "—") }}</div></td>
         <td>
           <div class="item-desc">{{ item.descripcion_libre or (item.producto.nombre if item.producto else None) or "Producto especial" }}</div>
+          {% set _csat = item.clave_prod_serv or (item.producto.clave_prod_serv if item.producto else None) %}
+          {% set _usat = item.clave_unidad_sat or (item.producto.clave_unidad_sat if item.producto else None) %}
+          {% if _csat or _usat %}<div class="item-sat">SAT: {{ _csat or '—' }} · Unidad: {{ _usat or '—' }}</div>{% endif %}
           {% if item.observaciones_linea %}<div class="item-nota">{{ item.observaciones_linea }}</div>{% endif %}
         </td>
         {% endif %}
