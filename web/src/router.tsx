@@ -26,6 +26,7 @@ const inventario = lazyPage(() => import('@/features/inventario/pages/Inventario
 const catalogos = lazyPage(() => import('@/features/catalogos/pages/CatalogosPage'), 'CatalogosPage');
 const compras = lazyPage(() => import('@/features/compras/pages/ComprasPage'), 'ComprasPage');
 const remisiones = lazyPage(() => import('@/features/remisiones/pages/RemisionesPage'), 'RemisionesPage');
+const crearRemision = lazyPage(() => import('@/features/remisiones/pages/CrearRemisionPage'), 'CrearRemisionPage');
 const gastos = lazyPage(() => import('@/features/gastos/pages/GastosPage'), 'GastosPage');
 const reportes = lazyPage(() => import('@/features/reportes/pages/ReportesPage'), 'ReportesPage');
 const reportesServicio = lazyPage(() => import('@/features/reportes_servicio/pages/ReportesServicioPage'), 'ReportesServicioPage');
@@ -68,6 +69,7 @@ export const router = createBrowserRouter([
       { path: 'catalogos', lazy: catalogos },
       { path: 'compras', lazy: compras },
       { path: 'remisiones', lazy: remisiones },
+      { path: 'remisiones-nueva', lazy: crearRemision },
       { path: 'gastos', lazy: gastos },
       { path: 'reportes', lazy: reportes },
       { path: 'reportes-servicio', lazy: reportesServicio },
