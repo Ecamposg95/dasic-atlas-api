@@ -865,49 +865,35 @@ def recibir_oc(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Marca OC como recibida y emite ENTRADA por cada DetalleCompra."""
+    """Recibe TODO lo pendiente de la OC (delta = cantidad - cantidad_recibida
+    por línea) reutilizando _aplicar_recepcion. Idempotente: si ya está todo
+    recibido, no hay deltas. Marca la OC como recibida/parcial según resultado."""
     orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
     if not orden:
         raise HTTPException(404, "OC no encontrada")
     if orden.estatus == "recibido":
         raise HTTPException(400, "La OC ya fue recibida")
-    if orden.estatus not in ("borrador", "enviada", "confirmada"):
+    if orden.estatus not in ("borrador", "enviada", "confirmada", "recibida_parcial"):
         raise HTTPException(400, f"Estatus '{orden.estatus}' no permite recepción")
-
-    detalles = (
-        db.query(models.DetalleCompra)
-        .filter(models.DetalleCompra.orden_compra_id == id)
-        .all()
-    )
-    if not detalles:
+    if not orden.detalles:
         raise HTTPException(400, "OC sin detalles, nada que recibir")
 
-    try:
-        procesados = 0
-        for det in detalles:
-            if not det.producto_id:
-                continue
-            producto = db.get(models.Producto, det.producto_id)
-            if not producto:
-                continue
-            aplicar_movimiento(
-                db,
-                producto=producto,
-                tipo=TipoMovimientoStock.ENTRADA.value,
-                cantidad=int(det.cantidad),
-                referencia_tipo="oc",
-                referencia_id=orden.id,
-                motivo=f"Recepción OC {orden.folio or '#'+str(orden.id)}",
-                usuario=current_user,
-            )
-            procesados += 1
+    deltas = {
+        d.id: (d.cantidad - (d.cantidad_recibida or 0))
+        for d in orden.detalles
+        if (d.cantidad - (d.cantidad_recibida or 0)) > 0
+    }
+    if not deltas:
+        raise HTTPException(400, "No hay cantidades pendientes por recibir")
 
-        orden.estatus = "recibido"
+    try:
+        res = _aplicar_recepcion(db, orden, deltas, None, current_user)
         db.commit()
         return {
             "ok": True,
             "folio": orden.folio,
-            "productos_ingresados": procesados,
+            "productos_ingresados": res["procesados"],
+            "estatus": res["estatus"],
         }
     except HTTPException:
         db.rollback()
@@ -915,6 +901,46 @@ def recibir_oc(
     except Exception as exc:
         db.rollback()
         logger.exception("compras.recibir_oc falló (id=%s)", id)
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+@router.post("/{id}/recibir-parcial", dependencies=[Depends(allow_admin_asistente)])
+def recibir_oc_parcial(
+    id: int,
+    payload: RecepcionParcialInput,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Recepción parcial incremental: recibe las cantidades indicadas por línea
+    (delta de esta recepción). Acumula cantidad_recibida y mueve stock solo para
+    líneas de catálogo. La OC pasa a 'recibida_parcial' o 'recibido'."""
+    orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    if not orden:
+        raise HTTPException(404, "OC no encontrada")
+    if orden.estatus == "recibido":
+        raise HTTPException(400, "La OC ya fue recibida en su totalidad")
+    if orden.estatus not in ("borrador", "enviada", "confirmada", "recibida_parcial"):
+        raise HTTPException(400, f"Estatus '{orden.estatus}' no permite recepción")
+
+    deltas = {l.detalle_compra_id: l.cantidad for l in payload.lineas if l.cantidad and l.cantidad > 0}
+    if not deltas:
+        raise HTTPException(400, "No se indicaron cantidades a recibir")
+
+    try:
+        res = _aplicar_recepcion(db, orden, deltas, payload.fecha, current_user)
+        db.commit()
+        return {
+            "ok": True,
+            "folio": orden.folio,
+            "estatus": res["estatus"],
+            "procesados": res["procesados"],
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("compras.recibir_oc_parcial falló (id=%s)", id)
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
