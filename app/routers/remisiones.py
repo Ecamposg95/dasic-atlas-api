@@ -3,9 +3,12 @@
 import logging
 import re
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
+from jinja2 import BaseLoader, Environment
 from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session
 
@@ -45,6 +48,41 @@ def _generar_folio_remision(db: Session) -> str:
         if m:
             consecutivo = int(m.group(1)) + 1
     return f"{prefijo}-{yymm}{consecutivo:04d}"
+
+
+@router.get("/orden/{orden_id}/borrador", dependencies=[Depends(allow_all_staff)])
+def borrador_remision_desde_orden(orden_id: int, db: Session = Depends(get_db)):
+    """Arma el draft de una remisión desde una orden de venta: una línea por
+    cada DetalleOrden con su precio/unidad SAT snapshot y la cantidad sugerida
+    (= la de la orden). El frontend precarga la página de creación con esto."""
+    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == orden_id).first()
+    if not orden:
+        raise HTTPException(404, "Orden de venta no encontrada")
+    if orden.estatus == models.EstatusOrden.COTIZACION:
+        raise HTTPException(400, "La orden todavía es cotización — convierte a venta antes de remisionar")
+
+    lineas = []
+    for d in orden.detalles:
+        prod = d.producto
+        descripcion = d.descripcion_libre or (prod.nombre if prod else None) or "Producto"
+        sku = d.sku_libre or (prod.sku_comercial if prod else None) or (prod.sku if prod else None)
+        clave_unidad = d.clave_unidad_sat or (prod.clave_unidad_sat if prod else None)
+        lineas.append({
+            "detalle_orden_id": d.id,
+            "descripcion": descripcion,
+            "sku": sku,
+            "clave_unidad_sat": clave_unidad,
+            "precio_unitario": float(d.precio_unitario or 0),
+            "cantidad_orden": d.cantidad,
+        })
+
+    return {
+        "orden_venta_id": orden.id,
+        "orden_folio": orden.folio,
+        "cliente_nombre": orden.cliente.nombre_empresa if orden.cliente else None,
+        "moneda": orden.moneda,
+        "lineas": lineas,
+    }
 
 
 @router.get("/", dependencies=[Depends(allow_all_staff)])
