@@ -41,6 +41,15 @@ class DetalleOrdenCreate(BaseModel):
     # Nota libre por línea: productos similares manuales u observaciones
     # específicas para esta línea (no aplica a toda la cotización).
     observaciones_linea: Optional[str] = Field(default=None, max_length=1000)
+    # Homologación fantasma (US-008): marca + claves SAT + notas del fantasma.
+    # Se capturan en el modal de fantasma y alimentan el upsert del pool y el
+    # snapshot SAT de la línea. `observaciones` aquí es nota del fantasma
+    # (distinta de `observaciones_linea`, que es nota de esta línea concreta).
+    marca: Optional[str] = Field(default=None, max_length=80)
+    marca_id: Optional[int] = None
+    clave_prod_serv: Optional[str] = Field(default=None, max_length=8)
+    clave_unidad_sat: Optional[str] = Field(default=None, max_length=10)
+    observaciones: Optional[str] = Field(default=None)
 
     @model_validator(mode="after")
     def _validar_entrega(self) -> "DetalleOrdenCreate":

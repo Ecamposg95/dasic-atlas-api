@@ -732,7 +732,21 @@ def crear_orden(
                     costo=costo_origen,
                     moneda=moneda_origen_linea,
                     proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                    marca=getattr(item, "marca", None),
+                    marca_id=getattr(item, "marca_id", None),
+                    clave_prod_serv=getattr(item, "clave_prod_serv", None),
+                    clave_unidad_sat=getattr(item, "clave_unidad_sat", None),
+                    observaciones=getattr(item, "observaciones", None),
                 )
+
+            # Snapshot SAT por línea (US-006/008): catálogo copia de Producto;
+            # fantasma usa lo capturado en el modal; servicio queda sin SAT.
+            if producto is not None:
+                _clave_prod = producto.clave_prod_serv
+                _clave_unidad = producto.clave_unidad_sat
+            else:
+                _clave_prod = getattr(item, "clave_prod_serv", None)
+                _clave_unidad = getattr(item, "clave_unidad_sat", None)
 
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
@@ -743,6 +757,8 @@ def crear_orden(
                 descripcion_libre=descripcion_libre,
                 moneda_origen_linea=moneda_origen_linea,
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
+                clave_prod_serv=_clave_prod,
+                clave_unidad_sat=_clave_unidad,
                 cantidad=item.cantidad,
                 # precio_unitario = bruto pre-descuento (lo que el cliente ve por unidad).
                 # subtotal ya incluye el descuento aplicado.
@@ -969,7 +985,21 @@ def actualizar_orden(
                     costo=costo_origen,
                     moneda=moneda_origen_linea,
                     proveedor_sugerido_id=getattr(item, "proveedor_sugerido_id", None),
+                    marca=getattr(item, "marca", None),
+                    marca_id=getattr(item, "marca_id", None),
+                    clave_prod_serv=getattr(item, "clave_prod_serv", None),
+                    clave_unidad_sat=getattr(item, "clave_unidad_sat", None),
+                    observaciones=getattr(item, "observaciones", None),
                 )
+
+            # Snapshot SAT por línea (US-006/008): catálogo copia de Producto;
+            # fantasma usa lo capturado en el modal; servicio queda sin SAT.
+            if producto is not None:
+                _clave_prod = producto.clave_prod_serv
+                _clave_unidad = producto.clave_unidad_sat
+            else:
+                _clave_prod = getattr(item, "clave_prod_serv", None)
+                _clave_unidad = getattr(item, "clave_unidad_sat", None)
 
             tipo_linea = _resolve_tipo_linea(item, producto)
             db.add(models.DetalleOrden(
@@ -980,6 +1010,8 @@ def actualizar_orden(
                 descripcion_libre=descripcion_libre,
                 moneda_origen_linea=moneda_origen_linea,
                 costo_base_linea=costo_origen.quantize(Decimal("0.01")),
+                clave_prod_serv=_clave_prod,
+                clave_unidad_sat=_clave_unidad,
                 cantidad=item.cantidad,
                 precio_unitario=precio_unit_bruto.quantize(Decimal("0.01")),
                 utilidad_aplicada=utilidad_pct,
