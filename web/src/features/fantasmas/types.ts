@@ -19,6 +19,11 @@ export type Fantasma = {
   veces_solicitado: number;
   costo_referencia: number;
   moneda: Moneda;
+  marca: string | null;
+  marca_id: number | null;
+  clave_prod_serv: string | null;
+  clave_unidad_sat: string | null;
+  observaciones: string | null;
   estado: EstadoFantasma;
   creado_en: string | null;
   ultimo_visto_en: string | null;
@@ -46,6 +51,11 @@ export type FantasmaUpdatePayload = {
   costo_referencia?: number;
   moneda_referencia?: Moneda;
   proveedor_sugerido_id?: number | null;
+  marca?: string | null;
+  marca_id?: number | null;
+  clave_prod_serv?: string | null;
+  clave_unidad_sat?: string | null;
+  observaciones?: string | null;
 };
 
 export type Proveedor = {

@@ -354,6 +354,13 @@ export function FantasmasPage() {
               </td>
               <td className="p-3 max-w-xs">
                 <div className="truncate text-slate-800 dark:text-slate-200" title={f.descripcion}>{f.descripcion}</div>
+                {(f.marca || f.clave_prod_serv || f.clave_unidad_sat) && (
+                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-500">
+                    {f.marca && <span>{f.marca}</span>}
+                    {f.clave_prod_serv && <span className="font-mono">SAT {f.clave_prod_serv}</span>}
+                    {f.clave_unidad_sat && <span className="font-mono">Un {f.clave_unidad_sat}</span>}
+                  </div>
+                )}
               </td>
               <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{f.sku_libre || '—'}</td>
               <td className="p-3 text-xs">
@@ -498,6 +505,10 @@ function EditarModal({
   const [costo, setCosto] = useState(String(fantasma.costo_referencia));
   const [moneda, setMoneda] = useState<Moneda>(fantasma.moneda);
   const [provId, setProvId] = useState<string>(fantasma.proveedor_sugerido_id?.toString() ?? '');
+  const [marca, setMarca] = useState(fantasma.marca ?? '');
+  const [claveProdServ, setClaveProdServ] = useState(fantasma.clave_prod_serv ?? '');
+  const [claveUnidadSat, setClaveUnidadSat] = useState(fantasma.clave_unidad_sat ?? '');
+  const [observaciones, setObservaciones] = useState(fantasma.observaciones ?? '');
   const [err, setErr] = useState<string | null>(null);
 
   function onSubmit() {
@@ -511,6 +522,10 @@ function EditarModal({
       costo_referencia: c,
       moneda_referencia: moneda,
       proveedor_sugerido_id: provId ? parseInt(provId, 10) : null,
+      marca: marca.trim() || null,
+      clave_prod_serv: claveProdServ.trim() || null,
+      clave_unidad_sat: claveUnidadSat.trim() || null,
+      observaciones: observaciones.trim() || null,
     });
   }
 
@@ -553,6 +568,20 @@ function EditarModal({
           <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
         ))}
       </select>
+      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Marca</label>
+      <Input value={marca} onChange={(e) => setMarca(e.target.value)} className="mb-3" placeholder="Marca del producto" />
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave prod/serv SAT</label>
+          <Input value={claveProdServ} onChange={(e) => setClaveProdServ(e.target.value)} maxLength={8} placeholder="Ej. 31181701" className="font-mono" />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave unidad SAT</label>
+          <Input value={claveUnidadSat} onChange={(e) => setClaveUnidadSat(e.target.value)} maxLength={10} placeholder="Ej. H87" className="font-mono" />
+        </div>
+      </div>
+      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Observaciones</label>
+      <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="mb-3" placeholder="Notas del fantasma" />
       {err && <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 mb-3 text-rose-700 dark:text-rose-300">{err}</div>}
       <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancelar</Button>
