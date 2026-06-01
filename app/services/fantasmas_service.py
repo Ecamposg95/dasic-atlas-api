@@ -20,6 +20,11 @@ def upsert_from_detalle(
     costo: Decimal,
     moneda: str,
     proveedor_sugerido_id: Optional[int],
+    marca: Optional[str] = None,
+    marca_id: Optional[int] = None,
+    clave_prod_serv: Optional[str] = None,
+    clave_unidad_sat: Optional[str] = None,
+    observaciones: Optional[str] = None,
 ) -> Optional[int]:
     """Crea o actualiza un ProductoFantasma a partir de los datos de una línea
     ad-hoc. Retorna el `id` del fantasma para que el caller lo asigne a
@@ -48,6 +53,16 @@ def upsert_from_detalle(
             existente.sku_libre = sku_libre
         if proveedor_sugerido_id and not existente.proveedor_sugerido_id:
             existente.proveedor_sugerido_id = proveedor_sugerido_id
+        if marca and not existente.marca:
+            existente.marca = marca
+        if marca_id and not existente.marca_id:
+            existente.marca_id = marca_id
+        if clave_prod_serv and not existente.clave_prod_serv:
+            existente.clave_prod_serv = clave_prod_serv
+        if clave_unidad_sat and not existente.clave_unidad_sat:
+            existente.clave_unidad_sat = clave_unidad_sat
+        if observaciones and not existente.observaciones:
+            existente.observaciones = observaciones
         db.flush()
         return existente.id
 
@@ -58,6 +73,11 @@ def upsert_from_detalle(
         costo_referencia=Decimal(costo),
         moneda_referencia=moneda,
         proveedor_sugerido_id=proveedor_sugerido_id,
+        marca=marca or None,
+        marca_id=marca_id,
+        clave_prod_serv=clave_prod_serv or None,
+        clave_unidad_sat=clave_unidad_sat or None,
+        observaciones=observaciones or None,
         estado="PENDIENTE",
         veces_solicitado=1,
     )
