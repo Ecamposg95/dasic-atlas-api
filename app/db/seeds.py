@@ -434,6 +434,16 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
     "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS precio_unitario NUMERIC(10,2)",
     "ALTER TABLE IF EXISTS detalles_remision ADD COLUMN IF NOT EXISTS subtotal NUMERIC(12,2)",
+
+    # ====================================================================
+    # 20260601_04 — US-026/027: snapshot SAT/marca + recepción parcial en
+    # líneas de OC. Todo aditivo.
+    # ====================================================================
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS marca VARCHAR(80)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS clave_prod_serv VARCHAR(8)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS cantidad_recibida INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS fecha_recepcion TIMESTAMP WITH TIME ZONE",
 ]
 
 
