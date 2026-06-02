@@ -63,7 +63,10 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/60">
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-slate-950/60"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="h-full w-full max-w-2xl overflow-y-auto bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
           <div>
