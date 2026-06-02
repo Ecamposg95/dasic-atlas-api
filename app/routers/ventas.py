@@ -2,7 +2,7 @@ import logging
 import re
 from pathlib import Path as _P
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, select, text
@@ -35,6 +35,7 @@ from app.services.stock_service import (
     reservas_activas,
 )
 from app.services.fantasmas_service import upsert_from_detalle
+from app.services.word_service import build_cotizacion_docx
 
 logger = logging.getLogger(__name__)
 
@@ -1643,6 +1644,50 @@ def generar_pdf(
         iva_pct_label=_iva_pct_label(),
         qr_data_uri=qr_data_uri,
         view_detalles=view_detalles,
+    )
+
+
+@router.get("/{id}/word", dependencies=[Depends(allow_all_staff)])
+def generar_word(id: int, db: Session = Depends(get_db)):
+    """Genera la cotización como .docx editable (descarga). Reutiliza el mismo
+    cálculo de totales que /pdf. No muta pdf_generado_at (eso es del PDF)."""
+    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == id).first()
+    if not orden:
+        raise HTTPException(404)
+
+    iva = (orden.total * _iva_rate()).quantize(Decimal("0.01"))
+    total = (orden.total + iva).quantize(Decimal("0.01"))
+    es_cotizacion = orden.estatus == models.EstatusOrden.COTIZACION
+    tipo_doc = "COTIZACION" if es_cotizacion else "NOTA DE VENTA"
+    simbolo = _currency_symbol(orden.moneda)
+
+    meses_es = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    if orden.fecha_creacion:
+        f = orden.fecha_creacion
+        fecha_str = f"{f.day} de {meses_es[f.month - 1]} de {f.year}"
+    else:
+        fecha_str = ""
+    vigencia_dias = (
+        max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
+        if orden.fecha_vencimiento and orden.fecha_creacion
+        else _quote_validity_days()
+    )
+
+    data = build_cotizacion_docx(
+        orden=orden,
+        iva=iva,
+        total=total,
+        simbolo=simbolo,
+        tipo_doc=tipo_doc,
+        fecha_str=fecha_str,
+        vigencia_dias=vigencia_dias,
+    )
+    filename = f"cotizacion_{orden.folio or orden.id}.docx"
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
