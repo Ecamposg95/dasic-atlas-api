@@ -9,7 +9,14 @@ import { useCotizador } from '../store';
 import type { Producto, Servicio } from '../types';
 import { CatalogoFiltros } from './CatalogoFiltros';
 
-export function ProductSearch() {
+export type ProductSearchHandlers = {
+  onPickProducto: (p: Producto, qty: number) => void | Promise<void>;
+  onPickServicio: (s: Servicio, qty: number) => void;
+  onPickFantasma: (f: FantasmaPrevio, qty: number) => void;
+  onOpenAddFantasma: (initial: { initialSku?: string; initialDescripcion?: string }) => void;
+};
+
+export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers } = {}) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   // Phase 5 (Task 5.1): filtros para el scope de búsqueda.
@@ -27,8 +34,27 @@ export function ProductSearch() {
   // es sibling del flex wrapper, así que basar el check en parentElement
   // chain del input bota el dropdown al primer click adentro.
   const containerRef = useRef<HTMLDivElement>(null);
-  const addProducto = useCotizador((s) => s.addProducto);
-  const addServicio = useCotizador((s) => s.addServicio);
+  const defaultHandlers: ProductSearchHandlers = {
+    onPickProducto: async (p, qty) => {
+      const cliente_id = useCotizador.getState().cliente_id;
+      const util = await fetchAutoUtilidad(cliente_id, p.id);
+      useCotizador.getState().addProducto(p, qty, util ?? undefined);
+    },
+    onPickServicio: (svc, qty) => useCotizador.getState().addServicio(svc, qty),
+    onPickFantasma: (f, qty) =>
+      useCotizador.getState().addLineaAdhoc({
+        descripcion: f.descripcion,
+        sku_libre: f.sku_libre || undefined,
+        costo: Number(f.costo_referencia) || 0,
+        moneda: (f.moneda || 'MXN').toUpperCase() === 'USD' ? 'USD' : 'MXN',
+        proveedor_sugerido_id: f.proveedor_sugerido_id,
+        utilidad: 30,
+        qty,
+      }),
+    onOpenAddFantasma: (initial) =>
+      window.dispatchEvent(new CustomEvent('cot:open-add-fantasma', { detail: initial })),
+  };
+  const h = handlers ?? defaultHandlers;
   const { data, isLoading, error } = useProductosSearch({
     q,
     tipo,
@@ -71,32 +97,21 @@ export function ProductSearch() {
   }, [open]);
 
   async function onSelect(p: Producto) {
-    const cliente_id = useCotizador.getState().cliente_id;
-    const util = await fetchAutoUtilidad(cliente_id, p.id);
-    addProducto(p, cantidadParseada ?? 1, util ?? undefined);
+    await h.onPickProducto(p, cantidadParseada ?? 1);
     setQ('');
     setOpen(false);
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function onSelectServicio(s: Servicio) {
-    addServicio(s, cantidadParseada ?? 1);
+    h.onPickServicio(s, cantidadParseada ?? 1);
     setQ('');
     setOpen(false);
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function onSelectFantasma(f: FantasmaPrevio) {
-    const addLineaAdhoc = useCotizador.getState().addLineaAdhoc;
-    addLineaAdhoc({
-      descripcion: f.descripcion,
-      sku_libre: f.sku_libre || undefined,
-      costo: Number(f.costo_referencia) || 0,
-      moneda: (f.moneda || 'MXN').toUpperCase() === 'USD' ? 'USD' : 'MXN',
-      proveedor_sugerido_id: f.proveedor_sugerido_id,
-      utilidad: 30,
-      qty: cantidadParseada ?? 1,
-    });
+    h.onPickFantasma(f, cantidadParseada ?? 1);
     setQ('');
     setOpen(false);
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -151,11 +166,7 @@ export function ProductSearch() {
         </div>
         <button
           type="button"
-          onClick={() =>
-            window.dispatchEvent(
-              new CustomEvent('cot:open-add-fantasma', { detail: { initialDescripcion: '' } }),
-            )
-          }
+          onClick={() => h.onOpenAddFantasma({ initialDescripcion: '' })}
           title="Agregar producto que no está en el catálogo"
           className="shrink-0 h-8 px-2.5 inline-flex items-center gap-1 text-[11px] font-medium rounded border border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/40 hover:border-amber-500 transition"
         >
@@ -230,14 +241,7 @@ export function ProductSearch() {
                         <button
                           type="button"
                           onClick={() => {
-                            window.dispatchEvent(
-                              new CustomEvent('cot:open-add-fantasma', {
-                                // US-002: el texto buscado se arrastra al SKU
-                                // libre (no a la descripción). El usuario lo
-                                // edita arriba antes de guardar.
-                                detail: { initialSku: q.trim() },
-                              }),
-                            );
+                            h.onOpenAddFantasma({ initialSku: q.trim() });
                             setOpen(false);
                             setQ('');
                           }}
