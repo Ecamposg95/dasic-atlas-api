@@ -564,3 +564,103 @@ def registrar_pago_distribuido(
         raise HTTPException(400, str(exc))
     db.commit()
     return {"ok": True, **result}
+
+
+# --- CONTACTOS (personas por empresa) ---
+
+def _sync_contacto_principal(db: Session, cliente, contacto) -> None:
+    """Desmarca otros principales de la empresa y sincroniza el trío
+    denormalizado del cliente (lo que leen picker/PDF) desde el contacto."""
+    db.query(models.Contacto).filter(
+        models.Contacto.cliente_id == cliente.id,
+        models.Contacto.id != contacto.id,
+    ).update({models.Contacto.es_principal: False})
+    cliente.contacto_nombre = contacto.nombre
+    cliente.email = contacto.email
+    cliente.telefono = contacto.telefono
+
+
+@router.get("/{cliente_id}/contactos", response_model=List[schemas.ContactoResponse], dependencies=[Depends(allow_all_staff)])
+def listar_contactos(cliente_id: int, db: Session = Depends(get_db)):
+    return (
+        db.query(models.Contacto)
+        .filter(models.Contacto.cliente_id == cliente_id)
+        .order_by(models.Contacto.es_principal.desc(), models.Contacto.nombre.asc())
+        .all()
+    )
+
+
+@router.post("/{cliente_id}/contactos", response_model=schemas.ContactoResponse, dependencies=[Depends(allow_all_staff)])
+def crear_contacto(cliente_id: int, payload: schemas.ContactoCreate, db: Session = Depends(get_db)):
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    try:
+        c = models.Contacto(
+            cliente_id=cliente_id,
+            nombre=payload.nombre.strip(),
+            cargo=(payload.cargo or None),
+            email=(payload.email or None),
+            telefono=(payload.telefono or None),
+            es_principal=bool(payload.es_principal),
+        )
+        db.add(c)
+        db.flush()
+        if c.es_principal:
+            _sync_contacto_principal(db, cliente, c)
+        db.commit()
+        db.refresh(c)
+        return c
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.crear_contacto falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+@router.patch("/{cliente_id}/contactos/{contacto_id}", response_model=schemas.ContactoResponse, dependencies=[Depends(allow_all_staff)])
+def actualizar_contacto(cliente_id: int, contacto_id: int, payload: schemas.ContactoUpdate, db: Session = Depends(get_db)):
+    c = (
+        db.query(models.Contacto)
+        .filter(models.Contacto.id == contacto_id, models.Contacto.cliente_id == cliente_id)
+        .first()
+    )
+    if not c:
+        raise HTTPException(404, "Contacto no encontrado")
+    try:
+        data = payload.model_dump(exclude_unset=True)
+        if "nombre" in data and data["nombre"]:
+            data["nombre"] = data["nombre"].strip()
+        for k, v in data.items():
+            setattr(c, k, v)
+        db.flush()
+        if c.es_principal:
+            cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+            if cliente:
+                _sync_contacto_principal(db, cliente, c)
+        db.commit()
+        db.refresh(c)
+        return c
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.actualizar_contacto falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+@router.delete("/{cliente_id}/contactos/{contacto_id}", dependencies=[Depends(allow_all_staff)])
+def eliminar_contacto(cliente_id: int, contacto_id: int, db: Session = Depends(get_db)):
+    c = (
+        db.query(models.Contacto)
+        .filter(models.Contacto.id == contacto_id, models.Contacto.cliente_id == cliente_id)
+        .first()
+    )
+    if not c:
+        raise HTTPException(404, "Contacto no encontrado")
+    db.delete(c)
+    db.commit()
+    return {"ok": True}
