@@ -1,0 +1,68 @@
+// Primitivas de documento compartidas entre Cotizador y Remisión.
+// Estos tipos son PRESENTACIONALES: ya vienen calculados desde el adaptador
+// (el cotizador computa TC/importe/costoOc con su store; la remisión pasa
+// valores simples). DocumentRow NO lee ningún store.
+
+export type DocLineTipo = 'producto' | 'producto_fantasma' | 'servicio_catalogo';
+
+/** Qué celdas/controles renderiza la fila. Cotización = todo; Remisión = reducido. */
+export type DocRowCaps = {
+  showCosto: boolean;     // celda Orig + OC
+  showUtilidad: boolean;  // input % util
+  showDescuento: boolean; // input % desc
+  showEntrega: boolean;   // inputs entrega min/max/unidad
+  showImporte: boolean;   // celda importe (remisión: solo si mostrarPrecios)
+  editableQty: boolean;   // input cantidad editable
+};
+
+/** View-model ya calculado de una línea. */
+export type DocRowVM = {
+  uid: string;
+  tipo: DocLineTipo;
+  sku: string;
+  nom: string;
+
+  // Badges
+  productCurrency: string;     // 'MXN' | 'USD'
+  monedaDocumento: string;     // moneda de la cotización/remisión
+  toleranciaTc?: number;       // para el title del badge de conversión
+  esOverride?: boolean;        // chip "Editado" (solo catálogo)
+  stockMax?: number | null;    // para StockBadge; null/undefined => no badge
+
+  // Cantidad
+  qty: number;
+  qtyMax?: number | null;      // cap parcial (remisión). null/undefined => sin tope
+
+  // Costo (solo si caps.showCosto)
+  costOrigen: number;          // crudo del catálogo, moneda nativa
+  costoOc: number;             // DOF puro convertido a moneda doc
+
+  // Util / Desc / Entrega (solo si sus caps)
+  utilidad: number;
+  descuento: number;
+  entrega_min: number | null;
+  entrega_max: number | null;
+  entrega_unidad: 'dias' | 'semanas' | null;
+
+  // Importe (solo si caps.showImporte)
+  importe: number;
+
+  expanded: boolean;
+};
+
+export type DocRowCallbacks = {
+  onQty: (uid: string, qty: number) => void;
+  onUtilidad?: (uid: string, v: number) => void;
+  onDescuento?: (uid: string, v: number) => void;
+  onEntrega?: (
+    uid: string,
+    patch: {
+      entrega_min?: number | null;
+      entrega_max?: number | null;
+      entrega_unidad?: 'dias' | 'semanas' | null;
+    },
+  ) => void;
+  onRemove: (uid: string) => void;
+  onEdit?: (uid: string) => void;       // abre modal de edición (opcional)
+  onToggleExpand: (uid: string) => void;
+};
