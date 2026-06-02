@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -47,6 +48,25 @@ export function CatalogoFiltros(props: Props) {
 
   const categorias = categoriasResp?.items ?? [];
 
+  // La tabla `marcas` tiene filas duplicadas por nombre (captura manual, con
+  // distinta abreviatura). El filtro de productos abajo filtra por NOMBRE
+  // (useProductosSearch manda `marca=<nombre>`), así que colapsar el dropdown
+  // por nombre es correcto: una opción por marca, sumando sus productos, y el
+  // filtro sigue trayendo todos los productos de esa marca.
+  const marcasUnicas = useMemo(() => {
+    const map = new Map<string, { id: number; nombre: string; n_productos: number }>();
+    for (const m of marcas ?? []) {
+      const key = m.nombre.trim().toLowerCase();
+      const ex = map.get(key);
+      if (ex) {
+        ex.n_productos += m.n_productos;
+      } else {
+        map.set(key, { id: m.id, nombre: m.nombre, n_productos: m.n_productos });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [marcas]);
+
   return (
     <div className="flex flex-col gap-2 mb-2">
       <div className="inline-flex gap-1 p-1 rounded-md bg-slate-950/40 border border-slate-800/60 w-fit">
@@ -84,13 +104,13 @@ export function CatalogoFiltros(props: Props) {
                 return;
               }
               const id = Number(raw);
-              const m = (marcas ?? []).find((x) => x.id === id);
+              const m = marcasUnicas.find((x) => x.id === id);
               props.onMarcaChange(id, m?.nombre ?? null);
             }}
             className="h-8 rounded border border-slate-700 bg-slate-900 px-2 text-xs flex-1 focus:border-accent-glow outline-none"
           >
             <option value="">Todas las marcas</option>
-            {(marcas ?? []).map((m) => (
+            {marcasUnicas.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nombre}
                 {m.n_productos > 0 ? ` (${m.n_productos})` : ''}
