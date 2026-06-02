@@ -185,6 +185,18 @@ export function CotizadorPage() {
   // Reset store on unmount so the next visit starts fresh
   useEffect(() => () => reset(), [reset]);
 
+  // Aviso nativo del navegador al cerrar/recargar con líneas sin guardar.
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (useCotizador.getState().cart.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
   // Auth error → bounce to login
   useEffect(() => {
     const status = (error as { status?: number } | undefined)?.status;
