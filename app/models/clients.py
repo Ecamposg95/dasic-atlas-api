@@ -2,8 +2,9 @@
 Clients models: Cliente, Proveedor.
 """
 
-from sqlalchemy import Column, DECIMAL, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DECIMAL, DateTime, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db import Base
 
@@ -31,6 +32,23 @@ class Cliente(Base):
     ordenes = relationship("OrdenVenta", back_populates="cliente")
     transacciones = relationship("TransaccionCliente", back_populates="cliente")
     creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
+    contactos = relationship("Contacto", back_populates="cliente", cascade="all, delete-orphan")
+
+
+class Contacto(Base):
+    """Persona de contacto de una empresa (cliente). Varias por empresa."""
+    __tablename__ = "contactos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id", ondelete="CASCADE"), nullable=False, index=True)
+    nombre = Column(String(120), nullable=False)
+    cargo = Column(String(80), nullable=True)
+    email = Column(String(120), nullable=True)
+    telefono = Column(String(40), nullable=True)
+    es_principal = Column(Boolean, nullable=False, server_default=text("false"))
+    creado_en = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    cliente = relationship("Cliente", back_populates="contactos")
 
 
 class Proveedor(Base):
