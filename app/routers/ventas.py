@@ -585,7 +585,7 @@ def crear_orden(
         )
         .first()
     )
-    if not cliente: raise HTTPException(404, "Cliente no encontrado")
+    if not cliente: raise HTTPException(422, "Selecciona un cliente válido para guardar la cotización.")
 
     moneda_cotizacion = _normalize_currency(orden_data.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)

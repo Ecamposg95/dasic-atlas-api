@@ -97,7 +97,7 @@ class DetalleOrdenResponse(BaseModel):
 class OrdenVentaCreate(BaseModel):
     cliente_id: int
     contacto_id: Optional[int] = None
-    detalles: List[DetalleOrdenCreate]
+    detalles: List[DetalleOrdenCreate] = Field(..., min_length=1, max_length=500)
     observaciones: Optional[str] = None
     moneda: str = Field(default="MXN", min_length=3, max_length=3)
     # Modelo TC Excel V_03 (2026-05-23): tipo_cambio se reinterpreta como
