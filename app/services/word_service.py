@@ -65,6 +65,12 @@ def build_cotizacion_docx(
     if extras:
         doc.add_paragraph("   ".join(extras)).runs[0].font.size = Pt(9)
 
+    # Contacto de la orden (sub-2): "Atención: <nombre>"
+    if getattr(orden, "contacto", None):
+        atenc = doc.add_paragraph()
+        atenc.add_run("Atención: ").bold = True
+        atenc.add_run(orden.contacto.nombre)
+
     doc.add_paragraph("")
 
     # Tabla de líneas
