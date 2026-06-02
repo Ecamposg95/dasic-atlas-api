@@ -16,6 +16,7 @@ import { toast } from '@/lib/toast';
 import { useIsAdmin } from '@/lib/permissions';
 import { useClientes } from '../hooks/useClientes';
 import { ClienteFormModal } from '../components/ClienteFormModal';
+import { EmpresaDetalleDrawer } from '../components/EmpresaDetalleDrawer';
 import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../types';
 
 function fmtMoney(moneda: MonedaCredito, value: number | string) {
@@ -28,6 +29,7 @@ export function ClientesPage() {
   const [filtroMoneda, setFiltroMoneda] = useState<MonedaCredito | ''>('');
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
+  const [detalle, setDetalle] = useState<Cliente | null>(null);
 
   const { data: clientes, isLoading, error } = useClientes();
   const qc = useQueryClient();
@@ -113,12 +115,12 @@ export function ClientesPage() {
     <div className="p-6 max-w-7xl mx-auto space-y-4">
       <header className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Users className="h-5 w-5 text-cyan-400" /> Clientes
+          <Users className="h-5 w-5 text-cyan-400" /> Empresas
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{filtrados.length} cliente(s)</span>
+          <span className="text-xs text-slate-500">{filtrados.length} empresa(s)</span>
           <Button size="sm" onClick={() => setModalCrear(true)}>
-            + Nuevo cliente
+            + Nueva empresa
           </Button>
         </div>
       </header>
@@ -215,6 +217,13 @@ export function ClientesPage() {
                 </td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <button
+                    onClick={() => setDetalle(c)}
+                    className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-1.5 text-xs"
+                    title="Ver empresa"
+                  >
+                    Ver
+                  </button>
+                  <button
                     onClick={() => setModalEditar(c)}
                     title="Editar"
                     className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 px-1.5 text-xs"
@@ -256,6 +265,15 @@ export function ClientesPage() {
           onSave={(data) => editarMut.mutate({ id: modalEditar.id, payload: data })}
           onClose={() => setModalEditar(null)}
           busy={editarMut.isPending}
+        />
+      )}
+
+      {/* Drawer detalle empresa */}
+      {detalle && (
+        <EmpresaDetalleDrawer
+          empresa={detalle}
+          onEditarDatos={() => { setModalEditar(detalle); setDetalle(null); }}
+          onClose={() => setDetalle(null)}
         />
       )}
     </div>
