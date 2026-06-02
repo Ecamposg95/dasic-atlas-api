@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ghost, X, Building2, DollarSign, Hash, Percent, Recycle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { SatCombobox } from '@/components/ui/sat-combobox';
 import { Button } from '@/components/ui/button';
 import { useCotizador } from '../store';
 import { ProveedorPicker } from './ProveedorPicker';
@@ -360,11 +361,11 @@ export function AgregarFantasmaModal() {
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Clave prod/serv SAT</label>
-              <Input value={claveProdServ} onChange={(e) => setClaveProdServ(e.target.value)} maxLength={8} placeholder="Ej. 31181701" className="h-8 text-xs font-mono" />
+              <SatCombobox value={claveProdServ} onChange={setClaveProdServ} endpoint="/api/sat/clave-prod-serv" minChars={2} maxLength={8} placeholder="Buscar o escribir" className="h-8 text-xs font-mono" />
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Clave unidad SAT</label>
-              <Input value={claveUnidadSat} onChange={(e) => setClaveUnidadSat(e.target.value)} maxLength={10} placeholder="Ej. H87" className="h-8 text-xs font-mono" />
+              <SatCombobox value={claveUnidadSat} onChange={setClaveUnidadSat} endpoint="/api/sat/clave-unidad" minChars={1} maxLength={10} placeholder="Buscar unidad" className="h-8 text-xs font-mono" />
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-slate-400 mb-1">Observaciones</label>

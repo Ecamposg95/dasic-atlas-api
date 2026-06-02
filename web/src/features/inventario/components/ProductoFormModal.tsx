@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal, ModalFooter } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SatCombobox } from '@/components/ui/sat-combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -181,11 +182,11 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave producto/servicio SAT</label>
-              <Input value={claveProdServ} onChange={(e) => setClaveProdServ(e.target.value)} maxLength={8} placeholder="Ej. 31181701" className="font-mono" />
+              <SatCombobox value={claveProdServ} onChange={setClaveProdServ} endpoint="/api/sat/clave-prod-serv" minChars={2} maxLength={8} placeholder="Buscar o escribir (ej. 31181701)" className="font-mono" />
             </div>
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave unidad SAT</label>
-              <Input value={claveUnidadSat} onChange={(e) => setClaveUnidadSat(e.target.value)} maxLength={10} placeholder="Ej. H87" className="font-mono" />
+              <SatCombobox value={claveUnidadSat} onChange={setClaveUnidadSat} endpoint="/api/sat/clave-unidad" minChars={1} maxLength={10} placeholder="Buscar unidad (ej. H87)" className="font-mono" />
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2">
