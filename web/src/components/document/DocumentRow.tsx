@@ -1,0 +1,265 @@
+import { useEffect, useRef, useState } from 'react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { StockBadge } from '@/features/cotizador/components/StockBadge';
+import { EntregaChip } from '@/features/cotizador/components/EntregaChip';
+import { MargenChip } from '@/features/cotizador/components/MargenChip';
+import type { DocRowVM, DocRowCaps, DocRowCallbacks } from './types';
+
+function fmt(n: number) {
+  return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function DocumentRow({
+  vm,
+  caps,
+  cb,
+  justAdded,
+}: {
+  vm: DocRowVM;
+  caps: DocRowCaps;
+  cb: DocRowCallbacks;
+  justAdded: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (justAdded && rowRef.current) {
+      const el = rowRef.current;
+      el.classList.add('cot-row-in');
+      const t = setTimeout(() => el.classList.remove('cot-row-in'), 400);
+      return () => clearTimeout(t);
+    }
+  }, [justAdded]);
+
+  const esFantasma = vm.tipo === 'producto_fantasma';
+  const esServicio = vm.tipo === 'servicio_catalogo';
+
+  const rowClass = esServicio
+    ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500 hover:bg-emerald-950/45'
+    : esFantasma
+      ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
+      : 'hover:bg-slate-100 dark:hover:bg-slate-800/30';
+  const skuClass = esServicio
+    ? 'text-emerald-300'
+    : esFantasma
+      ? 'text-amber-300'
+      : 'text-accent-glow';
+
+  return (
+    <tr
+      ref={rowRef}
+      className={`border-b border-slate-200 dark:border-slate-800 transition cursor-pointer ${rowClass}`}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('input, select, button, textarea, a')) return;
+        cb.onToggleExpand(vm.uid);
+      }}
+    >
+      {/* SKU / Descripción */}
+      <td className="p-2.5 align-top max-w-md">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {esFantasma && (
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              <Ghost className="h-2.5 w-2.5" /> Fantasma
+            </span>
+          )}
+          {esServicio && (
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-emerald-950 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              <Wrench className="h-2.5 w-2.5" /> Servicio
+            </span>
+          )}
+          <span className={`font-mono text-xs font-bold ${skuClass}`}>{vm.sku}</span>
+          {vm.productCurrency !== vm.monedaDocumento && (
+            <span
+              className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded"
+              title={`Línea en ${vm.productCurrency} convertida a ${vm.monedaDocumento}${vm.toleranciaTc != null ? ` con TC del Banxico ±${vm.toleranciaTc} de tolerancia` : ''}`}
+            >
+              {vm.productCurrency} → {vm.monedaDocumento}
+            </span>
+          )}
+          {vm.esOverride && !esFantasma && !esServicio && (
+            <span className="text-[10px] font-bold bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded uppercase">
+              <Pen className="inline h-2.5 w-2.5 mr-0.5" /> Editado
+            </span>
+          )}
+          {!esFantasma && !esServicio && vm.stockMax != null && (
+            <StockBadge stock={vm.stockMax} qty={vm.qty} />
+          )}
+        </div>
+        <div className="text-[13px] text-slate-700 dark:text-slate-300 mt-0.5">{vm.nom}</div>
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          {caps.showEntrega && (
+            <EntregaChip min={vm.entrega_min} max={vm.entrega_max} unidad={vm.entrega_unidad} />
+          )}
+          {caps.showUtilidad && <MargenChip utilidad={vm.utilidad} />}
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
+            {vm.expanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+            {vm.expanded ? 'Cerrar' : 'Detalles'}
+          </span>
+        </div>
+      </td>
+
+      {/* Cantidad */}
+      <td className="p-2.5 align-top text-center w-20">
+        <Input
+          type="number"
+          min="1"
+          max={vm.qtyMax ?? undefined}
+          value={vm.qty}
+          disabled={!caps.editableQty}
+          onChange={(e) => {
+            const v = Math.max(1, parseInt(e.target.value) || 1);
+            const capped = vm.qtyMax != null ? Math.min(v, vm.qtyMax) : v;
+            cb.onQty(vm.uid, capped);
+          }}
+          className="h-7 text-center text-xs px-1"
+        />
+        {vm.qtyMax != null && <div className="text-[10px] text-slate-400">de {vm.qtyMax}</div>}
+      </td>
+
+      {/* Costo */}
+      {caps.showCosto && (
+        <td className="p-2.5 align-top text-right font-mono w-28">
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+            <span className="text-slate-600">Orig</span> {vm.productCurrency} ${fmt(vm.costOrigen)}
+          </div>
+          <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-tight">
+            ${fmt(vm.costoOc)}
+            <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">OC</span>
+          </div>
+        </td>
+      )}
+
+      {/* Utilidad */}
+      {caps.showUtilidad && (
+        <td className="p-2.5 align-top text-center w-16">
+          <Input
+            type="number"
+            min="0"
+            max="99"
+            value={vm.utilidad}
+            onChange={(e) =>
+              cb.onUtilidad?.(vm.uid, Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))
+            }
+            className="h-7 text-center text-xs px-1"
+          />
+        </td>
+      )}
+
+      {/* Descuento */}
+      {caps.showDescuento && (
+        <td className="p-2.5 align-top text-center w-16">
+          <Input
+            type="number"
+            min="0"
+            max="100"
+            step="0.5"
+            value={vm.descuento}
+            onChange={(e) =>
+              cb.onDescuento?.(vm.uid, Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))
+            }
+            className="h-7 text-center text-xs px-1"
+          />
+        </td>
+      )}
+
+      {/* Entrega */}
+      {caps.showEntrega && (
+        <td className="p-2.5 align-top text-center w-40">
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              placeholder="min"
+              value={vm.entrega_min ?? ''}
+              onChange={(e) =>
+                cb.onEntrega?.(vm.uid, {
+                  entrega_min: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
+                })
+              }
+              className="h-7 text-center text-xs px-1 w-12"
+            />
+            <span className="text-slate-500 dark:text-slate-400 text-xs">–</span>
+            <Input
+              type="number"
+              placeholder="max"
+              value={vm.entrega_max ?? ''}
+              onChange={(e) =>
+                cb.onEntrega?.(vm.uid, {
+                  entrega_max: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
+                })
+              }
+              className="h-7 text-center text-xs px-1 w-12"
+            />
+            <select
+              value={vm.entrega_unidad ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                const u = v === 'dias' || v === 'semanas' ? v : null;
+                cb.onEntrega?.(vm.uid, {
+                  entrega_unidad: u,
+                  ...(u == null ? { entrega_min: null, entrega_max: null } : {}),
+                });
+              }}
+              className="h-7 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
+            >
+              <option value="">—</option>
+              <option value="dias">días</option>
+              <option value="semanas">sem.</option>
+            </select>
+          </div>
+        </td>
+      )}
+
+      {/* Importe */}
+      {caps.showImporte && (
+        <td className="p-2.5 align-top text-right font-mono font-bold text-[13px] w-28">${fmt(vm.importe)}</td>
+      )}
+
+      {/* Acciones */}
+      <td className="p-2.5 align-top text-center w-8 relative">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((v) => !v);
+          }}
+          className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+          aria-label="Acciones de la línea"
+        >
+          <MoreVertical className="h-3.5 w-3.5" />
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-1 top-8 z-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[150px] text-left">
+              {cb.onEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    cb.onEdit?.(vm.uid);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2"
+                >
+                  <Pen className="h-3 w-3" /> Editar línea
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  cb.onRemove(vm.uid);
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-rose-900/30 text-rose-400 flex items-center gap-2"
+              >
+                <Trash2 className="h-3 w-3" /> Eliminar
+              </button>
+            </div>
+          </>
+        )}
+      </td>
+    </tr>
+  );
+}
