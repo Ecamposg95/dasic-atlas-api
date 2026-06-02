@@ -31,8 +31,6 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   // Misma fórmula que RowExpanded.tsx:26-32 (match Excel CotProveedor!I6).
   const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento_proveedor || 0) / 100);
   const costoOc = convertCostDOF(costoOcOrigen, item.productCurrency, moneda, tc);
-  const mostrarOrigen =
-    item.productCurrency !== moneda || Number(item.descuento_proveedor || 0) > 0;
   const importe = lineImporte(item, moneda, tcs);
   const esOverride =
     (item.sku_original != null && item.sku !== item.sku_original) ||
@@ -137,14 +135,12 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
         />
       </td>
       <td className="p-2.5 align-top text-right font-mono w-28">
-        {mostrarOrigen && (
-          <div
-            className="text-[10px] text-slate-500 leading-tight"
-            title="Costo crudo del catálogo en su moneda nativa (sin TC, sin descuentos)"
-          >
-            {item.productCurrency} ${fmt(Number(item.cost))}
-          </div>
-        )}
+        <div
+          className="text-[10px] text-slate-500 leading-tight"
+          title="Costo de origen: crudo del catálogo en su moneda nativa — fijo, NO cambia al cambiar la moneda de la cotización"
+        >
+          <span className="text-slate-600">Orig</span> {item.productCurrency} ${fmt(Number(item.cost))}
+        </div>
         <div
           className="text-[13px] text-slate-300 leading-tight"
           title="Costo OC: lo que Dasic paga al proveedor (DOF puro, con descuento proveedor aplicado)"

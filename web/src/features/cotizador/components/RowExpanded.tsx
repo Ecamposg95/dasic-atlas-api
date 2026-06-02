@@ -47,6 +47,9 @@ export function RowExpanded({ item }: { item: CartItem }) {
               {item.productCurrency}
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">{fuente}</div>
+            <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+              Costo origen: {item.productCurrency} ${Number(item.cost).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
             {item.productCurrency !== moneda && (
               <div className="text-[10px] text-amber-400 mt-0.5">
                 Se aplica TC automáticamente.
