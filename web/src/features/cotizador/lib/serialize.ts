@@ -5,6 +5,7 @@ import type { CartItem, OrdenVentaCreate } from '../types';
 
 export type CotizadorSnapshot = {
   cliente_id: number | null;
+  contacto_id: number | null;
   moneda: 'MXN' | 'USD';
   tc: number;                               // DOF (TC oficial Banxico)
   tc_mn_a_usd: number | null;               // override MN→USD, null = backend deriva DOF-tolerancia_tc
@@ -36,6 +37,7 @@ function hayOverrideCosto(it: CartItem): boolean {
 export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
   return {
     cliente_id: s.cliente_id,
+    contacto_id: s.contacto_id,
     moneda: s.moneda,
     tipo_cambio: s.tc,
     tc_mn_a_usd: s.tc_mn_a_usd,

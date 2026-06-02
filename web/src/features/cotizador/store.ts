@@ -35,6 +35,7 @@ type CotizadorState = {
 
   // Header:
   cliente_id: number | null;
+  contacto_id: number | null;
   moneda: Moneda;
   // Modelo TC Excel V_03 (2026-05-23): `tc` representa el DOF (TC oficial
   // Banxico). Los otros 2 son los TCs efectivos por dirección, default
@@ -65,6 +66,7 @@ type CotizadorState = {
 
   // Setters:
   setCliente: (id: number | null) => void;
+  setContacto: (id: number | null) => void;
   setMoneda: (m: Moneda) => void;
   setTc: (tc: number) => void;
   setTcMnAUsd: (v: number | null) => void;
@@ -94,6 +96,7 @@ const initialState = {
   editingFolio: null as string | null,
   editingEstatus: null as string | null,
   cliente_id: null as number | null,
+  contacto_id: null as number | null,
   moneda: 'MXN' as Moneda,
   tc: 1,
   tc_mn_a_usd: null as number | null,
@@ -120,6 +123,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
   ...initialState,
 
   setCliente: (cliente_id) => set({ cliente_id }),
+  setContacto: (contacto_id) => set({ contacto_id }),
   setMoneda: (moneda) => set({ moneda }),
   setTc: (tc) => set({ tc }),
   setTcMnAUsd: (tc_mn_a_usd) => set({ tc_mn_a_usd }),
@@ -454,6 +458,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
         editingFolio: orden.folio,
         editingEstatus: orden.estatus,
         cliente_id: orden.cliente_id,
+        contacto_id: orden.contacto_id ?? null,
         moneda: monedaOrden,
         tc: Number(orden.tipo_cambio) || 1,
         tc_mn_a_usd:

@@ -100,6 +100,7 @@ export function TotalsBar() {
     guardar.mutate(
       {
         cliente_id: s.cliente_id,
+        contacto_id: s.contacto_id,
         moneda: s.moneda,
         tc: s.tc,
         tc_mn_a_usd: s.tc_mn_a_usd,

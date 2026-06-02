@@ -139,6 +139,7 @@ export type OrdenVentaDetail = {
   folio: string;
   estatus: string;
   cliente_id: number | null;
+  contacto_id: number | null;
   moneda: string;
   // Modelo TC Excel V_03 (2026-05-23): tipo_cambio es el DOF. Los otros 2
   // pueden ser null en cotizaciones legacy creadas antes del modelo nuevo;
@@ -254,6 +255,7 @@ export type DetalleOrdenCreate = {
 
 export type OrdenVentaCreate = {
   cliente_id: number | null;
+  contacto_id: number | null;
   moneda: Moneda;
   // Modelo TC Excel V_03: tipo_cambio = DOF, los otros 2 son los direccionales.
   // Si null, el backend los deriva con DOF±tolerancia_tc.
@@ -429,4 +431,12 @@ export type PlantillaCreateResponse = {
   id: number;
   nombre: string;
   n_lineas: number;
+};
+
+// Contacto de la empresa (subset para el sub-selector del cotizador).
+export type ContactoLite = {
+  id: number;
+  nombre: string;
+  cargo: string | null;
+  es_principal: boolean;
 };
