@@ -1,19 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
 import { lineImporte, convertCostDOF, resolveDirectionalTcs } from '../lib/calc';
-import { StockBadge } from './StockBadge';
-import { EntregaChip } from './EntregaChip';
-import { MargenChip } from './MargenChip';
+import { DocumentRow } from '@/components/document/DocumentRow';
+import type { DocRowVM, DocRowCaps, DocRowCallbacks, DocLineTipo } from '@/components/document/types';
 import type { CartItem } from '../types';
 
-function fmt(n: number) {
-  return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const QUOTE_CAPS: DocRowCaps = {
+  showCosto: true,
+  showUtilidad: true,
+  showDescuento: true,
+  showEntrega: true,
+  showImporte: true,
+  editableQty: true,
+};
+
+function tipoVM(t: CartItem['tipo_linea']): DocLineTipo {
+  if (t === 'producto_fantasma') return 'producto_fantasma';
+  if (t === 'servicio_catalogo') return 'servicio_catalogo';
+  return 'producto';
 }
 
 export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolean }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
   const tcMnAUsd = useCotizador((s) => s.tc_mn_a_usd);
@@ -23,12 +29,8 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   const toggleExpand = useCotizador((s) => s.toggleExpand);
   const updateLinea = useCotizador((s) => s.updateLinea);
   const removeLinea = useCotizador((s) => s.removeLinea);
-  const rowRef = useRef<HTMLTableRowElement>(null);
-  const expanded = expandedUids.has(item.uid);
-  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
 
-  // Costo OC: lo que Dasic le paga al proveedor — DOF puro + descuento proveedor.
-  // Misma fórmula que RowExpanded.tsx:26-32 (match Excel CotProveedor!I6).
+  const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
   const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento_proveedor || 0) / 100);
   const costoOc = convertCostDOF(costoOcOrigen, item.productCurrency, moneda, tc);
   const importe = lineImporte(item, moneda, tcs);
@@ -36,231 +38,40 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
     (item.sku_original != null && item.sku !== item.sku_original) ||
     (item.nom_original != null && item.nom !== item.nom_original) ||
     (item.cost_original != null && Number(item.cost) !== Number(item.cost_original));
+  const esCatalogo = item.tipo_linea === 'producto_catalogo';
 
-  useEffect(() => {
-    if (justAdded && rowRef.current) {
-      const el = rowRef.current;
-      el.classList.add('cot-row-in');
-      const t = setTimeout(() => el.classList.remove('cot-row-in'), 400);
-      return () => clearTimeout(t);
-    }
-  }, [justAdded]);
+  const vm: DocRowVM = {
+    uid: item.uid,
+    tipo: tipoVM(item.tipo_linea),
+    sku: item.sku,
+    nom: item.nom,
+    productCurrency: item.productCurrency,
+    monedaDocumento: moneda,
+    toleranciaTc,
+    esOverride,
+    stockMax: esCatalogo ? item.max : null,
+    qty: item.qty,
+    qtyMax: null,
+    costOrigen: Number(item.cost),
+    costoOc,
+    utilidad: item.utilidad,
+    descuento: item.descuento,
+    entrega_min: item.entrega_min,
+    entrega_max: item.entrega_max,
+    entrega_unidad: item.entrega_unidad as 'dias' | 'semanas' | null,
+    importe,
+    expanded: expandedUids.has(item.uid),
+  };
 
-  function openEditModal() {
-    window.dispatchEvent(new CustomEvent('cot:edit-line', { detail: { uid: item.uid } }));
-    setMenuOpen(false);
-  }
+  const cb: DocRowCallbacks = {
+    onQty: (uid, qty) => updateLinea(uid, { qty }),
+    onUtilidad: (uid, v) => updateLinea(uid, { utilidad: v }),
+    onDescuento: (uid, v) => updateLinea(uid, { descuento: v }),
+    onEntrega: (uid, patch) => updateLinea(uid, patch),
+    onRemove: (uid) => removeLinea(uid),
+    onEdit: (uid) => window.dispatchEvent(new CustomEvent('cot:edit-line', { detail: { uid } })),
+    onToggleExpand: (uid) => toggleExpand(uid),
+  };
 
-  const esFantasma = item.tipo_linea === 'producto_fantasma';
-  const esServicio = item.tipo_linea === 'servicio_catalogo';
-
-  // Color por tipo de línea. Fantasma=ámbar, Servicio=esmeralda, Producto=slate.
-  const rowClass = esServicio
-    ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500 hover:bg-emerald-950/45'
-    : esFantasma
-      ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
-      : 'hover:bg-slate-100 dark:hover:bg-slate-800/30';
-  const skuClass = esServicio
-    ? 'text-emerald-300'
-    : esFantasma
-      ? 'text-amber-300'
-      : 'text-accent-glow';
-
-  return (
-    <tr
-      ref={rowRef}
-      className={`border-b border-slate-200 dark:border-slate-800 transition cursor-pointer ${rowClass}`}
-      onClick={(e) => {
-        // No expandir cuando el click es sobre un input/select/button/textarea/anchor.
-        const target = e.target as HTMLElement;
-        if (target.closest('input, select, button, textarea, a')) return;
-        toggleExpand(item.uid);
-      }}
-    >
-      <td className="p-2.5 align-top max-w-md">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {esFantasma && (
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded flex items-center gap-0.5"
-              title="Producto fantasma — ad-hoc, no está en el catálogo"
-            >
-              <Ghost className="h-2.5 w-2.5" /> Fantasma
-            </span>
-          )}
-          {esServicio && (
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-emerald-950 px-1.5 py-0.5 rounded flex items-center gap-0.5"
-              title="Servicio del catálogo — sin stock, sin OC al proveedor"
-            >
-              <Wrench className="h-2.5 w-2.5" /> Servicio
-            </span>
-          )}
-          <span className={`font-mono text-xs font-bold ${skuClass}`}>
-            {item.sku}
-          </span>
-          {item.productCurrency !== moneda && (
-            <span
-              className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded"
-              title={`Línea en ${item.productCurrency} convertida a ${moneda} con TC del Banxico ±${toleranciaTc} de tolerancia`}
-            >
-              {item.productCurrency} → {moneda}
-            </span>
-          )}
-          {esOverride && !esFantasma && !esServicio && (
-            <span className="text-[10px] font-bold bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded uppercase">
-              <Pen className="inline h-2.5 w-2.5 mr-0.5" /> Editado
-            </span>
-          )}
-          {!esFantasma && !esServicio && <StockBadge stock={item.max} qty={item.qty} />}
-        </div>
-        <div className="text-[13px] text-slate-700 dark:text-slate-300 mt-0.5">{item.nom}</div>
-        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          <EntregaChip min={item.entrega_min} max={item.entrega_max} unidad={item.entrega_unidad} />
-          <MargenChip utilidad={item.utilidad} />
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
-            {expanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
-            {expanded ? 'Cerrar' : 'Detalles'}
-          </span>
-        </div>
-      </td>
-      <td className="p-2.5 align-top text-center w-20">
-        <Input
-          type="number"
-          min="1"
-          value={item.qty}
-          onChange={(e) =>
-            updateLinea(item.uid, { qty: Math.max(1, parseInt(e.target.value) || 1) })
-          }
-          className="h-7 text-center text-xs px-1"
-        />
-      </td>
-      <td className="p-2.5 align-top text-right font-mono w-28">
-        <div
-          className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight"
-          title="Costo de origen: crudo del catálogo en su moneda nativa — fijo, NO cambia al cambiar la moneda de la cotización"
-        >
-          <span className="text-slate-600">Orig</span> {item.productCurrency} ${fmt(Number(item.cost))}
-        </div>
-        <div
-          className="text-[13px] text-slate-700 dark:text-slate-300 leading-tight"
-          title="Costo OC: lo que Dasic paga al proveedor (DOF puro, con descuento proveedor aplicado)"
-        >
-          ${fmt(costoOc)}
-          <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">OC</span>
-        </div>
-      </td>
-      <td className="p-2.5 align-top text-center w-16">
-        <Input
-          type="number"
-          min="0"
-          max="99"
-          value={item.utilidad}
-          onChange={(e) =>
-            updateLinea(item.uid, {
-              utilidad: Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)),
-            })
-          }
-          className="h-7 text-center text-xs px-1"
-        />
-      </td>
-      <td className="p-2.5 align-top text-center w-16">
-        <Input
-          type="number"
-          min="0"
-          max="100"
-          step="0.5"
-          value={item.descuento}
-          onChange={(e) =>
-            updateLinea(item.uid, {
-              descuento: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
-            })
-          }
-          className="h-7 text-center text-xs px-1"
-        />
-      </td>
-      <td className="p-2.5 align-top text-center w-40">
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            placeholder="min"
-            value={item.entrega_min ?? ''}
-            onChange={(e) =>
-              updateLinea(item.uid, {
-                entrega_min:
-                  e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
-              })
-            }
-            className="h-7 text-center text-xs px-1 w-12"
-          />
-          <span className="text-slate-500 dark:text-slate-400 text-xs">–</span>
-          <Input
-            type="number"
-            placeholder="max"
-            value={item.entrega_max ?? ''}
-            onChange={(e) =>
-              updateLinea(item.uid, {
-                entrega_max:
-                  e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0),
-              })
-            }
-            className="h-7 text-center text-xs px-1 w-12"
-          />
-          <select
-            value={item.entrega_unidad ?? ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              const u = v === 'dias' || v === 'semanas' ? v : null;
-              updateLinea(item.uid, {
-                entrega_unidad: u,
-                ...(u == null ? { entrega_min: null, entrega_max: null } : {}),
-              });
-            }}
-            className="h-7 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
-          >
-            <option value="">—</option>
-            <option value="dias">días</option>
-            <option value="semanas">sem.</option>
-          </select>
-        </div>
-      </td>
-      <td className="p-2.5 align-top text-right font-mono font-bold text-[13px] w-28">${fmt(importe)}</td>
-      <td className="p-2.5 align-top text-center w-8 relative">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((v) => !v);
-          }}
-          className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-          aria-label="Acciones de la línea"
-        >
-          <MoreVertical className="h-3.5 w-3.5" />
-        </button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-1 top-8 z-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[150px] text-left">
-              <button
-                type="button"
-                onClick={openEditModal}
-                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2"
-              >
-                <Pen className="h-3 w-3" /> Editar línea
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  removeLinea(item.uid);
-                  setMenuOpen(false);
-                }}
-                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-rose-900/30 text-rose-400 flex items-center gap-2"
-              >
-                <Trash2 className="h-3 w-3" /> Eliminar
-              </button>
-            </div>
-          </>
-        )}
-      </td>
-    </tr>
-  );
+  return <DocumentRow vm={vm} caps={QUOTE_CAPS} cb={cb} justAdded={justAdded} />;
 }
