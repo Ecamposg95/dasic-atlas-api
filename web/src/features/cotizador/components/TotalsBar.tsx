@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DocumentTotalsBar } from '@/components/document/DocumentTotalsBar';
 import { toast } from '@/lib/toast';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
@@ -140,125 +141,79 @@ export function TotalsBar() {
         : 'bg-emerald-900/30 text-emerald-300 border-emerald-700/50';
 
   return (
-    <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-3">
-      {err && (
-        <div className="mb-2 text-[11px] bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-2 py-1.5 flex items-center gap-1.5">
-          <AlertTriangle className="h-3 w-3 shrink-0" />
-          {err}
-        </div>
-      )}
-      {reasons.length > 0 && cart.length > 0 && (
-        <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          Pendiente para guardar: {reasons.join(', ')}
-        </div>
-      )}
-      {margenStats.bajas > 0 && (
-        <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          {margenStats.criticas > 0
-            ? `${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
-            : `${margenStats.bajas} línea(s) con utilidad baja (<15 %)`}
-        </div>
-      )}
-      {showBreakdown && (
-        <div
-          className="mb-1 flex items-center gap-1.5 flex-wrap"
-          title="Subtotales antes de IVA, en la moneda nativa de cada línea (sin conversión por TC)"
-        >
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Por moneda nativa
-          </span>
-          {breakdown.usd_count > 0 && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-cyan-900/30 text-cyan-300 border-cyan-700/50">
-              USD {breakdown.usd_count} línea{breakdown.usd_count === 1 ? '' : 's'} · $
-              {breakdown.usd.toLocaleString('es-MX', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
+    <DocumentTotalsBar
+      warnings={
+        <>
+          {err && (
+            <div className="mb-2 text-[11px] bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-2 py-1.5 flex items-center gap-1.5">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {err}
+            </div>
           )}
-          {breakdown.mxn_count > 0 && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-emerald-900/30 text-emerald-300 border-emerald-700/50">
-              MXN {breakdown.mxn_count} línea{breakdown.mxn_count === 1 ? '' : 's'} · $
-              {breakdown.mxn.toLocaleString('es-MX', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
+          {reasons.length > 0 && cart.length > 0 && (
+            <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Pendiente para guardar: {reasons.join(', ')}
+            </div>
           )}
-        </div>
-      )}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-6 flex-wrap">
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Sigma className="h-3 w-3" /> Subtotal
-            </span>
-            <span className="font-mono text-2xl font-semibold text-slate-900 dark:text-slate-100">{fmtMoney(subtotal, moneda)}</span>
-          </div>
-          <div
-            className="flex flex-col"
-            title="Costo total que Dasic le paga al proveedor (con DOF puro, aplicando descuento del proveedor por línea). No incluye el spread del TC."
-          >
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Wallet className="h-3 w-3" /> Costo
-            </span>
-            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{fmtMoney(costo, moneda)}</span>
-          </div>
-          <div
-            className="flex flex-col"
-            title="Margen de ganancia final = Subtotal − Costo. Incluye la utilidad explícita por línea y el spread del TC (DOF ± tolerancia)."
-          >
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-emerald-400" /> Margen
-            </span>
-            <span
-              className={`font-mono text-sm font-semibold ${
-                margen < 0
-                  ? 'text-rose-400'
-                  : margenPct < 15
-                    ? 'text-amber-300'
-                    : 'text-emerald-300'
-              }`}
+          {margenStats.bajas > 0 && (
+            <div className="mb-1 text-[11px] text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              {margenStats.criticas > 0
+                ? `${margenStats.criticas} línea(s) con utilidad crítica (<5 %)`
+                : `${margenStats.bajas} línea(s) con utilidad baja (<15 %)`}
+            </div>
+          )}
+          {showBreakdown && (
+            <div
+              className="mb-1 flex items-center gap-1.5 flex-wrap"
+              title="Subtotales antes de IVA, en la moneda nativa de cada línea (sin conversión por TC)"
             >
-              {fmtMoney(margen, moneda)}
-              <span className="ml-1 text-[10px] font-normal opacity-80">
-                ({margenPct.toFixed(1)}%)
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Por moneda nativa
               </span>
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})
-            </span>
-            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{fmtMoney(iva, moneda)}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Coins className="h-3 w-3 text-accent-glow" /> Total
-            </span>
-            <span className="font-mono text-2xl font-bold text-accent-glow">{fmtMoney(total, moneda)}</span>
-          </div>
-          {cart.length > 0 && (
-            <span
-              className={`self-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}
-              title="Utilidad promedio del carrito"
-            >
-              <TrendingUp className="h-2.5 w-2.5" />
-              Util prom. {margenStats.avg.toFixed(1)}%
-            </span>
+              {breakdown.usd_count > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-cyan-900/30 text-cyan-300 border-cyan-700/50">
+                  USD {breakdown.usd_count} línea{breakdown.usd_count === 1 ? '' : 's'} · $
+                  {breakdown.usd.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
+              {breakdown.mxn_count > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-emerald-900/30 text-emerald-300 border-emerald-700/50">
+                  MXN {breakdown.mxn_count} línea{breakdown.mxn_count === 1 ? '' : 's'} · $
+                  {breakdown.mxn.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
           )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>
-            Cancelar
-          </Button>
+        </>
+      }
+      stats={[
+        { label: <><Sigma className="h-3 w-3" /> Subtotal</>, value: fmtMoney(subtotal, moneda), emphasis: 'big' },
+        { label: <><Wallet className="h-3 w-3" /> Costo</>, value: fmtMoney(costo, moneda) },
+        {
+          label: <><TrendingUp className="h-3 w-3 text-emerald-400" /> Margen</>,
+          value: `${fmtMoney(margen, moneda)} (${margenPct.toFixed(1)}%)`,
+          valueClass: `font-mono text-sm font-semibold ${margen < 0 ? 'text-rose-400' : margenPct < 15 ? 'text-amber-300' : 'text-emerald-300'}`,
+        },
+        { label: <><Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})</>, value: fmtMoney(iva, moneda) },
+        { label: <><Coins className="h-3 w-3 text-accent-glow" /> Total</>, value: fmtMoney(total, moneda), emphasis: 'accent' },
+      ]}
+      trailing={
+        cart.length > 0 ? (
+          <span className={`self-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}>
+            <TrendingUp className="h-2.5 w-2.5" /> Util prom. {margenStats.avg.toFixed(1)}%
+          </span>
+        ) : null
+      }
+      actions={
+        <>
+          <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>Cancelar</Button>
           <Button onClick={onSave} disabled={disabled} data-cot-save>
             {guardar.isPending ? 'Guardando…' : editingId != null ? 'Actualizar cotización' : 'Guardar cotización'}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }
