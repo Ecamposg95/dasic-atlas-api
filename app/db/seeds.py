@@ -635,6 +635,30 @@ def seed_sat_clave_unidad(db: Session) -> None:
         logger.info("seed_sat_clave_unidad: %s claves de unidad sembradas", nuevos)
 
 
+def seed_contactos_principal(db: Session) -> None:
+    """Backfill idempotente: por cada Cliente con contacto_nombre y SIN contactos,
+    crea un Contacto principal copiando nombre/email/telefono."""
+    clientes = db.query(models.Cliente).all()
+    creados = 0
+    for c in clientes:
+        if not (c.contacto_nombre or "").strip():
+            continue
+        existe = db.query(models.Contacto.id).filter(models.Contacto.cliente_id == c.id).first()
+        if existe:
+            continue
+        db.add(models.Contacto(
+            cliente_id=c.id,
+            nombre=c.contacto_nombre.strip(),
+            email=(c.email or None),
+            telefono=(c.telefono or None),
+            es_principal=True,
+        ))
+        creados += 1
+    if creados:
+        db.commit()
+        logger.info("seed_contactos_principal: %s contactos principales creados", creados)
+
+
 def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
@@ -642,4 +666,5 @@ def run_all_seeds(db: Session) -> None:
     seed_marcas(db)
     seed_sat_catalogos_pequenos(db)
     seed_sat_clave_unidad(db)
+    seed_contactos_principal(db)
     logger.info("Startup completado correctamente.")
