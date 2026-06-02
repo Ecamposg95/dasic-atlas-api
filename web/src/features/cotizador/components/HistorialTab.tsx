@@ -264,6 +264,11 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
                       className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 hover:border-accent-glow text-slate-300 flex items-center gap-1"
                       title="Ver PDF"
                     ><FileText className="h-3 w-3" /> PDF</a>
+                    <a
+                      href={`/api/ventas/${o.id}/word`} target="_blank" rel="noreferrer"
+                      className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 hover:border-accent-glow text-slate-300 flex items-center gap-1"
+                      title="Descargar Word"
+                    ><FileText className="h-3 w-3" /> Word</a>
                     {o.estatus === 'cotizacion' && (
                       <>
                         <Button size="sm" variant="ghost" onClick={() => onVender(o)} disabled={convertir.isPending}>
