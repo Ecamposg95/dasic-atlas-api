@@ -47,11 +47,11 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
       setErr('El nombre debe tener al menos 2 caracteres.');
       return;
     }
+    if (!email.trim()) {
+      setErr('El correo es requerido.');
+      return;
+    }
     if (mode === 'create') {
-      if (!email.trim()) {
-        setErr('El correo es requerido.');
-        return;
-      }
       if (password.length < 6) {
         setErr('La contraseña debe tener al menos 6 caracteres.');
         return;
@@ -68,7 +68,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
         password,
       });
     } else {
-      (onSave as EditProps['onSave'])({ nombre: nombre.trim(), rol, activo });
+      (onSave as EditProps['onSave'])({ nombre: nombre.trim(), email: email.trim(), rol, activo });
     }
   }
 
@@ -89,28 +89,17 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
           />
         </div>
 
-        {mode === 'create' && (
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
-              Correo electrónico <span className="text-rose-400">*</span>
-            </label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@dasic.com"
-            />
-          </div>
-        )}
-
-        {mode === 'edit' && (
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Correo</label>
-            <div className="h-10 flex items-center px-3 text-sm text-slate-500 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-              {usuario?.email}
-            </div>
-          </div>
-        )}
+        <div>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+            Correo electrónico <span className="text-rose-400">*</span>
+          </label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="usuario@dasic.com"
+          />
+        </div>
 
         <div>
           <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Rol</label>

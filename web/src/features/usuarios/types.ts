@@ -26,6 +26,7 @@ export type UsuarioCreate = {
 
 export type UsuarioUpdate = {
   nombre?: string;
+  email?: string;
   rol?: RolUsuario;
   activo?: boolean;
 };
