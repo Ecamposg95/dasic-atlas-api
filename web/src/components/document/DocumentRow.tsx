@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/features/cotizador/components/StockBadge';
@@ -261,5 +261,161 @@ export function DocumentRow({
         )}
       </td>
     </tr>
+  );
+}
+
+export function DocumentRowCard({
+  vm,
+  caps,
+  cb,
+  expandedRenderer,
+}: {
+  vm: DocRowVM;
+  caps: DocRowCaps;
+  cb: DocRowCallbacks;
+  expandedRenderer?: (uid: string) => ReactNode;
+}) {
+  const esFantasma = vm.tipo === 'producto_fantasma';
+  const esServicio = vm.tipo === 'servicio_catalogo';
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {esFantasma && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded">Fantasma</span>
+            )}
+            {esServicio && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500 text-emerald-950 px-1.5 py-0.5 rounded">Servicio</span>
+            )}
+            <span className="font-mono text-xs font-bold text-accent-glow">{vm.sku}</span>
+            {vm.productCurrency !== vm.monedaDocumento && (
+              <span className="text-[10px] font-bold border border-amber-700/50 bg-amber-900/20 text-amber-300 px-1.5 py-0.5 rounded">
+                {vm.productCurrency} → {vm.monedaDocumento}
+              </span>
+            )}
+          </div>
+          <div className="text-[13px] text-slate-700 dark:text-slate-300 mt-0.5">{vm.nom}</div>
+        </div>
+        <button type="button" onClick={() => cb.onRemove(vm.uid)} className="text-rose-400 text-[11px] shrink-0 hover:underline">
+          Eliminar
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap text-xs">
+        <label className="flex items-center gap-1">
+          <span className="text-slate-500">Cant</span>
+          <input
+            type="number"
+            min={1}
+            max={vm.qtyMax ?? undefined}
+            value={vm.qty}
+            disabled={!caps.editableQty}
+            onChange={(e) => {
+              const v = Math.max(1, parseInt(e.target.value) || 1);
+              cb.onQty(vm.uid, vm.qtyMax != null ? Math.min(v, vm.qtyMax) : v);
+            }}
+            className="h-7 w-16 text-center text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          />
+          {vm.qtyMax != null && <span className="text-[10px] text-slate-400">de {vm.qtyMax}</span>}
+        </label>
+        {caps.showImporte && (
+          <span className="font-mono font-bold ml-auto">
+            ${vm.importe.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        )}
+      </div>
+
+      {caps.showCosto && (
+        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+          Costo OC:{' '}
+          <span className="font-mono">
+            ${vm.costoOc.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span className="ml-2">
+            Orig {vm.productCurrency} ${vm.costOrigen.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      )}
+
+      {caps.showUtilidad && (
+        <label className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 w-20">Util %</span>
+          <input
+            type="number"
+            min={0}
+            max={99}
+            value={vm.utilidad}
+            onChange={(e) => cb.onUtilidad?.(vm.uid, Math.min(99, Math.max(0, parseFloat(e.target.value) || 0)))}
+            className="h-7 w-20 text-center text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          />
+        </label>
+      )}
+
+      {caps.showDescuento && (
+        <label className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 w-20">Desc %</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={0.5}
+            value={vm.descuento}
+            onChange={(e) => cb.onDescuento?.(vm.uid, Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+            className="h-7 w-20 text-center text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          />
+        </label>
+      )}
+
+      {caps.showEntrega && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 w-20">Entrega</span>
+          <input
+            type="number"
+            placeholder="min"
+            value={vm.entrega_min ?? ''}
+            onChange={(e) =>
+              cb.onEntrega?.(vm.uid, { entrega_min: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0) })
+            }
+            className="h-7 w-14 text-center text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          />
+          <span className="text-slate-500">–</span>
+          <input
+            type="number"
+            placeholder="max"
+            value={vm.entrega_max ?? ''}
+            onChange={(e) =>
+              cb.onEntrega?.(vm.uid, { entrega_max: e.target.value === '' ? null : Math.max(0, parseInt(e.target.value) || 0) })
+            }
+            className="h-7 w-14 text-center text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          />
+          <select
+            value={vm.entrega_unidad ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              const u = v === 'dias' || v === 'semanas' ? v : null;
+              cb.onEntrega?.(vm.uid, { entrega_unidad: u, ...(u == null ? { entrega_min: null, entrega_max: null } : {}) });
+            }}
+            className="h-7 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
+          >
+            <option value="">—</option>
+            <option value="dias">días</option>
+            <option value="semanas">sem.</option>
+          </select>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        {cb.onEdit && (
+          <button type="button" onClick={() => cb.onEdit?.(vm.uid)} className="text-[11px] text-accent-glow hover:underline">
+            Editar línea
+          </button>
+        )}
+        <button type="button" onClick={() => cb.onToggleExpand(vm.uid)} className="text-[11px] text-slate-500 ml-auto hover:underline">
+          {vm.expanded ? 'Cerrar' : 'Detalles'}
+        </button>
+      </div>
+      {expandedRenderer && vm.expanded && expandedRenderer(vm.uid)}
+    </div>
   );
 }
