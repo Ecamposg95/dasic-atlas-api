@@ -56,9 +56,9 @@ export function HeaderCotizacion() {
           <span>Selecciona un cliente para que esta cotización pueda guardarse.</span>
         </div>
       )}
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
       <div>
-        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1.5">
           <User className="h-3 w-3" />
           Cliente
         </label>
@@ -68,21 +68,21 @@ export function HeaderCotizacion() {
 
       <div className="md:col-span-2 grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1.5">
             <Coins className="h-3 w-3" />
             Moneda
           </label>
           <select
             value={moneda}
             onChange={(e) => setMoneda(e.target.value as 'MXN' | 'USD')}
-            className="w-full h-8 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
+            className="w-full h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
           >
             <option value="MXN">MXN</option>
             <option value="USD">USD</option>
           </select>
         </div>
         <div className={tcNecesario ? '' : 'opacity-60'}>
-          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1.5">
             <ArrowRightLeft className="h-3 w-3" />
             TC
             {!tcNecesario && (
@@ -105,7 +105,7 @@ export function HeaderCotizacion() {
       </div>
 
       <div>
-        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1.5">
           <CalendarPlus className="h-3 w-3" />
           F. creación
         </label>
@@ -118,7 +118,7 @@ export function HeaderCotizacion() {
       </div>
 
       <div>
-        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-400 mb-1 flex items-center gap-1.5">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1.5">
           <CalendarClock className="h-3 w-3" />
           F. vencimiento
         </label>
@@ -130,7 +130,7 @@ export function HeaderCotizacion() {
         />
       </div>
 
-      <div className="text-[11px] text-slate-500 flex items-end">
+      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-end">
         Vigencia default: {config.quote_validity_days} días
       </div>
     </div>

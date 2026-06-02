@@ -9,12 +9,12 @@ function fmtMoney(n: number, m: string) {
 }
 
 function SubtotalesLine({ subtotales }: { subtotales: SubtotalPorMoneda[] }) {
-  if (subtotales.length === 0) return <span className="text-slate-500">—</span>;
+  if (subtotales.length === 0) return <span className="text-slate-500 dark:text-slate-400">—</span>;
   return (
     <span className="font-mono text-sm text-accent-glow">
       {subtotales.map((s, i) => (
         <span key={s.moneda}>
-          {i > 0 && <span className="text-slate-500"> · </span>}
+          {i > 0 && <span className="text-slate-500 dark:text-slate-400"> · </span>}
           {fmtMoney(s.monto, s.moneda)}
         </span>
       ))}
@@ -55,18 +55,18 @@ export function PreviewOCDrawer() {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-slate-950/60"
+        className="fixed inset-0 z-40 bg-slate-100 dark:bg-slate-950/60"
         onClick={() => setOpen(false)}
       />
-      <aside className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+      <aside className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Truck className="h-4 w-4 text-accent-glow" /> Preview OCs
           </h3>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="text-slate-400 hover:text-slate-100"
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -74,15 +74,15 @@ export function PreviewOCDrawer() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {isEmpty && (
-            <div className="text-xs text-slate-500 text-center p-6 flex flex-col items-center gap-2">
-              <Package className="h-8 w-8 text-slate-700" />
+            <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-6 flex flex-col items-center gap-2">
+              <Package className="h-8 w-8 text-slate-300 dark:text-slate-700" />
               <span>Agrega productos al carrito para ver el preview de OCs.</span>
             </div>
           )}
 
           {!isEmpty && (
             <>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
                 Proyección al guardar la cotización: {gruposConProv.length} OC(s)
                 {grupoSinProv ? ` · ${grupoSinProv.items.length} línea(s) sin proveedor` : ''}
               </div>
@@ -95,17 +95,17 @@ export function PreviewOCDrawer() {
                 return (
                   <div
                     key={g.proveedor_id ?? 'sin'}
-                    className="bg-slate-950 border border-slate-800 rounded-lg p-3"
+                    className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3"
                   >
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-sm truncate">{nombre}</div>
-                        <div className="text-[10px] text-slate-500">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400">
                           {g.items.length} línea(s)
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-[10px] text-slate-500 uppercase tracking-wide">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                           Total
                         </div>
                         <SubtotalesLine subtotales={g.subtotales} />
@@ -114,15 +114,15 @@ export function PreviewOCDrawer() {
                     <ul className="space-y-1 text-xs">
                       {g.items.map((it) => (
                         <li key={it.uid} className="flex items-baseline gap-2">
-                          <span className="text-slate-500">•</span>
+                          <span className="text-slate-500 dark:text-slate-400">•</span>
                           <span className="font-mono text-cyan-400 shrink-0">
                             {it.sku}
                           </span>
-                          <span className="text-slate-400 shrink-0">×{it.qty}</span>
-                          <span className="text-slate-300 truncate flex-1">
+                          <span className="text-slate-600 dark:text-slate-400 shrink-0">×{it.qty}</span>
+                          <span className="text-slate-700 dark:text-slate-300 truncate flex-1">
                             {it.nom}
                           </span>
-                          <span className="font-mono text-slate-400 shrink-0">
+                          <span className="font-mono text-slate-600 dark:text-slate-400 shrink-0">
                             {fmtMoney(it.cost, it.moneda)}
                           </span>
                         </li>
@@ -165,7 +165,7 @@ export function PreviewOCDrawer() {
               )}
 
               {gruposConProv.length === 0 && !grupoSinProv && (
-                <div className="text-xs text-slate-500 text-center p-4">
+                <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">
                   No hay líneas para agrupar.
                 </div>
               )}
@@ -173,7 +173,7 @@ export function PreviewOCDrawer() {
           )}
         </div>
 
-        <div className="p-3 border-t border-slate-800 text-[10px] text-slate-500 leading-relaxed">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
           Subtotales por proveedor en moneda nativa de cada línea (sin TC, sin
           utilidad, sin descuento). El backend genera las OCs reales al usar
           "Sugerir OC" después de guardar.

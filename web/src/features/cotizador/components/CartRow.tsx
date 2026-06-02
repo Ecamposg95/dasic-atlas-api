@@ -59,7 +59,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
     ? 'bg-emerald-950/30 border-l-4 border-l-emerald-500 hover:bg-emerald-950/45'
     : esFantasma
       ? 'bg-amber-950/30 border-l-4 border-l-amber-500 hover:bg-amber-950/45'
-      : 'hover:bg-slate-800/30';
+      : 'hover:bg-slate-100 dark:hover:bg-slate-800/30';
   const skuClass = esServicio
     ? 'text-emerald-300'
     : esFantasma
@@ -69,7 +69,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
   return (
     <tr
       ref={rowRef}
-      className={`border-b border-slate-800 transition cursor-pointer ${rowClass}`}
+      className={`border-b border-slate-200 dark:border-slate-800 transition cursor-pointer ${rowClass}`}
       onClick={(e) => {
         // No expandir cuando el click es sobre un input/select/button/textarea/anchor.
         const target = e.target as HTMLElement;
@@ -113,11 +113,11 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
           )}
           {!esFantasma && !esServicio && <StockBadge stock={item.max} qty={item.qty} />}
         </div>
-        <div className="text-[13px] text-slate-300 mt-0.5">{item.nom}</div>
+        <div className="text-[13px] text-slate-700 dark:text-slate-300 mt-0.5">{item.nom}</div>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <EntregaChip min={item.entrega_min} max={item.entrega_max} unidad={item.entrega_unidad} />
           <MargenChip utilidad={item.utilidad} />
-          <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
             {expanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
             {expanded ? 'Cerrar' : 'Detalles'}
           </span>
@@ -136,17 +136,17 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
       </td>
       <td className="p-2.5 align-top text-right font-mono w-28">
         <div
-          className="text-[10px] text-slate-500 leading-tight"
+          className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight"
           title="Costo de origen: crudo del catálogo en su moneda nativa — fijo, NO cambia al cambiar la moneda de la cotización"
         >
           <span className="text-slate-600">Orig</span> {item.productCurrency} ${fmt(Number(item.cost))}
         </div>
         <div
-          className="text-[13px] text-slate-300 leading-tight"
+          className="text-[13px] text-slate-700 dark:text-slate-300 leading-tight"
           title="Costo OC: lo que Dasic paga al proveedor (DOF puro, con descuento proveedor aplicado)"
         >
           ${fmt(costoOc)}
-          <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500">OC</span>
+          <span className="ml-1 text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">OC</span>
         </div>
       </td>
       <td className="p-2.5 align-top text-center w-16">
@@ -192,7 +192,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
             }
             className="h-7 text-center text-xs px-1 w-12"
           />
-          <span className="text-slate-500 text-xs">–</span>
+          <span className="text-slate-500 dark:text-slate-400 text-xs">–</span>
           <Input
             type="number"
             placeholder="max"
@@ -215,7 +215,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
                 ...(u == null ? { entrega_min: null, entrega_max: null } : {}),
               });
             }}
-            className="h-7 text-[11px] rounded border border-slate-700 bg-slate-900 px-1"
+            className="h-7 text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
           >
             <option value="">—</option>
             <option value="dias">días</option>
@@ -231,7 +231,7 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
             e.stopPropagation();
             setMenuOpen((v) => !v);
           }}
-          className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition"
+          className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
           aria-label="Acciones de la línea"
         >
           <MoreVertical className="h-3.5 w-3.5" />
@@ -239,11 +239,11 @@ export function CartRow({ item, justAdded }: { item: CartItem; justAdded: boolea
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-1 top-8 z-20 bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[150px] text-left">
+            <div className="absolute right-1 top-8 z-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl py-1 min-w-[150px] text-left">
               <button
                 type="button"
                 onClick={openEditModal}
-                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-slate-800 text-slate-200 flex items-center gap-2"
+                className="w-full text-left text-[11px] px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2"
               >
                 <Pen className="h-3 w-3" /> Editar línea
               </button>

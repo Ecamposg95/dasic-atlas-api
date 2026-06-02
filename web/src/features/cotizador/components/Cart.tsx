@@ -75,10 +75,10 @@ export function Cart() {
       )}
 
       {cart.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 border-dashed rounded-xl p-8 text-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-dashed rounded-xl p-8 text-center">
           <ShoppingCart className="mx-auto h-7 w-7 text-slate-600 mb-2" />
-          <div className="text-xs font-medium text-slate-300">El carrito está vacío</div>
-          <p className="text-[11px] text-slate-500 mt-1">
+          <div className="text-xs font-medium text-slate-700 dark:text-slate-300">El carrito está vacío</div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Busca productos arriba y agrégalos para empezar.
           </p>
         </div>
@@ -86,43 +86,43 @@ export function Cart() {
         // US-004: overflow-x-auto + min-w en la tabla → en laptops chicas la
         // tabla scrollea horizontalmente en vez de aplastar/cortar columnas.
         // US-003: base text-[13px] (antes text-xs) para mejor legibilidad.
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
           <table className="w-full text-[13px] min-w-[680px]">
-            <thead className="bg-slate-800/50 text-[11px] text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
+            <thead className="bg-slate-100 dark:bg-slate-800/50 text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
               <tr>
                 <th className="p-2.5 text-left">
                   <span className="inline-flex items-center gap-1">
-                    <Tag className="h-3 w-3 text-slate-500" /> SKU / Descripción
+                    <Tag className="h-3 w-3 text-slate-500 dark:text-slate-400" /> SKU / Descripción
                   </span>
                 </th>
                 <th className="p-2.5 text-center w-20">
                   <span className="inline-flex items-center gap-1">
-                    <Hash className="h-3 w-3 text-slate-500" /> Cant
+                    <Hash className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Cant
                   </span>
                 </th>
                 <th className="p-2.5 text-right w-28">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <DollarSign className="h-3 w-3 text-slate-500" /> Costo
+                    <DollarSign className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Costo
                   </span>
                 </th>
                 <th className="p-2.5 text-center w-16">
                   <span className="inline-flex items-center gap-1">
-                    <Percent className="h-3 w-3 text-slate-500" /> Util
+                    <Percent className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Util
                   </span>
                 </th>
                 <th className="p-2.5 text-center w-16">
                   <span className="inline-flex items-center gap-1">
-                    <Minus className="h-3 w-3 text-slate-500" /> Desc
+                    <Minus className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Desc
                   </span>
                 </th>
                 <th className="p-2.5 text-center w-40">
                   <span className="inline-flex items-center gap-1">
-                    <Truck className="h-3 w-3 text-slate-500" /> Entrega
+                    <Truck className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Entrega
                   </span>
                 </th>
                 <th className="p-2.5 text-right w-28">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    <Calculator className="h-3 w-3 text-slate-500" /> Importe
+                    <Calculator className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Importe
                   </span>
                 </th>
                 <th className="p-2.5 text-center w-8"></th>

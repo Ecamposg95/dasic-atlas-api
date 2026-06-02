@@ -40,8 +40,8 @@ export function SuggestRelacionados() {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 mt-3">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-2">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 mt-3">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-slate-600 dark:text-slate-400 mb-2">
         <Sparkles className="h-3 w-3 text-violet-400" /> Suelen ir juntos
       </div>
       <div className="flex gap-2 flex-wrap">
@@ -51,12 +51,12 @@ export function SuggestRelacionados() {
             type="button"
             disabled={busyId === p.producto_id}
             onClick={() => onAdd(p.producto_id)}
-            className="text-xs px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow flex items-center gap-1 transition disabled:opacity-50 disabled:cursor-wait"
+            className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow flex items-center gap-1 transition disabled:opacity-50 disabled:cursor-wait"
             title={`Co-ocurrencia: ${p.co_apariciones} vez/veces`}
           >
             <Plus className="h-3 w-3" />
             <span className="font-mono">{p.sku || '—'}</span>
-            <span className="text-slate-500 hidden md:inline">· {p.nombre.slice(0, 30)}</span>
+            <span className="text-slate-500 dark:text-slate-400 hidden md:inline">· {p.nombre.slice(0, 30)}</span>
           </button>
         ))}
       </div>

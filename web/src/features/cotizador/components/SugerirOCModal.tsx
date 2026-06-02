@@ -53,15 +53,15 @@ export function SugerirOCModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-3xl w-full p-5 my-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-3xl w-full p-5 my-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Truck className="h-4 w-4 text-accent-glow" /> Sugerir órdenes de compra · {folio}
           </h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-100">
+          <button type="button" onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -76,7 +76,7 @@ export function SugerirOCModal({
           {porProveedor.map((prov) => {
             const items = prov.items ?? [];
             return (
-              <div key={prov.proveedor_id} className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+              <div key={prov.proveedor_id} className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="font-semibold text-sm flex-1">{prov.proveedor_empresa ?? `Proveedor #${prov.proveedor_id}`}</div>
                   <div className="font-mono text-sm text-accent-glow">
@@ -84,7 +84,7 @@ export function SugerirOCModal({
                   </div>
                 </div>
                 <table className="w-full text-xs">
-                  <thead className="text-[10px] text-slate-500 uppercase">
+                  <thead className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">
                     <tr>
                       <th className="text-left py-1">SKU</th>
                       <th className="text-left py-1">Descripción</th>
@@ -94,9 +94,9 @@ export function SugerirOCModal({
                   </thead>
                   <tbody>
                     {items.map((l, idx) => (
-                      <tr key={`${prov.proveedor_id}-${l.producto_id ?? 'fantasma'}-${idx}`} className="border-t border-slate-800">
+                      <tr key={`${prov.proveedor_id}-${l.producto_id ?? 'fantasma'}-${idx}`} className="border-t border-slate-200 dark:border-slate-800">
                         <td className="py-1 font-mono text-cyan-400">{l.sku ?? '—'}</td>
-                        <td className="py-1 text-slate-300 truncate max-w-xs">{l.nombre}</td>
+                        <td className="py-1 text-slate-700 dark:text-slate-300 truncate max-w-xs">{l.nombre}</td>
                         <td className="py-1 text-center">{l.cantidad}</td>
                         <td className="py-1 text-right font-mono">{fmtMoney(l.costo_unitario, l.moneda)}</td>
                       </tr>
@@ -126,7 +126,7 @@ export function SugerirOCModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-800">
+        <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
           <Button variant="ghost" onClick={onClose} disabled={generar.isPending}>Cancelar</Button>
           <Button onClick={onGenerar} disabled={generar.isPending || !hayProveedores}>
             {generar.isPending ? 'Generando…' : `Generar ${porProveedor.length} OC(s)`}

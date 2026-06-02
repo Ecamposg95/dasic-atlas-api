@@ -140,7 +140,7 @@ export function TotalsBar() {
         : 'bg-emerald-900/30 text-emerald-300 border-emerald-700/50';
 
   return (
-    <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-4 py-3">
+    <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-3">
       {err && (
         <div className="mb-2 text-[11px] bg-rose-900/30 border border-rose-700/50 text-rose-300 rounded px-2 py-1.5 flex items-center gap-1.5">
           <AlertTriangle className="h-3 w-3 shrink-0" />
@@ -166,7 +166,7 @@ export function TotalsBar() {
           className="mb-1 flex items-center gap-1.5 flex-wrap"
           title="Subtotales antes de IVA, en la moneda nativa de cada línea (sin conversión por TC)"
         >
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Por moneda nativa
           </span>
           {breakdown.usd_count > 0 && (
@@ -192,25 +192,25 @@ export function TotalsBar() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Sigma className="h-3 w-3" /> Subtotal
             </span>
-            <span className="font-mono text-2xl font-semibold text-slate-100">{fmtMoney(subtotal, moneda)}</span>
+            <span className="font-mono text-2xl font-semibold text-slate-900 dark:text-slate-100">{fmtMoney(subtotal, moneda)}</span>
           </div>
           <div
             className="flex flex-col"
             title="Costo total que Dasic le paga al proveedor (con DOF puro, aplicando descuento del proveedor por línea). No incluye el spread del TC."
           >
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Wallet className="h-3 w-3" /> Costo
             </span>
-            <span className="font-mono text-xs text-slate-400">{fmtMoney(costo, moneda)}</span>
+            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{fmtMoney(costo, moneda)}</span>
           </div>
           <div
             className="flex flex-col"
             title="Margen de ganancia final = Subtotal − Costo. Incluye la utilidad explícita por línea y el spread del TC (DOF ± tolerancia)."
           >
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-emerald-400" /> Margen
             </span>
             <span
@@ -229,13 +229,13 @@ export function TotalsBar() {
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})
             </span>
-            <span className="font-mono text-xs text-slate-400">{fmtMoney(iva, moneda)}</span>
+            <span className="font-mono text-xs text-slate-600 dark:text-slate-400">{fmtMoney(iva, moneda)}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <Coins className="h-3 w-3 text-accent-glow" /> Total
             </span>
             <span className="font-mono text-2xl font-bold text-accent-glow">{fmtMoney(total, moneda)}</span>

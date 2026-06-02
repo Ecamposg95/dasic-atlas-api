@@ -33,12 +33,12 @@ export function ModalNotaLinea() {
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-accent-glow" /> Nota / productos similares
@@ -46,7 +46,7 @@ export function ModalNotaLinea() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="text-slate-400 hover:text-slate-100"
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -57,12 +57,12 @@ export function ModalNotaLinea() {
           rows={8}
           maxLength={MAX}
           placeholder="Texto que aparece en el PDF debajo de la línea (productos similares, condiciones, etc.)…"
-          className="w-full text-sm rounded border border-slate-700 bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none resize-none"
+          className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none resize-none"
         />
-        <div className="text-[10px] text-slate-500 text-right mt-1">
+        <div className="text-[10px] text-slate-500 dark:text-slate-400 text-right mt-1">
           {texto.length}/{MAX}
         </div>
-        <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
             Cancelar
           </Button>

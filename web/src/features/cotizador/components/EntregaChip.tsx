@@ -10,7 +10,7 @@ export function EntregaChip({ min, max, unidad }: Props) {
   const completo = min != null && max != null && unidad != null;
   if (!completo) {
     return (
-      <span className="text-[10px] bg-slate-800 text-slate-400 border border-dashed border-slate-700 px-1.5 py-0.5 rounded flex items-center gap-1">
+      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 px-1.5 py-0.5 rounded flex items-center gap-1">
         <Clock className="h-2.5 w-2.5" /> + Entrega
       </span>
     );

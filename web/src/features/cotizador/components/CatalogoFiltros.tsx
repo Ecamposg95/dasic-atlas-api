@@ -69,14 +69,14 @@ export function CatalogoFiltros(props: Props) {
 
   return (
     <div className="flex flex-col gap-2 mb-2">
-      <div className="inline-flex gap-1 p-1 rounded-md bg-slate-950/40 border border-slate-800/60 w-fit">
+      <div className="inline-flex gap-1 p-1 rounded-md bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/60 w-fit">
         <button
           type="button"
           onClick={() => props.onTipoChange('producto')}
           className={`px-2.5 py-1 text-[11px] rounded transition ${
             props.tipo === 'producto'
-              ? 'bg-slate-800 text-accent-glow'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-slate-100 dark:bg-slate-800 text-accent-glow'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           Productos
@@ -86,8 +86,8 @@ export function CatalogoFiltros(props: Props) {
           onClick={() => props.onTipoChange('servicio')}
           className={`px-2.5 py-1 text-[11px] rounded transition ${
             props.tipo === 'servicio'
-              ? 'bg-slate-800 text-emerald-300'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-slate-100 dark:bg-slate-800 text-emerald-300'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           Servicios
@@ -107,7 +107,7 @@ export function CatalogoFiltros(props: Props) {
               const m = marcasUnicas.find((x) => x.id === id);
               props.onMarcaChange(id, m?.nombre ?? null);
             }}
-            className="h-8 rounded border border-slate-700 bg-slate-900 px-2 text-xs flex-1 focus:border-accent-glow outline-none"
+            className="h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs flex-1 focus:border-accent-glow outline-none"
           >
             <option value="">Todas las marcas</option>
             {marcasUnicas.map((m) => (
@@ -120,7 +120,7 @@ export function CatalogoFiltros(props: Props) {
           <select
             value={props.categoriaNombre ?? ''}
             onChange={(e) => props.onCategoriaChange(e.target.value || null)}
-            className="h-8 rounded border border-slate-700 bg-slate-900 px-2 text-xs flex-1 focus:border-accent-glow outline-none"
+            className="h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs flex-1 focus:border-accent-glow outline-none"
           >
             <option value="">Todas las categorías</option>
             {categorias.map((c) => (

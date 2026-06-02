@@ -226,7 +226,7 @@ export function CotizadorPage() {
               onClick={() =>
                 window.dispatchEvent(new CustomEvent('cot:open-borradores'))
               }
-              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
               <ClipboardList className="h-3 w-3" /> Borradores
             </button>
@@ -236,7 +236,7 @@ export function CotizadorPage() {
                 window.dispatchEvent(new CustomEvent('cot:open-preview-oc'))
               }
               title="Preview de OCs que nacerán al guardar"
-              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
               <Truck className="h-3 w-3" /> Preview OC
             </button>
@@ -244,7 +244,7 @@ export function CotizadorPage() {
               type="button"
               onClick={handleExport}
               title="Exportar borrador a JSON"
-              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
               <Download className="h-3 w-3" />
             </button>
@@ -252,7 +252,7 @@ export function CotizadorPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Importar borrador desde JSON"
-              className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
             >
               <Upload className="h-3 w-3" />
             </button>
@@ -273,7 +273,7 @@ export function CotizadorPage() {
                 href={`/api/ventas/${editingId}/pdf`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:border-accent-glow text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+                className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
               >
                 <FileText className="h-3 w-3" /> Ver PDF
               </a>
@@ -286,7 +286,7 @@ export function CotizadorPage() {
         {tab === 'editor' && (
           <>
             {isLoading && editIdNum != null && (
-              <div className="text-xs text-slate-400 bg-slate-900 border border-slate-800 rounded p-3">
+              <div className="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3">
                 Cargando cotización #{editIdNum}…
               </div>
             )}
@@ -322,7 +322,7 @@ export function CotizadorPage() {
                   onChange={(e) => setObservaciones(e.target.value)}
                   rows={4}
                   placeholder="Notas internas o para el cliente…"
-                  className="w-full text-xs rounded-md border border-slate-700 bg-slate-900 px-2 py-2 focus:border-accent-glow outline-none"
+                  className="w-full text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 focus:border-accent-glow outline-none"
                 />
               </div>
               <div>
@@ -336,14 +336,14 @@ export function CotizadorPage() {
                   onClick={() =>
                     window.dispatchEvent(new CustomEvent('cot:open-terminos'))
                   }
-                  className="w-full text-left text-xs rounded-md border border-slate-700 bg-slate-900 px-2 py-2 hover:border-accent-glow text-slate-300 flex items-start gap-2 min-h-[5rem]"
+                  className="w-full text-left text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 hover:border-accent-glow text-slate-700 dark:text-slate-300 flex items-start gap-2 min-h-[5rem]"
                 >
-                  <FileText className="h-3.5 w-3.5 mt-0.5 text-slate-500 shrink-0" />
+                  <FileText className="h-3.5 w-3.5 mt-0.5 text-slate-500 dark:text-slate-400 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] text-slate-500 mb-1">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">
                       {terminos.split('\n').filter((l) => l.trim()).length} cláusulas · click para editar
                     </div>
-                    <div className="text-[11px] text-slate-400 line-clamp-3 whitespace-pre-wrap">
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-3 whitespace-pre-wrap">
                       {terminos || 'Vacío — se usarán los defaults del backend al guardar.'}
                     </div>
                   </div>
@@ -357,7 +357,7 @@ export function CotizadorPage() {
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
             </div>
             <div className="flex items-center gap-3 text-[11px] flex-wrap">
-              <label className="flex items-center gap-2 text-slate-300">
+              <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={pdfConceptoEnabled}
@@ -376,7 +376,7 @@ export function CotizadorPage() {
                 <Pencil className="h-3 w-3" /> Editar concepto…
               </button>
               {pdfConceptoEnabled && pdfConceptoUnificado && (
-                <span className="text-[10px] text-slate-500 truncate max-w-md">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-md">
                   «{pdfConceptoUnificado}»
                 </span>
               )}

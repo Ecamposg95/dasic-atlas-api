@@ -118,30 +118,30 @@ export function PlantillasModal() {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Folder className="h-4 w-4 text-accent-glow" /> Plantillas
           </h3>
-          <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-100">
+          <button type="button" onClick={() => setOpen(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex gap-1 border-b border-slate-800 mb-3">
+        <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 mb-3">
           <button
             type="button"
             onClick={() => setModo('cargar')}
-            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'cargar' ? 'text-accent-glow border-accent-glow' : 'text-slate-400 border-transparent'}`}
+            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'cargar' ? 'text-accent-glow border-accent-glow' : 'text-slate-600 dark:text-slate-400 border-transparent'}`}
           >
             Cargar
           </button>
           <button
             type="button"
             onClick={() => setModo('guardar')}
-            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'guardar' ? 'text-accent-glow border-accent-glow' : 'text-slate-400 border-transparent'}`}
+            className={`px-3 py-1.5 text-sm border-b-2 ${modo === 'guardar' ? 'text-accent-glow border-accent-glow' : 'text-slate-600 dark:text-slate-400 border-transparent'}`}
           >
             Guardar carrito actual
           </button>
@@ -149,15 +149,15 @@ export function PlantillasModal() {
 
         {modo === 'cargar' && (
           <div className="space-y-2 max-h-80 overflow-y-auto">
-            {isLoading && <div className="text-xs text-slate-500 text-center p-4">Cargando…</div>}
+            {isLoading && <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">Cargando…</div>}
             {!isLoading && (plantillas?.length ?? 0) === 0 && (
-              <div className="text-xs text-slate-500 text-center p-4">Aún no tienes plantillas</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">Aún no tienes plantillas</div>
             )}
             {(plantillas ?? []).map((p) => (
-              <div key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-800 border border-slate-800">
+              <div key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.nombre}</div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
                     {p.n_lineas} línea(s) · {p.es_global ? 'Global' : 'Personal'}
                     {p.descripcion ? ` · ${p.descripcion}` : ''}
                   </div>
@@ -180,10 +180,10 @@ export function PlantillasModal() {
         {modo === 'guardar' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Nombre</label>
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Nombre</label>
               <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Kit arranque industrial" />
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               Se guardará el carrito actual: <strong>{cart.length}</strong> línea(s).
             </div>
             <Button
