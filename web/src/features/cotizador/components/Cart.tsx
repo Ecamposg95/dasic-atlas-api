@@ -3,7 +3,7 @@ import { RowExpanded } from './RowExpanded';
 import { QUOTE_CAPS } from '../lib/caps';
 import { useCotizador } from '../store';
 import { DocumentCartTable } from '@/components/document/DocumentCartTable';
-import { resolveDirectionalTcs, convertCostDOF, lineImporte } from '../lib/calc';
+import { resolveDirectionalTcs, convertCost, lineImporte } from '../lib/calc';
 import type { DocRowVM, DocRowCallbacks } from '@/components/document/types';
 
 export function Cart() {
@@ -21,7 +21,6 @@ export function Cart() {
 
   const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
   const rows: DocRowVM[] = cart.map((item) => {
-    const costoOcOrigen = Number(item.cost) * (1 - Number(item.descuento_proveedor || 0) / 100);
     const esOverride =
       (item.sku_original != null && item.sku !== item.sku_original) ||
       (item.nom_original != null && item.nom !== item.nom_original) ||
@@ -44,7 +43,10 @@ export function Cart() {
       qty: item.qty,
       qtyMax: null,
       costOrigen: Number(item.cost),
-      costoOc: convertCostDOF(costoOcOrigen, item.productCurrency, moneda, tc),
+      // Costo mostrado en la fila = costo convertido al TC de VENTA (DOF + tolerancia),
+      // la misma base que usa lineImporte. Así costo×(1+util) reconcilia con el IMPORTE.
+      // El costo OC real al proveedor (DOF puro) vive en el detalle expandido (RowExpanded).
+      costoOc: convertCost(Number(item.cost), item.productCurrency, moneda, tcs),
       utilidad: item.utilidad,
       descuento: item.descuento,
       entrega_min: item.entrega_min,
