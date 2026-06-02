@@ -7,7 +7,7 @@ export function remisionLineaToVM(l: RemisionLinea, moneda: string): DocRowVM {
     tipo: l.tipo,
     sku: l.sku ?? '',
     nom: l.descripcion,
-    productCurrency: l.productCurrency,
+    productCurrency: moneda,
     monedaDocumento: moneda,
     esOverride: false,
     stockMax: null,

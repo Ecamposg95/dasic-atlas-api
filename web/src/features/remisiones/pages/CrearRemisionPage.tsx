@@ -32,7 +32,9 @@ export function CrearRemisionPage() {
   const s = useRemision();
 
   useEffect(() => {
-    if (borrador && ordenId != null) s.hydrateFromBorrador(borrador, ordenId);
+    if (borrador && ordenId != null && useRemision.getState().ordenId !== ordenId) {
+      s.hydrateFromBorrador(borrador, ordenId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [borrador, ordenId]);
   useEffect(() => () => useRemision.getState().reset(), []);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/features/cotizador/components/StockBadge';
@@ -268,12 +268,10 @@ export function DocumentRowCard({
   vm,
   caps,
   cb,
-  expandedRenderer,
 }: {
   vm: DocRowVM;
   caps: DocRowCaps;
   cb: DocRowCallbacks;
-  expandedRenderer?: (uid: string) => ReactNode;
 }) {
   const esFantasma = vm.tipo === 'producto_fantasma';
   const esServicio = vm.tipo === 'servicio_catalogo';
@@ -405,17 +403,13 @@ export function DocumentRowCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        {cb.onEdit && (
+      {cb.onEdit && (
+        <div className="flex items-center justify-end">
           <button type="button" onClick={() => cb.onEdit?.(vm.uid)} className="text-[11px] text-accent-glow hover:underline">
             Editar línea
           </button>
-        )}
-        <button type="button" onClick={() => cb.onToggleExpand(vm.uid)} className="text-[11px] text-slate-500 ml-auto hover:underline">
-          {vm.expanded ? 'Cerrar' : 'Detalles'}
-        </button>
-      </div>
-      {expandedRenderer && vm.expanded && expandedRenderer(vm.uid)}
+        </div>
+      )}
     </div>
   );
 }

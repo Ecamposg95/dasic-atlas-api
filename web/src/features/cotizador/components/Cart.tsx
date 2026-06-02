@@ -1,6 +1,6 @@
 import { AlertTriangle, ShoppingCart } from 'lucide-react';
 import { RowExpanded } from './RowExpanded';
-import { QUOTE_CAPS } from './CartRow';
+import { QUOTE_CAPS } from '../lib/caps';
 import { useCotizador } from '../store';
 import { DocumentCartTable } from '@/components/document/DocumentCartTable';
 import { resolveDirectionalTcs, convertCostDOF, lineImporte } from '../lib/calc';

@@ -96,7 +96,7 @@ export function DocumentCartTable({
       </div>
       <div className="md:hidden space-y-2">
         {rows.map((vm) => (
-          <DocumentRowCard key={vm.uid} vm={vm} caps={caps} cb={cb} expandedRenderer={expandedRenderer} />
+          <DocumentRowCard key={vm.uid} vm={vm} caps={caps} cb={cb} />
         ))}
       </div>
     </>
