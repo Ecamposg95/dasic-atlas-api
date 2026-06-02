@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ settings = get_settings()
 def login_for_access_token(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
+    remember: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     user = UserService.get_user_by_email(db, form_data.username)
@@ -33,7 +34,15 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    # "Recordar sesión": cookie persistente de larga duración. Sin él: JWT de
+    # 12h y cookie de SESIÓN (sin max_age → el navegador la borra al cerrarse).
+    if remember:
+        access_token_expires = timedelta(days=settings.remember_session_days)
+        cookie_max_age = settings.remember_session_days * 24 * 3600
+    else:
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        cookie_max_age = None
+
     access_token = create_access_token(
         data={
             "sub": user.email,
@@ -42,14 +51,16 @@ def login_for_access_token(
         expires_delta=access_token_expires,
     )
 
-    response.set_cookie(
+    cookie_kwargs = dict(
         key=settings.token_cookie_name,
         value=f"Bearer {access_token}",
         httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
         secure=settings.cookie_secure,
     )
+    if cookie_max_age is not None:
+        cookie_kwargs["max_age"] = cookie_max_age
+    response.set_cookie(**cookie_kwargs)
 
     return {"access_token": access_token, "token_type": "bearer"}
 

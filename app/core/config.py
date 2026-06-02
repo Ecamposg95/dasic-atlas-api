@@ -59,6 +59,7 @@ def get_settings() -> Settings:
         )
 
     access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "720"))
+    remember_session_days = int(os.getenv("REMEMBER_SESSION_DAYS", "30"))
     token_cookie_name = os.getenv("TOKEN_COOKIE_NAME", "access_token").strip() or "access_token"
     cookie_secure = _as_bool(os.getenv("COOKIE_SECURE", "false"), default=False)
 
