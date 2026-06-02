@@ -35,9 +35,9 @@
 En `app/routers/clientes.py`:
 - `GET /api/clientes/{cliente_id}/contactos` → lista de contactos de la empresa.
 - `POST /api/clientes/{cliente_id}/contactos` → crea contacto. Si `es_principal=True`: desmarca el principal anterior y **sincroniza** `cliente.contacto_nombre/email/telefono` desde el nuevo.
-- `PATCH /api/contactos/{contacto_id}` → actualiza; mismo manejo de `es_principal` + sync.
-- `DELETE /api/contactos/{contacto_id}` → elimina (si era principal, no re-sincroniza el trío del empresa — queda el último valor; opcional limpiar).
-- El listado de empresas (`GET /api/clientes/`) agrega `n_contactos` al response (conteo).
+- `PATCH /api/clientes/{cliente_id}/contactos/{contacto_id}` → actualiza; mismo manejo de `es_principal` + sync. (Anidado bajo `/api/clientes` para validar ownership y no requerir router nuevo.)
+- `DELETE /api/clientes/{cliente_id}/contactos/{contacto_id}` → elimina (si era principal, no re-sincroniza el trío del empresa — queda el último valor; opcional limpiar).
+- **`n_contactos` en el listado queda fuera del sub-1** (no se toca `GET /api/clientes/`); el conteo de contactos se ve en el detalle. Se puede agregar después si se quiere la columna.
 
 Schemas en `app/schemas/clients.py`: `ContactoBase`, `ContactoCreate`, `ContactoUpdate`, `ContactoResponse`. **Re-exportar en `app/schemas/__init__.py`** (import + `__all__`) — gotcha conocido [[feedback-schemas-reexport]].
 
@@ -47,7 +47,7 @@ No requiere endpoints nuevos: el detalle reutiliza los **existentes** (hoy sin c
 
 ### 4. Frontend — área de empresas (`web/src/features/clientes/`)
 
-- **`ClientesPage`** se presenta como **"Empresas"**: encabezado/labels actualizados; tabla con Empresa · RFC · Contacto principal · Crédito · Saldo · # contactos · Acciones. Mantiene crear/editar empresa (form actual) y eliminar.
+- **`ClientesPage`** se presenta como **"Empresas"**: encabezado/labels actualizados; tabla con Empresa · RFC · Contacto principal · Crédito · Saldo · Acciones (# contactos se ve en el detalle, no en la lista — ver arriba). Mantiene crear/editar empresa (form actual) y eliminar.
 - **`EmpresaDetalleDrawer`** (nuevo): panel lateral/modal grande que abre al "Ver" una empresa, con 3 secciones:
   1. **Datos & crédito** — datos de la empresa (reusa/enlaza el `ClienteFormModal` para editar).
   2. **Contactos** — lista de contactos con agregar/editar/eliminar y marcar principal (CRUD contra los endpoints nuevos).
