@@ -96,6 +96,7 @@ class DetalleOrdenResponse(BaseModel):
 
 class OrdenVentaCreate(BaseModel):
     cliente_id: int
+    contacto_id: Optional[int] = None
     detalles: List[DetalleOrdenCreate]
     observaciones: Optional[str] = None
     moneda: str = Field(default="MXN", min_length=3, max_length=3)

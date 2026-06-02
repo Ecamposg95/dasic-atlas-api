@@ -437,6 +437,7 @@ PDF_TEMPLATE_VENTA = """
     {% if orden.cliente.email %}
       <div class="row email"><span class="lbl">E-mail:</span> <a href="mailto:{{ orden.cliente.email }}">{{ orden.cliente.email }}</a></div>
     {% endif %}
+    {% if orden.contacto %}<div class="row"><span class="lbl">Atención:</span> {{ orden.contacto.nombre }}</div>{% endif %}
   </div>
 
   {# PDF unificado: si view_detalles viene del backend, usarlo; si no, orden.detalles #}
@@ -613,6 +614,7 @@ def crear_orden(
         nueva_orden = models.OrdenVenta(
             folio=folio,
             cliente_id=cliente.id,
+            contacto_id=orden_data.contacto_id,
             vendedor_id=current_user.id,
             estatus=tipo_orden,
             observaciones=orden_data.observaciones,
@@ -885,6 +887,7 @@ def actualizar_orden(
     try:
         # Actualizar cabecera
         orden.cliente_id = orden_update.cliente_id
+        orden.contacto_id = orden_update.contacto_id
         orden.observaciones = orden_update.observaciones
         if orden_update.terminos_condiciones is not None:
             orden.terminos_condiciones = orden_update.terminos_condiciones
@@ -1138,6 +1141,7 @@ def recotizar(
         nueva = models.OrdenVenta(
             folio=folio_versionado,
             cliente_id=origen.cliente_id,
+            contacto_id=origen.contacto_id,
             vendedor_id=current_user.id,
             estatus=models.EstatusOrden.COTIZACION,
             observaciones=origen.observaciones,
@@ -1525,6 +1529,7 @@ def obtener_detalle_orden(
         "id": orden.id,
         "folio": orden.folio,
         "cliente_id": orden.cliente_id,
+        "contacto_id": orden.contacto_id,
         "observaciones": orden.observaciones,
         "moneda": orden.moneda,
         "tipo_cambio": float(orden.tipo_cambio or 1),
