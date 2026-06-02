@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useGuardarCotizacion } from '../hooks/useCotizacion';
@@ -54,6 +55,7 @@ export function TotalsBar() {
   const reasons: string[] = [];
   if (cart.length === 0) reasons.push('agrega productos');
   if (cliente_id == null) reasons.push('selecciona cliente');
+  if (cart.some((l) => l.qty <= 0)) reasons.push('hay líneas con cantidad 0');
   if (tcInvalido) reasons.push('captura TC');
   if (tieneNoSoportadas) reasons.push('cotización contiene líneas ad-hoc no soportadas');
   if (noEditable) reasons.push(`cotización en estatus ${editingEstatus}`);
@@ -123,6 +125,7 @@ export function TotalsBar() {
             window.location.href = '/spa/login';
             return;
           }
+          toast({ kind: 'error', title: 'No se pudo guardar la cotización', description: e.detail });
           setErr(e.detail || 'No se pudo guardar la cotización');
         },
       },
