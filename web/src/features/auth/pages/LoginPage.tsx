@@ -8,6 +8,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export function LoginPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username: email, password }).toString(),
+        body: new URLSearchParams({ username: email, password, remember: String(remember) }).toString(),
       });
       if (!r.ok) {
         const body = (await r.json().catch(() => ({}))) as { detail?: unknown };
@@ -131,6 +132,16 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="h-4 w-4 accent-accent-glow"
+              />
+              Recordar sesión en este equipo
+            </label>
 
             <button
               type="submit"
