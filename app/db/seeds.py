@@ -459,6 +459,9 @@ _BACKFILL_DDL = [
         creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     )""",
     "CREATE INDEX IF NOT EXISTS ix_contactos_cliente_id ON contactos (cliente_id)",
+
+    # 20260601_06 — contacto de la orden (sub-2). FK a contactos (creada en 05).
+    "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS contacto_id INTEGER REFERENCES contactos(id)",
 ]
 
 

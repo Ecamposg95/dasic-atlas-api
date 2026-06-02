@@ -16,6 +16,7 @@ class OrdenVenta(Base):
     id = Column(Integer, primary_key=True, index=True)
     folio = Column(String(40), unique=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
+    contacto_id = Column(Integer, ForeignKey("contactos.id"), nullable=True)
     vendedor_id = Column(Integer, ForeignKey("usuarios.id"))
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_vencimiento = Column(DateTime, nullable=True)
@@ -65,6 +66,7 @@ class OrdenVenta(Base):
     )
 
     cliente = relationship("Cliente", back_populates="ordenes")
+    contacto = relationship("Contacto", foreign_keys=[contacto_id])
     vendedor = relationship("Usuario", back_populates="ventas")
     detalles = relationship(
         "DetalleOrden",
