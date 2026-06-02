@@ -61,3 +61,29 @@ class ProveedorResponse(ProveedorBase):
     id: int
     saldo_actual: Decimal
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContactoBase(BaseModel):
+    nombre: str
+    cargo: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    es_principal: bool = False
+
+
+class ContactoCreate(ContactoBase):
+    pass
+
+
+class ContactoUpdate(BaseModel):
+    nombre: Optional[str] = None
+    cargo: Optional[str] = None
+    email: Optional[str] = None
+    telefono: Optional[str] = None
+    es_principal: Optional[bool] = None
+
+
+class ContactoResponse(ContactoBase):
+    id: int
+    cliente_id: int
+    model_config = ConfigDict(from_attributes=True)
