@@ -70,6 +70,18 @@ class EstatusOrden(str, enum.Enum):
     PAGADA = "pagada"
     CANCELADA = "cancelada"
 
+    @classmethod
+    def _missing_(cls, value):
+        # Tolera valores legacy en la DB (mayúsculas, espacios) normalizando
+        # a lowercase y matcheando por value o por nombre. Evita que un row
+        # con estatus viejo tire queries enteras (.all()) que cargan OrdenVenta.
+        if isinstance(value, str):
+            v = value.strip().lower()
+            for miembro in cls:
+                if miembro.value == v or miembro.name.lower() == v:
+                    return miembro
+        return None
+
 
 class TipoMovimiento(str, enum.Enum):
     CARGO = "cargo"
