@@ -444,6 +444,21 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS clave_unidad_sat VARCHAR(10)",
     "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS cantidad_recibida INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE IF EXISTS detalles_compra ADD COLUMN IF NOT EXISTS fecha_recepcion TIMESTAMP WITH TIME ZONE",
+
+    # ====================================================================
+    # 20260601_05 — contactos (personas por empresa). Aditivo.
+    # ====================================================================
+    """CREATE TABLE IF NOT EXISTS contactos (
+        id SERIAL PRIMARY KEY,
+        cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+        nombre VARCHAR(120) NOT NULL,
+        cargo VARCHAR(80),
+        email VARCHAR(120),
+        telefono VARCHAR(40),
+        es_principal BOOLEAN NOT NULL DEFAULT FALSE,
+        creado_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_contactos_cliente_id ON contactos (cliente_id)",
 ]
 
 
