@@ -603,10 +603,28 @@ def seed_sat_catalogos_pequenos(db: Session) -> None:
         logger.info("SAT catálogos chicos ya estaban completos.")
 
 
+def seed_sat_clave_unidad(db: Session) -> None:
+    """Siembra un set curado de claves de unidad SAT (idempotente). El catálogo
+    completo requiere importer; esto da datos al dropdown de captura."""
+    from app.data.sat.claves_unidad import CLAVE_UNIDAD_COMUNES
+
+    existentes = {row[0] for row in db.query(models.SatClaveUnidad.codigo).all()}
+    nuevos = 0
+    for codigo, nombre in CLAVE_UNIDAD_COMUNES:
+        if codigo in existentes:
+            continue
+        db.add(models.SatClaveUnidad(codigo=codigo, nombre=nombre, activo=True))
+        nuevos += 1
+    if nuevos:
+        db.commit()
+        logger.info("seed_sat_clave_unidad: %s claves de unidad sembradas", nuevos)
+
+
 def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
     seed_super_admin(db)
     seed_marcas(db)
     seed_sat_catalogos_pequenos(db)
+    seed_sat_clave_unidad(db)
     logger.info("Startup completado correctamente.")
