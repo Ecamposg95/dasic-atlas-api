@@ -28,7 +28,8 @@ def listar_clientes(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Lista clientes. VENTAS solo ve los que ellos crearon."""
+    """Lista clientes (empresas) con conteo de contactos. VENTAS solo ve los suyos."""
+    from sqlalchemy import func
     query = db.query(models.Cliente)
     if is_owner_scoped(current_user, "read", "cliente"):
         query = query.filter(models.Cliente.creado_por_id == current_user.id)
@@ -39,12 +40,18 @@ def listar_clientes(
             models.Cliente.contacto_nombre.ilike(like),
             models.Cliente.email.ilike(like),
         ))
-    return (
+    rows = (
         query.order_by(models.Cliente.nombre_empresa.asc())
-        .offset(skip)
-        .limit(limit)
+        .offset(skip).limit(limit).all()
+    )
+    counts = dict(
+        db.query(models.Contacto.cliente_id, func.count(models.Contacto.id))
+        .group_by(models.Contacto.cliente_id)
         .all()
     )
+    for c in rows:
+        c.n_contactos = counts.get(c.id, 0)
+    return rows
 
 # --- 2. CREAR CLIENTE ---
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])

@@ -43,6 +43,7 @@ class ClienteResponse(ClienteBase):
     id: int
     saldo_actual: Decimal
     creado_por_id: Optional[int] = None
+    n_contactos: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
 
 
