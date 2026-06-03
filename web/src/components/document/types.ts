@@ -13,6 +13,7 @@ export type DocRowCaps = {
   showEntrega: boolean;   // inputs entrega min/max/unidad
   showImporte: boolean;   // celda importe (remisión: solo si mostrarPrecios)
   editableQty: boolean;   // input cantidad editable
+  editablePrecio?: boolean; // input precio unitario por línea (solo remisión)
 };
 
 /** View-model ya calculado de una línea. */
@@ -46,6 +47,7 @@ export type DocRowVM = {
 
   // Importe (solo si caps.showImporte)
   importe: number;
+  precioUnitario?: number;
 
   expanded: boolean;
 };
@@ -65,4 +67,5 @@ export type DocRowCallbacks = {
   onRemove: (uid: string) => void;
   onEdit?: (uid: string) => void;       // abre modal de edición (opcional)
   onToggleExpand: (uid: string) => void;
+  onPrecio?: (uid: string, v: number) => void;
 };

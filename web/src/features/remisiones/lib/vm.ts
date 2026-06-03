@@ -21,6 +21,7 @@ export function remisionLineaToVM(l: RemisionLinea, moneda: string): DocRowVM {
     entrega_max: null,
     entrega_unidad: null,
     importe: l.precio_unitario * l.cantidad,
+    precioUnitario: l.precio_unitario,
     expanded: l.expanded,
   };
 }

@@ -217,7 +217,23 @@ export function DocumentRow({
 
       {/* Importe */}
       {caps.showImporte && (
-        <td className="p-2.5 align-top text-right font-mono font-bold text-[13px] w-28">${fmt(vm.importe)}</td>
+        <td className="p-2.5 align-top text-right font-mono w-28">
+          {caps.editablePrecio ? (
+            <>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={vm.precioUnitario ?? 0}
+                onChange={(e) => cb.onPrecio?.(vm.uid, Math.max(0, parseFloat(e.target.value) || 0))}
+                className="h-7 text-right text-xs px-1"
+              />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${fmt(vm.importe)}</div>
+            </>
+          ) : (
+            <span className="font-bold text-[13px]">${fmt(vm.importe)}</span>
+          )}
+        </td>
       )}
 
       {/* Acciones */}
@@ -320,7 +336,20 @@ export function DocumentRowCard({
           />
           {vm.qtyMax != null && <span className="text-[10px] text-slate-400">de {vm.qtyMax}</span>}
         </label>
-        {caps.showImporte && (
+        {caps.showImporte && caps.editablePrecio && (
+          <label className="flex items-center gap-1 ml-auto text-xs">
+            <span className="text-slate-500">P.U.</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={vm.precioUnitario ?? 0}
+              onChange={(e) => cb.onPrecio?.(vm.uid, Math.max(0, parseFloat(e.target.value) || 0))}
+              className="h-7 w-24 text-right text-xs px-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            />
+          </label>
+        )}
+        {caps.showImporte && !caps.editablePrecio && (
           <span className="font-mono font-bold ml-auto">
             ${vm.importe.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
