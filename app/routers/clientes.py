@@ -674,14 +674,17 @@ def eliminar_contacto(cliente_id: int, contacto_id: int, db: Session = Depends(g
 
 
 @router.get("/{cliente_id}/ordenes", dependencies=[Depends(allow_all_staff)])
-def ordenes_de_cliente(cliente_id: int, db: Session = Depends(get_db)):
+def ordenes_de_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
     """Historial de cotizaciones/órdenes de la empresa (folio, fecha, estatus, total)."""
-    rows = (
-        db.query(models.OrdenVenta)
-        .filter(models.OrdenVenta.cliente_id == cliente_id)
-        .order_by(models.OrdenVenta.fecha_creacion.desc())
-        .all()
-    )
+    query = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
+    # Owner-scope: VENTAS solo ve sus propias órdenes (mismo patrón que ventas.py).
+    if is_owner_scoped(current_user, "read", "cotizacion"):
+        query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
+    rows = query.order_by(models.OrdenVenta.fecha_creacion.desc()).all()
     return [
         {
             "id": o.id,

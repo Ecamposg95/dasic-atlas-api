@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, contains_eager
 from typing import Optional
 
 from app import models
@@ -27,6 +27,7 @@ def listar_contactos(
     query = (
         db.query(models.Contacto)
         .join(models.Cliente, models.Contacto.cliente_id == models.Cliente.id)
+        .options(contains_eager(models.Contacto.cliente))
     )
     if is_owner_scoped(current_user, "read", "cliente"):
         query = query.filter(models.Cliente.creado_por_id == current_user.id)
@@ -69,13 +70,16 @@ def listar_contactos(
 
 
 @router.get("/{contacto_id}/historial", dependencies=[Depends(allow_all_staff)])
-def historial_contacto(contacto_id: int, db: Session = Depends(get_db)):
-    rows = (
-        db.query(models.OrdenVenta)
-        .filter(models.OrdenVenta.contacto_id == contacto_id)
-        .order_by(models.OrdenVenta.fecha_creacion.desc())
-        .all()
-    )
+def historial_contacto(
+    contacto_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    query = db.query(models.OrdenVenta).filter(models.OrdenVenta.contacto_id == contacto_id)
+    # Owner-scope: VENTAS solo ve sus propias órdenes (mismo patrón que ventas.py).
+    if is_owner_scoped(current_user, "read", "cotizacion"):
+        query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
+    rows = query.order_by(models.OrdenVenta.fecha_creacion.desc()).all()
     return [
         {
             "id": o.id,

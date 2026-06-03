@@ -98,7 +98,7 @@ export function ContactosPage() {
         </DataTableBody>
       </DataTable>
 
-      <ContactoFormModal open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
+      <ContactoFormModal key={editing?.id ?? 'new'} open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
       <ContactoHistorialDrawer contacto={histContacto} onClose={() => setHistContacto(null)} />
     </div>
   );
