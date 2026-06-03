@@ -3,7 +3,7 @@ Clients & Suppliers schemas: Cliente, Proveedor.
 """
 
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -88,3 +88,8 @@ class ContactoResponse(ContactoBase):
     id: int
     cliente_id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class MergeEmpresasInput(BaseModel):
+    survivor_id: int
+    loser_ids: List[int]

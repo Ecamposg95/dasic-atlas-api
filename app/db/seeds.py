@@ -466,6 +466,9 @@ _BACKFILL_DDL = [
     # 20260602_05 — remisión libre (sin orden): cliente propio + orden nullable
     "ALTER TABLE IF EXISTS remisiones ALTER COLUMN orden_venta_id DROP NOT NULL",
     "ALTER TABLE IF EXISTS remisiones ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)",
+
+    # 20260603_01 — audit log de fusión de empresas (Sub-3 dedup)
+    "CREATE TABLE IF NOT EXISTS cliente_merge_log (id SERIAL PRIMARY KEY, survivor_id INTEGER, loser_id INTEGER, loser_nombre VARCHAR(150), loser_rfc VARCHAR(50), loser_saldo NUMERIC(12,2), n_ordenes INTEGER, n_transacciones INTEGER, n_remisiones INTEGER, n_contactos INTEGER, merged_by_id INTEGER, merged_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
 ]
 
 

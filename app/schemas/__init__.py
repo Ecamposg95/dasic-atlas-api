@@ -46,6 +46,7 @@ from app.schemas.clients import (  # noqa: F401
     ContactoCreate,
     ContactoUpdate,
     ContactoResponse,
+    MergeEmpresasInput,
 )
 
 from app.schemas.finance import (  # noqa: F401
@@ -124,6 +125,7 @@ __all__ = [
     "ClienteBase", "ClienteCreate", "ClienteUpdate", "ClienteResponse",
     "ProveedorBase", "ProveedorCreate", "ProveedorResponse",
     "ContactoBase", "ContactoCreate", "ContactoUpdate", "ContactoResponse",
+    "MergeEmpresasInput",
     # finance
     "TransaccionCreate", "TransaccionResponse",
     # sales

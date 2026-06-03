@@ -64,3 +64,22 @@ class Proveedor(Base):
 
     compras = relationship("OrdenCompra", back_populates="proveedor")
     transacciones = relationship("TransaccionProveedor", back_populates="proveedor")
+
+
+class ClienteMergeLog(Base):
+    """Auditoría de fusiones de empresas (Sub-3). Sin FK a clientes a propósito:
+    el loser se borra; este log debe sobrevivir como respaldo recuperable."""
+    __tablename__ = "cliente_merge_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    survivor_id = Column(Integer, index=True)
+    loser_id = Column(Integer, index=True)
+    loser_nombre = Column(String(150))
+    loser_rfc = Column(String(50))
+    loser_saldo = Column(DECIMAL(12, 2))
+    n_ordenes = Column(Integer)
+    n_transacciones = Column(Integer)
+    n_remisiones = Column(Integer)
+    n_contactos = Column(Integer)
+    merged_by_id = Column(Integer)
+    merged_at = Column(DateTime(timezone=True), server_default=func.now())
