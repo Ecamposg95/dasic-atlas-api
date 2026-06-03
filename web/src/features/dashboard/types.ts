@@ -148,3 +148,32 @@ export type TopsResponse = {
   vendedores: TopVendedor[];
   ve_equipo: boolean;
 };
+
+// ---------- /api/dashboard/tendencia ----------
+
+export type TendenciaPunto = {
+  mes: string;   // YYYY-MM
+  label: string; // "ene 26"
+  ventas_mxn: number;
+  ventas_count: number;
+  cotizaciones_mxn: number;
+  cotizaciones_count: number;
+};
+
+export type TendenciaResponse = {
+  series: TendenciaPunto[];
+  meses: number;
+};
+
+// ---------- /api/dashboard/heatmap ----------
+
+export type HeatmapDia = {
+  d: string; // YYYY-MM-DD
+  v: number;
+};
+
+export type HeatmapResponse = {
+  days: HeatmapDia[];
+  max: number;
+  total: number;
+};

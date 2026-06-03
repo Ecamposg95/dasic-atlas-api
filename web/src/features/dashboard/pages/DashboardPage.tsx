@@ -7,7 +7,12 @@ import { useHero } from '../hooks/useHero';
 import { usePipeline } from '../hooks/usePipeline';
 import { useAlertas } from '../hooks/useAlertas';
 import { useTops } from '../hooks/useTops';
-import type { PipelineResponse } from '../types';
+import { useTendencia } from '../hooks/useTendencia';
+import { useHeatmap } from '../hooks/useHeatmap';
+import { KpiCard } from '../components/KpiCard';
+import { TendenciaChart } from '../components/TendenciaChart';
+import { PipelineDonut } from '../components/PipelineDonut';
+import { ActivityHeatmap } from '../components/ActivityHeatmap';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,50 +48,6 @@ function useSafeQuery<T>(
   return { data, isLoading };
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  loading,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-1 pt-4 px-4">
-        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">{label}</p>
-      </CardHeader>
-      <CardContent className="px-4 pb-4">
-        <CardTitle className={`text-2xl font-bold ${loading ? 'text-slate-400 dark:text-slate-600' : ''}`}>
-          {loading ? '—' : value}
-        </CardTitle>
-        {sub && (
-          <p className="text-xs text-slate-500 mt-1">{loading ? '' : sub}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Pipeline Cards ────────────────────────────────────────────────────────────
-
-const PIPELINE_COLS: {
-  key: keyof PipelineResponse;
-  label: string;
-  variant: 'default' | 'cyan' | 'amber' | 'rose' | 'emerald';
-}[] = [
-  { key: 'nueva', label: 'Nuevas', variant: 'cyan' },
-  { key: 'seguimiento', label: 'Seguimiento', variant: 'default' },
-  { key: 'por_vencer', label: 'Por vencer', variant: 'amber' },
-  { key: 'vencida', label: 'Vencidas', variant: 'rose' },
-  { key: 'convertida', label: 'Convertidas', variant: 'emerald' },
-];
-
 // ─── Alert badge severity ──────────────────────────────────────────────────────
 
 type Severity = 'urgente' | 'warning' | 'info';
@@ -110,6 +71,8 @@ export function DashboardPage() {
   const pipelineQ = useSafeQuery(usePipeline(), 'pipeline');
   const alertasQ = useSafeQuery(useAlertas(), 'alertas');
   const topsQ = useSafeQuery(useTops(), 'tops');
+  const tendenciaQ = useSafeQuery(useTendencia(), 'tendencia');
+  const heatmapQ = useSafeQuery(useHeatmap(), 'heatmap');
 
   const hero = heroQ.data;
   const pipeline = pipelineQ.data;
@@ -183,27 +146,24 @@ export function DashboardPage() {
           <KpiCard
             label="Ventas del mes"
             value={fmtMoney(hero?.ventas.monto_mxn ?? 0)}
-            sub={
-              hero
-                ? `${fmtInt(hero.ventas.count)} órdenes${
-                    hero.ventas.delta_pct !== null
-                      ? ` · ${hero.ventas.delta_pct > 0 ? '+' : ''}${fmtPct(hero.ventas.delta_pct)} vs periodo ant.`
-                      : ''
-                  }`
-                : undefined
-            }
+            sub={hero ? `${fmtInt(hero.ventas.count)} órdenes` : undefined}
+            delta={hero?.ventas.delta_pct ?? null}
+            spark={hero?.ventas.sparkline_30d?.map((p) => p.v)}
+            tone="emerald"
             loading={heroQ.isLoading}
           />
           <KpiCard
             label="Pipeline abierto"
             value={fmtMoney(hero?.pipeline.monto_mxn ?? 0)}
-            sub={hero ? `${fmtInt(hero.pipeline.count)} cotizaciones · ticket promedio ${fmtMoney(hero.pipeline.ticket_promedio_mxn)}` : undefined}
+            sub={hero ? `${fmtInt(hero.pipeline.count)} cotizaciones · ticket prom. ${fmtMoney(hero.pipeline.ticket_promedio_mxn)}` : undefined}
             loading={heroQ.isLoading}
           />
           <KpiCard
             label="Conversión 30d"
             value={fmtPct(hero?.conversion.tasa_pct ?? 0)}
             sub={hero ? `Meta: ${fmtPct(hero.conversion.target_pct)}` : undefined}
+            spark={hero?.conversion.sparkline_4w}
+            tone="cyan"
             loading={heroQ.isLoading}
           />
           <KpiCard
@@ -215,46 +175,28 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* Row 2: Pipeline */}
+      {/* Row 2: Tendencia */}
       <section>
         <h2 className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3">
-          Pipeline de cotizaciones
+          Tendencia (12 meses)
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {PIPELINE_COLS.map(({ key, label, variant }) => {
-            const col = pipeline?.[key];
-            return (
-              <Card key={key}>
-                <CardHeader className="pb-1 pt-4 px-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">{label}</p>
-                    <Badge variant={variant}>{pipelineQ.isLoading ? '—' : fmtInt(col?.count ?? 0)}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <p className="text-lg font-bold">
-                    {pipelineQ.isLoading ? '—' : fmtMoney(col?.monto_total_mxn ?? 0)}
-                  </p>
-                  {!pipelineQ.isLoading && col && col.items.length > 0 && (
-                    <ul className="mt-2 space-y-1">
-                      {col.items.slice(0, 3).map((o) => (
-                        <li key={o.id} className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                          {o.folio} · {o.cliente}
-                        </li>
-                      ))}
-                      {col.count > 3 && (
-                        <li className="text-xs text-slate-400 dark:text-slate-600">+{col.count - 3} más</li>
-                      )}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+        <TendenciaChart series={tendenciaQ.data?.series ?? []} loading={tendenciaQ.isLoading} />
+      </section>
+
+      {/* Row 3: Pipeline donut + Heatmap */}
+      <section>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PipelineDonut pipeline={pipeline} loading={pipelineQ.isLoading} />
+          <ActivityHeatmap
+            days={heatmapQ.data?.days ?? []}
+            max={heatmapQ.data?.max ?? 0}
+            total={heatmapQ.data?.total ?? 0}
+            loading={heatmapQ.isLoading}
+          />
         </div>
       </section>
 
-      {/* Row 3: Alertas */}
+      {/* Row 4: Alertas */}
       <section>
         <h2 className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3 flex items-center gap-1">
           <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
@@ -276,10 +218,7 @@ export function DashboardPage() {
                 </Badge>
                 <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 leading-snug">{a.text}</span>
                 {a.link && (
-                  <a
-                    href={a.link}
-                    className="text-xs text-cyan-400 hover:text-cyan-300 shrink-0 self-center"
-                  >
+                  <a href={a.link} className="text-xs text-cyan-400 hover:text-cyan-300 shrink-0 self-center">
                     ver →
                   </a>
                 )}
@@ -289,7 +228,7 @@ export function DashboardPage() {
         )}
       </section>
 
-      {/* Row 4: Tops */}
+      {/* Row 5: Tops */}
       <section>
         <h2 className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3">
           Tops del mes
@@ -316,9 +255,7 @@ export function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{p.nombre}</span>
-                          {p.stock_riesgo && (
-                            <Badge variant="rose">Stock bajo</Badge>
-                          )}
+                          {p.stock_riesgo && <Badge variant="rose">Stock bajo</Badge>}
                         </div>
                         <p className="text-xs text-slate-500 font-mono">
                           {p.sku}{p.marca ? ` · ${p.marca}` : ''}
