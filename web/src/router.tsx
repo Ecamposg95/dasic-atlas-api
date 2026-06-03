@@ -22,6 +22,7 @@ const borradores = lazyPage(() => import('@/features/borradores/pages/Borradores
 const seguimiento = lazyPage(() => import('@/features/seguimiento/pages/SeguimientoPage'), 'SeguimientoPage');
 const fantasmas = lazyPage(() => import('@/features/fantasmas/pages/FantasmasPage'), 'FantasmasPage');
 const clientes = lazyPage(() => import('@/features/clientes/pages/ClientesPage'), 'ClientesPage');
+const contactos = lazyPage(() => import('@/features/contactos/pages/ContactosPage'), 'ContactosPage');
 const inventario = lazyPage(() => import('@/features/inventario/pages/InventarioPage'), 'InventarioPage');
 const catalogos = lazyPage(() => import('@/features/catalogos/pages/CatalogosPage'), 'CatalogosPage');
 const compras = lazyPage(() => import('@/features/compras/pages/ComprasPage'), 'ComprasPage');
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
       { path: 'seguimiento', lazy: seguimiento },
       { path: 'fantasmas', lazy: fantasmas },
       { path: 'clientes', lazy: clientes },
+      { path: 'contactos', lazy: contactos },
       { path: 'inventario', lazy: inventario },
       { path: 'catalogos', lazy: catalogos },
       { path: 'compras', lazy: compras },

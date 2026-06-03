@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, BookMarked, ClipboardCheck, Coins, FileClock, FileText, Ghost,
+  Activity, BarChart3, BookMarked, ClipboardCheck, Coins, Contact, FileClock, FileText, Ghost,
   LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Tags,
   Truck, UserCog, Users, Wallet, Wrench,
 } from 'lucide-react';
@@ -19,6 +19,7 @@ const SECTIONS: NavSection[] = [
       { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
       { to: '/spa/seguimiento', label: 'Seguimiento', Icon: ListChecks },
       { to: '/spa/clientes', label: 'Clientes', Icon: Users },
+      { to: '/spa/contactos', label: 'Contactos', Icon: Contact },
     ],
   },
   {
