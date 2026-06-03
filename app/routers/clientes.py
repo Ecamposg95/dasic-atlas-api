@@ -671,3 +671,25 @@ def eliminar_contacto(cliente_id: int, contacto_id: int, db: Session = Depends(g
     db.delete(c)
     db.commit()
     return {"ok": True}
+
+
+@router.get("/{cliente_id}/ordenes", dependencies=[Depends(allow_all_staff)])
+def ordenes_de_cliente(cliente_id: int, db: Session = Depends(get_db)):
+    """Historial de cotizaciones/órdenes de la empresa (folio, fecha, estatus, total)."""
+    rows = (
+        db.query(models.OrdenVenta)
+        .filter(models.OrdenVenta.cliente_id == cliente_id)
+        .order_by(models.OrdenVenta.fecha_creacion.desc())
+        .all()
+    )
+    return [
+        {
+            "id": o.id,
+            "folio": o.folio,
+            "fecha": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+            "estatus": str(o.estatus.value if hasattr(o.estatus, "value") else o.estatus),
+            "total": float(o.total) if getattr(o, "total", None) is not None else 0.0,
+            "moneda": o.moneda,
+        }
+        for o in rows
+    ]
