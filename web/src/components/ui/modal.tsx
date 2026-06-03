@@ -33,7 +33,7 @@ export function Modal({
       className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className={cn('bg-white border border-slate-200 text-slate-900 rounded-xl shadow-2xl w-full p-5 max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100', sizeCls)}>
+      <div className={cn('bg-white border border-slate-200 text-slate-900 rounded-xl shadow-2xl w-full p-5 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100', sizeCls)}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
