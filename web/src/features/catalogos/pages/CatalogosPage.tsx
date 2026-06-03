@@ -63,7 +63,7 @@ export function CatalogosPage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 dark:border-slate-800 flex gap-1 flex-wrap">
+      <div className="border-b border-slate-200 dark:border-slate-800 flex gap-1 overflow-x-auto whitespace-nowrap">
         {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
