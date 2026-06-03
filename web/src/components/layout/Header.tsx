@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, Settings, User as UserIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useAuth, type User } from '@/stores/auth';
@@ -13,7 +13,7 @@ function initialsOf(u: User): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function Header() {
+export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const navigate = useNavigate();
@@ -54,9 +54,19 @@ export function Header() {
 
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
-      <h2 className="text-sm uppercase tracking-wider text-slate-700 dark:text-slate-400 font-semibold">
-        DASIC <span className="text-accent-glow">·</span> Atlas ONE
-      </h2>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Abrir menú"
+          className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h2 className="text-sm uppercase tracking-wider text-slate-700 dark:text-slate-400 font-semibold">
+          DASIC <span className="text-accent-glow">·</span> Atlas ONE
+        </h2>
+      </div>
 
       {user && (
         <div className="flex items-center gap-1">

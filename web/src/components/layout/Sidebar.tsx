@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -9,9 +10,6 @@ import {
 type NavItem = { to: string; label: string; Icon: LucideIcon };
 type NavSection = { title: string; items: NavItem[] };
 
-// Secciones semánticas: el sidebar agrupa por dominio funcional para que el
-// vendedor encuentre rápido lo que usa (Comercial), el operativo lo suyo
-// (Operación), y el catálogo de datos quede separado del flujo diario.
 const SECTIONS: NavSection[] = [
   {
     title: 'Comercial',
@@ -64,43 +62,63 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export function Sidebar() {
-  return (
-    <aside className="w-64 bg-sidebar text-sidebar-text border-r border-slate-800 flex flex-col">
-      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-slate-800/60">
-        <div className="text-xl font-bold leading-tight">DASIC</div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-0.5">
-          Atlas ONE <span className="text-accent-glow">·</span> Sistema Industrial
-        </div>
-      </div>
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  // Cerrar el drawer con Escape (solo relevante en mobile; en desktop es estático).
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-        {SECTIONS.map((section) => (
-          <div key={section.title}>
-            <div className="px-2 mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-              {section.title}
-            </div>
-            <div className="space-y-0.5">
-              {section.items.map(({ to, label, Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition ${
-                      isActive
-                        ? 'bg-accent-glow/10 text-accent-glow font-medium'
-                        : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
-                    }`
-                  }
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{label}</span>
-                </NavLink>
-              ))}
-            </div>
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} aria-hidden="true" />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-text border-r border-slate-800 flex flex-col transition-transform duration-200 md:static md:translate-x-0 md:z-auto ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="px-4 pt-4 pb-3 shrink-0 border-b border-slate-800/60">
+          <div className="text-xl font-bold leading-tight">DASIC</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-0.5">
+            Atlas ONE <span className="text-accent-glow">·</span> Sistema Industrial
           </div>
-        ))}
-      </nav>
-    </aside>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+          {SECTIONS.map((section) => (
+            <div key={section.title}>
+              <div className="px-2 mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                {section.title}
+              </div>
+              <div className="space-y-0.5">
+                {section.items.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition ${
+                        isActive
+                          ? 'bg-accent-glow/10 text-accent-glow font-medium'
+                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
+                      }`
+                    }
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 }

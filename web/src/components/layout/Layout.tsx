@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth, type User } from '@/stores/auth';
@@ -10,6 +10,7 @@ export function Layout() {
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // El store Zustand vive en memoria: tras un refresh o una navegación directa
   // a una ruta protegida, `user` arranca en null y el Header pierde los botones
@@ -35,9 +36,9 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>
