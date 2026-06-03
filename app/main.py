@@ -83,7 +83,7 @@ app.add_middleware(
 # Routers API
 # ---------------------------------------------------------------------------
 from app.routers import (  # noqa: E402
-    admin, auth, catalogos, clientes, compras, cuentas_por_cobrar, dashboard,
+    admin, auth, catalogos, clientes, compras, contactos, cuentas_por_cobrar, dashboard,
     fantasmas, fx, gastos, inventario, precios, productos, remisiones, reportes,
     reportes_servicio_docs, sat, servicios, usuarios, ventas,
 )
@@ -92,6 +92,7 @@ app.include_router(auth.router)
 app.include_router(productos.router)
 app.include_router(ventas.router)
 app.include_router(clientes.router)
+app.include_router(contactos.router)
 app.include_router(compras.router)
 app.include_router(usuarios.router)
 app.include_router(gastos.router)
