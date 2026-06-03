@@ -95,6 +95,8 @@ export function CrearRemisionPage() {
     crear.mutate(
       {
         orden_venta_id: ordenId!,
+        cliente_id: s.clienteId,
+        moneda: s.moneda || null,
         transportista: s.transportista.trim() || null,
         observaciones: s.observaciones.trim() || null,
         mostrar_precios: s.mostrarPrecios,
