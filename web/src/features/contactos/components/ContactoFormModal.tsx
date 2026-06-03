@@ -1,0 +1,108 @@
+import { useState } from 'react';
+import { Modal, ModalFooter } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
+import { useClientes } from '@/features/clientes/hooks/useClientes';
+import { useGuardarContacto } from '@/features/clientes/hooks/useEmpresaDetalle';
+import type { ContactoGlobal } from '../types';
+
+export function ContactoFormModal({
+  open,
+  onClose,
+  editing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  editing: ContactoGlobal | null;
+}) {
+  const { data: empresas } = useClientes();
+  const [empresaId, setEmpresaId] = useState<number | null>(editing?.cliente_id ?? null);
+  const [nombre, setNombre] = useState(editing?.nombre ?? '');
+  const [cargo, setCargo] = useState(editing?.cargo ?? '');
+  const [email, setEmail] = useState(editing?.email ?? '');
+  const [telefono, setTelefono] = useState(editing?.telefono ?? '');
+  const [esPrincipal, setEsPrincipal] = useState(editing?.es_principal ?? false);
+
+  const guardar = useGuardarContacto(empresaId ?? 0);
+
+  if (!open) return null;
+
+  function onSave() {
+    if (!empresaId) { toast({ kind: 'warning', title: 'Elige una empresa' }); return; }
+    if (!nombre.trim()) { toast({ kind: 'warning', title: 'El nombre es obligatorio' }); return; }
+    guardar.mutate(
+      {
+        id: editing?.id,
+        data: {
+          nombre: nombre.trim(),
+          cargo: cargo.trim() || null,
+          email: email.trim() || null,
+          telefono: telefono.trim() || null,
+          es_principal: esPrincipal,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ kind: 'success', title: editing ? 'Contacto actualizado' : 'Contacto creado' });
+          onClose();
+        },
+        onError: (e) => {
+          const err = e as { status?: number; detail?: string };
+          if (err.status === 401) { window.location.href = '/spa/login'; return; }
+          toast({ kind: 'error', title: 'No se pudo guardar', description: err.detail });
+        },
+      },
+    );
+  }
+
+  return (
+    <Modal title={editing ? 'Editar contacto' : 'Nuevo contacto'} onClose={onClose} size="md">
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Empresa *</label>
+          {editing ? (
+            <div className="text-sm text-slate-700 dark:text-slate-200">{editing.empresa_nombre}</div>
+          ) : (
+            <select
+              value={empresaId ?? ''}
+              onChange={(e) => setEmpresaId(e.target.value ? parseInt(e.target.value, 10) : null)}
+              className="w-full h-9 text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2"
+            >
+              <option value="">— Elige empresa —</option>
+              {(empresas ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre_empresa}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Nombre *</label>
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Cargo</label>
+            <Input value={cargo} onChange={(e) => setCargo(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Email</label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Teléfono</label>
+            <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={esPrincipal} onChange={(e) => setEsPrincipal(e.target.checked)} />
+          Contacto principal de la empresa
+        </label>
+      </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        <Button onClick={onSave} disabled={guardar.isPending}>{guardar.isPending ? 'Guardando…' : 'Guardar'}</Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
