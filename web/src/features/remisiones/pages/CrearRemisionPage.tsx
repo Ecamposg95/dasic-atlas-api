@@ -13,6 +13,7 @@ import { useRemision } from '../store';
 import { remisionLineaToVM } from '../lib/vm';
 import { RemisionProductSearch } from '../components/RemisionProductSearch';
 import { AgregarLineaFantasmaModal } from '../components/AgregarLineaFantasmaModal';
+import { RemisionClientPicker } from '../components/RemisionClientPicker';
 
 function fmtMoney(n: number, moneda: string) {
   return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -23,6 +24,7 @@ export function CrearRemisionPage() {
   const [params] = useSearchParams();
   const ordenParam = params.get('orden');
   const ordenId = ordenParam ? parseInt(ordenParam, 10) : null;
+  const libre = params.get('libre') === '1';
 
   const { data: borrador, isLoading } = useRemisionBorrador(ordenId);
   const { data: ordenes } = useOrdenesRemisionables();
@@ -39,28 +41,42 @@ export function CrearRemisionPage() {
   }, [borrador, ordenId]);
   useEffect(() => () => useRemision.getState().reset(), []);
 
-  if (!ordenId) {
+  if (!ordenId && !libre) {
     return (
-      <div className="p-6 max-w-3xl mx-auto space-y-4">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Truck className="h-5 w-5 text-cyan-400" /> Nueva remisión
         </h1>
-        <p className="text-sm text-slate-500">Selecciona la orden de venta a remisionar:</p>
-        <div className="border border-slate-200 dark:border-slate-800 rounded-md divide-y divide-slate-100 dark:divide-slate-800">
-          {(ordenes ?? []).map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => navigate(`/spa/remisiones-nueva?orden=${o.id}`)}
-              className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between"
-            >
-              <span className="font-mono text-sm text-accent-glow">{o.folio}</span>
-              <span className="text-xs text-slate-500">{o.cliente ?? ''}</span>
-            </button>
-          ))}
-          {(ordenes ?? []).length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-slate-500">No hay órdenes de venta remisionables.</div>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <h2 className="text-sm font-semibold mb-2">Nueva libre (sin orden)</h2>
+            <p className="text-xs text-slate-500 mb-3">Elige un cliente y arma la remisión desde el catálogo.</p>
+            <RemisionClientPicker
+              onPick={(c) => {
+                useRemision.getState().hydrateLibre({ id: c.id, nombre: c.nombre_empresa });
+                navigate('/spa/remisiones-nueva?libre=1');
+              }}
+            />
+          </div>
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <h2 className="text-sm font-semibold mb-2">Desde una orden de venta</h2>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
+              {(ordenes ?? []).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => navigate(`/spa/remisiones-nueva?orden=${o.id}`)}
+                  className="w-full text-left px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between"
+                >
+                  <span className="font-mono text-sm text-accent-glow">{o.folio}</span>
+                  <span className="text-xs text-slate-500">{o.cliente ?? ''}</span>
+                </button>
+              ))}
+              {(ordenes ?? []).length === 0 && (
+                <div className="px-2 py-6 text-center text-sm text-slate-500">No hay órdenes remisionables.</div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -75,6 +91,7 @@ export function CrearRemisionPage() {
     showEntrega: false,
     showImporte: s.mostrarPrecios,
     editableQty: true,
+    editablePrecio: s.mostrarPrecios,
   };
 
   const rows: DocRowVM[] = s.lineas.map((l) => remisionLineaToVM(l, s.moneda));
@@ -82,6 +99,7 @@ export function CrearRemisionPage() {
     onQty: (uid, qty) => s.setQty(uid, qty),
     onRemove: (uid) => s.removeLinea(uid),
     onToggleExpand: (uid) => s.toggleExpand(uid),
+    onPrecio: (uid, v) => s.setPrecio(uid, v),
   };
 
   const subtotal = s.lineas.reduce((acc, l) => acc + l.precio_unitario * l.cantidad, 0);
@@ -94,9 +112,9 @@ export function CrearRemisionPage() {
     }
     crear.mutate(
       {
-        orden_venta_id: ordenId!,
-        cliente_id: s.clienteId,
-        moneda: s.moneda || null,
+        orden_venta_id: s.modo === 'orden' ? ordenId : null,
+        cliente_id: s.modo === 'libre' ? s.clienteId : null,
+        moneda: s.moneda,
         transportista: s.transportista.trim() || null,
         observaciones: s.observaciones.trim() || null,
         mostrar_precios: s.mostrarPrecios,
@@ -153,9 +171,20 @@ export function CrearRemisionPage() {
         </header>
 
         {s.clienteNombre && (
-          <div className="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-4 py-2">
+          <div className="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-4 py-2 flex items-center gap-3 flex-wrap">
             <span className="text-slate-500">{s.clienteNombre}</span>
-            <span className="ml-3 text-slate-500">{s.moneda}</span>
+            {s.modo === 'libre' ? (
+              <select
+                value={s.moneda}
+                onChange={(e) => s.setMoneda(e.target.value)}
+                className="h-7 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
+              >
+                <option value="MXN">MXN</option>
+                <option value="USD">USD</option>
+              </select>
+            ) : (
+              <span className="text-slate-500">{s.moneda}</span>
+            )}
           </div>
         )}
 
