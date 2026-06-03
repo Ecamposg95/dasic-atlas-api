@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useIsAdmin } from '@/lib/permissions';
 import { useClientes } from '../hooks/useClientes';
+import { useDuplicados } from '../hooks/useDuplicados';
 import { ClienteFormModal } from '../components/ClienteFormModal';
 import { EmpresaDetalleDrawer } from '../components/EmpresaDetalleDrawer';
 import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../types';
@@ -31,6 +33,10 @@ export function ClientesPage() {
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
   const [detalle, setDetalle] = useState<Cliente | null>(null);
+
+  const navigate = useNavigate();
+  const { data: dups } = useDuplicados();
+  const dupCount = dups?.length ?? 0;
 
   const { data: clientes, isLoading, error } = useClientes();
   const qc = useQueryClient();
@@ -119,6 +125,11 @@ export function ClientesPage() {
         </h1>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500">{filtrados.length} empresa(s)</span>
+          {isAdmin && dupCount > 0 && (
+            <Button size="sm" variant="outline" onClick={() => navigate('/spa/empresas-unificar')}>
+              Unificar duplicados ({dupCount})
+            </Button>
+          )}
           <Button size="sm" onClick={() => setModalCrear(true)}>
             + Nueva empresa
           </Button>
