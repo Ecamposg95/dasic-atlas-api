@@ -41,6 +41,12 @@ export function CrearRemisionPage() {
   }, [borrador, ordenId]);
   useEffect(() => () => useRemision.getState().reset(), []);
 
+  // Refresh directo a ?libre=1 pierde el cliente del store (modo libre vive en
+  // memoria) → regresa a la pantalla de entrada en vez de un editor sin cliente.
+  useEffect(() => {
+    if (libre && !useRemision.getState().clienteId) navigate('/spa/remisiones-nueva', { replace: true });
+  }, [libre, navigate]);
+
   if (!ordenId && !libre) {
     return (
       <div className="p-6 max-w-3xl mx-auto space-y-6">
