@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { api } from '@/lib/api';
+import { toast } from '@/lib/toast';
+import { useIsAdmin } from '@/lib/permissions';
 import { useCotizador } from '../store';
 import { useProductosSearch } from '../hooks/useProductosSearch';
 import { ProveedorPicker } from './ProveedorPicker';
@@ -10,6 +14,9 @@ import type { CartItem, Moneda, Producto } from '../types';
 export function EditLineModal() {
   const cart = useCotizador((s) => s.cart);
   const updateLinea = useCotizador((s) => s.updateLinea);
+  const qc = useQueryClient();
+  const isAdmin = useIsAdmin();
+  const [savingCat, setSavingCat] = useState(false);
   const [open, setOpen] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
   const [desc, setDesc] = useState('');
@@ -87,6 +94,35 @@ export function EditLineModal() {
       updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
     }
     onClose();
+  }
+
+  // Solo admin + línea de catálogo: aplica el override de línea Y actualiza el
+  // PRODUCTO maestro en el catálogo (PUT). El fantasma no aplica: la línea
+  // ad-hoc no lleva el id del fantasma del pool.
+  async function onSaveAndCatalog() {
+    setErr(null);
+    if (!desc.trim()) { setErr('La descripción es obligatoria.'); return; }
+    const c = parseFloat(cost);
+    if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
+    if (!uid || !it?.producto_id) return;
+    updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
+    setSavingCat(true);
+    try {
+      await api.put(`/api/productos/${it.producto_id}`, {
+        nombre: desc.trim(),
+        sku: sku.trim() || null,
+        costo_compra: c,
+      });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      toast({ kind: 'success', title: 'Producto actualizado en el catálogo' });
+      onClose();
+    } catch (e) {
+      const err = e as { status?: number; detail?: string };
+      if (err.status === 401) { window.location.href = '/spa/login'; return; }
+      setErr(err.detail || 'No se pudo actualizar el catálogo');
+    } finally {
+      setSavingCat(false);
+    }
   }
 
   function onPickReplacement(p: Producto) {
@@ -174,7 +210,9 @@ export function EditLineModal() {
 
             {!esFantasma && esCatalogo && (
               <div className="text-xs bg-amber-900/20 border border-amber-700/50 rounded p-2 mb-3 text-amber-300">
-                Override solo en esta cotización. El catálogo no se modifica.
+                {isAdmin
+                  ? '«Guardar» aplica el override solo en esta cotización. Usa «Guardar y actualizar catálogo» para modificar también el producto maestro.'
+                  : 'Override solo en esta cotización. El catálogo no se modifica.'}
               </div>
             )}
 
@@ -222,9 +260,14 @@ export function EditLineModal() {
               <MessageSquare className="h-3 w-3" /> Editar nota larga / productos similares…
             </button>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-              <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button size="sm" onClick={onSave}>Guardar</Button>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={onClose} disabled={savingCat}>Cancelar</Button>
+              {esCatalogo && isAdmin && (
+                <Button variant="outline" size="sm" onClick={onSaveAndCatalog} disabled={savingCat}>
+                  <Save className="h-3.5 w-3.5 mr-1" /> {savingCat ? 'Guardando…' : 'Guardar y actualizar catálogo'}
+                </Button>
+              )}
+              <Button size="sm" onClick={onSave} disabled={savingCat}>Guardar</Button>
             </div>
           </>
         ) : (

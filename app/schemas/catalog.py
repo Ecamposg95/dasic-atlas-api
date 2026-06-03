@@ -47,6 +47,7 @@ class ProductoCreate(ProductoBase):
 
 class ProductoUpdate(BaseModel):
     nombre: Optional[str] = None
+    sku: Optional[str] = Field(None, max_length=50)
     sku_comercial: Optional[str] = Field(None, min_length=2, max_length=80)
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
