@@ -17,6 +17,7 @@ export type Cliente = {
   moneda_credito: MonedaCredito;
   saldo_actual: number | string;
   creado_por_id: number | null;
+  n_contactos?: number;
 };
 
 export type ClienteCreate = {

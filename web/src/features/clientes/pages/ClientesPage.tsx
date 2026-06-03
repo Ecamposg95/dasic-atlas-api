@@ -162,6 +162,7 @@ export function ClientesPage() {
             <th className="p-3 text-left">RFC</th>
             <th className="p-3 text-left">Teléfono</th>
             <th className="p-3 text-left">Email</th>
+            <th className="p-2 text-center">Contactos</th>
             <th className="p-3 text-right">Crédito</th>
             <th className="p-3 text-right">Saldo</th>
             <th className="p-3 text-right">Acciones</th>
@@ -169,10 +170,10 @@ export function ClientesPage() {
         </DataTableHead>
         <DataTableBody>
           {isLoading && (
-            <DataTableEmpty colSpan={8}>Cargando clientes…</DataTableEmpty>
+            <DataTableEmpty colSpan={9}>Cargando clientes…</DataTableEmpty>
           )}
           {!isLoading && filtrados.length === 0 && (
-            <DataTableEmpty colSpan={8}>
+            <DataTableEmpty colSpan={9}>
               <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
               {items.length === 0 ? 'Sin clientes registrados' : 'Sin coincidencias con la búsqueda'}
             </DataTableEmpty>
@@ -198,6 +199,7 @@ export function ClientesPage() {
                 <td className="p-3 text-xs text-slate-600 dark:text-slate-400 truncate max-w-[140px]">
                   {c.email || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
+                <td className="p-2 text-center"><Badge variant="slate">{c.n_contactos ?? 0}</Badge></td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <Badge variant="cyan">
                     {fmtMoney(c.moneda_credito, c.limite_credito)}
