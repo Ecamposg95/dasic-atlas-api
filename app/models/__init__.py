@@ -25,7 +25,7 @@ from app.models.enums import (  # noqa: F401
 )
 from app.models.users import Usuario  # noqa: F401
 from app.models.catalog import Producto, Promocion, Marca  # noqa: F401
-from app.models.clients import Cliente, Contacto, Proveedor  # noqa: F401
+from app.models.clients import Cliente, Contacto, Proveedor, ClienteMergeLog  # noqa: F401
 from app.models.finance import (  # noqa: F401
     TransaccionCliente,
     TransaccionProveedor,
@@ -70,7 +70,7 @@ __all__ = [
     "TipoLineaCotizacion", "TipoMovimientoStock",
     "Usuario",
     "Producto", "Promocion", "Marca",
-    "Cliente", "Contacto", "Proveedor",
+    "Cliente", "Contacto", "Proveedor", "ClienteMergeLog",
     "TransaccionCliente", "TransaccionProveedor",
     "OrdenVenta", "DetalleOrden",
     "OrdenCompra", "DetalleCompra",
