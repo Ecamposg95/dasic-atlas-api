@@ -126,7 +126,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         {/* Identificación */}
         <section>
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Identificación</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU interno</label>
               <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU-001" />
@@ -159,7 +159,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         {/* Clasificación */}
         <section>
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Clasificación</h4>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Marca</label>
               <select value={marcaId} onChange={(e) => setMarcaId(e.target.value)} className={SELECT_CLS}>
@@ -206,7 +206,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         {/* Stock */}
         <section>
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Stock</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Stock actual</label>
               <Input
@@ -231,7 +231,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         {/* Costos */}
         <section>
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Costos y precios</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Costo de compra *</label>
               <Input
@@ -287,7 +287,7 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
         {/* Proveedores / logística */}
         <section>
           <h4 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Proveedores y logística</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor principal</label>
               <select value={provPrincipalId} onChange={(e) => setProvPrincipalId(e.target.value)} className={SELECT_CLS}>

@@ -161,7 +161,7 @@ export function ServicioFormModal({ mode, servicio, onSave, onClose, busy }: Pro
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
               Costo <span className="text-rose-600 dark:text-rose-400">*</span>
