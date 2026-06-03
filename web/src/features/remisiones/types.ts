@@ -92,11 +92,20 @@ export type RemisionDetalleInput = {
 };
 
 export type RemisionCreatePayload = {
-  orden_venta_id: number;
+  orden_venta_id: number | null;
+  cliente_id: number | null;
+  moneda: string | null;
   transportista: string | null;
   observaciones: string | null;
   mostrar_precios: boolean;
   detalles: RemisionDetalleInput[];
+};
+
+export type ClienteLite = {
+  id: number;
+  nombre_empresa: string;
+  rfc_tax_id: string | null;
+  email: string | null;
 };
 
 export type RemisionCreateResponse = { id: number; folio: string };
