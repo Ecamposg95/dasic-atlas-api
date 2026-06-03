@@ -20,6 +20,7 @@ export function useGuardarContacto(clienteId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contactos', clienteId] });
       qc.invalidateQueries({ queryKey: ['clientes'] });
+      void qc.invalidateQueries({ queryKey: ['contactos', 'global'] });
     },
   });
 }
@@ -28,7 +29,10 @@ export function useEliminarContacto(clienteId: number) {
   const qc = useQueryClient();
   return useMutation<{ ok: boolean }, { status?: number; detail?: string }, number>({
     mutationFn: (id) => api.delete<{ ok: boolean }>(`/api/clientes/${clienteId}/contactos/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contactos', clienteId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contactos', clienteId] });
+      void qc.invalidateQueries({ queryKey: ['contactos', 'global'] });
+    },
   });
 }
 
