@@ -87,3 +87,27 @@ export type CxCClienteResponse = {
   };
   cargos: CargoAbierto[];
 };
+
+export type EmpresaDuplicadaMiembro = {
+  id: number;
+  nombre_empresa: string;
+  contacto_nombre: string | null;
+  saldo_actual: number;
+  limite_credito: number;
+  dias_credito: number;
+  n_ordenes: number;
+  n_transacciones: number;
+  n_remisiones: number;
+  n_contactos: number;
+};
+
+export type GrupoDuplicado = {
+  rfc: string;
+  miembros: EmpresaDuplicadaMiembro[];
+};
+
+export type MergeResult = {
+  survivor_id: number;
+  merged: number;
+  remapped: { ordenes: number; transacciones: number; remisiones: number; contactos: number };
+};
