@@ -12,7 +12,7 @@ from jinja2 import Environment, BaseLoader
 from app import models
 from app import schemas
 from app.db import get_db
-from app.security import allow_admin_asistente, allow_all_staff, get_current_user
+from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
 from app.security.permissions import is_owner_scoped, require
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,129 @@ def listar_clientes(
     for c in rows:
         c.n_contactos = counts.get(c.id, 0)
     return rows
+
+
+# --- DUPLICADOS / MERGE ---
+@router.get("/duplicados", dependencies=[Depends(allow_admin)])
+def empresas_duplicadas(db: Session = Depends(get_db)):
+    """Grupos de empresas con el mismo RFC (no nulo, count>1) + contadores."""
+    rfcs = [
+        r[0]
+        for r in (
+            db.query(models.Cliente.rfc_tax_id)
+            .filter(models.Cliente.rfc_tax_id.isnot(None), func.btrim(models.Cliente.rfc_tax_id) != "")
+            .group_by(models.Cliente.rfc_tax_id)
+            .having(func.count(models.Cliente.id) > 1)
+            .all()
+        )
+    ]
+    if not rfcs:
+        return []
+    miembros = db.query(models.Cliente).filter(models.Cliente.rfc_tax_id.in_(rfcs)).all()
+    ids = [c.id for c in miembros]
+
+    def counts_for(model):
+        rows = (
+            db.query(model.cliente_id, func.count())
+            .filter(model.cliente_id.in_(ids))
+            .group_by(model.cliente_id)
+            .all()
+        )
+        return {cid: n for cid, n in rows}
+
+    n_ord = counts_for(models.OrdenVenta)
+    n_trx = counts_for(models.TransaccionCliente)
+    n_rem = counts_for(models.Remision)
+    n_con = counts_for(models.Contacto)
+
+    grupos: dict = {}
+    for c in miembros:
+        grupos.setdefault(c.rfc_tax_id, []).append({
+            "id": c.id,
+            "nombre_empresa": c.nombre_empresa,
+            "contacto_nombre": c.contacto_nombre,
+            "saldo_actual": float(c.saldo_actual or 0),
+            "limite_credito": float(c.limite_credito or 0),
+            "dias_credito": c.dias_credito,
+            "n_ordenes": n_ord.get(c.id, 0),
+            "n_transacciones": n_trx.get(c.id, 0),
+            "n_remisiones": n_rem.get(c.id, 0),
+            "n_contactos": n_con.get(c.id, 0),
+        })
+    out = []
+    for rfc, ms in grupos.items():
+        ms.sort(key=lambda m: (-m["n_ordenes"], m["id"]))
+        out.append({"rfc": rfc, "miembros": ms})
+    out.sort(key=lambda g: g["rfc"])
+    return out
+
+
+@router.post("/merge", dependencies=[Depends(allow_admin)])
+def merge_empresas(
+    payload: schemas.MergeEmpresasInput,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Fusiona empresas (mismo RFC) en el sobreviviente. Transaccional + audit."""
+    if not payload.loser_ids:
+        raise HTTPException(400, "loser_ids vacío")
+    if payload.survivor_id in payload.loser_ids:
+        raise HTTPException(400, "El sobreviviente no puede estar entre los perdedores")
+    all_ids = [payload.survivor_id] + payload.loser_ids
+    rows = db.query(models.Cliente).filter(models.Cliente.id.in_(all_ids)).all()
+    by_id = {c.id: c for c in rows}
+    if payload.survivor_id not in by_id:
+        raise HTTPException(404, "Sobreviviente no encontrado")
+    for lid in payload.loser_ids:
+        if lid not in by_id:
+            raise HTTPException(404, f"Empresa {lid} no encontrada")
+    rfcs = {(by_id[i].rfc_tax_id or "").strip().lower() for i in all_ids}
+    if len(rfcs) != 1 or "" in rfcs:
+        raise HTTPException(400, "Todas las empresas a fusionar deben compartir el mismo RFC (no nulo)")
+
+    survivor = by_id[payload.survivor_id]
+    try:
+        for lid in payload.loser_ids:
+            loser = by_id[lid]
+            db.add(models.ClienteMergeLog(
+                survivor_id=survivor.id,
+                loser_id=lid,
+                loser_nombre=loser.nombre_empresa,
+                loser_rfc=loser.rfc_tax_id,
+                loser_saldo=loser.saldo_actual,
+                n_ordenes=db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == lid).count(),
+                n_transacciones=db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id == lid).count(),
+                n_remisiones=db.query(models.Remision).filter(models.Remision.cliente_id == lid).count(),
+                n_contactos=db.query(models.Contacto).filter(models.Contacto.cliente_id == lid).count(),
+                merged_by_id=current_user.id,
+            ))
+
+        remapped = {
+            "ordenes": db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id.in_(payload.loser_ids)).update({models.OrdenVenta.cliente_id: survivor.id}, synchronize_session=False),
+            "transacciones": db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id.in_(payload.loser_ids)).update({models.TransaccionCliente.cliente_id: survivor.id}, synchronize_session=False),
+            "remisiones": db.query(models.Remision).filter(models.Remision.cliente_id.in_(payload.loser_ids)).update({models.Remision.cliente_id: survivor.id}, synchronize_session=False),
+            "contactos": db.query(models.Contacto).filter(models.Contacto.cliente_id.in_(payload.loser_ids)).update({models.Contacto.cliente_id: survivor.id}, synchronize_session=False),
+        }
+
+        saldo = Decimal("0")
+        for t in db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id == survivor.id).all():
+            if t.tipo == models.TipoMovimiento.CARGO:
+                saldo += Decimal(t.monto or 0)
+            elif t.tipo == models.TipoMovimiento.ABONO:
+                saldo -= Decimal(t.monto or 0)
+        survivor.saldo_actual = saldo.quantize(Decimal("0.01"))
+
+        db.query(models.Cliente).filter(models.Cliente.id.in_(payload.loser_ids)).delete(synchronize_session=False)
+        db.commit()
+        return {"survivor_id": survivor.id, "merged": len(payload.loser_ids), "remapped": remapped}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.exception("clientes.merge_empresas falló")
+        raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
 
 # --- 2. CREAR CLIENTE ---
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
