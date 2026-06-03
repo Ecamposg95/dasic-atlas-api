@@ -113,7 +113,10 @@ def listar_remisiones(
                 "folio": r.folio,
                 "orden_venta_id": r.orden_venta_id,
                 "orden_folio": r.orden_venta.folio if r.orden_venta else None,
-                "cliente_nombre": (r.orden_venta.cliente.nombre_empresa if r.orden_venta and r.orden_venta.cliente else None),
+                "cliente_nombre": (
+                    r.orden_venta.cliente.nombre_empresa if r.orden_venta and r.orden_venta.cliente
+                    else (r.cliente.nombre_empresa if r.cliente else None)
+                ),
                 "fecha_remision": r.fecha_remision.isoformat() if r.fecha_remision else None,
                 "transportista": r.transportista,
                 "recibido_por": r.recibido_por,
@@ -131,23 +134,35 @@ def crear_remision(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == payload.orden_venta_id).first()
-    if not orden:
-        raise HTTPException(404, "Orden de venta no encontrada")
-    if orden.estatus == models.EstatusOrden.COTIZACION:
-        raise HTTPException(400, "La orden todavía es cotización — convierte a venta antes de remisionar")
     if not payload.detalles:
         raise HTTPException(400, "Debe incluir al menos una línea")
 
-    # Index de las líneas de la orden para re-leer precio/unidad/desc snapshot.
-    det_orden = {d.id: d for d in orden.detalles}
+    orden = None
+    det_orden: dict = {}
+    cliente_id = None
+    moneda = payload.moneda or "MXN"
+
+    if payload.orden_venta_id:
+        orden = db.query(models.OrdenVenta).filter(models.OrdenVenta.id == payload.orden_venta_id).first()
+        if not orden:
+            raise HTTPException(404, "Orden de venta no encontrada")
+        if orden.estatus == models.EstatusOrden.COTIZACION:
+            raise HTTPException(400, "La orden todavía es cotización — convierte a venta antes de remisionar")
+        det_orden = {d.id: d for d in orden.detalles}
+        moneda = orden.moneda
+    else:
+        cliente = db.query(models.Cliente).filter(models.Cliente.id == payload.cliente_id).first()
+        if not cliente:
+            raise HTTPException(404, "Cliente no encontrado")
+        cliente_id = cliente.id
 
     folio = _generar_folio_remision(db)
     try:
         rem = models.Remision(
             folio=folio,
-            orden_venta_id=orden.id,
-            moneda=orden.moneda,
+            orden_venta_id=orden.id if orden else None,
+            cliente_id=cliente_id,
+            moneda=moneda,
             mostrar_precios=payload.mostrar_precios,
             transportista=payload.transportista,
             observaciones=payload.observaciones,
@@ -170,7 +185,7 @@ def crear_remision(
                 clave_unidad = base.clave_unidad_sat or (prod.clave_unidad_sat if prod else None)
                 precio = base.precio_unitario or Decimal("0")
             else:
-                # Línea fantasma ad-hoc capturada en la remisión (US-024).
+                # Línea ad-hoc: fantasma en remisión desde orden, o cualquier línea en modo libre.
                 descripcion = d.descripcion
                 sku = d.sku
                 clave_unidad = d.clave_unidad_sat
@@ -209,7 +224,10 @@ def detalle_remision(id: int, db: Session = Depends(get_db)):
         "folio": rem.folio,
         "orden_venta_id": rem.orden_venta_id,
         "orden_folio": rem.orden_venta.folio if rem.orden_venta else None,
-        "cliente_nombre": (rem.orden_venta.cliente.nombre_empresa if rem.orden_venta and rem.orden_venta.cliente else None),
+        "cliente_nombre": (
+            rem.orden_venta.cliente.nombre_empresa if rem.orden_venta and rem.orden_venta.cliente
+            else (rem.cliente.nombre_empresa if rem.cliente else None)
+        ),
         "fecha_remision": rem.fecha_remision.isoformat() if rem.fecha_remision else None,
         "transportista": rem.transportista,
         "recibido_por": rem.recibido_por,
@@ -287,7 +305,7 @@ PDF_TEMPLATE_REMISION = """<!doctype html>
     </div>
   </div>
   <div class="meta">
-    <strong>Cliente:</strong> {{ rem.orden_venta.cliente.nombre_empresa if rem.orden_venta and rem.orden_venta.cliente else '—' }}<br>
+    <strong>Cliente:</strong> {{ (rem.orden_venta.cliente.nombre_empresa if rem.orden_venta and rem.orden_venta.cliente else (rem.cliente.nombre_empresa if rem.cliente else '—')) }}<br>
     {% if rem.transportista %}<strong>Transportista:</strong> {{ rem.transportista }}{% endif %}
   </div>
   <table>
