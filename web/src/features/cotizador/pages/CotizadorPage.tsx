@@ -40,6 +40,8 @@ export function CotizadorPage() {
   const [params] = useSearchParams();
   const editId = params.get('edit');
   const editIdNum = editId ? parseInt(editId, 10) : null;
+  const clienteParam = params.get('cliente');
+  const contactoParam = params.get('contacto');
   const [tab, setTab] = useState<CotizadorTab>('editor');
 
   const reset = useCotizador((s) => s.reset);
@@ -184,6 +186,20 @@ export function CotizadorPage() {
 
   // Reset store on unmount so the next visit starts fresh
   useEffect(() => () => reset(), [reset]);
+
+  // Pre-poblar desde Contactos/Empresas: ?cliente=<id>&contacto=<id>.
+  // Solo en cotización nueva (sin ?edit=) y una vez al montar.
+  useEffect(() => {
+    if (editIdNum != null) return;
+    const cid = clienteParam ? parseInt(clienteParam, 10) : null;
+    const coid = contactoParam ? parseInt(contactoParam, 10) : null;
+    if (cid != null && !Number.isNaN(cid)) {
+      const st = useCotizador.getState();
+      st.setCliente(cid);
+      if (coid != null && !Number.isNaN(coid)) st.setContacto(coid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Aviso nativo del navegador al cerrar/recargar con líneas sin guardar.
   useEffect(() => {
