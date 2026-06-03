@@ -21,12 +21,13 @@ import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../ty
 
 function fmtMoney(moneda: MonedaCredito, value: number | string) {
   const n = Number(value) || 0;
-  return `${moneda} $${n.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+  const amount = `$${n.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+  // El prefijo MXN es ruido en el directorio; solo se muestra el código si NO es MXN.
+  return moneda && moneda !== 'MXN' ? `${moneda} ${amount}` : amount;
 }
 
 export function ClientesPage() {
   const [filtroQ, setFiltroQ] = useState('');
-  const [filtroMoneda, setFiltroMoneda] = useState<MonedaCredito | ''>('');
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
   const [detalle, setDetalle] = useState<Cliente | null>(null);
@@ -46,7 +47,6 @@ export function ClientesPage() {
   const filtrados = useMemo(() => {
     const needle = filtroQ.trim().toLowerCase();
     return items.filter((c) => {
-      if (filtroMoneda && c.moneda_credito !== filtroMoneda) return false;
       if (needle) {
         const hay = [c.nombre_empresa, c.rfc_tax_id ?? '', c.contacto_nombre ?? '']
           .join(' ')
@@ -55,7 +55,7 @@ export function ClientesPage() {
       }
       return true;
     });
-  }, [items, filtroQ, filtroMoneda]);
+  }, [items, filtroQ]);
 
   // Mutations
   const crearMut = useMutation<Cliente, { status?: number; detail?: string }, ClienteCreate>({
@@ -133,20 +133,11 @@ export function ClientesPage() {
           placeholder="Buscar empresa, RFC, contacto…"
           className="flex-1 w-full sm:w-auto sm:min-w-[220px]"
         />
-        <select
-          value={filtroMoneda}
-          onChange={(e) => setFiltroMoneda(e.target.value as MonedaCredito | '')}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-        >
-          <option value="">Cualquier moneda</option>
-          <option value="MXN">MXN</option>
-          <option value="USD">USD</option>
-        </select>
-        {(filtroQ || filtroMoneda) && (
+        {filtroQ && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setFiltroQ(''); setFiltroMoneda(''); }}
+            onClick={() => setFiltroQ('')}
           >
             Limpiar
           </Button>
