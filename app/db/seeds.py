@@ -462,6 +462,10 @@ _BACKFILL_DDL = [
 
     # 20260601_06 — contacto de la orden (sub-2). FK a contactos (creada en 05).
     "ALTER TABLE IF EXISTS ordenes_venta ADD COLUMN IF NOT EXISTS contacto_id INTEGER REFERENCES contactos(id)",
+
+    # 20260602_05 — remisión libre (sin orden): cliente propio + orden nullable
+    "ALTER TABLE IF EXISTS remisiones ALTER COLUMN orden_venta_id DROP NOT NULL",
+    "ALTER TABLE IF EXISTS remisiones ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)",
 ]
 
 

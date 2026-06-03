@@ -12,7 +12,8 @@ class Remision(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     folio = Column(String(40), unique=True, index=True)
-    orden_venta_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=False, index=True)
+    orden_venta_id = Column(Integer, ForeignKey("ordenes_venta.id"), nullable=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True, index=True)
     fecha_remision = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     transportista = Column(String(150), nullable=True)
     recibido_por = Column(String(150), nullable=True)
@@ -24,6 +25,7 @@ class Remision(Base):
     creado_en = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     orden_venta = relationship("OrdenVenta", foreign_keys=[orden_venta_id])
+    cliente = relationship("Cliente", foreign_keys=[cliente_id])
     creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
     detalles = relationship("DetalleRemision", back_populates="remision", cascade="all, delete-orphan")
 
