@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from decimal import Decimal
@@ -72,6 +72,23 @@ def crear_cliente(
         )
         if existing:
             raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
+    # Guard anti-duplicado: una empresa = un RFC. Evita el problema de empresas
+    # repetidas (Sub-3). Bloquea con el nombre de la empresa que ya tiene el RFC.
+    if cliente.rfc_tax_id and cliente.rfc_tax_id.strip():
+        rfc = cliente.rfc_tax_id.strip()
+        dup = (
+            db.query(models.Cliente)
+            .filter(func.lower(models.Cliente.rfc_tax_id) == rfc.lower())
+            .first()
+        )
+        if dup:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Ya existe una empresa con el RFC {rfc}: «{dup.nombre_empresa}». "
+                    "Usa esa empresa (agrégale un contacto) en vez de crear un duplicado."
+                ),
+            )
 
     try:
         nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
@@ -112,6 +129,18 @@ def editar_cliente(
         )
         if otro:
             raise HTTPException(status_code=400, detail="Ya existe otro cliente con este email")
+    if "rfc_tax_id" in data and data["rfc_tax_id"] and data["rfc_tax_id"].strip():
+        rfc = data["rfc_tax_id"].strip()
+        otro_rfc = (
+            db.query(models.Cliente)
+            .filter(func.lower(models.Cliente.rfc_tax_id) == rfc.lower(), models.Cliente.id != cliente_id)
+            .first()
+        )
+        if otro_rfc:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Ya existe otra empresa con el RFC {rfc}: «{otro_rfc.nombre_empresa}».",
+            )
 
     try:
         for k, v in data.items():
