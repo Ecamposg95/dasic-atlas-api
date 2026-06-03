@@ -22,6 +22,8 @@ type RemisionState = {
   ordenId: number | null;
   ordenFolio: string | null;
   clienteNombre: string | null;
+  modo: 'orden' | 'libre';
+  clienteId: number | null;
   moneda: string;
   lineas: RemisionLinea[];
   mostrarPrecios: boolean;
@@ -35,6 +37,9 @@ type RemisionState = {
   setMostrarPrecios: (v: boolean) => void;
   setTransportista: (v: string) => void;
   setObservaciones: (v: string) => void;
+  setMoneda: (v: string) => void;
+  setPrecio: (uid: string, precio: number) => void;
+  hydrateLibre: (cliente: { id: number; nombre: string }) => void;
   addProductoCatalogo: (p: Producto, qty: number) => void;
   addServicio: (s: Servicio, qty: number) => void;
   addFantasma: (f: FantasmaPrevio, qty: number) => void;
@@ -49,6 +54,8 @@ const initial = {
   ordenId: null,
   ordenFolio: null,
   clienteNombre: null,
+  modo: 'orden' as const,
+  clienteId: null,
   moneda: 'MXN',
   lineas: [] as RemisionLinea[],
   mostrarPrecios: false,
@@ -62,6 +69,8 @@ export const useRemision = create<RemisionState>((set) => ({
   hydrateFromBorrador: (b, ordenId) =>
     set({
       ordenId,
+      modo: 'orden' as const,
+      clienteId: null,
       ordenFolio: b.orden_folio,
       clienteNombre: b.cliente_nombre,
       moneda: b.moneda || 'MXN',
@@ -95,6 +104,20 @@ export const useRemision = create<RemisionState>((set) => ({
   setMostrarPrecios: (v) => set({ mostrarPrecios: v }),
   setTransportista: (v) => set({ transportista: v }),
   setObservaciones: (v) => set({ observaciones: v }),
+  setMoneda: (v) => set({ moneda: v }),
+  setPrecio: (uid, precio) =>
+    set((s) => ({
+      lineas: s.lineas.map((l) => (l.uid === uid ? { ...l, precio_unitario: Math.max(0, precio) } : l)),
+    })),
+  hydrateLibre: (cliente) =>
+    set({
+      modo: 'libre',
+      ordenId: null,
+      ordenFolio: null,
+      clienteId: cliente.id,
+      clienteNombre: cliente.nombre,
+      lineas: [],
+    }),
 
   addProductoCatalogo: (p, qty) =>
     set((s) => ({
