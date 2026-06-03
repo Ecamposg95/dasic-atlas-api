@@ -311,7 +311,7 @@ export function SeguimientoPage() {
             placeholder="Buscar folio o cliente…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-64"
+            className="w-full sm:w-64"
           />
 
           <select

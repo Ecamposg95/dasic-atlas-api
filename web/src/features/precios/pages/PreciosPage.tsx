@@ -211,7 +211,7 @@ export function PreciosPage() {
           {/* Filtros */}
           <div className="flex flex-wrap gap-3">
             <Select
-              className="max-w-[220px]"
+              className="w-full sm:w-auto sm:max-w-[220px]"
               value={filtroProducto}
               onChange={(e) => {
                 setFiltroProducto(e.target.value);
@@ -226,7 +226,7 @@ export function PreciosPage() {
               ))}
             </Select>
             <Select
-              className="max-w-[220px]"
+              className="w-full sm:w-auto sm:max-w-[220px]"
               value={filtroProveedor}
               onChange={(e) => setFiltroProveedor(e.target.value)}
             >

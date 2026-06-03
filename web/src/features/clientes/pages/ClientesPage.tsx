@@ -131,7 +131,7 @@ export function ClientesPage() {
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
           placeholder="Buscar empresa, RFC, contacto…"
-          className="flex-1 min-w-[220px]"
+          className="flex-1 w-full sm:w-auto sm:min-w-[220px]"
         />
         <select
           value={filtroMoneda}

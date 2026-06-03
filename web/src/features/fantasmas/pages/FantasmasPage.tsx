@@ -240,7 +240,7 @@ export function FantasmasPage() {
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
           placeholder="Buscar descripción o SKU…"
-          className="flex-1 min-w-[200px]"
+          className="flex-1 w-full sm:w-auto sm:min-w-[200px]"
         />
         <select
           value={filtroEstado}
