@@ -136,3 +136,131 @@ def build_cotizacion_docx(
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue()
+
+
+def build_remision_docx(
+    *,
+    remision,
+    simbolo: str,
+    fecha_str: str,
+) -> bytes:
+    """Genera una remisión como .docx editable.
+
+    Columnas de precio (P. Unit / Subtotal) sólo se incluyen cuando
+    ``remision.mostrar_precios`` es verdadero; en ese caso se agrega una fila
+    de Total al final de la tabla.
+    """
+    doc = Document()
+
+    # --- Encabezado -----------------------------------------------------------
+    h = doc.add_paragraph()
+    r = h.add_run("DASIC Industrial")
+    r.bold = True
+    r.font.size = Pt(18)
+
+    sub = doc.add_paragraph()
+    sr = sub.add_run(f"REMISIÓN · {remision.folio or ''}")
+    sr.bold = True
+    sr.font.size = Pt(12)
+
+    meta_text = f"Fecha: {fecha_str}"
+    ov = remision.orden_venta
+    if ov and getattr(ov, "folio", None):
+        meta_text += f"    Ref. cotización: {ov.folio}"
+    meta = doc.add_paragraph(meta_text)
+    meta.runs[0].font.size = Pt(9)
+
+    # --- Cliente --------------------------------------------------------------
+    # Resolución: si hay orden_venta usa su cliente, si no usa cliente directo.
+    cli = (ov.cliente if ov else None) or getattr(remision, "cliente", None)
+    pc = doc.add_paragraph()
+    pc.add_run("Cliente: ").bold = True
+    pc.add_run(cli.nombre_empresa if cli else "—")
+    extras = []
+    if cli and getattr(cli, "rfc_tax_id", None):
+        extras.append(f"RFC: {cli.rfc_tax_id}")
+    if cli and getattr(cli, "contacto_nombre", None):
+        extras.append(f"Contacto: {cli.contacto_nombre}")
+    if cli and getattr(cli, "email", None):
+        extras.append(cli.email)
+    if cli and getattr(cli, "telefono", None):
+        extras.append(cli.telefono)
+    if extras:
+        doc.add_paragraph("   ".join(extras)).runs[0].font.size = Pt(9)
+
+    # --- Logística ------------------------------------------------------------
+    log_p = doc.add_paragraph()
+    log_p.add_run("Transportista: ").bold = True
+    log_p.add_run(remision.transportista or "—")
+    rec_p = doc.add_paragraph()
+    rec_p.add_run("Recibido por: ").bold = True
+    rec_p.add_run(remision.recibido_por or "—")
+
+    doc.add_paragraph("")
+
+    # --- Tabla de líneas ------------------------------------------------------
+    mostrar = bool(remision.mostrar_precios)
+    num_cols = 6 if mostrar else 4  # #, SKU, Descripción, Cantidad [, P.Unit, Subtotal]
+    tabla = doc.add_table(rows=1, cols=num_cols)
+    tabla.style = "Table Grid"
+    hdr = tabla.rows[0].cells
+    headers = ["#", "SKU", "Descripción", "Cantidad"]
+    if mostrar:
+        headers += ["P. Unit", "Subtotal"]
+    for i, t in enumerate(headers):
+        hdr[i].text = ""
+        run = hdr[i].paragraphs[0].add_run(t)
+        run.bold = True
+        run.font.size = Pt(9)
+
+    total_remision = Decimal("0")
+    for idx, d in enumerate(remision.detalles, start=1):
+        row = tabla.add_row().cells
+        row[0].text = str(idx)
+        row[1].text = str(d.sku or "—")
+
+        dcell = row[2]
+        dcell.text = ""
+        dcell.paragraphs[0].add_run(d.descripcion or "—").font.size = Pt(9)
+        if d.observaciones_linea:
+            orun = dcell.add_paragraph().add_run(d.observaciones_linea)
+            orun.italic = True
+            orun.font.size = Pt(8)
+
+        unidad = d.clave_unidad_sat or "PZA"
+        row[3].text = f"{d.cantidad} ({unidad})"
+
+        if mostrar:
+            precio = d.precio_unitario or Decimal("0")
+            subtotal = d.subtotal or Decimal("0")
+            row[4].text = _fmt(simbolo, precio)
+            row[5].text = _fmt(simbolo, subtotal)
+            total_remision += Decimal(subtotal)
+
+    # --- Total (sólo con precios) ---------------------------------------------
+    if mostrar:
+        doc.add_paragraph("")
+        pt = doc.add_paragraph()
+        pt.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        run = pt.add_run(f"Total: {_fmt(simbolo, total_remision)}")
+        run.bold = True
+        run.font.size = Pt(12)
+
+    # --- Observaciones --------------------------------------------------------
+    if remision.observaciones:
+        doc.add_paragraph("")
+        doc.add_paragraph().add_run("Observaciones:").bold = True
+        doc.add_paragraph(remision.observaciones).runs[0].font.size = Pt(9)
+
+    # --- Bloque de firmas -----------------------------------------------------
+    doc.add_paragraph("")
+    firma_p = doc.add_paragraph()
+    firma_p.add_run("_________________________          _________________________")
+    firma_p.runs[0].font.size = Pt(9)
+    firma_labels = doc.add_paragraph()
+    firma_labels.add_run("        Entregó                              Recibió")
+    firma_labels.runs[0].font.size = Pt(9)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()

@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from jinja2 import BaseLoader, Environment
 from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
+from app.services.word_service import build_remision_docx
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +276,37 @@ def registrar_recepcion(
         db.rollback()
         logger.exception("remisiones.registrar_recepcion falló")
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+meses_es = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+@router.get("/{id}/word", dependencies=[Depends(allow_all_staff)])
+def generar_word_remision(id: int, db: Session = Depends(get_db)):
+    """Genera la remisión como .docx editable (descarga)."""
+    rem = db.query(models.Remision).filter(models.Remision.id == id).first()
+    if not rem:
+        raise HTTPException(404, "Remisión no encontrada")
+
+    # Fecha en español (mismo patrón que ventas.py::generar_word)
+    fecha_base = rem.fecha_remision or getattr(rem, "creado_en", None)
+    if fecha_base:
+        fecha_str = f"{fecha_base.day} de {meses_es[fecha_base.month - 1]} de {fecha_base.year}"
+    else:
+        fecha_str = "—"
+
+    simbolo = "US$" if (rem.moneda or "").upper() == "USD" else "$"
+
+    data = build_remision_docx(remision=rem, simbolo=simbolo, fecha_str=fecha_str)
+    filename = f"remision_{rem.folio or rem.id}.docx"
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 PDF_TEMPLATE_REMISION = """<!doctype html>

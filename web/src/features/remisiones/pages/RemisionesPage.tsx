@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X, Plus, FileText } from 'lucide-react';
+import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X, Plus, FileText, FileDown } from 'lucide-react';
 import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hooks/useRemisiones';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -259,6 +259,15 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
           >
             <FileText className="h-3.5 w-3.5 mr-1" />
             PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            title="Descargar Word"
+            onClick={() => window.open(`/api/remisiones/${item.id}/word`, '_blank')}
+          >
+            <FileDown className="h-3.5 w-3.5 mr-1" />
+            Word
           </Button>
           {!recibida && (
             <Button
