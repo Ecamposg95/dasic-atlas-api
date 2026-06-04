@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export type AuditFuente = 'cotizacion' | 'fusion_cliente';
@@ -43,5 +43,6 @@ export function useAudit(filtros: AuditFiltros) {
   return useQuery<AuditResponse>({
     queryKey: ['superadmin', 'audit', filtros],
     queryFn: () => api.get<AuditResponse>(`/api/superadmin/audit?${buildQuery(filtros)}`),
+    placeholderData: keepPreviousData,
   });
 }

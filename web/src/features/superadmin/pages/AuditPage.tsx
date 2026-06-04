@@ -40,7 +40,7 @@ export function AuditPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / (data?.page_size ?? PAGE_SIZE)));
 
   function resetPage<T>(setter: (v: T) => void) {
     return (v: T) => { setter(v); setPage(1); };
