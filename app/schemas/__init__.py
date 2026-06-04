@@ -113,6 +113,15 @@ from app.schemas.reportes_servicio import (  # noqa: F401
     ReporteServicioResponse,
 )
 
+from app.schemas.crm import (  # noqa: F401
+    PipelineOut,
+    StageOut,
+    DealOut,
+    DealCreate,
+    DealUpdate,
+    DealMove,
+)
+
 __all__ = [
     # auth
     "Token", "TokenData", "LoginRequest",
@@ -151,4 +160,6 @@ __all__ = [
     "DetalleRemisionInput", "RemisionCreate", "RemisionResponse",
     # reportes_servicio (documento hijo de OrdenVenta)
     "ReporteServicioCreate", "ReporteServicioResponse",
+    # crm kanban
+    "PipelineOut", "StageOut", "DealOut", "DealCreate", "DealUpdate", "DealMove",
 ]

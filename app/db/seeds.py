@@ -690,6 +690,57 @@ def seed_contactos_principal(db: Session) -> None:
         logger.info("seed_contactos_principal: %s contactos principales creados", creados)
 
 
+def seed_default_pipeline(db: Session) -> None:
+    """Crea el pipeline 'Ventas' con 5 stages si no existe ninguno en la DB.
+
+    Idempotente: si ya existe al menos un pipeline, no hace nada.
+    El organization_id se toma del primer usuario ADMINISTRADOR/SUPERADMIN
+    encontrado; si la DB está completamente vacía se usa None y las tablas
+    quedan disponibles para ser asociadas en el primer login.
+    """
+    from app.models.crm import Pipeline, PipelineStage
+
+    if db.query(Pipeline).first():
+        return
+
+    # Intentar obtener el organization_id del primer superadmin o admin
+    admin_user = (
+        db.query(models.Usuario)
+        .filter(models.Usuario.rol.in_(["superadmin", "administrador", "SUPERADMIN", "ADMINISTRADOR"]))
+        .first()
+    )
+    org_id = getattr(admin_user, "organization_id", None) if admin_user else None
+
+    pipeline = Pipeline(
+        organization_id=org_id,
+        nombre="Ventas",
+        es_default=True,
+    )
+    db.add(pipeline)
+    db.flush()  # necesitamos pipeline.id para las stages
+
+    stages_def = [
+        (1, "Prospecto",    False, False, "slate"),
+        (2, "Cotizado",     False, False, "cyan"),
+        (3, "Negociación",  False, False, "amber"),
+        (4, "Ganado",       True,  False, "emerald"),
+        (5, "Perdido",      False, True,  "rose"),
+    ]
+    for orden, nombre, es_ganado, es_perdido, color in stages_def:
+        db.add(PipelineStage(
+            organization_id=org_id,
+            pipeline_id=pipeline.id,
+            nombre=nombre,
+            orden=orden,
+            color=color,
+            es_ganado=es_ganado,
+            es_perdido=es_perdido,
+        ))
+
+    db.commit()
+    logger.info("seed_default_pipeline: pipeline 'Ventas' con 5 stages creado.")
+
+
 def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
@@ -699,4 +750,5 @@ def run_all_seeds(db: Session) -> None:
     seed_sat_catalogos_pequenos(db)
     seed_sat_clave_unidad(db)
     seed_contactos_principal(db)
+    seed_default_pipeline(db)
     logger.info("Startup completado correctamente.")
