@@ -255,7 +255,7 @@ PDF_TEMPLATE_VENTA = """
 <meta charset="UTF-8">
 <title>{{ tipo_doc }} {{ orden.folio }}</title>
 <style>
-  @page { size: Letter; margin: 0; }
+  @page { size: Letter; margin: 0 0 14mm 0; }
   /* Forzar impresión de colores y backgrounds en TODOS los navegadores.
      Sin esto, Chrome/Edge/Safari descartan fondos coloreados al imprimir. */
   * {
@@ -374,14 +374,22 @@ PDF_TEMPLATE_VENTA = """
   .print-btn:hover { background:#155a8d; transform: translateY(-1px); }
   .print-btn:active { transform: translateY(0); }
 
-  /* IMPRESIÓN: 1 sola página + colores intactos */
+  /* IMPRESIÓN: pagina con elegancia cuando hay muchos ítems (no fuerza 1 hoja).
+     - .page en block flow para permitir saltos de página naturales.
+     - thead se repite arriba de cada hoja; tfoot (totales) aparece una sola vez.
+     - filas no se parten a la mitad.
+     - footer fijo al pie de TODAS las hojas (el @page reserva 14mm abajo). */
   @media print {
     .print-btn { display:none; }
     body { background:#fff; }
     html, body { height: auto; }
-    .page { page-break-after: avoid; page-break-inside: avoid; min-height: 0; }
+    .page { display: block; min-height: 0; padding-bottom: 6px; }
+    .footer-bar { position: fixed; }
     table.items { page-break-inside: auto; }
+    table.items thead { display: table-header-group; }
+    table.items tfoot { display: table-row-group; }
     table.items tr { page-break-inside: avoid; page-break-after: auto; }
+    .cierre { page-break-inside: avoid; }
     /* Refuerzo color-adjust en los elementos con fondo */
     table.items thead th,
     table.items tbody td,
