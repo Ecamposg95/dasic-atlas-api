@@ -1,6 +1,6 @@
 """Consola super-admin: configuración en runtime + auditoría global."""
 import json
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
@@ -98,9 +98,9 @@ def _accion_quote(canal: str | None, estatus: str | None, meta: dict) -> str:
     return f"Evento {c or '—'}"
 
 
-def _detalle_quote(ev, meta: dict) -> str:
-    if ev.asunto:
-        return ev.asunto
+def _detalle_quote(asunto: str | None, meta: dict) -> str:
+    if asunto:
+        return asunto
     ta, tn = meta.get("total_anterior"), meta.get("total_nuevo")
     if ta is not None and tn is not None:
         return f"Total {ta} → {tn}"
@@ -124,7 +124,7 @@ def _normalize_quote_event(ev, folio_map: dict, nombre_map: dict) -> AuditEvent:
         usuario_id=ev.creado_por_id,
         accion=_accion_quote(ev.canal, ev.estatus, meta),
         entidad=folio or f"Cotización #{ev.orden_id}",
-        detalle=_detalle_quote(ev, meta),
+        detalle=_detalle_quote(ev.asunto, meta),
         link=f"/spa/seguimiento?orden={ev.orden_id}",
     )
 
@@ -165,7 +165,7 @@ def get_audit(
         if desde is not None:
             q = q.filter(models.QuoteEvent.creado_en >= datetime.combine(desde, time.min))
         if hasta is not None:
-            q = q.filter(models.QuoteEvent.creado_en <= datetime.combine(hasta, time.max))
+            q = q.filter(models.QuoteEvent.creado_en < datetime.combine(hasta + timedelta(days=1), time.min))
         qrows = q.all()
         orden_ids = {e.orden_id for e in qrows}
         folio_map: dict = {}
@@ -187,7 +187,7 @@ def get_audit(
         if desde is not None:
             m = m.filter(models.ClienteMergeLog.merged_at >= datetime.combine(desde, time.min))
         if hasta is not None:
-            m = m.filter(models.ClienteMergeLog.merged_at <= datetime.combine(hasta, time.max))
+            m = m.filter(models.ClienteMergeLog.merged_at < datetime.combine(hasta + timedelta(days=1), time.min))
         mrows = m.all()
     else:
         mrows = []
