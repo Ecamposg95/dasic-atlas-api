@@ -694,22 +694,16 @@ def seed_default_pipeline(db: Session) -> None:
     """Crea el pipeline 'Ventas' con 5 stages si no existe ninguno en la DB.
 
     Idempotente: si ya existe al menos un pipeline, no hace nada.
-    El organization_id se toma del primer usuario ADMINISTRADOR/SUPERADMIN
-    encontrado; si la DB está completamente vacía se usa None y las tablas
-    quedan disponibles para ser asociadas en el primer login.
+    El sistema es mono-tenant en la práctica (Usuario no tiene organization_id),
+    así que el pipeline se crea con organization_id=None, consistente con cómo
+    el router /api/crm crea los deals.
     """
     from app.models.crm import Pipeline, PipelineStage
 
     if db.query(Pipeline).first():
         return
 
-    # Intentar obtener el organization_id del primer superadmin o admin
-    admin_user = (
-        db.query(models.Usuario)
-        .filter(models.Usuario.rol.in_(["superadmin", "administrador", "SUPERADMIN", "ADMINISTRADOR"]))
-        .first()
-    )
-    org_id = getattr(admin_user, "organization_id", None) if admin_user else None
+    org_id = None
 
     pipeline = Pipeline(
         organization_id=org_id,
