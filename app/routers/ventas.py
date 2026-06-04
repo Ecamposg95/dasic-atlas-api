@@ -255,7 +255,10 @@ PDF_TEMPLATE_VENTA = """
 <meta charset="UTF-8">
 <title>{{ tipo_doc }} {{ orden.folio }}</title>
 <style>
-  @page { size: Letter; margin: 0 0 14mm 0; }
+  /* Márgenes de página (aplican en TODAS las hojas al imprimir): top da aire al
+     contenido de continuación en hojas 2+, bottom (16mm) reserva la banda del
+     footer fijo (~8mm) con holgura para que NUNCA encime el contenido. */
+  @page { size: Letter; margin: 10mm 0 16mm 0; }
   /* Forzar impresión de colores y backgrounds en TODOS los navegadores.
      Sin esto, Chrome/Edge/Safari descartan fondos coloreados al imprimir. */
   * {
@@ -383,7 +386,7 @@ PDF_TEMPLATE_VENTA = """
     .print-btn { display:none; }
     body { background:#fff; }
     html, body { height: auto; }
-    .page { display: block; min-height: 0; padding-bottom: 6px; }
+    .page { display: block; min-height: 0; padding-top: 0; padding-bottom: 0; }
     .footer-bar { position: fixed; }
     table.items { page-break-inside: auto; }
     table.items thead { display: table-header-group; }
