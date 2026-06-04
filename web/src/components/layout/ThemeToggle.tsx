@@ -17,7 +17,7 @@ export function ThemeToggle() {
       onClick={cycle}
       title={`${LABELS[mode]} · click para cambiar`}
       aria-label={LABELS[mode]}
-      className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 dark:hover:bg-slate-800 transition"
+      className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-2 transition"
     >
       {mode === 'light' && <Sun className="h-4 w-4 text-amber-500" />}
       {mode === 'dark' && <Moon className="h-4 w-4 text-cyan-300" />}

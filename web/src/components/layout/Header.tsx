@@ -53,17 +53,17 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   }
 
   return (
-    <header className="h-16 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
+    <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card/70 backdrop-blur-xl shrink-0">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label="Abrir menú"
-          className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground transition"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h2 className="text-sm uppercase tracking-wider text-slate-700 dark:text-slate-400 font-semibold">
+        <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold">
           DASIC <span className="text-accent-glow">·</span> Atlas ONE
         </h2>
       </div>
@@ -78,7 +78,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             disabled={busy}
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition disabled:opacity-50"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -87,7 +87,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition group"
+              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-2 transition group"
               aria-haspopup="menu"
               aria-expanded={open}
             >
@@ -95,27 +95,27 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                 {initialsOf(user)}
               </span>
               <div className="hidden sm:flex flex-col items-start leading-tight">
-                <span className="text-sm text-slate-700 dark:text-slate-100">{user.nombre || user.email}</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-500 uppercase tracking-wider">{user.rol_label}</span>
+                <span className="text-sm text-foreground">{user.nombre || user.email}</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{user.rol_label}</span>
               </div>
               <ChevronDown
-                className={`h-3.5 w-3.5 text-slate-400 dark:text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
+                className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
               />
             </button>
 
             {open && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden z-50"
+                className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-elev-2 overflow-hidden z-50"
               >
-                <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</div>
+                <div className="px-3 py-2 border-b border-border">
+                  <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                 </div>
                 <button
                   type="button"
                   disabled
                   title="Próximamente"
-                  className="w-full text-left px-3 py-2 text-sm text-slate-400 dark:text-slate-500 flex items-center gap-2 cursor-not-allowed"
+                  className="w-full text-left px-3 py-2 text-sm text-muted-foreground flex items-center gap-2 cursor-not-allowed"
                 >
                   <UserIcon className="h-3.5 w-3.5" /> Mi perfil
                 </button>
@@ -123,11 +123,11 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                   type="button"
                   disabled
                   title="Próximamente"
-                  className="w-full text-left px-3 py-2 text-sm text-slate-400 dark:text-slate-500 flex items-center gap-2 cursor-not-allowed"
+                  className="w-full text-left px-3 py-2 text-sm text-muted-foreground flex items-center gap-2 cursor-not-allowed"
                 >
                   <Settings className="h-3.5 w-3.5" /> Configuración
                 </button>
-                <div className="border-t border-slate-200 dark:border-slate-800" />
+                <div className="border-t border-border" />
                 <button
                   type="button"
                   onClick={onLogout}
