@@ -41,6 +41,7 @@ const fx = lazyPage(() => import('@/features/fx/pages/FxPage'), 'FxPage');
 const precios = lazyPage(() => import('@/features/precios/pages/PreciosPage'), 'PreciosPage');
 const usuarios = lazyPage(() => import('@/features/usuarios/pages/UsuariosPage'), 'UsuariosPage');
 const servicios = lazyPage(() => import('@/features/servicios/pages/ServiciosPage'), 'ServiciosPage');
+const superadmin = lazyPage(() => import('@/features/superadmin/pages/SuperAdminPage'), 'SuperAdminPage');
 
 // Helper: ruta legacy que envuelve el mismo Layout y mounta el mismo lazy.
 const legacyRoute = (path: string, lazyLoader: ReturnType<typeof lazyPage>) => ({
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
       { path: 'precios', lazy: precios },
       { path: 'usuarios', lazy: usuarios },
       { path: 'servicios', lazy: servicios },
+      { path: 'superadmin', lazy: superadmin },
     ],
   },
   // Rutas legacy — FastAPI sirve el mismo dist/index.html para estas URLs.

@@ -3,9 +3,10 @@ import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity, BarChart3, BookMarked, ClipboardCheck, Coins, Contact, FileClock, FileText, Ghost,
-  LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, Tags,
+  LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, ShieldCheck, Tags,
   Truck, UserCog, Users, Wallet, Wrench,
 } from 'lucide-react';
+import { useIsSuperadmin } from '@/lib/permissions';
 
 type NavItem = { to: string; label: string; Icon: LucideIcon };
 type NavSection = { title: string; items: NavItem[] };
@@ -61,9 +62,18 @@ const SECTIONS: NavSection[] = [
       { to: '/spa/usuarios', label: 'Usuarios', Icon: UserCog },
     ],
   },
+  {
+    title: 'Plataforma',
+    items: [
+      { to: '/spa/superadmin', label: 'Consola', Icon: ShieldCheck },
+    ],
+  },
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const isSuper = useIsSuperadmin();
+  const secciones = isSuper ? SECTIONS : SECTIONS.filter((s) => s.title !== 'Plataforma');
+
   // Cerrar el drawer con Escape (solo relevante en mobile; en desktop es estático).
   useEffect(() => {
     if (!open) return;
@@ -92,7 +102,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-          {SECTIONS.map((section) => (
+          {secciones.map((section) => (
             <div key={section.title}>
               <div className="px-2 mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 {section.title}
