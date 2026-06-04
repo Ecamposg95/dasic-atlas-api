@@ -85,7 +85,7 @@ app.add_middleware(
 from app.routers import (  # noqa: E402
     admin, auth, catalogos, clientes, compras, contactos, cuentas_por_cobrar, dashboard,
     fantasmas, fx, gastos, inventario, precios, productos, remisiones, reportes,
-    reportes_servicio_docs, sat, servicios, usuarios, ventas,
+    reportes_servicio_docs, sat, servicios, superadmin, usuarios, ventas,
 )
 
 app.include_router(auth.router)
@@ -109,6 +109,7 @@ app.include_router(cuentas_por_cobrar.router)
 app.include_router(precios.router)
 app.include_router(remisiones.router)
 app.include_router(reportes_servicio_docs.router)
+app.include_router(superadmin.router)
 
 # ---------------------------------------------------------------------------
 # Helper: obtener current_user opcional desde cookie (para SSR)
