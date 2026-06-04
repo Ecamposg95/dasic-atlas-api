@@ -157,6 +157,18 @@ def _protected_view(template_name: str):
 # SSR Routes
 # ---------------------------------------------------------------------------
 
+# El shell index.html NUNCA debe cachearse: referencia assets con hash que
+# cambian en cada build. Si el navegador cachea el index viejo, tras un deploy
+# pide chunks/css con hashes que ya no existen → 404 "Failed to fetch
+# dynamically imported module". Los assets con hash bajo /static sí pueden
+# cachearse (son inmutables). no-cache fuerza revalidar el shell en cada visita.
+_SPA_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
 # Login (pública) — sirve el SPA, React Router monta LoginPage.
 # Si la cookie ya es válida, devolvemos 302 a /dashboard para evitar hidratar
 # el SPA antes de redirect (mejor TTI). El SPA además tiene su propio guard
@@ -169,7 +181,7 @@ async def view_root(request: Request):
     if not index_path.exists():
         # Fallback al Jinja viejo si por alguna razón el build no existe.
         return templates.TemplateResponse(request, "login.html", context={"request": request})
-    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse(index_path.read_text(encoding="utf-8"), headers=_SPA_NO_CACHE)
 
 
 # Phase 6 (2026-05-22): TODAS las páginas (incluso login) migradas al SPA.
@@ -206,7 +218,7 @@ async def spa_catchall(request: Request, full_path: str) -> HTMLResponse:
             "<p>Run <code>cd web && npm run build</code> o despliega en Railway.</p>",
             status_code=503,
         )
-    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse(index_path.read_text(encoding="utf-8"), headers=_SPA_NO_CACHE)
 
 
 # Helper para servir el SPA en una URL legacy. Reusado por todas las páginas
@@ -223,7 +235,7 @@ def _serve_spa_protected(request: Request) -> HTMLResponse | RedirectResponse:
             "<p>Run <code>cd web && npm run build</code> o despliega en Railway.</p>",
             status_code=503,
         )
-    return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse(index_path.read_text(encoding="utf-8"), headers=_SPA_NO_CACHE)
 
 
 # Phase 1d: /ventas/cotizador → SPA
