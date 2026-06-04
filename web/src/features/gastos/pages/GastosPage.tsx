@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { Receipt, Pencil, Trash2 } from 'lucide-react';
 import { useGastos, useCrearGasto, useEditarGasto, useEliminarGasto } from '../hooks/useGastos';
 import { toast } from '@/lib/toast';
@@ -191,8 +192,8 @@ export function GastosPage() {
     }
   }
 
-  function handleDelete(gasto: Gasto) {
-    if (!window.confirm(`¿Eliminar el gasto "${gasto.descripcion ?? gasto.categoria}"? Esta acción no se puede deshacer.`)) return;
+  async function handleDelete(gasto: Gasto) {
+    if (!(await confirm({ mensaje: `¿Eliminar el gasto "${gasto.descripcion ?? gasto.categoria}"? Esta acción no se puede deshacer.`, tono: 'danger' }))) return;
     eliminar.mutate(gasto.id, {
       onSuccess: () => toast({ kind: 'success', title: 'Gasto eliminado' }),
       onError: (err) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { GitMerge, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ function GrupoCard({ grupo }: { grupo: GrupoDuplicado }) {
   const merge = useMergeEmpresas();
   const losers = grupo.miembros.filter((m) => m.id !== survivor);
 
-  function onConfirm() {
+  async function onConfirm() {
     const surv = grupo.miembros.find((m) => m.id === survivor);
     const resumen =
       `Se moverán al sobreviviente «${surv?.nombre_empresa}»:\n` +
@@ -26,7 +27,7 @@ function GrupoCard({ grupo }: { grupo: GrupoDuplicado }) {
       losers.reduce((a, l) => a + l.n_remisiones, 0) + ' remisiones, ' +
       losers.reduce((a, l) => a + l.n_contactos, 0) + ' contactos.\n' +
       `Se BORRARÁN ${losers.length} empresa(s). Esta acción no se puede deshacer.\n¿Continuar?`;
-    if (!window.confirm(resumen)) return;
+    if (!(await confirm({ mensaje: resumen, tono: 'danger' }))) return;
     merge.mutate(
       { survivor_id: survivor, loser_ids: losers.map((l) => l.id) },
       {

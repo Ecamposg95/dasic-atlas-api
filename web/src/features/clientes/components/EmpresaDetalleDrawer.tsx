@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, Star, Trash2, Pencil, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -122,7 +123,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
                       <FileText className="h-4 w-4" />
                     </button>
                     <button onClick={() => abrirEditar(c)} className="p-1 text-slate-400 hover:text-cyan-500" title="Editar"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => { if (window.confirm(`¿Eliminar a ${c.nombre}?`)) eliminar.mutate(c.id); }} className="p-1 text-slate-400 hover:text-rose-500" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={async () => { if (await confirm({ mensaje: `¿Eliminar a ${c.nombre}?`, tono: 'danger' })) eliminar.mutate(c.id); }} className="p-1 text-slate-400 hover:text-rose-500" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               ))}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileClock, Play, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -134,8 +135,8 @@ export function BorradoresPage() {
     },
   });
 
-  function handleDiscard(id: number) {
-    if (!window.confirm('¿Descartar este borrador? La acción lo cancelará y no podrá deshacerse.')) {
+  async function handleDiscard(id: number) {
+    if (!(await confirm({ mensaje: '¿Descartar este borrador? La acción lo cancelará y no podrá deshacerse.', tono: 'danger' }))) {
       return;
     }
     cancelar.mutate(id);

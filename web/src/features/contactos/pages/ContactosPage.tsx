@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
 import { DataTable, DataTableHead, DataTableBody, DataTableRow, DataTableEmpty } from '@/components/ui/data-table';
@@ -110,8 +111,8 @@ function DeleteContactoButton({ contacto }: { contacto: ContactoGlobal }) {
     <button
       type="button"
       title="Eliminar"
-      onClick={() => {
-        if (!window.confirm(`¿Eliminar a ${contacto.nombre}?`)) return;
+      onClick={async () => {
+        if (!(await confirm({ mensaje: `¿Eliminar a ${contacto.nombre}?`, tono: 'danger' }))) return;
         eliminar.mutate(contacto.id, {
           onSuccess: () => toast({ kind: 'success', title: 'Contacto eliminado' }),
           onError: () => toast({ kind: 'error', title: 'No se pudo eliminar' }),

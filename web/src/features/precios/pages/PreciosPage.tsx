@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { Tags, Trash2, BarChart2 } from 'lucide-react';
 import { usePrecios, useComparativaPrecios, useCrearPrecio, useEliminarPrecio } from '../hooks/usePrecios';
 import { useProductos } from '@/features/inventario/hooks/useProductos';
@@ -166,8 +167,8 @@ export function PreciosPage() {
     });
   }
 
-  function handleDelete(id: number, label: string) {
-    if (!window.confirm(`¿Eliminar el precio "${label}"? Esta acción no se puede deshacer.`)) return;
+  async function handleDelete(id: number, label: string) {
+    if (!(await confirm({ mensaje: `¿Eliminar el precio "${label}"? Esta acción no se puede deshacer.`, tono: 'danger' }))) return;
     eliminar.mutate(id, {
       onSuccess: () => toast({ kind: 'success', title: 'Precio eliminado' }),
       onError: (err) => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { confirm } from '@/lib/confirm';
 import { Pen, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,12 +124,13 @@ export function CategoriasTab() {
     },
   });
 
-  function onEliminar(c: Categoria) {
+  async function onEliminar(c: Categoria) {
     if (c.n_productos > 0) {
-      if (!window.confirm(
-        `¿Eliminar la categoría "${c.categoria}"?\n\nEsto quitará la categoría a ${c.n_productos} producto(s).`,
-      )) return;
-    } else if (!window.confirm(`¿Eliminar la categoría "${c.categoria}"?`)) {
+      if (!(await confirm({
+        mensaje: `¿Eliminar la categoría "${c.categoria}"?\n\nEsto quitará la categoría a ${c.n_productos} producto(s).`,
+        tono: 'danger',
+      }))) return;
+    } else if (!(await confirm({ mensaje: `¿Eliminar la categoría "${c.categoria}"?`, tono: 'danger' }))) {
       return;
     }
     eliminarMut.mutate(c.categoria);

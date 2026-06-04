@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { confirm } from '@/lib/confirm';
 import { Pen, Trash2, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -178,7 +179,7 @@ export function MarcasTab() {
     },
   });
 
-  function onEliminar(m: Marca) {
+  async function onEliminar(m: Marca) {
     if (m.n_productos > 0) {
       toast({
         kind: 'warning',
@@ -187,7 +188,7 @@ export function MarcasTab() {
       });
       return;
     }
-    if (window.confirm(`¿Eliminar la marca "${m.nombre}" (${m.abreviatura})?`)) {
+    if (await confirm({ mensaje: `¿Eliminar la marca "${m.nombre}" (${m.abreviatura})?`, tono: 'danger' })) {
       eliminarMut.mutate(m.abreviatura);
     }
   }

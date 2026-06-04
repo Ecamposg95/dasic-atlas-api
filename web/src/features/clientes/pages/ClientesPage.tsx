@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
@@ -109,8 +110,8 @@ export function ClientesPage() {
     },
   });
 
-  function onEliminar(c: Cliente) {
-    if (window.confirm(`¿Eliminar al cliente "${c.nombre_empresa}"? Esta acción no se puede deshacer.`)) {
+  async function onEliminar(c: Cliente) {
+    if (await confirm({ mensaje: `¿Eliminar al cliente "${c.nombre_empresa}"? Esta acción no se puede deshacer.`, tono: 'danger' })) {
       eliminarMut.mutate(c.id);
     }
   }

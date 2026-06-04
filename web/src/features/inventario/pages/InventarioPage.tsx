@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -120,8 +121,8 @@ export function InventarioPage() {
     },
   });
 
-  function onDelete(p: Producto) {
-    if (!window.confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`)) return;
+  async function onDelete(p: Producto) {
+    if (!(await confirm({ mensaje: `¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`, tono: 'danger' }))) return;
     deleteMut.mutate(p.id);
   }
 
