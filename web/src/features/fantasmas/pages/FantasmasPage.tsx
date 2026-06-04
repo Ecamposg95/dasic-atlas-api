@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Eye, Pen, ArrowUp, X, Ghost, FileSpreadsheet, Brush, Truck,
@@ -129,14 +130,14 @@ export function FantasmasPage() {
     setPromoverTarget(f);
   }
 
-  function onDescartar(f: Fantasma) {
-    if (window.confirm(`¿Descartar "${f.descripcion}"?`)) {
+  async function onDescartar(f: Fantasma) {
+    if (await confirm({ mensaje: `¿Descartar "${f.descripcion}"?`, tono: 'danger' })) {
       descartarMut.mutate(f.id);
     }
   }
 
   async function onBulkDescartar() {
-    if (!window.confirm(`¿Descartar ${seleccionados.size} fantasma(s)? Solo afecta PENDIENTE.`)) return;
+    if (!(await confirm({ mensaje: `¿Descartar ${seleccionados.size} fantasma(s)? Solo afecta PENDIENTE.`, tono: 'danger' }))) return;
     let ok = 0, skip = 0, fail = 0;
     for (const id of Array.from(seleccionados)) {
       try {

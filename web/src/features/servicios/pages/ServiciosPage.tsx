@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/data-table';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
 import { useAuth } from '@/stores/auth';
 import { useServicios } from '../hooks/useServicios';
 import { useCategoriasServicio } from '../hooks/useCategoriasServicio';
@@ -117,11 +118,12 @@ export function ServiciosPage() {
     },
   });
 
-  function onEliminar(s: Servicio) {
+  async function onEliminar(s: Servicio) {
     if (
-      window.confirm(
-        `¿Eliminar el servicio "${s.nombre}" (${s.codigo})? Si tiene referencias en cotizaciones se marcará inactivo.`,
-      )
+      await confirm({
+        mensaje: `¿Eliminar el servicio "${s.nombre}" (${s.codigo})? Si tiene referencias en cotizaciones se marcará inactivo.`,
+        tono: 'danger',
+      })
     ) {
       eliminarMut.mutate(s.id);
     }

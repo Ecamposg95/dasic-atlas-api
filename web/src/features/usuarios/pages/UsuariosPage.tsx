@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/data-table';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
 import { useAuth } from '@/stores/auth';
 import { useUsuarios } from '../hooks/useUsuarios';
 import { UsuarioFormModal } from '../components/UsuarioFormModal';
@@ -114,11 +115,12 @@ export function UsuariosPage() {
     },
   });
 
-  function onEliminar(u: Usuario) {
+  async function onEliminar(u: Usuario) {
     if (
-      window.confirm(
-        `¿Eliminar al usuario "${u.nombre}" (${u.email})? Esta acción no se puede deshacer.`,
-      )
+      await confirm({
+        mensaje: `¿Eliminar al usuario "${u.nombre}" (${u.email})? Esta acción no se puede deshacer.`,
+        tono: 'danger',
+      })
     ) {
       eliminarMut.mutate(u.id);
     }

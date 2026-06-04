@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { Ghost, X, Building2, DollarSign, Hash, Percent, Recycle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { SatCombobox } from '@/components/ui/sat-combobox';
@@ -151,9 +152,9 @@ export function AgregarFantasmaModal() {
 
   // Único punto de salida intencional (Esc / X / Cancelar). El click-fuera ya
   // no cierra. Si hay datos capturados, pedimos confirmación antes de descartar.
-  function requestClose() {
+  async function requestClose() {
     if (!open) return;
-    if (formIsDirty() && !window.confirm('Tienes datos capturados en el producto fantasma. ¿Descartarlos y cerrar?')) {
+    if (formIsDirty() && !(await confirm({ mensaje: 'Tienes datos capturados en el producto fantasma. ¿Descartarlos y cerrar?', tono: 'danger' }))) {
       return;
     }
     setOpen(false);

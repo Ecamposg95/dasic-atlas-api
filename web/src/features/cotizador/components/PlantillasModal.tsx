@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { X, Folder, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,7 +107,7 @@ export function PlantillasModal() {
   }
 
   async function onBorrar(p: Plantilla) {
-    if (!window.confirm(`Borrar plantilla "${p.nombre}"?`)) return;
+    if (!(await confirm({ mensaje: `Borrar plantilla "${p.nombre}"?`, tono: 'danger' }))) return;
     try {
       await borrar.mutateAsync(p.id);
       toast({ kind: 'success', title: 'Plantilla borrada' });

@@ -21,6 +21,7 @@ import {
   DataTableEmpty,
 } from '@/components/ui/data-table';
 import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
 import { api, type ApiError } from '@/lib/api';
 import { useHistorial } from '../hooks/useHistorial';
 import type {
@@ -236,19 +237,20 @@ export function SeguimientoPage() {
     recotizarMutation.mutate(id);
   }
 
-  function handleConvertir(item: HistorialItem) {
+  async function handleConvertir(item: HistorialItem) {
     if (
-      !window.confirm(
-        `¿Convertir ${item.folio} a venta? Esta acción no se puede deshacer.`,
-      )
+      !(await confirm({
+        mensaje: `¿Convertir ${item.folio} a venta? Esta acción no se puede deshacer.`,
+        tono: 'danger',
+      }))
     )
       return;
     setLoadingId(item.id);
     convertirMutation.mutate(item.id);
   }
 
-  function handleCancelar(item: HistorialItem) {
-    if (!window.confirm(`¿Cancelar la cotización ${item.folio}?`)) return;
+  async function handleCancelar(item: HistorialItem) {
+    if (!(await confirm({ mensaje: `¿Cancelar la cotización ${item.folio}?`, tono: 'danger' }))) return;
     setLoadingId(item.id);
     cancelarMutation.mutate(item.id);
   }

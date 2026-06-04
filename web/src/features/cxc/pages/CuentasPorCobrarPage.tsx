@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { confirm } from '@/lib/confirm';
 import { Wallet, AlertTriangle, Clock, Users, RefreshCw } from 'lucide-react';
 import { useResumenCxC } from '../hooks/useResumenCxC';
 import { useVencimientosCxC } from '../hooks/useVencimientosCxC';
@@ -169,11 +170,12 @@ export function CuentasPorCobrarPage() {
     },
   });
 
-  function handleMarcarVencidos() {
+  async function handleMarcarVencidos() {
     if (
-      !window.confirm(
-        '¿Marcar como vencidos todos los cargos con fecha de vencimiento pasada? Esta operación es idempotente.',
-      )
+      !(await confirm({
+        mensaje: '¿Marcar como vencidos todos los cargos con fecha de vencimiento pasada? Esta operación es idempotente.',
+        tono: 'warning',
+      }))
     )
       return;
     marcarMutation.mutate();

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { confirm } from '@/lib/confirm';
 import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentTotalsBar } from '@/components/document/DocumentTotalsBar';
@@ -62,12 +63,12 @@ export function TotalsBar() {
   if (noEditable) reasons.push(`cotización en estatus ${editingEstatus}`);
   const disabled = reasons.length > 0 || guardar.isPending;
 
-  function onCancel() {
+  async function onCancel() {
     if (editingId != null) {
       window.location.href = '/seguimiento';
       return;
     }
-    if (cart.length === 0 || window.confirm('¿Descartar cotización?')) {
+    if (cart.length === 0 || (await confirm({ mensaje: '¿Descartar cotización?', tono: 'danger' }))) {
       useCotizador.getState().reset();
       window.location.href = '/seguimiento';
     }
@@ -82,20 +83,21 @@ export function TotalsBar() {
     return { criticas, bajas, avg };
   }, [cart]);
 
-  function onSave() {
+  async function onSave() {
     setErr(null);
     const s = useCotizador.getState();
 
     if (margenStats.criticas > 0) {
       if (
-        !window.confirm(
-          `⚠ ${margenStats.criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
-        )
+        !(await confirm({
+          mensaje: `⚠ ${margenStats.criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
+          tono: 'warning',
+        }))
       ) {
         return;
       }
     } else if (margenStats.bajas > 0) {
-      if (!window.confirm(`${margenStats.bajas} línea(s) con utilidad < 15 %. ¿Continuar?`)) {
+      if (!(await confirm({ mensaje: `${margenStats.bajas} línea(s) con utilidad < 15 %. ¿Continuar?`, tono: 'warning' }))) {
         return;
       }
     }
