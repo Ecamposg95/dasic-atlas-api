@@ -9,10 +9,26 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 // Esto baja el bundle inicial de ~520kB a ~150kB (vendor + shell + dashboard).
 // Las otras pages bajan en chunks separados según el usuario navega.
 
+// Tras un deploy, el index.html (no-cache) trae hashes de chunk nuevos, pero una
+// SPA ya abierta sigue en memoria con el entry viejo y, al navegar, intenta importar
+// un chunk cuyo hash ya no existe → "Failed to fetch dynamically imported module".
+// Si el import dinámico falla, recargamos UNA vez (trae index.html + chunks nuevos).
+// La guarda en sessionStorage evita un loop si el fallo es real (no por deploy).
+const CHUNK_RELOAD_FLAG = 'spa-chunk-reload';
 const lazyPage = <K extends string>(loader: () => Promise<Record<K, React.ComponentType>>, key: K) =>
   async () => {
-    const mod = await loader();
-    return { Component: mod[key] };
+    try {
+      const mod = await loader();
+      sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+      return { Component: mod[key] };
+    } catch (err) {
+      if (!sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+        sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
+        window.location.reload();
+        return { Component: () => null };
+      }
+      throw err;
+    }
   };
 
 const hello = lazyPage(() => import('@/features/hello/pages/HelloPage'), 'HelloPage');
