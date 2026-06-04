@@ -20,6 +20,7 @@ from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin_asistente, get_current_user
 from app.services.stock_service import aplicar_movimiento
 from pydantic import BaseModel
+from app.core.runtime_config import get_iva_rate
 
 
 def _iva_rate() -> Decimal:
@@ -795,7 +796,7 @@ def imprimir_oc(id: int, db: Session = Depends(get_db)):
     orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
     if not orden: raise HTTPException(404)
     
-    iva = orden.total * _iva_rate()
+    iva = orden.total * get_iva_rate(db)
     gran_total = orden.total + iva
 
     env = Environment(loader=BaseLoader())

@@ -36,6 +36,7 @@ from app.services.stock_service import (
 )
 from app.services.fantasmas_service import upsert_from_detalle
 from app.services.word_service import build_cotizacion_docx
+from app.core.runtime_config import get_iva_rate, get_quote_validity_days
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +105,13 @@ def _quote_validity_days() -> int:
 
 
 @router.get("/config/cotizador-defaults", dependencies=[Depends(allow_all_staff)])
-def cotizador_defaults():
+def cotizador_defaults(db: Session = Depends(get_db)):
     """Defaults dinámicos para el frontend del cotizador (IVA, vigencia)."""
-    s = get_settings()
+    iva = get_iva_rate(db)
     return {
-        "iva_rate": s.iva_rate,
-        "iva_pct_label": f"{s.iva_rate * 100:g}%",
-        "quote_validity_days": s.quote_validity_days,
+        "iva_rate": float(iva),
+        "iva_pct_label": f"{float(iva) * 100:g}%",
+        "quote_validity_days": get_quote_validity_days(db),
     }
 
 
@@ -623,7 +624,7 @@ def crear_orden(
             tc_mn_a_usd=tc_mn_a_usd,
             tc_usd_a_mn=tc_usd_a_mn,
             tolerancia_tc=tolerancia_tc,
-            fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
+            fecha_vencimiento=datetime.utcnow() + timedelta(days=get_quote_validity_days(db)),
             total=0,
             terminos_condiciones=terminos,
             pdf_unificado=1 if orden_data.pdf_unificado else 0,
@@ -811,7 +812,7 @@ def crear_orden(
 
         # Deuda (Solo si es venta directa) — usa CxC formal con vencimiento.
         if tipo_orden == models.EstatusOrden.PENDIENTE:
-            total_con_iva = (total_orden * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
+            total_con_iva = (total_orden * (Decimal("1.0") + get_iva_rate(db))).quantize(Decimal("0.01"))
             crear_cargo_por_venta(
                 db,
                 orden_venta=nueva_orden,
@@ -902,7 +903,7 @@ def actualizar_orden(
             orden.fecha_vencimiento = orden_update.fecha_vencimiento
         elif orden.fecha_vencimiento is None:
             # No tenía vencimiento previo; aplicar default
-            orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=_quote_validity_days())
+            orden.fecha_vencimiento = datetime.utcnow() + timedelta(days=get_quote_validity_days(db))
         if orden_update.pdf_unificado is not None:
             orden.pdf_unificado = 1 if orden_update.pdf_unificado else 0
         if orden_update.concepto_unificado is not None:
@@ -1152,7 +1153,7 @@ def recotizar(
             tc_usd_a_mn=origen.tc_usd_a_mn,
             tolerancia_tc=origen.tolerancia_tc,
             total=origen.total,
-            fecha_vencimiento=datetime.utcnow() + timedelta(days=_quote_validity_days()),
+            fecha_vencimiento=datetime.utcnow() + timedelta(days=get_quote_validity_days(db)),
             cotizacion_origen_id=raiz_id,
             version=siguiente_version,
             enviada_at=None,
@@ -1331,7 +1332,7 @@ def convertir_cotizacion(
                 orden.folio = orden.folio.replace("COT-", "VTA-", 1)
         
         # Generar Deuda — usando servicio CxC formal (vence en cliente.dias_credito)
-        total_con_iva = (orden.total * (Decimal("1.0") + _iva_rate())).quantize(Decimal("0.01"))
+        total_con_iva = (orden.total * (Decimal("1.0") + get_iva_rate(db))).quantize(Decimal("0.01"))
         crear_cargo_por_venta(
             db,
             orden_venta=orden,
@@ -1565,7 +1566,7 @@ def generar_pdf(
     )
     if not orden: raise HTTPException(404)
 
-    iva = (orden.total * _iva_rate()).quantize(Decimal("0.01"))
+    iva = (orden.total * get_iva_rate(db)).quantize(Decimal("0.01"))
     gran_total = (orden.total + iva).quantize(Decimal("0.01"))
     es_cotizacion = orden.estatus == models.EstatusOrden.COTIZACION
     tipo_doc = "COTIZACION" if es_cotizacion else "NOTA DE VENTA"
@@ -1582,7 +1583,7 @@ def generar_pdf(
     vigencia_dias = (
         max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
         if orden.fecha_vencimiento and orden.fecha_creacion
-        else _quote_validity_days()
+        else get_quote_validity_days(db)
     )
 
     # QR del folio embebido como data URI. Fallback silencioso si qrcode no
@@ -1660,7 +1661,7 @@ def generar_word(id: int, db: Session = Depends(get_db)):
     if not orden:
         raise HTTPException(404)
 
-    iva = (orden.total * _iva_rate()).quantize(Decimal("0.01"))
+    iva = (orden.total * get_iva_rate(db)).quantize(Decimal("0.01"))
     total = (orden.total + iva).quantize(Decimal("0.01"))
     es_cotizacion = orden.estatus == models.EstatusOrden.COTIZACION
     tipo_doc = "COTIZACION" if es_cotizacion else "NOTA DE VENTA"
@@ -1676,7 +1677,7 @@ def generar_word(id: int, db: Session = Depends(get_db)):
     vigencia_dias = (
         max((orden.fecha_vencimiento.date() - orden.fecha_creacion.date()).days, 0)
         if orden.fecha_vencimiento and orden.fecha_creacion
-        else _quote_validity_days()
+        else get_quote_validity_days(db)
     )
 
     data = build_cotizacion_docx(
