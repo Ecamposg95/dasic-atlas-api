@@ -1,19 +1,20 @@
 """Endpoints administrativos: seed de datos de context/, etc.
 
-Sólo accesibles para roles de admin.
+Sólo accesibles para superadmin.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from app.db import engine, get_db
-from app.security import allow_admin
+from app.security.jwt import allow_superadmin
 
 router = APIRouter(prefix="/api/admin", tags=["Administración"])
 
 
-@router.post("/seed-context", dependencies=[Depends(allow_admin)])
+@router.post("/seed-context", dependencies=[Depends(allow_superadmin)])
 def seed_context(
     dry_run: bool = False,
     db: Session = Depends(get_db),
@@ -36,13 +37,24 @@ def seed_context(
         raise HTTPException(status_code=500, detail=f"Seed falló: {exc}")
 
 
-@router.post("/drop-all-tables", dependencies=[Depends(allow_admin)])
-def drop_all_tables():
+class _DropConfirm(BaseModel):
+    confirm: str
+
+
+@router.post("/drop-all-tables", dependencies=[Depends(allow_superadmin)])
+def drop_all_tables(payload: _DropConfirm):
     """Elimina **todas** las tablas de la base de datos con CASCADE.
 
     ⚠️  OPERACIÓN DESTRUCTIVA E IRREVERSIBLE. Úsese únicamente para
     reinicializar el esquema en entornos de desarrollo/staging.
+
+    Requiere body: { "confirm": "BORRAR TODO" }
     """
+    if payload.confirm != "BORRAR TODO":
+        raise HTTPException(
+            status_code=400,
+            detail='Se requiere confirmación explícita: { "confirm": "BORRAR TODO" }',
+        )
     try:
         inspector = inspect(engine)
         table_names = inspector.get_table_names()

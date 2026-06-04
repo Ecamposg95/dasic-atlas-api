@@ -5,8 +5,12 @@ Bootstrap limpio: logging, lifespan, middlewares, routers y vistas SSR.
 
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+# Captured at module-import time ≈ process startup; used by /api/superadmin/health.
+APP_STARTED_AT = datetime.now(timezone.utc)
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse

@@ -1,10 +1,13 @@
-"""Consola super-admin: configuración en runtime + auditoría global."""
+"""Consola super-admin: configuración en runtime + auditoría global + salud + mantenimiento."""
 import json
-from datetime import date, datetime, time, timedelta
+import os
+import platform
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -13,6 +16,7 @@ from app.db import get_db
 from app.security import get_current_user
 from app.security.jwt import allow_superadmin
 from app.core.runtime_config import EDITABLE_KEYS, effective_summary
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/api/superadmin", tags=["Super-Admin"])
 
@@ -214,3 +218,199 @@ def get_audit(
     start = (page - 1) * page_size
     items = eventos[start : start + page_size]
     return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+# ---------------------------------------------------------------------------
+# Módulo C — Salud del sistema: GET /api/superadmin/health
+# ---------------------------------------------------------------------------
+
+@router.get("/health", dependencies=[Depends(allow_superadmin)])
+def get_health(db: Session = Depends(get_db)):
+    """Estado completo del sistema: app, DB, conteos, FX, integraciones, config."""
+    from app.main import APP_STARTED_AT
+
+    now = datetime.now(timezone.utc)
+    settings = get_settings()
+
+    # --- App info ---
+    app_info = {
+        "version": "2.0.0",
+        "git_sha": os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("GIT_SHA") or None,
+        "python": platform.python_version(),
+        "env": (os.getenv("ENV") or os.getenv("ENVIRONMENT") or "development"),
+        "started_at": APP_STARTED_AT.isoformat(),
+        "uptime_seconds": int((now - APP_STARTED_AT).total_seconds()),
+    }
+
+    # --- DB ping ---
+    try:
+        db.execute(text("SELECT 1"))
+        db_status = {"status": "ok", "error": None}
+    except Exception as exc:
+        db_status = {"status": "error", "error": str(exc)}
+
+    # --- Counts (each wrapped independently so one missing table doesn't 500) ---
+    def _count(model):
+        try:
+            return db.query(model).count()
+        except Exception:
+            return -1
+
+    counts = {
+        "usuarios":          _count(models.Usuario),
+        "clientes":          _count(models.Cliente),
+        "contactos":         _count(models.Contacto),
+        "productos":         _count(models.Producto),
+        "ordenes_venta":     _count(models.OrdenVenta),
+        "remisiones":        _count(models.Remision),
+        "ordenes_compra":    _count(models.OrdenCompra),
+        "deals":             _count(models.Deal),
+        "quote_events":      _count(models.QuoteEvent),
+        "gastos":            _count(models.Gasto),
+        "productos_fantasma": _count(models.ProductoFantasma),
+    }
+
+    # --- FX: last row from tipos_cambio_dia ---
+    fx_info = None
+    try:
+        last_fx = (
+            db.query(models.TipoCambioDia)
+            .order_by(models.TipoCambioDia.obtenido_en.desc())
+            .first()
+        )
+        if last_fx:
+            obtenido_en = last_fx.obtenido_en
+            age_horas: Optional[float] = None
+            if obtenido_en:
+                # obtenido_en may be timezone-aware or naive; normalize
+                if obtenido_en.tzinfo is None:
+                    obtenido_en_aware = obtenido_en.replace(tzinfo=timezone.utc)
+                else:
+                    obtenido_en_aware = obtenido_en
+                age_horas = round((now - obtenido_en_aware).total_seconds() / 3600, 2)
+            fx_info = {
+                "fecha": last_fx.fecha.isoformat() if last_fx.fecha else None,
+                "usd_mxn": float(last_fx.usd_mxn) if last_fx.usd_mxn is not None else None,
+                "fuente": last_fx.fuente,
+                "obtenido_en": obtenido_en.isoformat() if obtenido_en else None,
+                "age_horas": age_horas,
+            }
+    except Exception:
+        fx_info = None
+
+    # --- Integrations (presence only — never expose values) ---
+    integraciones = {
+        "smtp": bool(settings.smtp_host and settings.smtp_user),
+        "anthropic": bool(settings.anthropic_api_key),
+        "banxico": bool(os.getenv("BANXICO_TOKEN")),
+    }
+
+    return {
+        "app": app_info,
+        "db": db_status,
+        "counts": counts,
+        "fx": fx_info,
+        "integraciones": integraciones,
+        "runtime_config": effective_summary(db),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Módulo D — Mantenimiento: POST /api/superadmin/maintenance/*
+# ---------------------------------------------------------------------------
+
+class _WhichBody(BaseModel):
+    which: str
+
+
+_RESEED_MAP = {
+    "ddl":        "run_backfill_ddl",
+    "marcas":     "seed_marcas",
+    "sat":        "seed_sat_catalogos_pequenos",
+    "sat_unidad": "seed_sat_clave_unidad",
+    "contactos":  "seed_contactos_principal",
+    "pipeline":   "seed_default_pipeline",
+}
+
+_JOB_WHITELIST = {"marcar_vencidos", "refresh_fx"}
+
+
+@router.post("/maintenance/reseed", dependencies=[Depends(allow_superadmin)])
+def maintenance_reseed(payload: _WhichBody, db: Session = Depends(get_db)):
+    """Re-ejecuta una función de seed específica. Claves: ddl, marcas, sat, sat_unidad, contactos, pipeline."""
+    if payload.which not in _RESEED_MAP:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Clave inválida: '{payload.which}'. Opciones: {sorted(_RESEED_MAP.keys())}",
+        )
+    fn_name = _RESEED_MAP[payload.which]
+    try:
+        from app.db import seeds as _seeds
+        fn = getattr(_seeds, fn_name)
+        fn(db)
+        return {"ok": True, "which": payload.which, "mensaje": f"{fn_name} ejecutado correctamente."}
+    except Exception as exc:
+        return {"ok": False, "which": payload.which, "mensaje": str(exc)}
+
+
+@router.post("/maintenance/job", dependencies=[Depends(allow_superadmin)])
+def maintenance_job(payload: _WhichBody, db: Session = Depends(get_db)):
+    """Lanza un job puntual. Claves: marcar_vencidos, refresh_fx."""
+    if payload.which not in _JOB_WHITELIST:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Clave inválida: '{payload.which}'. Opciones: {sorted(_JOB_WHITELIST)}",
+        )
+    try:
+        if payload.which == "marcar_vencidos":
+            from app.services.cuentas_por_cobrar import marcar_vencidos
+            n = marcar_vencidos(db)
+            return {"ok": True, "which": payload.which, "actualizados": n}
+        elif payload.which == "refresh_fx":
+            from app.services.fx_service import get_or_fetch, FXError
+            from datetime import date as _date
+            # Respect MANUAL override: don't overwrite if today is MANUAL.
+            existing = (
+                db.query(models.TipoCambioDia)
+                .filter(models.TipoCambioDia.fecha == _date.today())
+                .first()
+            )
+            if existing and existing.fuente == "MANUAL":
+                return {
+                    "ok": True,
+                    "which": payload.which,
+                    "mensaje": "Override MANUAL activo; no se refresco.",
+                    "fecha": existing.fecha.isoformat(),
+                    "usd_mxn": float(existing.usd_mxn),
+                    "fuente": existing.fuente,
+                }
+            row = get_or_fetch(db, force=True)
+            return {
+                "ok": True,
+                "which": payload.which,
+                "fecha": row.fecha.isoformat(),
+                "usd_mxn": float(row.usd_mxn),
+                "fuente": row.fuente,
+            }
+    except Exception as exc:
+        return {"ok": False, "which": payload.which, "mensaje": str(exc)}
+
+
+class _SeedContextBody(BaseModel):
+    dry_run: bool = False
+
+
+@router.post("/maintenance/seed-context", dependencies=[Depends(allow_superadmin)])
+def maintenance_seed_context(payload: _SeedContextBody, db: Session = Depends(get_db)):
+    """Re-ejecuta el seed de context/ (productos, clientes, cotizaciones de muestra, etc.)."""
+    try:
+        from scripts.import_context_data import run_seed
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo importar el script de seed: {exc}",
+        )
+    try:
+        return run_seed(db, dry_run=payload.dry_run)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Seed falló: {exc}")
