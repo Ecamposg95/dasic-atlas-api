@@ -255,10 +255,10 @@ PDF_TEMPLATE_VENTA = """
 <meta charset="UTF-8">
 <title>{{ tipo_doc }} {{ orden.folio }}</title>
 <style>
-  /* Márgenes de página (aplican en TODAS las hojas al imprimir): top da aire al
-     contenido de continuación en hojas 2+, bottom (16mm) reserva la banda del
-     footer fijo (~8mm) con holgura para que NUNCA encime el contenido. */
-  @page { size: Letter; margin: 10mm 0 16mm 0; }
+  /* Márgenes de página (aplican en TODAS las hojas): top da aire al contenido de
+     continuación en hojas 2+; bottom evita que el contenido toque el borde. El
+     footer va en flujo normal (aparece una sola vez, en la última hoja), no fijo. */
+  @page { size: Letter; margin: 10mm 0; }
   /* Forzar impresión de colores y backgrounds en TODOS los navegadores.
      Sin esto, Chrome/Edge/Safari descartan fondos coloreados al imprimir. */
   * {
@@ -381,13 +381,14 @@ PDF_TEMPLATE_VENTA = """
      - .page en block flow para permitir saltos de página naturales.
      - thead se repite arriba de cada hoja; tfoot (totales) aparece una sola vez.
      - filas no se parten a la mitad.
-     - footer fijo al pie de TODAS las hojas (el @page reserva 14mm abajo). */
+     - footer en flujo normal: aparece una sola vez al final (última hoja), nunca
+       encima el contenido. */
   @media print {
     .print-btn { display:none; }
     body { background:#fff; }
     html, body { height: auto; }
     .page { display: block; min-height: 0; padding-top: 0; padding-bottom: 0; }
-    .footer-bar { position: fixed; }
+    .footer-bar { position: static; margin-top: 14px; page-break-inside: avoid; }
     table.items { page-break-inside: auto; }
     table.items thead { display: table-header-group; }
     table.items tfoot { display: table-row-group; }
