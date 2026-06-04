@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Producto } from '../types';
+import type { CardexProducto, Producto } from '../types';
 
 // Paginación server-side via skip/limit (backend retorna array plano).
 // q se envía al backend (ILIKE en sku/sku_comercial/nombre/marca).
@@ -18,6 +18,15 @@ export function useProductos(page = 1, q = '', pageSize = 50) {
     queryKey: ['productos', page, q.trim(), pageSize],
     queryFn: () => api.get<Producto[]>(`/api/productos?${params.toString()}`),
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+export function useCardex(productoId: number | null) {
+  return useQuery<CardexProducto>({
+    queryKey: ['cardex', productoId],
+    queryFn: () => api.get<CardexProducto>(`/api/productos/${productoId}/cardex`),
+    enabled: productoId !== null,
     staleTime: 30_000,
   });
 }

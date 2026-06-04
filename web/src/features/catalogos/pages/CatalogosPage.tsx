@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookMarked, Tags, Layers, Ruler, Wrench } from 'lucide-react';
+import { BookMarked, Tags, Layers, Ruler, Wrench, FileSearch } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { ResumenCatalogo } from '../types';
 import { MarcasTab } from '../components/MarcasTab';
 import { CategoriasTab } from '../components/CategoriasTab';
 import { UnidadesTab } from '../components/UnidadesTab';
 import { CategoriasServicioTab } from '../components/CategoriasServicioTab';
+import { SatTab } from '../components/SatTab';
 
-type Tab = 'marcas' | 'categorias' | 'unidades' | 'categorias-servicio';
+type Tab = 'marcas' | 'categorias' | 'unidades' | 'categorias-servicio' | 'sat';
 
 const TABS: { key: Tab; label: string; Icon: typeof Tags }[] = [
   { key: 'marcas', label: 'Marcas', Icon: Tags },
   { key: 'categorias', label: 'Categorías de producto', Icon: Layers },
   { key: 'unidades', label: 'Unidades', Icon: Ruler },
   { key: 'categorias-servicio', label: 'Categorías de servicio', Icon: Wrench },
+  { key: 'sat', label: 'Catálogos SAT', Icon: FileSearch },
 ];
 
 export function CatalogosPage() {
@@ -87,6 +89,7 @@ export function CatalogosPage() {
         {tab === 'categorias' && <CategoriasTab />}
         {tab === 'unidades' && <UnidadesTab />}
         {tab === 'categorias-servicio' && <CategoriasServicioTab />}
+        {tab === 'sat' && <SatTab />}
       </div>
     </div>
   );

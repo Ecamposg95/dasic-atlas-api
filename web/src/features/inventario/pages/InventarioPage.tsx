@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { useImportProductos, useProductos } from '../hooks/useProductos';
 import { useMarcas } from '../hooks/useMarcas';
 import { useProveedores } from '../hooks/useProveedores';
 import { AjusteStockModal } from '../components/AjusteStockModal';
+import { KardexModal } from '../components/KardexModal';
 import { ProductoFormModal } from '../components/ProductoFormModal';
 import type { Producto } from '../types';
 
@@ -71,6 +72,7 @@ export function InventarioPage() {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState<Producto | null>(null);
   const [modalAjuste, setModalAjuste] = useState<Producto | null>(null);
+  const [modalKardex, setModalKardex] = useState<Producto | null>(null);
 
   // Import Excel/CSV: ref al <input type=file> oculto + estado del banner.
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -401,6 +403,13 @@ export function InventarioPage() {
                     <Sliders className="h-4 w-4 inline" />
                   </button>
                 )}
+                <button
+                  onClick={() => setModalKardex(p)}
+                  title="Kardex"
+                  className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 px-1"
+                >
+                  <ClipboardList className="h-4 w-4 inline" />
+                </button>
                 {isAdmin && (
                   <button
                     onClick={() => onDelete(p)}
@@ -454,6 +463,14 @@ export function InventarioPage() {
         <AjusteStockModal
           producto={modalAjuste}
           onClose={() => setModalAjuste(null)}
+        />
+      )}
+
+      {/* Modal kardex de movimientos */}
+      {modalKardex && (
+        <KardexModal
+          producto={modalKardex}
+          onClose={() => setModalKardex(null)}
         />
       )}
     </div>

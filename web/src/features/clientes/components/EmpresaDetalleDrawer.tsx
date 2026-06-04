@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Star, Trash2, Pencil, FileText } from 'lucide-react';
+import { X, Plus, Star, Trash2, Pencil, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import {
   useGuardarContacto,
   useEliminarContacto,
   useCxCCliente,
+  useEstadoCuenta,
   useRegistrarPago,
   useOrdenesEmpresa,
 } from '../hooks/useEmpresaDetalle';
@@ -30,6 +31,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
   const navigate = useNavigate();
   const { data: contactos } = useContactos(empresa.id);
   const { data: cxc } = useCxCCliente(empresa.id);
+  const { data: estadoCuenta, isLoading: edcLoading } = useEstadoCuenta(empresa.id);
   const { data: ordenes, isLoading: ordenesLoading } = useOrdenesEmpresa(empresa.id);
   const guardar = useGuardarContacto(empresa.id);
   const eliminar = useEliminarContacto(empresa.id);
@@ -224,6 +226,54 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          {/* Historial de movimientos (estado de cuenta completo) */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Historial de movimientos</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(`/api/clientes/${empresa.id}/pdf-estado-cuenta`, '_blank')}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Descargar PDF
+              </Button>
+            </div>
+            {edcLoading ? (
+              <p className="text-xs text-slate-500 py-2">Cargando historial…</p>
+            ) : (estadoCuenta ?? []).length === 0 ? (
+              <p className="text-xs text-slate-500 py-2">Sin movimientos registrados.</p>
+            ) : (
+              <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden max-h-72 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+                    <tr>
+                      <th className="p-2 text-left">Fecha</th>
+                      <th className="p-2 text-left">Concepto</th>
+                      <th className="p-2 text-center">Tipo</th>
+                      <th className="p-2 text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(estadoCuenta ?? []).map((t) => (
+                      <tr key={t.id} className="border-t border-slate-100 dark:border-slate-800">
+                        <td className="p-2 whitespace-nowrap">{t.fecha ? t.fecha.slice(0, 10) : '—'}</td>
+                        <td className="p-2 max-w-[180px] truncate" title={t.descripcion}>{t.descripcion}</td>
+                        <td className="p-2 text-center">
+                          <Badge variant={t.tipo === 'CARGO' ? 'rose' : 'emerald'}>
+                            {t.tipo}
+                          </Badge>
+                        </td>
+                        <td className="p-2 text-right whitespace-nowrap">
+                          {fmtMoney(t.monto, empresa.moneda_credito)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </div>
       </div>
