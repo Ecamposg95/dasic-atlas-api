@@ -3,7 +3,7 @@
 
 export type Pipeline = {
   id: number;
-  organization_id: string;
+  organization_id: string | null;
   nombre: string;
   es_default: boolean;
   creado_en: string;
@@ -11,7 +11,7 @@ export type Pipeline = {
 
 export type Stage = {
   id: number;
-  organization_id: string;
+  organization_id: string | null;
   pipeline_id: number;
   nombre: string;
   orden: number;
@@ -22,7 +22,7 @@ export type Stage = {
 
 export type Deal = {
   id: number;
-  organization_id: string;
+  organization_id: string | null;
   pipeline_id: number;
   stage_id: number;
   titulo: string;
@@ -33,7 +33,7 @@ export type Deal = {
   owner_user_id: number | null;
   orden_en_stage: number;
   creado_en: string;
-  actualizado_en: string;
+  actualizado_en: string | null;
   cerrado_en: string | null;
 };
 

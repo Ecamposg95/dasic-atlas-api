@@ -68,9 +68,12 @@ export function CrmKanbanPage() {
 
   const handleDrop = useCallback(
     (dealId: number, stageId: number) => {
+      // Evita un /move espurio (y el parpadeo) si se suelta en la misma columna.
+      const yaEnColumna = board?.deals_by_stage[String(stageId)]?.some((d) => d.id === dealId);
+      if (yaEnColumna) return;
       moveDeal.mutate({ id: dealId, move: { stage_id: stageId } });
     },
-    [moveDeal],
+    [moveDeal, board],
   );
 
   async function handleDelete(deal: Deal) {
