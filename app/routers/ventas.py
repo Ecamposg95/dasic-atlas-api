@@ -1638,7 +1638,15 @@ def generar_pdf(
                 or (d.servicio.nombre if d.servicio else None)
                 or "—"
             )
-            lineas_resumen.append(f"• {desc} (x{d.cantidad})")
+            # Clave SAT (prod/serv) como prefijo; snapshot del detalle gana,
+            # luego catálogo (producto/servicio). Se omite si no hay clave.
+            clave_sat = (
+                d.clave_prod_serv
+                or (d.producto.clave_prod_serv if d.producto else None)
+                or (d.servicio.clave_prod_serv if d.servicio else None)
+            )
+            prefijo = f"[{clave_sat}] " if clave_sat else ""
+            lineas_resumen.append(f"• {prefijo}{desc} (x{d.cantidad})")
         descripcion_unificada = concepto_titulo + "\n\n" + "\n".join(lineas_resumen)
         view_detalles = [{
             "es_unificado": True,
