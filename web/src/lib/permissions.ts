@@ -28,6 +28,12 @@ export function useIsAdmin(): boolean {
   return rol === 'administrador' || rol === 'superadmin' || rol === 'admin';
 }
 
+/** SUPERADMIN estricto (NO incluye administrador). Para la consola de plataforma. */
+export function useIsSuperadmin(): boolean {
+  const user = useAuth((s) => s.user);
+  return normalize(user?.rol) === 'superadmin';
+}
+
 /**
  * Admin tier + Gerente Comercial.
  * Úsalo para vistas/acciones de mando intermedio que NO requieren
