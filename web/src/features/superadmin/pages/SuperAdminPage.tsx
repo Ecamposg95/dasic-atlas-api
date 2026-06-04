@@ -4,7 +4,7 @@ import { useIsSuperadmin } from '@/lib/permissions';
 
 const CARDS = [
   { to: '/spa/superadmin/config', icon: SlidersHorizontal, title: 'Configuración', desc: 'IVA y vigencia de cotización, sin redeploy.', activo: true },
-  { to: '', icon: ScrollText, title: 'Auditoría', desc: 'Log de actividad global (próximamente).', activo: false },
+  { to: '/spa/superadmin/audit', icon: ScrollText, title: 'Auditoría', desc: 'Línea de tiempo de actividad registrada.', activo: true },
   { to: '', icon: Activity, title: 'Salud del sistema', desc: 'Métricas y estado (próximamente).', activo: false },
   { to: '', icon: Database, title: 'Datos y mantenimiento', desc: 'Herramientas de datos (próximamente).', activo: false },
 ];
