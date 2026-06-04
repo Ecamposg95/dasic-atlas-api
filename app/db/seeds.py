@@ -13,7 +13,7 @@ import json
 import logging
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app import models
@@ -494,11 +494,29 @@ def seed_super_admin(db: Session) -> None:
         nombre="Administrador Principal",
         email="admin@dasic.mx",
         password="784512",
-        rol=models.RolUsuario.ADMIN,
+        rol=models.RolUsuario.SUPERADMIN,
         activo=True,
     )
     UserService.create_user(db, admin)
     logger.info("Admin creado: admin@dasic.mx")
+
+
+def promote_superadmin_from_env(db: Session) -> None:
+    """Promueve a SUPERADMIN el usuario cuyo email == BOOTSTRAP_SUPERADMIN_EMAIL.
+    Idempotente. Para elevar un admin existente en prod sin auto-escalado por UI."""
+    import os
+    email = (os.getenv("BOOTSTRAP_SUPERADMIN_EMAIL") or "").strip().lower()
+    if not email:
+        return
+    u = db.query(models.Usuario).filter(func.lower(models.Usuario.email) == email).first()
+    if not u:
+        logger.warning("BOOTSTRAP_SUPERADMIN_EMAIL=%s no coincide con ningún usuario", email)
+        return
+    if u.rol == models.RolUsuario.SUPERADMIN:
+        return
+    u.rol = models.RolUsuario.SUPERADMIN
+    db.commit()
+    logger.info("Usuario %s promovido a SUPERADMIN por BOOTSTRAP_SUPERADMIN_EMAIL", email)
 
 
 def seed_marcas(db: Session) -> None:
@@ -673,6 +691,7 @@ def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
     seed_super_admin(db)
+    promote_superadmin_from_env(db)
     seed_marcas(db)
     seed_sat_catalogos_pequenos(db)
     seed_sat_clave_unidad(db)
