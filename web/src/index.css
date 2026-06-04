@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Paleta del sidebar como CSS vars para que responda al tema.
+   :root = light (default); .dark = preserva el look Atlas ONE oscuro actual. */
+:root {
+  --sidebar-bg: #f8fafc;       /* slate-50 */
+  --sidebar-bottom: #f1f5f9;   /* slate-100 */
+  --sidebar-text: #334155;     /* slate-700 */
+  --sidebar-dim: #94a3b8;      /* slate-400 (titulares de sección) */
+  --sidebar-border: #e2e8f0;   /* slate-200 */
+  --sidebar-hover: #e2e8f0;    /* slate-200 */
+  --sidebar-strong: #0f172a;   /* slate-900 (texto en hover) */
+  --sidebar-active: #2563eb;   /* blue-600 */
+  --sidebar-activebg: rgba(37, 99, 235, 0.1);
+}
+.dark {
+  --sidebar-bg: #0a1429;
+  --sidebar-bottom: #050a1a;
+  --sidebar-text: #cbd5e1;
+  --sidebar-dim: #64748b;
+  --sidebar-border: #1e293b;   /* slate-800 */
+  --sidebar-hover: rgba(30, 41, 59, 0.6);
+  --sidebar-strong: #f1f5f9;
+  --sidebar-active: #00d4e0;    /* accent glow */
+  --sidebar-activebg: rgba(0, 212, 224, 0.1);
+}
+
 @keyframes cot-row-in {
   from {
     opacity: 0;

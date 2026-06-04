@@ -86,7 +86,7 @@ export function HeaderCotizacion() {
             <ArrowRightLeft className="h-3 w-3" />
             TC
             {!tcNecesario && (
-              <span className="text-slate-600 normal-case tracking-normal font-normal text-[10px]">
+              <span className="text-slate-600 dark:text-slate-400 normal-case tracking-normal font-normal text-[10px]">
                 (no requerido)
               </span>
             )}

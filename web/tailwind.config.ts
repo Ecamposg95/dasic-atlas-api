@@ -6,12 +6,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta dark + cyan accent (matching base.html actual).
+        // Paleta del sidebar via CSS vars (light/dark en index.css).
         sidebar: {
-          DEFAULT: '#0a1429',
-          bottom: '#050a1a',
-          text: '#cbd5e1',
-          dim: '#64748b',
+          DEFAULT: 'var(--sidebar-bg)',
+          bottom: 'var(--sidebar-bottom)',
+          text: 'var(--sidebar-text)',
+          dim: 'var(--sidebar-dim)',
+          border: 'var(--sidebar-border)',
+          hover: 'var(--sidebar-hover)',
+          strong: 'var(--sidebar-strong)',
+          active: 'var(--sidebar-active)',
+          activebg: 'var(--sidebar-activebg)',
         },
         accent: {
           glow: '#00d4e0',

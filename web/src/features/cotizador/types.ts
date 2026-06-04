@@ -400,7 +400,9 @@ export type RecotizarResponse = {
 // reales del backend para evitar transformaciones a media capa.
 
 export type PlantillaLinea = {
-  producto_id: number;
+  // nullable: aunque hoy el guardado filtra a solo-catálogo, una línea
+  // fantasma/servicio legacy podría no traer producto_id. El loader lo omite.
+  producto_id: number | null;
   qty: number;
   utilidad: number;
   descuento: number;

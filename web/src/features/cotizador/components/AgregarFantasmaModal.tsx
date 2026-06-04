@@ -227,7 +227,7 @@ export function AgregarFantasmaModal() {
               desde el buscador; editable antes de guardar. */}
           <div>
             <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-              <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-slate-600 normal-case">(opcional)</span>
+              <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-slate-600 dark:text-slate-400 normal-case">(opcional)</span>
             </label>
             <Input
               value={skuLibre}
@@ -345,7 +345,7 @@ export function AgregarFantasmaModal() {
           <div>
             <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
               <Building2 className="h-2.5 w-2.5" />
-              Proveedor sugerido <span className="text-slate-600 normal-case">(opcional pero recomendado)</span>
+              Proveedor sugerido <span className="text-slate-600 dark:text-slate-400 normal-case">(opcional pero recomendado)</span>
             </label>
             <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">

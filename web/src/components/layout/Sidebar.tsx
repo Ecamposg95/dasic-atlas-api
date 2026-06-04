@@ -90,13 +90,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} aria-hidden="true" />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-text border-r border-slate-800 flex flex-col transition-transform duration-200 md:static md:translate-x-0 md:z-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-text border-r border-sidebar-border flex flex-col transition-transform duration-200 md:static md:translate-x-0 md:z-auto ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-4 pt-4 pb-3 shrink-0 border-b border-slate-800/60">
+        <div className="px-4 pt-4 pb-3 shrink-0 border-b border-sidebar-border">
           <div className="text-xl font-bold leading-tight">DASIC</div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-0.5">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-sidebar-dim mt-0.5">
             Atlas ONE <span className="text-accent-glow">·</span> Sistema Industrial
           </div>
         </div>
@@ -104,7 +104,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
           {secciones.map((section) => (
             <div key={section.title}>
-              <div className="px-2 mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+              <div className="px-2 mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-dim">
                 {section.title}
               </div>
               <div className="space-y-0.5">
@@ -116,8 +116,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                     className={({ isActive }) =>
                       `flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition ${
                         isActive
-                          ? 'bg-accent-glow/10 text-accent-glow font-medium'
-                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-slate-100'
+                          ? 'bg-sidebar-activebg text-sidebar-active font-medium'
+                          : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-strong'
                       }`
                     }
                   >

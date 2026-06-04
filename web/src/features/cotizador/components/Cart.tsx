@@ -69,7 +69,7 @@ export function Cart() {
 
   const emptyHint = (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-dashed rounded-xl p-8 text-center">
-      <ShoppingCart className="mx-auto h-7 w-7 text-slate-600 mb-2" />
+      <ShoppingCart className="mx-auto h-7 w-7 text-slate-600 dark:text-slate-400 mb-2" />
       <div className="text-xs font-medium text-slate-700 dark:text-slate-300">El carrito está vacío</div>
       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
         Busca productos arriba y agrégalos para empezar.

@@ -78,6 +78,9 @@ export function PlantillasModal() {
     let cargadas = 0;
     let faltantes = 0;
     for (const l of p.lineas) {
+      // Plantillas solo guardan líneas de catálogo (ver guarda al guardar);
+      // si una línea quedó sin producto_id (fantasma/servicio legacy), se omite.
+      if (l.producto_id == null) { faltantes += 1; continue; }
       const prod = await fetchProductoById(l.producto_id);
       if (!prod) { faltantes += 1; continue; }
       addProducto(prod, l.qty, l.utilidad);
