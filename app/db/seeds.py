@@ -469,6 +469,9 @@ _BACKFILL_DDL = [
 
     # 20260603_01 — audit log de fusión de empresas (Sub-3 dedup)
     "CREATE TABLE IF NOT EXISTS cliente_merge_log (id SERIAL PRIMARY KEY, survivor_id INTEGER, loser_id INTEGER, loser_nombre VARCHAR(150), loser_rfc VARCHAR(50), loser_saldo NUMERIC(12,2), n_ordenes INTEGER, n_transacciones INTEGER, n_remisiones INTEGER, n_contactos INTEGER, merged_by_id INTEGER, merged_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
+
+    # 20260603_02 — config de plataforma editable en runtime (consola super-admin)
+    "CREATE TABLE IF NOT EXISTS platform_config (clave VARCHAR(60) PRIMARY KEY, valor TEXT, actualizado_por_id INTEGER, actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
 ]
 
 
