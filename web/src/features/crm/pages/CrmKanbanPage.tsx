@@ -1,0 +1,191 @@
+import { useState, useMemo, useCallback } from 'react';
+import { KanbanSquare, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
+import { toast } from '@/lib/toast';
+import { confirm } from '@/lib/confirm';
+import { useClientes } from '@/features/clientes/hooks/useClientes';
+import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios';
+import type { Cliente } from '@/features/clientes/types';
+import type { Usuario } from '@/features/usuarios/types';
+import { useCrmPipelines, useCrmBoard } from '../hooks/useCrmBoard';
+import { useMoveDeal, useDeleteDeal } from '../hooks/useCrmDeals';
+import { KanbanColumn } from '../components/KanbanColumn';
+import { DealFormModal } from '../components/DealFormModal';
+import type { Deal } from '../types';
+
+export function CrmKanbanPage() {
+  const { data: pipelines = [], isLoading: loadingPipelines } = useCrmPipelines();
+
+  // Derive default pipeline id once pipelines load.
+  const defaultPipelineId = useMemo(() => {
+    if (pipelines.length === 0) return null;
+    const def = pipelines.find((p) => p.es_default);
+    return (def ?? pipelines[0]).id;
+  }, [pipelines]);
+
+  const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
+
+  // Use the controlled selection if set, otherwise fall back to the default.
+  const activePipelineId = selectedPipelineId ?? defaultPipelineId;
+
+  const { data: board, isLoading: loadingBoard } = useCrmBoard(activePipelineId);
+
+  const { data: clientes = [] } = useClientes(1, '', 500);
+  const { data: usuarios = [] } = useUsuarios();
+
+  // Build lookup maps for O(1) access in DealCard.
+  const clientesMap = useMemo(
+    () => new Map<number, Cliente>(clientes.map((c) => [c.id, c])),
+    [clientes],
+  );
+  const usuariosMap = useMemo(
+    () => new Map<number, Usuario>(usuarios.map((u) => [u.id, u])),
+    [usuarios],
+  );
+
+  const moveDeal = useMoveDeal(activePipelineId);
+  const deleteDeal = useDeleteDeal();
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+
+  function openCreate() {
+    setEditingDeal(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(deal: Deal) {
+    setEditingDeal(deal);
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditingDeal(null);
+  }
+
+  const handleDrop = useCallback(
+    (dealId: number, stageId: number) => {
+      moveDeal.mutate({ id: dealId, move: { stage_id: stageId } });
+    },
+    [moveDeal],
+  );
+
+  async function handleDelete(deal: Deal) {
+    const ok = await confirm({
+      titulo: 'Eliminar deal',
+      mensaje: `¿Eliminar "${deal.titulo}"? Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      tono: 'danger',
+    });
+    if (!ok) return;
+
+    deleteDeal.mutate(
+      { id: deal.id, pipelineId: deal.pipeline_id },
+      {
+        onSuccess: () => toast({ kind: 'success', title: 'Deal eliminado' }),
+      },
+    );
+  }
+
+  // Sorted stages for this board.
+  const stages = useMemo(
+    () => [...(board?.stages ?? [])].sort((a, b) => a.orden - b.orden),
+    [board],
+  );
+
+  if (loadingPipelines) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+        Cargando pipelines…
+      </div>
+    );
+  }
+
+  if (pipelines.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-2 text-muted-foreground">
+        <KanbanSquare className="h-10 w-10 opacity-30" />
+        <p className="text-sm">No hay pipelines configurados.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4 px-4 pt-4 pb-3 shrink-0 border-b border-border">
+        <div className="flex items-center gap-2">
+          <KanbanSquare className="h-5 w-5 text-accent-glow shrink-0" />
+          <h1 className="text-lg font-semibold">CRM · Pipeline</h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Pipeline selector — only shown when >1 pipeline */}
+          {pipelines.length > 1 && (
+            <Select
+              value={activePipelineId != null ? String(activePipelineId) : ''}
+              onChange={(e) => setSelectedPipelineId(parseInt(e.target.value, 10))}
+              className="w-48 h-9 text-sm"
+            >
+              {pipelines.map((p) => (
+                <option key={p.id} value={String(p.id)}>
+                  {p.nombre}
+                </option>
+              ))}
+            </Select>
+          )}
+
+          <Button size="sm" onClick={openCreate} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Nuevo deal
+          </Button>
+        </div>
+      </div>
+
+      {/* Board area — horizontal scroll */}
+      <div className="flex-1 overflow-auto">
+        {loadingBoard ? (
+          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+            Cargando tablero…
+          </div>
+        ) : stages.length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+            Este pipeline no tiene etapas configuradas.
+          </div>
+        ) : (
+          <div className="flex gap-4 p-4 min-w-max">
+            {stages.map((stage) => {
+              // deals_by_stage keys are stringified stage ids.
+              const deals = board?.deals_by_stage[String(stage.id)] ?? [];
+              return (
+                <KanbanColumn
+                  key={stage.id}
+                  stage={stage}
+                  deals={deals}
+                  clientesMap={clientesMap}
+                  usuariosMap={usuariosMap}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onDrop={handleDrop}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Deal form modal */}
+      {modalOpen && activePipelineId != null && (
+        <DealFormModal
+          pipelineId={activePipelineId}
+          stages={stages}
+          deal={editingDeal}
+          onClose={closeModal}
+        />
+      )}
+    </div>
+  );
+}

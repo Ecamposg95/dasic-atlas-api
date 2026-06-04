@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity, BarChart3, BookMarked, ClipboardCheck, Coins, Contact, FileClock, FileText, Ghost,
-  LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, ShieldCheck, Tags,
+  KanbanSquare, LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, ShieldCheck, Tags,
   Truck, UserCog, Users, Wallet, Wrench,
 } from 'lucide-react';
 import { useIsSuperadmin } from '@/lib/permissions';
@@ -16,6 +16,7 @@ const SECTIONS: NavSection[] = [
     title: 'Comercial',
     items: [
       { to: '/spa/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+      { to: '/spa/crm', label: 'CRM Pipeline', Icon: KanbanSquare },
       { to: '/spa/cotizador', label: 'Cotizador', Icon: FileText },
       { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
       { to: '/spa/seguimiento', label: 'Seguimiento', Icon: ListChecks },
