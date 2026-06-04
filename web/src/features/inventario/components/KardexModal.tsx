@@ -87,16 +87,20 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
                 </tr>
               </thead>
               <tbody>
-                {data.movimientos.map((m) => (
+                {data.movimientos.map((m) => {
+                  // Los enums de stock se serializan en minúsculas desde el backend.
+                  const tipo = (m.tipo || '').toUpperCase();
+                  const esEgreso = tipo === 'SALIDA' || tipo === 'RESERVA';
+                  return (
                   <tr key={m.id} className="border-t border-slate-100 dark:border-slate-800">
                     <td className="p-3 whitespace-nowrap">
                       {m.creado_en ? m.creado_en.slice(0, 16).replace('T', ' ') : '—'}
                     </td>
                     <td className="p-3 text-center">
-                      <Badge variant={TIPO_VARIANT[m.tipo] ?? 'slate'}>{m.tipo}</Badge>
+                      <Badge variant={TIPO_VARIANT[tipo] ?? 'slate'}>{tipo}</Badge>
                     </td>
-                    <td className={`p-3 text-right font-mono font-semibold ${m.tipo === 'SALIDA' || m.tipo === 'RESERVA' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                      {m.tipo === 'SALIDA' || m.tipo === 'RESERVA' ? '−' : '+'}{fmt(Math.abs(m.cantidad))}
+                    <td className={`p-3 text-right font-mono font-semibold ${esEgreso ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                      {esEgreso ? '−' : '+'}{fmt(Math.abs(m.cantidad))}
                     </td>
                     <td className="p-3 text-right font-mono">{fmt(m.stock_resultante)}</td>
                     <td className="p-3 text-slate-600 dark:text-slate-400">
@@ -108,7 +112,8 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
                       {m.motivo ?? '—'}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

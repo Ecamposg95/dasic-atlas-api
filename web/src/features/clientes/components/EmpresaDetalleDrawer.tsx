@@ -261,8 +261,8 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
                         <td className="p-2 whitespace-nowrap">{t.fecha ? t.fecha.slice(0, 10) : '—'}</td>
                         <td className="p-2 max-w-[180px] truncate" title={t.descripcion}>{t.descripcion}</td>
                         <td className="p-2 text-center">
-                          <Badge variant={t.tipo === 'CARGO' ? 'rose' : 'emerald'}>
-                            {t.tipo}
+                          <Badge variant={(t.tipo || '').toUpperCase() === 'CARGO' ? 'rose' : 'emerald'}>
+                            {(t.tipo || '').toUpperCase()}
                           </Badge>
                         </td>
                         <td className="p-2 text-right whitespace-nowrap">
