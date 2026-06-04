@@ -211,6 +211,9 @@ export function SeguimientoPage() {
     }
   }, [searchDebounced, estatusFilter]);
 
+  // vencimientoFilter es client-side → resetear a página 1 al cambiarlo.
+  useEffect(() => { setPage(1); }, [vencimientoFilter]);
+
   const { data: historial, isLoading, isPlaceholderData, error } = useHistorial(page, searchDebounced, estatusFilter);
 
   // Mutations

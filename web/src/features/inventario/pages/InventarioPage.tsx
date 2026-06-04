@@ -89,6 +89,10 @@ export function InventarioPage() {
     }
   }, [filtroQDebounced]);
 
+  // Los filtros client-side reducen la página actual → volver a página 1 al cambiarlos
+  // (evita quedar en una página alta que tras el filtro queda vacía).
+  useEffect(() => { setPage(1); }, [filtroMarca, filtroCategoria, soloBajoStock]);
+
   const { data: productos = [], isLoading, isPlaceholderData, error } = useProductos(page, filtroQDebounced);
   const { data: marcas = [] } = useMarcas();
   const { data: proveedores = [] } = useProveedores();
