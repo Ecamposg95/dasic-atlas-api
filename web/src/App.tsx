@@ -5,6 +5,7 @@ import { queryClient } from '@/lib/queryClient';
 import { router } from '@/router';
 import { Toaster } from '@/components/ui/toaster';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ConfirmHost } from '@/lib/confirm';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <RouterProvider router={router} />
       </ErrorBoundary>
       <Toaster />
+      <ConfirmHost />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
