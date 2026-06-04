@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  ChevronLeft,
+  ChevronRight,
   ListChecks,
   FileText,
   Pencil,
@@ -173,17 +175,43 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, load
   );
 }
 
+const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 // ─── SeguimientoPage ───────────────────────────────────────────────────────────
 
 export function SeguimientoPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: historial, isLoading, error } = useHistorial(200);
 
   // Filtros
   const [search, setSearch] = useState('');
   const [estatusFilter, setEstatusFilter] = useState<EstatusFilter>('TODOS');
   const [vencimientoFilter, setVencimientoFilter] = useState<VencimientoFilter>('TODAS');
+  const [page, setPage] = useState(1);
+
+  const searchDebounced = useDebounced(search);
+
+  // Reset page when server-side filters change
+  const prevFilters = useRef({ q: searchDebounced, estatus: estatusFilter });
+  useEffect(() => {
+    const prev = prevFilters.current;
+    if (prev.q !== searchDebounced || prev.estatus !== estatusFilter) {
+      setPage(1);
+      prevFilters.current = { q: searchDebounced, estatus: estatusFilter };
+    }
+  }, [searchDebounced, estatusFilter]);
+
+  const { data: historial, isLoading, isPlaceholderData, error } = useHistorial(page, searchDebounced, estatusFilter);
 
   // Mutations
   const [loadingId, setLoadingId] = useState<number | null>(null);
@@ -255,24 +283,11 @@ export function SeguimientoPage() {
     cancelarMutation.mutate(item.id);
   }
 
-  // Client-side filtering
+  // Client-side filtering — solo vencimiento (search y estatus van al servidor)
   const filtered = useMemo(() => {
     if (!historial) return [];
     return historial.filter((item) => {
-      // Search
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        const matchFolio = item.folio.toLowerCase().includes(q);
-        const matchCliente = item.cliente.toLowerCase().includes(q);
-        if (!matchFolio && !matchCliente) return false;
-      }
-
-      // Estatus
-      if (estatusFilter !== 'TODOS' && item.estatus.toUpperCase() !== estatusFilter) {
-        return false;
-      }
-
-      // Vencimiento
+      // Vencimiento — client-side (backend no lo soporta aún)
       if (vencimientoFilter === 'vigente' && (item.esta_vencida || item.fecha_vencimiento === null)) {
         return false;
       }
@@ -285,7 +300,7 @@ export function SeguimientoPage() {
 
       return true;
     });
-  }, [historial, search, estatusFilter, vencimientoFilter]);
+  }, [historial, vencimientoFilter]);
 
   // Error banner (non-401)
   const apiError = error as ApiError | null;
@@ -342,7 +357,7 @@ export function SeguimientoPage() {
 
           {historial && (
             <span className="text-xs text-slate-500 ml-auto">
-              {filtered.length} / {historial.length} registros
+              {filtered.length} registro(s){page > 1 ? ` — p. ${page}` : ''}
             </span>
           )}
         </div>
@@ -448,6 +463,19 @@ export function SeguimientoPage() {
               )}
             </DataTableBody>
           </DataTable>
+        )}
+
+        {/* Paginación */}
+        {(page > 1 || (historial && historial.length === PAGE_SIZE)) && (
+          <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+            <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+            </Button>
+            <span>Página {page}{historial && historial.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+            <Button variant="outline" size="sm" disabled={!historial || historial.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+              Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         )}
       </div>
     </div>

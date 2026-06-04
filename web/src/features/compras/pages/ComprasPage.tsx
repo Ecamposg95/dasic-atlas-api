@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Eye, Printer, Package, DollarSign, ShoppingCart,
+  ChevronLeft, ChevronRight, Eye, Printer, Package, DollarSign, ShoppingCart,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,18 +67,44 @@ function tieneSaldoPendiente(e: EstatusOC) {
   return !['pagado', 'cancelada'].includes(e);
 }
 
+const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 export function ComprasPage() {
-  const { data: ordenes, isLoading, error } = useOrdenesCompra();
   const navigate = useNavigate();
   const puedeCrearOC = useIsAdminOrGerente();
 
   const [filtroQ, setFiltroQ] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState<EstatusOC | ''>('');
+  const [page, setPage] = useState(1);
   const [modalDetalle, setModalDetalle] = useState<number | null>(null);
   const [modalRecepcion, setModalRecepcion] = useState<OrdenCompraListItem | null>(null);
   const [modalPago, setModalPago] = useState<OrdenCompraListItem | null>(null);
   const [modalProveedores, setModalProveedores] = useState(false);
   const [modalCrearOC, setModalCrearOC] = useState(false);
+
+  const filtroQDebounced = useDebounced(filtroQ);
+
+  // Reset page when filters change
+  const prevFilters = useRef({ q: filtroQDebounced, estatus: filtroEstatus });
+  useEffect(() => {
+    const prev = prevFilters.current;
+    if (prev.q !== filtroQDebounced || prev.estatus !== filtroEstatus) {
+      setPage(1);
+      prevFilters.current = { q: filtroQDebounced, estatus: filtroEstatus };
+    }
+  }, [filtroQDebounced, filtroEstatus]);
+
+  const { data: ordenes, isLoading, isPlaceholderData, error } = useOrdenesCompra(page, filtroQDebounced, filtroEstatus);
 
   // 401 → login
   useEffect(() => {
@@ -86,18 +112,7 @@ export function ComprasPage() {
     if (status === 401) window.location.href = '/spa/login';
   }, [error]);
 
-  const filtradas = useMemo(() => {
-    if (!ordenes) return [];
-    const needle = filtroQ.trim().toLowerCase();
-    return ordenes.filter((o) => {
-      if (filtroEstatus && o.estatus !== filtroEstatus) return false;
-      if (needle) {
-        const hay = `${o.folio ?? ''} ${o.proveedor}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [ordenes, filtroQ, filtroEstatus]);
+  const filtradas = ordenes ?? [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">
@@ -247,6 +262,19 @@ export function ComprasPage() {
           ))}
         </DataTableBody>
       </DataTable>
+
+      {/* Paginación */}
+      {(page > 1 || filtradas.length === PAGE_SIZE) && (
+        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span>Página {page}{filtradas.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+          <Button variant="outline" size="sm" disabled={filtradas.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {/* Modales */}
       {modalDetalle != null && (

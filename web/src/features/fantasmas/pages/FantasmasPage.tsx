@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Eye, Pen, ArrowUp, X, Ghost, FileSpreadsheet, Brush, Truck,
+  ChevronLeft, ChevronRight, Eye, Pen, ArrowUp, X, Ghost, FileSpreadsheet, Brush, Truck,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,18 @@ import { PromoverModal } from '../components/PromoverModal';
 import type {
   EstadoFantasma, Fantasma, FantasmaDetalle, FantasmaUpdatePayload, Moneda,
 } from '../types';
+
+const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 const ESTADOS: { key: EstadoFantasma; label: string; variant: 'amber' | 'cyan' | 'emerald' | 'violet' | 'slate' }[] = [
   { key: 'PENDIENTE', label: 'Pendientes', variant: 'amber' },
@@ -46,13 +58,23 @@ export function FantasmasPage() {
   const [filtroEstado, setFiltroEstado] = useState<EstadoFantasma | ''>('PENDIENTE');
   const [filtroProveedor, setFiltroProveedor] = useState<string>('');
   const [filtroMoneda, setFiltroMoneda] = useState<Moneda | ''>('');
+  const [page, setPage] = useState(1);
   const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
   const [modalDetalle, setModalDetalle] = useState<number | null>(null);
   const [modalEditar, setModalEditar] = useState<Fantasma | null>(null);
   const [modalAsignar, setModalAsignar] = useState(false);
   const [promoverTarget, setPromoverTarget] = useState<Fantasma | null>(null);
 
-  const { data: resp, isLoading, error } = useFantasmas();
+  const filtroQDebounced = useDebounced(filtroQ);
+
+  // Parse proveedor_id for server-side (null if sinAsignar or empty)
+  const proveedorIdServer = filtroProveedor && filtroProveedor !== '__sin_asignar__'
+    ? Number(filtroProveedor)
+    : null;
+
+  const { data: resp, isLoading, isPlaceholderData, error } = useFantasmas(
+    page, filtroQDebounced, filtroEstado, proveedorIdServer,
+  );
   const { data: proveedores } = useProveedores();
   const qc = useQueryClient();
 
@@ -64,7 +86,17 @@ export function FantasmasPage() {
 
   const items = resp?.items ?? [];
 
-  // KPIs — conteos sobre TODOS los items (sin filtros)
+  // Reset page when server-side filters change
+  const prevFilters = useRef({ q: filtroQDebounced, estado: filtroEstado, proveedorId: proveedorIdServer });
+  useEffect(() => {
+    const prev = prevFilters.current;
+    if (prev.q !== filtroQDebounced || prev.estado !== filtroEstado || prev.proveedorId !== proveedorIdServer) {
+      setPage(1);
+      prevFilters.current = { q: filtroQDebounced, estado: filtroEstado, proveedorId: proveedorIdServer };
+    }
+  }, [filtroQDebounced, filtroEstado, proveedorIdServer]);
+
+  // KPIs — conteos sobre items de la página actual (relabeled "en esta página")
   const counts = useMemo(() => {
     const c: Record<EstadoFantasma, number> = {
       PENDIENTE: 0, EN_OC: 0, RECIBIDO: 0, PROMOVIDO: 0, DESCARTADO: 0,
@@ -73,21 +105,14 @@ export function FantasmasPage() {
     return c;
   }, [items]);
 
-  // Filtros client-side
+  // Filtros client-side residuales (moneda, sinAsignar)
   const filtrados = useMemo(() => {
-    const needle = filtroQ.trim().toLowerCase();
     return items.filter((f) => {
-      if (filtroEstado && f.estado !== filtroEstado) return false;
       if (filtroProveedor === '__sin_asignar__' && f.proveedor_sugerido_id != null) return false;
-      if (filtroProveedor && filtroProveedor !== '__sin_asignar__' && f.proveedor_sugerido_id !== Number(filtroProveedor)) return false;
       if (filtroMoneda && f.moneda !== filtroMoneda) return false;
-      if (needle) {
-        const hay = `${f.descripcion} ${f.sku_libre ?? ''}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
       return true;
     });
-  }, [items, filtroQ, filtroEstado, filtroProveedor, filtroMoneda]);
+  }, [items, filtroProveedor, filtroMoneda]);
 
   // Bulk selection
   function toggleSel(id: number) {
@@ -426,6 +451,19 @@ export function FantasmasPage() {
 
       {promoverTarget && (
         <PromoverModal fantasma={promoverTarget} onClose={() => setPromoverTarget(null)} />
+      )}
+
+      {/* Paginación */}
+      {(page > 1 || items.length === PAGE_SIZE) && (
+        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span>Página {page}{items.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+          <Button variant="outline" size="sm" disabled={items.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
       )}
     </div>
   );

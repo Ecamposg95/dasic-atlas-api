@@ -134,7 +134,7 @@ export function PreciosPage() {
   const [filtroProveedor, setFiltroProveedor] = useState<string>('');
   const [comparaProductoId, setComparaProductoId] = useState<number | null>(null);
 
-  const { data: productosData } = useProductos();
+  const { data: productosData } = useProductos(1, '', 500);
   const { data: proveedoresData } = useProveedores();
 
   const productos = productosData ?? [];

@@ -5,7 +5,7 @@ from pathlib import Path as _P
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, select, text
+from sqlalchemy import desc, func, or_, select, text
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone
@@ -1353,7 +1353,10 @@ def convertir_cotizacion(
 # --- 4. LISTAR HISTORIAL ---
 @router.get("/historial", dependencies=[Depends(allow_all_staff)])
 def listar_historial(
+    skip: int = 0,
     limit: int = 50,
+    q: Optional[str] = None,
+    estatus: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
@@ -1361,7 +1364,25 @@ def listar_historial(
     query = db.query(models.OrdenVenta)
     if is_owner_scoped(current_user, "read", "cotizacion"):
         query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
-    ordenes = query.order_by(desc(models.OrdenVenta.fecha_creacion)).limit(limit).all()
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.OrdenVenta.folio.ilike(like),
+            models.OrdenVenta.cliente.has(
+                models.Cliente.nombre_empresa.ilike(like)
+            ),
+        ))
+    if estatus and estatus.upper() != "TODOS":
+        query = query.filter(
+            models.OrdenVenta.estatus == estatus.lower()
+        )
+    ordenes = (
+        query
+        .order_by(desc(models.OrdenVenta.fecha_creacion))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     ahora = datetime.utcnow().date()
 

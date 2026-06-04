@@ -1,14 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { Producto } from '../types';
 
-// Carga todos los productos (page_size=200). Los filtros son client-side
-// ya que el catálogo suele ser <500 items.
+// Paginación server-side via skip/limit (backend retorna array plano).
+// q se envía al backend (ILIKE en sku/sku_comercial/nombre/marca).
+// filtroMarca (marca_id) y filtroCategoria y soloBajoStock permanecen client-side
+// porque el backend no filtra por ellos en este endpoint.
+// pageSize: pasa 500 para obtener todos (uso en pickers/precios).
 
-export function useProductos() {
+export function useProductos(page = 1, q = '', pageSize = 50) {
+  const skip = (page - 1) * pageSize;
+  const params = new URLSearchParams();
+  params.set('skip', String(skip));
+  params.set('limit', String(pageSize));
+  if (q.trim()) params.set('q', q.trim());
   return useQuery<Producto[]>({
-    queryKey: ['productos'],
-    queryFn: () => api.get<Producto[]>('/api/productos?page_size=200'),
+    queryKey: ['productos', page, q.trim(), pageSize],
+    queryFn: () => api.get<Producto[]>(`/api/productos?${params.toString()}`),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }

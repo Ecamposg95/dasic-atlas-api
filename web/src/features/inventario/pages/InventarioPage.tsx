@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Package, Pencil, Plus, Sliders, Trash2, Upload, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,18 @@ type ImportFeedback = {
   errores: string[];
 };
 
+const PAGE_SIZE = 50;
 const SELECT_CLS = 'h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm';
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 function fmtMoney(n: number | undefined | null, moneda?: string) {
   if (n == null) return '—';
@@ -55,6 +66,7 @@ export function InventarioPage() {
   const [filtroMarca, setFiltroMarca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [soloBajoStock, setSoloBajoStock] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalEditar, setModalEditar] = useState<Producto | null>(null);
@@ -66,7 +78,18 @@ export function InventarioPage() {
   const [expandErrores, setExpandErrores] = useState(false);
   const importMut = useImportProductos();
 
-  const { data: productos = [], isLoading, error } = useProductos();
+  const filtroQDebounced = useDebounced(filtroQ);
+
+  // Reset page when server-side q changes
+  const prevQ = useRef(filtroQDebounced);
+  useEffect(() => {
+    if (prevQ.current !== filtroQDebounced) {
+      setPage(1);
+      prevQ.current = filtroQDebounced;
+    }
+  }, [filtroQDebounced]);
+
+  const { data: productos = [], isLoading, isPlaceholderData, error } = useProductos(page, filtroQDebounced);
   const { data: marcas = [] } = useMarcas();
   const { data: proveedores = [] } = useProveedores();
   const isAdmin = useIsAdmin();
@@ -86,23 +109,16 @@ export function InventarioPage() {
     return Array.from(cats).sort();
   }, [productos]);
 
-  // Filtros client-side
+  // Filtros client-side residuales (marca_id, categoria, bajo stock)
+  // q ya va al servidor; estos filtros restringen la página actual
   const filtrados = useMemo(() => {
-    const needle = filtroQ.trim().toLowerCase();
     return productos.filter((p) => {
       if (filtroMarca && String(p.marca_id) !== filtroMarca) return false;
       if (filtroCategoria && p.categoria !== filtroCategoria) return false;
       if (soloBajoStock && (p.es_servicio || p.stock_actual >= p.stock_minimo)) return false;
-      if (needle) {
-        const hay = [p.sku, p.sku_comercial, p.nombre, p.marca]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
       return true;
     });
-  }, [productos, filtroQ, filtroMarca, filtroCategoria, soloBajoStock]);
+  }, [productos, filtroMarca, filtroCategoria, soloBajoStock]);
 
   // Delete mutation
   const deleteMut = useMutation<void, { status?: number; detail?: string }, number>({
@@ -396,6 +412,19 @@ export function InventarioPage() {
           ))}
         </DataTableBody>
       </DataTable>
+
+      {/* Paginación */}
+      {(page > 1 || productos.length === PAGE_SIZE) && (
+        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span>Página {page}{productos.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+          <Button variant="outline" size="sm" disabled={productos.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {/* Modal nuevo producto */}
       {modalNuevo && (

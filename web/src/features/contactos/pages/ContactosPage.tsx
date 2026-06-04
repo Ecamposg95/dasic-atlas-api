@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
-import { Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
 import { DataTable, DataTableHead, DataTableBody, DataTableRow, DataTableEmpty } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,41 @@ import { ContactoFormModal } from '../components/ContactoFormModal';
 import { ContactoHistorialDrawer } from '../components/ContactoHistorialDrawer';
 import type { ContactoGlobal } from '../types';
 
+const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 export function ContactosPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ContactoGlobal | null>(null);
   const [histContacto, setHistContacto] = useState<ContactoGlobal | null>(null);
 
-  const { data, isLoading } = useContactosGlobal(q, empresaId);
-  const { data: empresas } = useClientes();
+  const qDebounced = useDebounced(q);
+
+  // Reset page when filters change
+  const prevFilters = useRef({ q: qDebounced, empresaId });
+  useEffect(() => {
+    if (prevFilters.current.q !== qDebounced || prevFilters.current.empresaId !== empresaId) {
+      setPage(1);
+      prevFilters.current = { q: qDebounced, empresaId };
+    }
+  }, [qDebounced, empresaId]);
+
+  const { data, isLoading, isPlaceholderData } = useContactosGlobal(qDebounced, empresaId, page);
+  // Empresas para el selector del filtro: carga 500 para llenar el dropdown completo
+  const { data: empresas } = useClientes(1, '', 500);
   const contactos = useMemo(() => data?.items ?? [], [data]);
 
   function onCotizar(c: ContactoGlobal) {
@@ -98,6 +123,19 @@ export function ContactosPage() {
           )}
         </DataTableBody>
       </DataTable>
+
+      {/* Paginación */}
+      {(page > 1 || contactos.length === PAGE_SIZE) && (
+        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span>Página {page}{contactos.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+          <Button variant="outline" size="sm" disabled={contactos.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       <ContactoFormModal key={editing?.id ?? 'new'} open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
       <ContactoHistorialDrawer contacto={histContacto} onClose={() => setHistContacto(null)} />

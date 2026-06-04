@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,18 @@ import { ClienteFormModal } from '../components/ClienteFormModal';
 import { EmpresaDetalleDrawer } from '../components/EmpresaDetalleDrawer';
 import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../types';
 
+const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 function fmtMoney(moneda: MonedaCredito, value: number | string) {
   const n = Number(value) || 0;
   const amount = `$${n.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
@@ -31,6 +43,7 @@ function fmtMoney(moneda: MonedaCredito, value: number | string) {
 
 export function ClientesPage() {
   const [filtroQ, setFiltroQ] = useState('');
+  const [page, setPage] = useState(1);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
   const [detalle, setDetalle] = useState<Cliente | null>(null);
@@ -39,7 +52,18 @@ export function ClientesPage() {
   const { data: dups } = useDuplicados();
   const dupCount = dups?.length ?? 0;
 
-  const { data: clientes, isLoading, error } = useClientes();
+  const filtroQDebounced = useDebounced(filtroQ);
+
+  // Reset page when search changes
+  const prevQ = useRef(filtroQDebounced);
+  useEffect(() => {
+    if (prevQ.current !== filtroQDebounced) {
+      setPage(1);
+      prevQ.current = filtroQDebounced;
+    }
+  }, [filtroQDebounced]);
+
+  const { data: clientes, isLoading, isPlaceholderData, error } = useClientes(page, filtroQDebounced);
   const qc = useQueryClient();
 
   // 401 → login
@@ -48,21 +72,7 @@ export function ClientesPage() {
     if (status === 401) window.location.href = '/spa/login';
   }, [error]);
 
-  const items = clientes ?? [];
-
-  // Filtros client-side
-  const filtrados = useMemo(() => {
-    const needle = filtroQ.trim().toLowerCase();
-    return items.filter((c) => {
-      if (needle) {
-        const hay = [c.nombre_empresa, c.rfc_tax_id ?? '', c.contacto_nombre ?? '']
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [items, filtroQ]);
+  const filtrados = clientes ?? [];
 
   // Mutations
   const crearMut = useMutation<Cliente, { status?: number; detail?: string }, ClienteCreate>({
@@ -125,7 +135,7 @@ export function ClientesPage() {
           <Users className="h-5 w-5 text-cyan-400" /> Empresas
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{filtrados.length} empresa(s)</span>
+          <span className="text-xs text-slate-500">{filtrados.length} empresa(s){page > 1 ? ` — p. ${page}` : ''}</span>
           {isAdmin && dupCount > 0 && (
             <Button size="sm" variant="outline" onClick={() => navigate('/spa/empresas-unificar')}>
               Unificar duplicados ({dupCount})
@@ -178,7 +188,7 @@ export function ClientesPage() {
           {!isLoading && filtrados.length === 0 && (
             <DataTableEmpty colSpan={9}>
               <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-              {items.length === 0 ? 'Sin clientes registrados' : 'Sin coincidencias con la búsqueda'}
+              {filtroQDebounced ? 'Sin coincidencias con la búsqueda' : 'Sin clientes registrados'}
             </DataTableEmpty>
           )}
           {filtrados.map((c) => {
@@ -251,6 +261,19 @@ export function ClientesPage() {
           })}
         </DataTableBody>
       </DataTable>
+
+      {/* Paginación */}
+      {(page > 1 || filtrados.length === PAGE_SIZE) && (
+        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+          </Button>
+          <span>Página {page}{filtrados.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
+          <Button variant="outline" size="sm" disabled={filtrados.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
 
       {/* Modal crear */}
       {modalCrear && (

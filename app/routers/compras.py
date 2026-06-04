@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func, text
-from typing import List
+from sqlalchemy import desc, func, or_, text
+from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
 from jinja2 import Environment, BaseLoader
@@ -278,11 +278,32 @@ def crear_proveedor(proveedor: schemas.ProveedorCreate, db: Session = Depends(ge
 # Listar Historial (alias en "/" para compat con clientes con caché viejo)
 @router.get("/")
 @router.get("/historial")
-def listar_historial_compras(limit: int = 50, db: Session = Depends(get_db)):
-    ordenes = db.query(models.OrdenCompra)\
-        .order_by(desc(models.OrdenCompra.fecha))\
-        .limit(limit).all()
-    
+def listar_historial_compras(
+    skip: int = 0,
+    limit: int = 50,
+    q: Optional[str] = None,
+    estatus: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.OrdenCompra)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.OrdenCompra.folio.ilike(like),
+            models.OrdenCompra.proveedor.has(
+                models.Proveedor.nombre_empresa.ilike(like)
+            ),
+        ))
+    if estatus:
+        query = query.filter(models.OrdenCompra.estatus == estatus)
+    ordenes = (
+        query
+        .order_by(desc(models.OrdenCompra.fecha))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     resultado = []
     for o in ordenes:
         resultado.append({
