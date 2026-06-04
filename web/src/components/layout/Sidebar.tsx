@@ -90,7 +90,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} aria-hidden="true" />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-text border-r border-sidebar-border flex flex-col transition-transform duration-200 md:static md:translate-x-0 md:z-auto ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 max-w-[88vw] bg-sidebar text-sidebar-text border-r border-sidebar-border flex flex-col transition-transform duration-200 md:static md:translate-x-0 md:z-auto ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
