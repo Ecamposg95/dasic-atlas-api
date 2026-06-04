@@ -44,6 +44,8 @@ const servicios = lazyPage(() => import('@/features/servicios/pages/ServiciosPag
 const superadmin = lazyPage(() => import('@/features/superadmin/pages/SuperAdminPage'), 'SuperAdminPage');
 const superadminConfig = lazyPage(() => import('@/features/superadmin/pages/ConfigPlataformaPage'), 'ConfigPlataformaPage');
 const superadminAudit = lazyPage(() => import('@/features/superadmin/pages/AuditPage'), 'AuditPage');
+const superadminSalud = lazyPage(() => import('@/features/superadmin/pages/SaludPage'), 'SaludPage');
+const superadminMantenimiento = lazyPage(() => import('@/features/superadmin/pages/MantenimientoPage'), 'MantenimientoPage');
 const crm = lazyPage(() => import('@/features/crm/pages/CrmKanbanPage'), 'CrmKanbanPage');
 
 // Helper: ruta legacy que envuelve el mismo Layout y mounta el mismo lazy.
@@ -90,6 +92,8 @@ export const router = createBrowserRouter([
       { path: 'superadmin', lazy: superadmin },
       { path: 'superadmin/config', lazy: superadminConfig },
       { path: 'superadmin/audit', lazy: superadminAudit },
+      { path: 'superadmin/salud', lazy: superadminSalud },
+      { path: 'superadmin/mantenimiento', lazy: superadminMantenimiento },
       { path: 'crm', lazy: crm },
     ],
   },

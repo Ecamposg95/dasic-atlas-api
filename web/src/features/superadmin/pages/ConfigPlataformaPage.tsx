@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { SlidersHorizontal, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/toast';
-import { useIsSuperadmin } from '@/lib/permissions';
+import { PlatformShell } from '../components/PlatformShell';
 import { useConfigPlataforma, useSetConfigPlataforma, type ConfigItem } from '../hooks/useConfigPlataforma';
 
 const LABELS: Record<string, string> = {
@@ -17,14 +15,20 @@ function Row({ item }: { item: ConfigItem }) {
   const [val, setVal] = useState(String(item.valor_efectivo));
   const set = useSetConfigPlataforma();
   return (
-    <div className="flex items-end gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800 py-3">
+    <div className="flex items-end gap-3 flex-wrap border-b border-emerald-500/10 py-3 last:border-0">
       <div className="flex-1 min-w-[200px]">
-        <label className="block text-xs text-slate-500 mb-1">{LABELS[item.clave] ?? item.clave}</label>
-        <Input value={val} onChange={(e) => setVal(e.target.value)} className="max-w-[200px]" />
-        <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+        <label className="block font-mono text-[11px] text-slate-500 mb-1">
+          {LABELS[item.clave] ?? item.clave}
+        </label>
+        <Input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          className="max-w-[200px] font-mono text-sm border-emerald-500/20 focus-visible:ring-emerald-500"
+        />
+        <div className="font-mono text-[10px] text-slate-500 mt-1 flex items-center gap-1">
           Default: {item.default}{' '}
           {item.overrideado ? (
-            <Badge variant="cyan">override activo</Badge>
+            <Badge variant="emerald">override activo</Badge>
           ) : (
             <Badge variant="slate">usando default</Badge>
           )}
@@ -49,6 +53,7 @@ function Row({ item }: { item: ConfigItem }) {
               },
             )
           }
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
         >
           Guardar
         </Button>
@@ -68,6 +73,7 @@ function Row({ item }: { item: ConfigItem }) {
                 },
               )
             }
+            className="text-slate-400 hover:text-slate-200"
           >
             Restaurar default
           </Button>
@@ -78,26 +84,24 @@ function Row({ item }: { item: ConfigItem }) {
 }
 
 export function ConfigPlataformaPage() {
-  const navigate = useNavigate();
-  const isSuper = useIsSuperadmin();
   const { data, isLoading } = useConfigPlataforma();
-  if (!isSuper) return <div className="p-6 text-sm text-slate-500">Solo el super-administrador.</div>;
+
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-4">
-      <header className="flex items-center justify-between gap-2 flex-wrap">
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <SlidersHorizontal className="h-5 w-5 text-accent-glow" /> Configuración de plataforma
-        </h1>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/spa/superadmin')}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Volver
-        </Button>
-      </header>
-      <p className="text-sm text-slate-500">Cambios aplican sin redeploy. Afectan cotizaciones nuevas.</p>
-      {isLoading ? (
-        <p className="text-sm text-slate-400">Cargando…</p>
-      ) : (
-        (data?.items ?? []).map((it) => <Row key={it.clave} item={it} />)
-      )}
-    </div>
+    <PlatformShell title="Configuración de plataforma">
+      <div className="max-w-2xl">
+        <p className="font-mono text-[11px] text-slate-500 mb-6">
+          Cambios aplican sin redeploy. Afectan cotizaciones nuevas y comportamiento global del sistema.
+        </p>
+        <div className="rounded-xl border border-emerald-500/20 bg-slate-900/30 divide-y divide-emerald-500/10 overflow-hidden">
+          {isLoading ? (
+            <p className="font-mono text-sm text-slate-400 px-4 py-6">Cargando configuración…</p>
+          ) : (
+            <div className="px-4 py-2">
+              {(data?.items ?? []).map((it) => <Row key={it.clave} item={it} />)}
+            </div>
+          )}
+        </div>
+      </div>
+    </PlatformShell>
   );
 }
