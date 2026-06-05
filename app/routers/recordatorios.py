@@ -138,11 +138,13 @@ def listar_recordatorios(
     # Usar datetime.combine para comparaciones de rangos (evita TZ drift)
     # Patrón idéntico al usado en ventas.py (historial usa .date() directamente,
     # aquí usamos combine para rangos explícitos en la columna con TZ).
-    inicio_hoy = datetime.combine(hoy, time.min)
-    fin_hoy = datetime.combine(hoy, time.max)
-    inicio_proximos = datetime.combine(hoy, time.min)
+    # tzinfo=UTC: la columna es DateTime(timezone=True); comparar con naive
+    # delega la coerción al TZ del server (frágil fuera de UTC). Lo hacemos explícito.
+    inicio_hoy = datetime.combine(hoy, time.min, tzinfo=timezone.utc)
+    fin_hoy = datetime.combine(hoy, time.max, tzinfo=timezone.utc)
+    inicio_proximos = datetime.combine(hoy, time.min, tzinfo=timezone.utc)
     from datetime import timedelta
-    fin_proximos = datetime.combine(hoy + timedelta(days=7), time.max)
+    fin_proximos = datetime.combine(hoy + timedelta(days=7), time.max, tzinfo=timezone.utc)
 
     query = db.query(models.Recordatorio)
 
@@ -188,9 +190,9 @@ def resumen_recordatorios(
     from datetime import timedelta
 
     hoy = date.today()
-    inicio_hoy = datetime.combine(hoy, time.min)
-    fin_hoy = datetime.combine(hoy, time.max)
-    fin_proximos = datetime.combine(hoy + timedelta(days=7), time.max)
+    inicio_hoy = datetime.combine(hoy, time.min, tzinfo=timezone.utc)
+    fin_hoy = datetime.combine(hoy, time.max, tzinfo=timezone.utc)
+    fin_proximos = datetime.combine(hoy + timedelta(days=7), time.max, tzinfo=timezone.utc)
 
     base = db.query(models.Recordatorio).filter(
         models.Recordatorio.estado == "pendiente"
