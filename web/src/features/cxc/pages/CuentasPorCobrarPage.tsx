@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { confirm } from '@/lib/confirm';
-import { Wallet, AlertTriangle, Clock, Users, RefreshCw } from 'lucide-react';
+import { Wallet, AlertTriangle, Clock, Users, RefreshCw, TrendingDown } from 'lucide-react';
 import { useResumenCxC } from '../hooks/useResumenCxC';
 import { useVencimientosCxC } from '../hooks/useVencimientosCxC';
+import { useAgingCxC } from '../hooks/useAgingCxC';
+import { useTopDeudores } from '../hooks/useTopDeudores';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useIsAdmin } from '@/lib/permissions';
@@ -16,6 +18,9 @@ import {
   DataTableRow,
   DataTableEmpty,
 } from '@/components/ui/data-table';
+import { AgingDonut } from '../components/AgingDonut';
+import { AgingBuckets } from '../components/AgingBuckets';
+import { TopDeudoresTable } from '../components/TopDeudoresTable';
 import type { MarcarVencidosResponse, VencimientoItem } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -139,7 +144,19 @@ function SkeletonRow() {
 }
 
 // ---------------------------------------------------------------------------
-// Página principal
+// Section header helper
+// ---------------------------------------------------------------------------
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+      {children}
+    </h2>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página principal — Centro de cobranza
 // ---------------------------------------------------------------------------
 
 export function CuentasPorCobrarPage() {
@@ -148,6 +165,8 @@ export function CuentasPorCobrarPage() {
   const qc = useQueryClient();
   const { data: resumen, isLoading: loadingResumen } = useResumenCxC();
   const { data: vencimientos, isLoading: loadingVenc } = useVencimientosCxC(365);
+  const { data: aging, isLoading: loadingAging } = useAgingCxC();
+  const { data: topDeudores, isLoading: loadingTop } = useTopDeudores(10);
 
   const marcarMutation = useMutation({
     mutationFn: () => api.post<MarcarVencidosResponse>('/api/cuentas-por-cobrar/marcar-vencidos'),
@@ -158,6 +177,8 @@ export function CuentasPorCobrarPage() {
       });
       void qc.invalidateQueries({ queryKey: ['cxc-resumen'] });
       void qc.invalidateQueries({ queryKey: ['cxc-vencimientos'] });
+      void qc.invalidateQueries({ queryKey: ['cxc-aging'] });
+      void qc.invalidateQueries({ queryKey: ['cxc-top-deudores'] });
     },
     onError: (err) => {
       const status = (err as { status?: number }).status;
@@ -182,14 +203,23 @@ export function CuentasPorCobrarPage() {
   }
 
   const items = vencimientos?.items ?? [];
+  const agingBuckets = aging?.buckets ?? [];
+  const deudores = topDeudores ?? [];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
-      {/* Header */}
+    <div className="p-6 max-w-7xl mx-auto w-full space-y-8">
+      {/* ---------------------------------------------------------------- */}
+      {/* 1. Header                                                         */}
+      {/* ---------------------------------------------------------------- */}
       <header className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
-          <Wallet className="h-6 w-6 text-accent-glow" />
-          <h1 className="text-2xl font-semibold">Cuentas por cobrar</h1>
+          <TrendingDown className="h-6 w-6 text-accent-glow" />
+          <div>
+            <h1 className="text-2xl font-semibold leading-tight">Centro de cobranza</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Cuentas por cobrar · Aging · Top deudores
+            </p>
+          </div>
         </div>
         {isAdmin && (
           <Button
@@ -204,47 +234,74 @@ export function CuentasPorCobrarPage() {
         )}
       </header>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard
-          label="Total por cobrar"
-          value={`$${fmtMXN(resumen?.total_pendiente ?? 0)}`}
-          sub="MXN"
-          Icon={Wallet}
-          color="text-accent-glow"
-          loading={loadingResumen}
-        />
-        <KpiCard
-          label="Vencido"
-          value={`$${fmtMXN(resumen?.total_vencido ?? 0)}`}
-          sub="MXN"
-          Icon={AlertTriangle}
-          color="text-rose-600 dark:text-rose-400"
-          loading={loadingResumen}
-        />
-        <KpiCard
-          label="Por vencer (7d)"
-          value={`$${fmtMXN(resumen?.por_vencer_7d ?? 0)}`}
-          sub="MXN"
-          Icon={Clock}
-          color="text-amber-600 dark:text-amber-400"
-          loading={loadingResumen}
-        />
-        <KpiCard
-          label="Clientes con saldo"
-          value={String(resumen?.n_cargos_abiertos ?? 0)}
-          sub="cargos abiertos"
-          Icon={Users}
-          color="text-slate-700 dark:text-slate-300"
-          loading={loadingResumen}
-        />
-      </div>
+      {/* ---------------------------------------------------------------- */}
+      {/* 2. KPI cards                                                      */}
+      {/* ---------------------------------------------------------------- */}
+      <section>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KpiCard
+            label="Total por cobrar"
+            value={`$${fmtMXN(resumen?.total_pendiente ?? 0)}`}
+            sub="MXN"
+            Icon={Wallet}
+            color="text-accent-glow"
+            loading={loadingResumen}
+          />
+          <KpiCard
+            label="Vencido"
+            value={`$${fmtMXN(resumen?.total_vencido ?? 0)}`}
+            sub="MXN"
+            Icon={AlertTriangle}
+            color="text-rose-600 dark:text-rose-400"
+            loading={loadingResumen}
+          />
+          <KpiCard
+            label="Por vencer (7d)"
+            value={`$${fmtMXN(resumen?.por_vencer_7d ?? 0)}`}
+            sub="MXN"
+            Icon={Clock}
+            color="text-amber-600 dark:text-amber-400"
+            loading={loadingResumen}
+          />
+          <KpiCard
+            label="Clientes con saldo"
+            value={String(resumen?.n_cargos_abiertos ?? 0)}
+            sub="cargos abiertos"
+            Icon={Users}
+            color="text-slate-700 dark:text-slate-300"
+            loading={loadingResumen}
+          />
+        </div>
+      </section>
 
-      {/* Tabla de vencimientos */}
-      <div>
-        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
-          Vencimientos pendientes
-        </h2>
+      {/* ---------------------------------------------------------------- */}
+      {/* 3. Aging                                                          */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="space-y-4">
+        <SectionTitle>Antigüedad de saldo (aging)</SectionTitle>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AgingDonut buckets={agingBuckets} loading={loadingAging} />
+          <div className="flex items-center">
+            <div className="w-full">
+              <AgingBuckets buckets={agingBuckets} loading={loadingAging} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* 4. Top deudores                                                   */}
+      {/* ---------------------------------------------------------------- */}
+      <section>
+        <SectionTitle>Top deudores</SectionTitle>
+        <TopDeudoresTable deudores={deudores} loading={loadingTop} />
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* 5. Vencimientos pendientes                                        */}
+      {/* ---------------------------------------------------------------- */}
+      <section>
+        <SectionTitle>Vencimientos pendientes</SectionTitle>
         <DataTable>
           <DataTableHead>
             <tr>
@@ -270,7 +327,7 @@ export function CuentasPorCobrarPage() {
             )}
           </DataTableBody>
         </DataTable>
-      </div>
+      </section>
     </div>
   );
 }

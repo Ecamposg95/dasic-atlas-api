@@ -31,3 +31,50 @@ export type MarcarVencidosResponse = {
   ok: boolean;
   actualizados: number;
 };
+
+// ---------------------------------------------------------------------------
+// Aging report
+// ---------------------------------------------------------------------------
+
+export type AgingBucket = {
+  rango: '0-30' | '31-60' | '61-90' | '90+';
+  dias_min: number;
+  dias_max: number | null;
+  monto: number;
+  count: number;
+};
+
+export type AgingResponse = {
+  buckets: AgingBucket[];
+  total: number;
+  total_count: number;
+};
+
+// ---------------------------------------------------------------------------
+// Top deudores
+// ---------------------------------------------------------------------------
+
+export type TopDeudor = {
+  cliente_id: number;
+  nombre_empresa: string;
+  saldo: number;
+  dias_max_atraso: number;
+  n_cargos_abiertos: number;
+};
+
+// ---------------------------------------------------------------------------
+// Pago distribuido
+// ---------------------------------------------------------------------------
+
+export type PagoDistribuidoRequest = {
+  monto: number;
+  descripcion?: string;
+  orden_venta_ids?: number[] | null;
+};
+
+export type PagoDistribuidoResponse = {
+  ok: boolean;
+  monto_aplicado: number;
+  monto_excedente: number;
+  detalle: unknown[];
+};
