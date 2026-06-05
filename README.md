@@ -1,48 +1,46 @@
-# DASIC CRM Industrial (Atlas-based)
+# Atlas ONE — DASIC Industrial (ERP/CRM)
 
-Sistema **CRM industrial** multi-tenant y multi-branch, inspirado en patrones de Atlas ERP/POS, con UI **SSR (Jinja2)** y frontend ligero (**Tailwind CSS CDN + Alpine.js**). Basado en un motor PostgreSQL orientado a escalabilidad operacional (cotizadores rápidos y gestión de stock muerto).
+Sistema **ERP/CRM industrial** de DASIC Industrial: cotizador inteligente (costo + utilidad, multimoneda) acoplado a inventario, CRM de pipeline, cobranza con aging, remisiones, reportería y una **consola de plataforma** (super-admin) separada.
 
-## Enfoque del Producto (DASIC_Plataforma_Base)
+> **Stack actual (migrado 2026-05-22):** SPA **React 18 + Vite + TypeScript + Tailwind + shadcn/ui + Zustand + TanStack Query** servida por backend **FastAPI + SQLAlchemy 2.x + PostgreSQL**, desplegada en **Railway** (autodeploy desde `main`).
+>
+> ⚠️ Si lees docs viejos que dicen *"SSR Jinja/Alpine"* o *"multi-tenant siempre"*: **ya no aplican.** La fuente de verdad es **`CLAUDE.md`** (raíz) y **`docs/Atlas-ONE-Proyecto.md`** (overview generoso para Obsidian). El sistema es **mono-tenant en la práctica** (`organization_id` existe en columnas pero es inerte).
 
-El núcleo del sistema es un **CRM muy potente acoplado a un Smart Quoter de Inventario**:
-- Modelado Físico: Almacén, inventario en tiempo real (Live Stock) y reservas temporales de 48H.
-- CRM Ágil: Cuentas (clientes), contactos múltiples, pipelines configurables por sucursal/organización.
-- Actividades (tareas/llamadas/visitas/notas) + **WhatsApp manual (Nivel A)**.
-- Cotización Ligada: Flujo `Oportunidad (Deal) -> Cotización` garantizado en <10 Minutos para ejecutivos de ventas.
+## Arquitectura (resumen)
 
-## Estructura Modular Actual
+- **Backend** `app/`: FastAPI. Modelos por dominio (`app/models/*.py`), routers `/api/*`, seeds/bootstrap en `app/core/lifespan.py` + `app/db/seeds.py`. `create_all()` crea tablas nuevas al boot; Alembic es la fuente canónica del schema, pero **el Procfile no corre alembic** → toda columna nueva en tabla existente necesita entrada paralela en `_BACKFILL_DDL`.
+- **Frontend** `web/src/`: cada página vive en `features/<x>/` (`types.ts` + `hooks/use<X>.ts` + `pages/` + `components/`). Primitivas tokenizadas en `components/ui/`, chrome en `components/layout/`, rutas en `router.tsx`. Build a `app/static/dist/` (commiteado).
+- **Auth:** JWT en cookie HttpOnly `access_token` (no mover al cliente).
 
-1. **`app/models/` y `app/schemas/`:** Desacoplados mediante enfoque "Design by Domain" (`catalog`, `clients`, `finance`, `nucleus`, `purchases`, `sales`, `users`, `enums`).
-2. **`app/core/`:** Configuración moderna central de la aplicación (Eventos `lifespan`, Logging centralizado, Config).
-3. **`app/db/`:** Manejo del motor PostgreSQL y Rutinas automáticas de poblado (`seeds.py`).
-4. **`context/`:** Carpeta maestra. **SI CUALQUIER AGENTE AI LEE ESTE PROYECTO**, debe iniciar aquí revisando el esquema de plan para asegurar consistencia e impedir regresiones o reinvención de la rueda.
+## Módulos
 
-## Principios No Negociables (Golden Rules)
+Dashboard · **CRM Pipeline** (Kanban) · **Cotizador** (PDF/Word/remisión) · Borradores · Seguimiento · **Recordatorios** · Clientes/Contactos · Compras · Fantasmas · Remisiones · Reportes de servicio · Gastos · Inventario (kardex) · Servicios · Precios · Diccionarios/SAT · **Centro de cobranza** (aging) · FX · Reportes · **Consola Super-Admin** (usuarios, config runtime, auditoría, salud, mantenimiento).
 
-- **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` (Modelo Nucleus). Ningún endpoint devuelve objetos donde el scope se rompa.
-- **SSR, no SPA**: Jinja2 + Tailwind CDN + Alpine.js. El diseño está blindado contra Javascript SPA (React/Vue/Angular). Visitar `context/UI_PATTERNS.md`.
-- **Alembic Obligatorio**: Si cambias algo de SQLAlchemy en `models/`, debe ir con una revisión de Alembic (Actual Fase 6 pendiente).
-- **PostgreSQL Directo**: Cero dependencias con SQLite falso o in-memory.
+## Reglas no negociables
 
-## ¿Eres un LLM/Agente AI? (Source of Truth)
+- **Folios, totales y movimientos de stock = server-side.** Stock solo vía filas `MovimientoStock`.
+- **No crear `.html` nuevos** en `app/templates/` (legacy de respaldo). Toda UI nueva en `web/src/features/<x>/`.
+- **Re-exportar** modelos/schemas nuevos en `__init__.py` (+`__all__`) o la app crashea al arrancar (py_compile no lo detecta).
+- **Enums en query:** usar `RolUsuario.X`, nunca strings crudos (valores DB: `superadmin/admin/asistente/vendedor/operativo`).
+- **`cd web && npm run build`** antes de push; commitear `app/static/dist/`.
 
-Si fuiste sumado al proyecto recientemente, tu primera tarea es escanear los siguientes archivos base:
+## Correr local
 
-1. `context/00_CONTEXT_START_HERE.md`
-2. `context/02_REPO_CURRENT_STATE.md` (Contiene en qué punto vamos y qué hace falta).
-3. `context/DASIC_Plataforma_Base.md` (Visión comercial del roadmap de 90 días).
-4. `context/UI_PATTERNS.md` (Todo el diseño front-end debe acatarse en esta guía).
-5. `context/CRM_SPEC.md` / `context/RBAC.md`
+```bash
+# Backend (necesita DATABASE_URL + SECRET_KEY)
+uvicorn app.main:app --reload          # Swagger: http://127.0.0.1:8000/docs
 
-## Configuración y Vstart Local
+# Frontend
+cd web && npm install && npm run dev    # Vite :5173 (proxy a :8000)
+cd web && npm run build                 # build de producción
 
-1. Prepara tu `.env`:
-   - `DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/dasic_crm`
-   - (El backend validará obligatoriamente esta URL al encender).
-2. Instalación de `venv`:
-   - `python -m venv venv`
-   - `venv\Scripts\activate` (o `source venv/bin/activate` en posix)
-   - `pip install -r requirements.txt`
-3. Levantando:
-   - `uvicorn app.main:app --reload`
-   - Swagger V1.0: `http://127.0.0.1:8000/docs`
+# Alembic
+alembic upgrade head
+alembic revision --autogenerate -m "descripcion"
+```
+
+**Env requeridas:** `DATABASE_URL`, `SECRET_KEY`. Opcionales: `BANXICO_TOKEN`, `ANTHROPIC_API_KEY`, `SMTP_*`, `SUPERADMIN_EMAIL`+`SUPERADMIN_PASSWORD` (crea superadmin dedicado), `BOOTSTRAP_SUPERADMIN_EMAIL` (promueve existente).
+
+## ¿Eres un agente AI / nuevo en el repo?
+
+Lee en orden: **`CLAUDE.md`** → **`docs/Atlas-ONE-Proyecto.md`** → **`context/02_REPO_CURRENT_STATE.md`** → `context/CRM_SPEC.md` / `context/RBAC.md`. Nota: `context/UI_PATTERNS.md` y partes de `context/` describen el stack SSR previo y son **parcialmente legacy**.

@@ -1,117 +1,56 @@
-# Estado Actual del Repo (Dasic_Atlas_api)
+# Estado Actual del Repo (Dasic_Atlas_api / Atlas ONE)
 
-> **Actualizado:** 2026-04-28 (Post-RBAC fase 1, catalogo fase 1, cotizador fase 2, seguimiento inicial)
+> **Actualizado:** 2026-06-05. Rama de referencia: `main` (autodeploy a Railway).
+> Fuente de verdad del stack: `CLAUDE.md` (raíz) + `docs/Atlas-ONE-Proyecto.md`.
 
-Este repositorio ya no está solo en etapa de refactor base. La rama activa de referencia es `main` y ahora contiene un primer bloque funcional orientado a la operación comercial real de DASIC: RBAC transicional, catálogo costo-first, cotizador multimoneda basado en utilidad y seguimiento de cotizaciones con borrador de OC.
+El repo dejó de ser un refactor base hace tiempo. Es un **ERP/CRM en producción**: SPA React (migrada 2026-05-22) sobre FastAPI, con design system premium tokenizado, CRM Kanban, cotizador robusto, centro de cobranza, recordatorios, y una consola de plataforma (super-admin) separada. **Mono-tenant en la práctica.**
 
-## Estructura Actual (Refactorizada)
+## Stack (resumen — ver `CLAUDE.md` para detalle)
 
-**Core y Bootstrap:**
-- `app/main.py`: Limpio (~90 líneas). Solo bootstrap de FastAPI, montado de SSR y middlewares.
-- `app/core/lifespan.py`: Maneja los eventos de startup de manera moderna (reemplaza `@on_event`).
-- `app/core/logging.py`: Configuración central de logging estructurado.
+- **Backend:** FastAPI + SQLAlchemy 2.x + Alembic + PostgreSQL (`psycopg`). Modelos por dominio en `app/models/`.
+- **Frontend:** SPA React 18 + Vite + TypeScript + Tailwind (compilado) + shadcn/ui + Zustand + TanStack Query v5 + React Router v6, en `web/src/features/<x>/`. Build a `app/static/dist/` (commiteado).
+- **Auth:** JWT en cookie HttpOnly `access_token`.
+- **Deploy:** Railway (nixpacks corre `npm run build`); Procfile = `uvicorn`. **Alembic NO corre en deploy** → shim `_BACKFILL_DDL` para columnas en tablas existentes; `create_all()` en lifespan crea tablas nuevas.
 
-**Base de Datos y Modelos:**
-- `app/db/session.py` (y `db/__init__.py`): Manejan el session engine de SQLAlchemy para PostgreSQL.
-- `app/db/seeds.py`: Rutinas de backfill retroactivo de DDL y creación de tenant base en el startup.
-- `app/models/`: Separado por dominio de negocio (`nucleus.py`, `users.py`, `catalog.py`, `clients.py`, `sales.py`, `purchases.py`, `finance.py`, `enums.py`).
-- `app/schemas/`: Espejeado con los subdominios de los modelos para Pydantic.
+## Qué está construido (módulos en producción)
 
-**API y SSR:**
-- `app/routers/`: Mantienen endpoints por áreas (próximo a incorporar capa de Repositories).
-- `app/templates/`: Vistas de SSR con Jinja2 (dashboard, cotizador, inventario, clientes, etc).
-- `app/static/`: Assets crudos CSS/JS. **Se usa Tailwind CDN y Alpine.js** globalmente.
+**Comercial:** Dashboard (KPIs + recharts + panel recordatorios) · **CRM Pipeline** Kanban (Pipeline/Stage/Deal, DnD nativo) · **Cotizador** (costo+utilidad, multimoneda, plantillas, recotización versionada, PDF desglose/unificado + Word + remisión + reporte servicio) · Borradores · Seguimiento · **Recordatorios** · Clientes/Empresas + Contactos (dedup, estado de cuenta + PDF).
 
-## Cumplimiento con DASIC_Plataforma_Base
+**Operación:** Compras (OC desde cotización) · Fantasmas (promover a producto) · Remisiones (PDF + **Word**) · Reportes de servicio · Gastos.
 
-Se ha consolidado el documento `context/DASIC_Plataforma_Base.md` que detalla el Plan de Operaciones a 90 días:
-1. **Live Stock:** Kardex, inventario en tiempo real, banderas de stock crítico.
-2. **Smart Quoter:** Generar cotizaciones en < 10 mins con reservas por 48 horas de stock.
-3. **Dashboard:** Para Dirección General y KPIs.
+**Catálogo:** Inventario (costo-first, kardex auditable, reservas, import Excel) · Servicios · Precios proveedor · Diccionarios (marcas/categorías/unidades + navegador SAT).
 
-## Lanes Cerrados en Esta Sesion
+**Finanzas:** **Centro de cobranza** (aging 0-30/31-60/61-90/90+, top deudores, pago distribuido FIFO, estado de cuenta PDF) · FX (Banxico + fallback).
 
-### 1. RBAC fase 1 segura
+**Reportes:** Reportes (ventas/inventario/conversión) · Analítica de servicios.
 
-- `app/models/enums.py` y `app/security/jwt.py` quedaron alineados a vocabulario canonico:
-  - `ADMINISTRADOR`
-  - `GERENTE_COMERCIAL`
-  - `VENTAS`
-- Se mantuvo compatibilidad con roles legacy:
-  - `ADMIN`
-  - `ASISTENTE`
-  - `VENDEDOR`
-- `app/templates/usuarios.html` y `app/routers/usuarios.py` ya reflejan esa fase 1.
-- Se aplico hotfix adicional en `app/models/users.py` para aceptar aliases legacy al leer filas existentes desde Railway (`omit_aliases=False`).
+**Plataforma (Consola Super-Admin, solo dev — skin emerald/mono vía `PlatformShell`):** Usuarios de plataforma (CRUD + rol superadmin, blindajes anti-escalada) · Configuración runtime (IVA/vigencia sin redeploy) · Auditoría global · Salud del sistema · Mantenimiento (re-seeds, jobs, seed-context, zona roja drop-all-tables con doble guarda).
 
-### 2. Catalogo / inventario fase 1
+## Design system premium (2026-06-04)
 
-- `app/models/catalog.py` agrega:
-  - `sku_comercial`
-  - `moneda_compra`
-- `precio_publico` deja de ser obligatorio en el contrato API, pero se mantiene compatibilidad con el cotizador legacy.
-- Existe migracion:
-  - `migrations/versions/20260428_01_catalog_purchase_currency.py`
-- `app/templates/inventario.html` tolera mejor productos sin precio publico fijo.
+Tokens semánticos HSL (`web/src/index.css` + `tailwind.config.ts`): `bg-card`, `bg-surface-2`, `text-foreground`, `text-muted-foreground`, `border-border`, etc. Dark = near-black azulado. Consumidos por primitivas (`components/ui/`) y chrome (`components/layout/`). **Cotizador ya migrado a tokens**; ~65 páginas slate restantes pendientes (mismo mapeo de 8 pares por feature).
 
-### 3. Cotizador fase 2
+## RBAC
 
-- `app/models/sales.py` ahora persiste:
-  - `moneda`
-  - `tipo_cambio`
-  - `utilidad_aplicada`
-- `app/schemas/sales.py` y `app/routers/ventas.py` ya trabajan con cotizacion basada en:
-  - `costo_compra + utilidad`
-  - no `precio_publico - descuento`
-- El PDF de cotizacion ya refleja la moneda real (`MXN` / `USD`) y el tipo de cambio cuando aplica.
-- Existe migracion:
-  - `migrations/versions/20260428_02_sales_quote_currency.py`
+Roles: `SUPERADMIN`, `ADMINISTRADOR` (="admin"), `GERENTE_COMERCIAL` (="asistente"), `VENTAS` (="vendedor"), `OPERATIVO`. Helpers en `app/security/jwt.py`. Owner scoping (`is_owner_scoped`) para VENTAS. **Enforcement tenant-aware real: pendiente** (hoy role-string). Blindaje superadmin: solo superadmin gestiona otro superadmin (anti-escalada cerrada 2026-06-04).
 
-### 4. Seguimiento comercial inicial
+## Riesgos / deuda
 
-- `/api/ventas/historial` ya expone datos de vigencia/antiguedad:
-  - `fecha_vencimiento`
-  - `edad_dias`
-  - `dias_restantes`
-  - `esta_vencida`
-- `app/templates/seguimiento.html` ya muestra seguimiento read-only con filtros de vigencia.
-- `app/routers/compras.py` expone:
-  - `GET /api/compras/cotizacion/{quote_id}/borrador`
-- Ese endpoint genera un borrador de OC sin persistir compra, sin mover stock y sin crear cuentas por pagar.
+1. **RBAC tenant-aware inexistente** (mono-tenant en práctica; `Usuario` sin `organization_id`).
+2. **Routers cargados** (`ventas.py`, `productos.py`, `compras.py` mezclan dominio/persistencia/presentación). Falta capa repository/services.
+3. **Sin suite de tests** — validación por `py_compile` + `npm run build` + review por subagentes + QA visual manual.
+4. **Decimales** serializados como string; los types TS dicen `number` (coerción).
 
-### 5. Hotfixes de despliegue cerrados
+## Pendientes (roadmap activo)
 
-- `app/main.py` fue corregido para usar la firma correcta de `Jinja2Templates.TemplateResponse(...)`.
-- `app/models/users.py` fue corregido para que Railway no truene al leer enums legacy en `usuarios.rol`.
+1. **CRM v2** — CRUD visual de pipelines/stages, métricas de conversión, deal↔cotización bidireccional, actividades por deal.
+2. **Timeline automático de negocio** (eventos deal/cotización/pago).
+3. **Migrar ~65 páginas slate restantes a tokens** (cotizador ya hecho).
+4. **RBAC tenant-aware real.**
+5. **Super-admin:** impersonación, feature flags, Módulo B v2 (`audit_log` + instrumentar login/CRUD usuarios/precio-stock), log de mantenimiento.
+6. **Aprobaciones de descuento** por rol; **WhatsApp nivel B**.
+7. **`SECRET_KEY` persistente en Railway** (config, para que no rote por deploy).
 
-## Riesgos Actuales
+## Histórico (lanes cerrados — resumen)
 
-1. **RBAC incompleto:** la fase actual es solo de vocabulario/plataforma. Todavia no existe enforcement real tenant-aware usando `UserOrganization`.
-2. **Compatibilidad transicional:** el sistema sigue conviviendo con datos y helpers legacy. Funciona, pero no es el estado final.
-3. **Routers muy cargados:** `app/routers/ventas.py`, `app/routers/productos.py` y `app/routers/compras.py` siguen mezclando dominio, persistencia y presentacion.
-4. **Cobertura de pruebas baja:** se validaron cambios con `py_compile` y checks de diff, pero no hay suite automatizada fuerte para regresiones funcionales.
-
-## Siguientes Fases Recomendadas
-
-1. **Folios y recotizaciones**
-   - folio por año/mes/usuario
-   - versionado de cotizaciones
-   - trazabilidad de recotizacion
-2. **Orden de compra real desde cotizacion**
-   - pasar de borrador a persistencia real
-   - relacionar cotizacion y OC
-   - seleccionar proveedor de forma segura
-3. **Correo + tracking**
-   - envio de cotizaciones
-   - bitacora de envios
-   - KPIs simples de entrega
-4. **Dashboard operativo**
-   - cotizaciones activas
-   - vencidas / por vencer
-   - stock critico
-   - OC generadas / pendientes
-5. **Capa repository / services**
-   - extraer logica pesada fuera de routers
-6. **RBAC tenant real**
-   - usar `UserOrganization` para autorizacion
-   - branch scope y visibilidad por ownership
+RBAC fase 1 · catálogo costo-first · cotizador fase 2 (multimoneda) · seguimiento · folios/recotización · OC real · migración SPA (2026-05-22) · Atlas ONE rebrand + theme · arquitectura de documentos (OC/remisión/reporte desde cotización) · empresas+contactos · auditoría paralela · super-admin Módulos 0/A/B/C/D · design system premium · paginación · módulos activados (estado cuenta/kardex/SAT) · CRM Kanban · centro de cobranza · recordatorios · migración cotizador a tokens. Detalle por commit en `git log` y en las notas de sesión.

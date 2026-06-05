@@ -2,27 +2,28 @@
 
 Este directorio contiene la documentación viva del proyecto. La referencia de arquitectura viene de Atlas ERP/POS, pero el preset activo, el esquema operativo del producto, e incentivo de negocio es **DASIC ERP Industrial**.
 
-Documentos canónicos más importantes:
-- `atlas_erp_pos_stack.md` (Baseline de infraestructura técnica original).
-- `DASIC_Plataforma_Base.md` (Baseline del Roadmap a 90 días con enfoque a Stocks, Dashboard y Smart Quoter CRM).
-- `UI_PATTERNS.md` (La biblia obligatoria del diseño Jinja+Tailwind para consistencia Front-end).
+> [!] **ESTE DIRECTORIO ES PARCIALMENTE LEGACY.** Varios docs describen el stack SSR (Jinja2 + Alpine) y multi-tenant que el proyecto tuvo hasta abril-2026. Eso **ya no aplica**. La fuente de verdad del stack actual es **`CLAUDE.md` (raíz del repo)** y **`docs/Atlas-ONE-Proyecto.md`**.
 
-## Golden Rules
+Documentos canónicos vigentes:
+- **`CLAUDE.md` (raíz)** — stack real, reglas, arquitectura. (`context/CLAUDE.md` es un boceto Next.js/Prisma hipotético — NO es la implementación.)
+- **`docs/Atlas-ONE-Proyecto.md`** — overview completo (módulos, design system, gotchas, roadmap).
+- `02_REPO_CURRENT_STATE.md` — estado actual del repo.
+- `CRM_SPEC.md` / `RBAC.md` — spec de dominio (CRM_SPEC es visión; los modelos Pipeline/Deal ya existen en `app/models/crm.py`).
 
-1. **Multi-tenant siempre**: toda tabla de negocio incluye `organization_id` (UUID) y toda query filtra por `organization_id`. Capa modelada por dominio en `models/nucleus.py`.
-2. **Alembic obligatorio**: toda evolución del esquema de DB local y de prod debe ejecutarse por `alembic revision` (SQLAlchemy 2.0).
-3. **Diseño por Dominio (Domain-Driven)**: Componentes en la base se ramifican bajo dominios semánticos (users, catalog, quotes, admin). No crear archivos "todólogos".
-4. **Auth mediante Core Central**: `core/lifespan.py`, SSR sin endpoints desacoplados en el Front, y Auth con cookies HttpOnly.
-5. **UI con Alpine.js/Tailwind:** Ninguna importación de librería SPA ajena al UI Stack autorizado.
+## Golden Rules (actualizadas 2026-06-05)
+
+1. **SPA React, no SSR** (migrado 2026-05-22): toda UI nueva en `web/src/features/<x>/`. NO crear `.html` nuevos en `app/templates/` (legacy de respaldo). ~~Jinja/Alpine~~.
+2. **Mono-tenant en la práctica**: `organization_id` existe en columnas pero es inerte (`Usuario` no lo tiene). NO asumir aislamiento por org. ~~Multi-tenant siempre~~.
+3. **Server-side**: folios, totales (subtotal/IVA/total) y movimientos de stock (`MovimientoStock`) se calculan en el backend. Nunca folios en el front.
+4. **Alembic + `_BACKFILL_DDL`**: el Procfile no corre alembic; columnas nuevas en tablas existentes necesitan entrada paralela en `app/db/seeds.py::_BACKFILL_DDL`. Tablas nuevas las crea `create_all`.
+5. **Diseño por dominio**: `app/models/<dominio>.py`, sin archivos todólogos. Re-exportar clases nuevas en `__init__.py` (+`__all__`) o la app crashea al arrancar.
+6. **Auth con cookie HttpOnly** (`access_token`). No mover al cliente.
+7. **Build antes de push**: `cd web && npm run build`; commitear `app/static/dist/`.
 
 ## Lectura Recomendada a Agentes de AI o Nuevos Contribuyentes (Orden)
 
-Si acabas de integrarte al proyecto, asimila el código con este orden imperativo:
-
-1. `00_CONTEXT_START_HERE.md` (Este documento).
-2. `DASIC_Plataforma_Base.md` (Blueprint comercial, KPIs y visión del cotizador-stock rápido).
-3. `02_REPO_CURRENT_STATE.md` (Fotografía exacta y lista de tareas donde el proyecto está "pausado" el día de hoy).
-4. `STACK_ADOPTION_CHECKLIST.md` (Estado granular del refactor y validación).
-5. `CRM_SPEC.md` / `RBAC.md` (Especificaciones del CRM MVP por construir y matriz de permisos de Branch y global).
-6. `UI_PATTERNS.md` (Reglas visuales y componentes).
-7. `ROADMAP.md` (Hoja de ruta iterativa integral).
+1. **`CLAUDE.md` (raíz)** — stack real y reglas.
+2. **`docs/Atlas-ONE-Proyecto.md`** — overview de módulos, design system y gotchas.
+3. `02_REPO_CURRENT_STATE.md` — fotografía del repo y pendientes.
+4. `CRM_SPEC.md` / `RBAC.md` — dominio y permisos.
+5. (Legacy, contexto histórico) `DASIC_Plataforma_Base.md`, `UI_PATTERNS.md`, `ROADMAP.md`, `STACK_ADOPTION_CHECKLIST.md`.
