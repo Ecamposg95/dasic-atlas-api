@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { LayoutDashboard, AlertTriangle, TrendingUp, Package, CreditCard } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { LayoutDashboard, AlertTriangle, TrendingUp, Package, CreditCard, BellRing } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/toast';
@@ -13,6 +14,7 @@ import { KpiCard } from '../components/KpiCard';
 import { TendenciaChart } from '../components/TendenciaChart';
 import { PipelineDonut } from '../components/PipelineDonut';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
+import { useResumenRecordatorios, useRecordatorios } from '@/features/recordatorios/hooks/useRecordatorios';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,6 +75,9 @@ export function DashboardPage() {
   const topsQ = useSafeQuery(useTops(), 'tops');
   const tendenciaQ = useSafeQuery(useTendencia(), 'tendencia');
   const heatmapQ = useSafeQuery(useHeatmap(), 'heatmap');
+  const resumenRecQ = useSafeQuery(useResumenRecordatorios(), 'recordatorios-resumen');
+  const vencidosRecQ = useSafeQuery(useRecordatorios('vencidos'), 'recordatorios-vencidos');
+  const hoyRecQ = useSafeQuery(useRecordatorios('hoy'), 'recordatorios-hoy');
 
   const hero = heroQ.data;
   const pipeline = pipelineQ.data;
@@ -228,7 +233,73 @@ export function DashboardPage() {
         )}
       </section>
 
-      {/* Row 5: Tops */}
+      {/* Row 5: Recordatorios */}
+      <section>
+        <h2 className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3 flex items-center gap-1">
+          <BellRing className="h-3.5 w-3.5 text-cyan-400" />
+          Recordatorios
+        </h2>
+        <Card>
+          <CardContent className="px-4 py-3 space-y-3">
+            {/* Summary counts */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="rose">{resumenRecQ.data?.vencidos ?? 0}</Badge>
+                <span className="text-xs text-slate-500">vencidos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="amber">{resumenRecQ.data?.hoy ?? 0}</Badge>
+                <span className="text-xs text-slate-500">hoy</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="slate">{resumenRecQ.data?.proximos_7d ?? 0}</Badge>
+                <span className="text-xs text-slate-500">próximos 7d</span>
+              </div>
+              <Link
+                to="/spa/recordatorios"
+                className="ml-auto text-xs text-cyan-500 hover:text-cyan-400 self-center"
+              >
+                ver todos →
+              </Link>
+            </div>
+
+            {/* Top 5 overdue + today items */}
+            {(vencidosRecQ.isLoading || hoyRecQ.isLoading) ? (
+              <p className="text-xs text-slate-400">Cargando…</p>
+            ) : (
+              (() => {
+                const items = [
+                  ...(vencidosRecQ.data ?? []),
+                  ...(hoyRecQ.data ?? []),
+                ].slice(0, 5);
+                if (items.length === 0) return (
+                  <p className="text-xs text-slate-500">Sin recordatorios urgentes.</p>
+                );
+                return (
+                  <ul className="space-y-1.5">
+                    {items.map((r) => (
+                      <li key={r.id} className="flex items-center gap-2 text-xs">
+                        <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${r.dias < 0 ? 'bg-rose-500' : 'bg-amber-400'}`} />
+                        <span className="font-mono text-slate-600 dark:text-slate-400 shrink-0">
+                          {r.folio ?? `#${r.orden_id}`}
+                        </span>
+                        <span className="text-slate-700 dark:text-slate-300 truncate flex-1">
+                          {r.cliente ?? '—'}
+                        </span>
+                        <span className="text-slate-400 shrink-0">
+                          {r.dias < 0 ? `−${Math.abs(r.dias)}d` : 'hoy'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Row 6: Tops */}
       <section>
         <h2 className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-3">
           Tops del mes

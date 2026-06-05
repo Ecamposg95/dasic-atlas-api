@@ -64,6 +64,7 @@ const superadminSalud = lazyPage(() => import('@/features/superadmin/pages/Salud
 const superadminMantenimiento = lazyPage(() => import('@/features/superadmin/pages/MantenimientoPage'), 'MantenimientoPage');
 const superadminUsuarios = lazyPage(() => import('@/features/superadmin/pages/UsuariosPlataformaPage'), 'UsuariosPlataformaPage');
 const crm = lazyPage(() => import('@/features/crm/pages/CrmKanbanPage'), 'CrmKanbanPage');
+const recordatorios = lazyPage(() => import('@/features/recordatorios/pages/RecordatoriosPage'), 'RecordatoriosPage');
 
 // Helper: ruta legacy que envuelve el mismo Layout y mounta el mismo lazy.
 const legacyRoute = (path: string, lazyLoader: ReturnType<typeof lazyPage>) => ({
@@ -113,6 +114,7 @@ export const router = createBrowserRouter([
       { path: 'superadmin/mantenimiento', lazy: superadminMantenimiento },
       { path: 'superadmin/usuarios', lazy: superadminUsuarios },
       { path: 'crm', lazy: crm },
+      { path: 'recordatorios', lazy: recordatorios },
     ],
   },
   // Rutas legacy — FastAPI sirve el mismo dist/index.html para estas URLs.

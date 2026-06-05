@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  BellPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import {
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
 import { api, type ApiError } from '@/lib/api';
+import { RecordatorioFormModal } from '@/features/recordatorios/components/RecordatorioFormModal';
 import { useHistorial } from '../hooks/useHistorial';
 import type {
   HistorialItem,
@@ -88,10 +90,11 @@ interface RowActionsProps {
   onConvertir: (item: HistorialItem) => void;
   onCancelar: (item: HistorialItem) => void;
   onEditar: (id: number) => void;
+  onRecordar: (item: HistorialItem) => void;
   loadingId: number | null;
 }
 
-function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, loadingId }: RowActionsProps) {
+function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, onRecordar, loadingId }: RowActionsProps) {
   const estatus = item.estatus.toUpperCase();
   const isBusy = loadingId === item.id;
 
@@ -99,6 +102,7 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, load
   const canRecotizar = estatus === 'COTIZACION' || estatus === 'CANCELADA';
   const canConvertir = estatus === 'COTIZACION';
   const canCancelar = estatus === 'COTIZACION' || estatus === 'PENDIENTE';
+  const canRecordar = estatus === 'COTIZACION';
 
   return (
     <div className="flex items-center gap-1">
@@ -171,6 +175,19 @@ function RowActions({ item, onRecotizar, onConvertir, onCancelar, onEditar, load
           <XCircle className="h-3.5 w-3.5" />
         </Button>
       )}
+
+      {/* Recordar seguimiento */}
+      {canRecordar && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Recordar seguimiento"
+          className="h-7 w-7 text-slate-600 hover:text-cyan-600 dark:text-slate-400 dark:hover:text-cyan-300"
+          onClick={() => onRecordar(item)}
+        >
+          <BellPlus className="h-3.5 w-3.5" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -192,6 +209,9 @@ function useDebounced<T>(value: T, delay = 300): T {
 export function SeguimientoPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+
+  // Recordatorio modal
+  const [recordarOrden, setRecordarOrden] = useState<{ id: number; folio: string } | null>(null);
 
   // Filtros
   const [search, setSearch] = useState('');
@@ -284,6 +304,10 @@ export function SeguimientoPage() {
     if (!(await confirm({ mensaje: `¿Cancelar la cotización ${item.folio}?`, tono: 'danger' }))) return;
     setLoadingId(item.id);
     cancelarMutation.mutate(item.id);
+  }
+
+  function handleRecordar(item: HistorialItem) {
+    setRecordarOrden({ id: item.id, folio: item.folio });
   }
 
   // Client-side filtering — solo vencimiento (search y estatus van al servidor)
@@ -457,6 +481,7 @@ export function SeguimientoPage() {
                           onConvertir={handleConvertir}
                           onCancelar={handleCancelar}
                           onEditar={(id) => navigate(`/ventas/cotizador?edit=${id}`)}
+                          onRecordar={handleRecordar}
                           loadingId={loadingId}
                         />
                       </td>
@@ -481,6 +506,15 @@ export function SeguimientoPage() {
           </div>
         )}
       </div>
+
+      {/* Recordatorio modal */}
+      {recordarOrden && (
+        <RecordatorioFormModal
+          ordenId={recordarOrden.id}
+          folio={recordarOrden.folio}
+          onClose={() => setRecordarOrden(null)}
+        />
+      )}
     </div>
   );
 }
