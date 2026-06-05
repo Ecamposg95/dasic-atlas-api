@@ -18,7 +18,7 @@ export function UltimaCotHint({ clienteId }: { clienteId: number | null }) {
   const { data } = useUltimaCot(clienteId);
   if (clienteId == null || !data || !data.folio) return null;
   return (
-    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-1.5 flex-wrap">
+    <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
       <Clock4 className="h-3 w-3 shrink-0" />
       <span>Última cot:</span>
       <a
@@ -34,7 +34,7 @@ export function UltimaCotHint({ clienteId }: { clienteId: number | null }) {
         </span>
       )}
       {data.estatus && (
-        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1 rounded">
+        <span className="text-[10px] bg-surface-2 text-muted-foreground px-1 rounded">
           {data.estatus}
         </span>
       )}

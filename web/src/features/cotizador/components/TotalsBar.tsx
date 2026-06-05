@@ -171,7 +171,7 @@ export function TotalsBar() {
               className="mb-1 flex items-center gap-1.5 flex-wrap"
               title="Subtotales antes de IVA, en la moneda nativa de cada línea (sin conversión por TC)"
             >
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Por moneda nativa
               </span>
               {breakdown.usd_count > 0 && (

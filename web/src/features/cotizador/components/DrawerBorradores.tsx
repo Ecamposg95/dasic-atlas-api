@@ -42,15 +42,15 @@ export function DrawerBorradores() {
         className="fixed inset-0 z-40 bg-slate-100 dark:bg-slate-950/60"
         onClick={() => setOpen(false)}
       />
-      <aside className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+      <aside className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-card border-l border-border shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-accent-glow" /> Borradores apilados
           </h3>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -58,10 +58,10 @@ export function DrawerBorradores() {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {isLoading && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">Cargando…</div>
+            <div className="text-xs text-muted-foreground text-center p-4">Cargando…</div>
           )}
           {!isLoading && items.length === 0 && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">
+            <div className="text-xs text-muted-foreground text-center p-4">
               No tienes borradores en curso
             </div>
           )}
@@ -69,15 +69,15 @@ export function DrawerBorradores() {
             <a
               key={b.id}
               href={`/ventas/cotizador?edit=${b.id}`}
-              className="block p-3 rounded border border-slate-200 dark:border-slate-800 hover:border-accent-glow bg-slate-100 dark:bg-slate-950 transition"
+              className="block p-3 rounded border border-border hover:border-accent-glow bg-slate-100 dark:bg-slate-950 transition"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-xs font-bold text-cyan-400">{b.folio}</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="text-[10px] text-muted-foreground">
                   {fmtDate(b.actualizado_en)}
                 </span>
               </div>
-              <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+              <div className="text-sm text-foreground truncate">
                 {b.cliente_nombre ?? 'Sin cliente'}
               </div>
               <div className="flex items-center justify-between mt-1">
@@ -85,17 +85,17 @@ export function DrawerBorradores() {
                   {fmtMoney(b.total, b.moneda)}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] text-muted-foreground">
                     {b.lineas_count} línea(s)
                   </span>
-                  <ExternalLink className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
                 </div>
               </div>
             </a>
           ))}
         </div>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <div className="p-4 border-t border-border flex justify-between items-center">
           <Button
             size="sm"
             variant="ghost"
@@ -104,7 +104,7 @@ export function DrawerBorradores() {
           >
             ← Anterior
           </Button>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400">Página {page}</span>
+          <span className="text-[10px] text-muted-foreground">Página {page}</span>
           <Button
             size="sm"
             variant="ghost"

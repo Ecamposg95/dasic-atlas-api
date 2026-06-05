@@ -38,7 +38,7 @@ export function ModalTerminos() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-5">
+      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-2xl w-full p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <FileText className="h-4 w-4 text-accent-glow" /> Términos y condiciones
@@ -46,7 +46,7 @@ export function ModalTerminos() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -56,10 +56,10 @@ export function ModalTerminos() {
           onChange={(e) => setDraft(e.target.value)}
           rows={12}
           placeholder="Una línea por cláusula. Vacío ⇒ usa los defaults del backend al guardar."
-          className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none resize-none font-mono"
+          className="w-full text-sm rounded border border-border-strong bg-card px-3 py-2 focus:border-accent-glow outline-none resize-none font-mono"
         />
         <div className="flex items-center justify-between mt-2">
-          <div className="text-[10px] text-slate-500 dark:text-slate-400">{lineCount} cláusulas</div>
+          <div className="text-[10px] text-muted-foreground">{lineCount} cláusulas</div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -74,7 +74,7 @@ export function ModalTerminos() {
             </Button>
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-border">
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
             Cancelar
           </Button>

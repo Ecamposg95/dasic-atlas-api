@@ -62,8 +62,8 @@ export function TCMiniTable() {
   }
 
   const containerClass = tcNecesario ? '' : 'opacity-60';
-  const activeColClass = 'border-accent-glow/60 bg-slate-100 dark:bg-slate-950/80 text-slate-900 dark:text-slate-100';
-  const idleColClass = 'border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400';
+  const activeColClass = 'border-accent-glow/60 bg-slate-100 dark:bg-slate-950/80 text-foreground';
+  const idleColClass = 'border-border bg-slate-100 dark:bg-slate-900/40 text-muted-foreground';
   const deltaBadge =
     'inline-flex items-center gap-0.5 text-[10px] font-bold px-1 py-px rounded ' +
     'bg-emerald-950/50 border border-emerald-700/50 text-emerald-300';
@@ -75,7 +75,7 @@ export function TCMiniTable() {
           type="button"
           onClick={onRefresh}
           disabled={refresh.isPending || !fx}
-          className="text-[10px] flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-accent-glow transition disabled:opacity-50"
+          className="text-[10px] flex items-center gap-1 text-muted-foreground hover:text-accent-glow transition disabled:opacity-50"
           title="Refrescar TC oficial desde Banxico"
         >
           <RefreshCw className={`h-2.5 w-2.5 ${refresh.isPending ? 'animate-spin' : ''}`} />
@@ -86,7 +86,7 @@ export function TCMiniTable() {
           </span>
         </button>
         <label
-          className="text-[10px] flex items-center gap-1 text-slate-600 dark:text-slate-400"
+          className="text-[10px] flex items-center gap-1 text-muted-foreground"
           title="Tolerancia simétrica del spread DOF±X. Rango 0.1 a 1.0 (step 0.1). Aplica solo cuando una línea está en divisa distinta a la cotización."
         >
           <span>Tolerancia ±</span>
@@ -97,7 +97,7 @@ export function TCMiniTable() {
             step="0.1"
             value={toleranciaTc}
             onChange={(e) => setToleranciaTc(parseFloat(e.target.value) || 1)}
-            className="w-12 h-5 px-1 text-[11px] font-mono tabular-nums rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-accent-glow"
+            className="w-12 h-5 px-1 text-[11px] font-mono tabular-nums rounded border border-border-strong bg-card text-foreground focus:outline-none focus:border-accent-glow"
           />
         </label>
       </div>
@@ -108,7 +108,7 @@ export function TCMiniTable() {
       >
         {/* DOF */}
         <div className={`rounded border px-1.5 py-1 ${idleColClass}`}>
-          <div className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">DOF · Banxico</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">DOF · Banxico</div>
           <div className="font-mono text-[11px] tabular-nums">
             {tcInvalido ? '—' : `$${fmt4(tc)}`}
           </div>
@@ -117,7 +117,7 @@ export function TCMiniTable() {
         <div
           className={`rounded border px-1.5 py-1 ${aplicaMnAUsd ? activeColClass : idleColClass}`}
         >
-          <div className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">MN → USD</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">MN → USD</div>
           <div className="flex items-center gap-1">
             <span className="font-mono text-[11px] tabular-nums">
               {tcInvalido ? '—' : `$${fmt4(tcs.tc_mn_a_usd)}`}
@@ -134,7 +134,7 @@ export function TCMiniTable() {
         <div
           className={`rounded border px-1.5 py-1 ${aplicaUsdAMn ? activeColClass : idleColClass}`}
         >
-          <div className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">USD → MN</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">USD → MN</div>
           <div className="flex items-center gap-1">
             <span className="font-mono text-[11px] tabular-nums">
               {tcInvalido ? '—' : `$${fmt4(tcs.tc_usd_a_mn)}`}

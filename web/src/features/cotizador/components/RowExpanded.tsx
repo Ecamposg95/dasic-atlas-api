@@ -32,22 +32,22 @@ export function RowExpanded({ item }: { item: CartItem }) {
   );
 
   return (
-    <tr className="bg-slate-100 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+    <tr className="bg-slate-100 dark:bg-slate-900/50 border-b border-border">
       <td colSpan={8} className="p-3">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <Coins className="h-2.5 w-2.5" />
               Moneda origen
             </label>
             <div
-              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center font-mono text-xs text-slate-700 dark:text-slate-300"
+              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center font-mono text-xs text-foreground"
               title={fuente}
             >
               {item.productCurrency}
             </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{fuente}</div>
-            <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 font-mono">
+            <div className="text-[10px] text-muted-foreground mt-0.5">{fuente}</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
               Costo origen: {item.productCurrency} ${Number(item.cost).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             {item.productCurrency !== moneda && (
@@ -57,7 +57,7 @@ export function RowExpanded({ item }: { item: CartItem }) {
             )}
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
               Descuento cliente %
             </label>
             <Input
@@ -76,7 +76,7 @@ export function RowExpanded({ item }: { item: CartItem }) {
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
               Descuento proveedor %
             </label>
             <Input
@@ -95,34 +95,34 @@ export function RowExpanded({ item }: { item: CartItem }) {
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <Truck className="h-2.5 w-2.5" />
               Costo OC (DOF)
             </label>
             <div
-              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center justify-end text-xs font-mono text-slate-700 dark:text-slate-300"
+              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center justify-end text-xs font-mono text-foreground"
               title="Costo a tipo de cambio DOF (sin spread) — lo que se le paga al proveedor cuando se genera la OC."
             >
               {moneda} ${fmt(costoOc)}
             </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <div className="text-[10px] text-muted-foreground mt-0.5">
               Sin spread · descuento proveedor aplicado
             </div>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
               Nota / texto al cliente
             </label>
             <textarea
               value={item.observaciones_linea}
               onChange={(e) => updateLinea(item.uid, { observaciones_linea: e.target.value })}
               rows={2}
-              className="w-full text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 focus:border-accent-glow outline-none resize-none"
+              className="w-full text-xs rounded border border-border-strong bg-card px-2 py-1 focus:border-accent-glow outline-none resize-none"
             />
           </div>
           {/* US-013/014: checkbox por producto — concatena la marca en el PDF. */}
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
               Marca en PDF
             </label>
             <label
@@ -133,10 +133,10 @@ export function RowExpanded({ item }: { item: CartItem }) {
                 type="checkbox"
                 checked={item.mostrar_marca ?? false}
                 onChange={(e) => updateLinea(item.uid, { mostrar_marca: e.target.checked })}
-                className="rounded border-slate-600 bg-slate-100 dark:bg-slate-800"
+                className="rounded border-slate-600 bg-surface-2"
               />
-              <span className="text-xs text-slate-700 dark:text-slate-300 truncate">
-                {item.marca ? item.marca : <span className="text-slate-500 dark:text-slate-400">Sin marca</span>}
+              <span className="text-xs text-foreground truncate">
+                {item.marca ? item.marca : <span className="text-muted-foreground">Sin marca</span>}
               </span>
             </label>
           </div>

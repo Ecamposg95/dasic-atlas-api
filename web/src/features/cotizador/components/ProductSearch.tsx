@@ -143,7 +143,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
       />
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             ref={inputRef}
             value={q}
@@ -175,35 +175,35 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
         </button>
       </div>
       {open && (
-        <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md shadow-xl z-20">
+        <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
           {tipo === 'servicio' ? (
             // Modo Servicios: render del catálogo de servicios.
             <>
               {(servicios.length > 0 || isLoading) && (
-                <div className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <div className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900/95 backdrop-blur border-b border-border px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center justify-between">
                   <span>{isLoading ? 'Buscando…' : `${servicios.length} servicio(s)`}</span>
                   {cantidadParseada != null && <span className="text-violet-400">Cantidad detectada: {cantidadParseada}</span>}
                 </div>
               )}
               {!isLoading && servicios.length === 0 && (
                 <div className="p-3 text-center">
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">Sin coincidencias en el catálogo de servicios</div>
+                  <div className="text-[11px] text-muted-foreground">Sin coincidencias en el catálogo de servicios</div>
                 </div>
               )}
               {servicios.map((s) => (
                 <button key={s.id} type="button" onClick={() => onSelectServicio(s)}
-                  className="w-full text-left px-2 py-1.5 hover:bg-emerald-950/30 transition border-b border-slate-200 dark:border-slate-800 last:border-b-0 flex items-center gap-2">
+                  className="w-full text-left px-2 py-1.5 hover:bg-emerald-950/30 transition border-b border-border last:border-b-0 flex items-center gap-2">
                   <Wrench className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono text-[11px] font-bold text-emerald-300">{s.codigo}</span>
                       {s.categoria_servicio && (
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400">· {s.categoria_servicio}</span>
+                        <span className="text-[10px] text-muted-foreground">· {s.categoria_servicio}</span>
                       )}
                     </div>
                     <div className="text-[11px] text-slate-800 dark:text-slate-200 truncate">{s.nombre}</div>
                   </div>
-                  <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">
+                  <div className="text-[11px] text-muted-foreground font-mono whitespace-nowrap">
                     {fmtCost(Number(s.costo ?? 0), (s.moneda || 'MXN').toUpperCase())}
                   </div>
                 </button>
@@ -221,7 +221,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
               return (
                 <>
                   {(totalCount > 0 || anyLoading) && (
-                    <div className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <div className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900/95 backdrop-blur border-b border-border px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center justify-between">
                       <span>
                         {anyLoading
                           ? 'Buscando…'
@@ -234,7 +234,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                   )}
                   {bothEmpty && (
                     <div className="p-3 text-center space-y-2">
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[11px] text-muted-foreground">
                         Sin coincidencias en el catálogo ni en fantasmas previos
                       </div>
                       {q.trim() && (
@@ -258,20 +258,20 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                       key={`p-${p.id}`}
                       type="button"
                       onClick={() => onSelect(p)}
-                      className="w-full text-left px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-b border-slate-200 dark:border-slate-800 last:border-b-0 flex items-center gap-2"
+                      className="w-full text-left px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-b border-border last:border-b-0 flex items-center gap-2"
                     >
-                      <Package className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+                      <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-[11px] font-bold text-accent-glow">
                             {p.sku_comercial || p.sku}
                           </span>
-                          {p.marca && <span className="text-[10px] text-slate-500 dark:text-slate-400">· {p.marca}</span>}
+                          {p.marca && <span className="text-[10px] text-muted-foreground">· {p.marca}</span>}
                           {stockChip(p.stock_actual)}
                         </div>
                         <div className="text-[11px] text-slate-800 dark:text-slate-200 truncate">{p.nombre}</div>
                       </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">
+                      <div className="text-[11px] text-muted-foreground font-mono whitespace-nowrap">
                         {fmtCost(Number(p.costo_compra ?? 0), p.moneda_compra || 'MXN')}
                       </div>
                     </button>
@@ -286,7 +286,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                       key={`f-${f.id}`}
                       type="button"
                       onClick={() => onSelectFantasma(f)}
-                      className="w-full text-left px-2 py-1.5 hover:bg-amber-950/30 transition border-b border-slate-200 dark:border-slate-800 last:border-b-0 flex items-center gap-2"
+                      className="w-full text-left px-2 py-1.5 hover:bg-amber-950/30 transition border-b border-border last:border-b-0 flex items-center gap-2"
                     >
                       <Ghost className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -300,7 +300,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                             </span>
                           )}
                           {f.proveedor_sugerido_nombre && (
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            <span className="text-[10px] text-muted-foreground">
                               · {f.proveedor_sugerido_nombre}
                             </span>
                           )}
@@ -315,7 +315,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                         </div>
                         <div className="text-[11px] text-slate-800 dark:text-slate-200 truncate">{f.descripcion}</div>
                       </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">
+                      <div className="text-[11px] text-muted-foreground font-mono whitespace-nowrap">
                         {(f.moneda || 'MXN').toUpperCase()} $
                         {Number(f.costo_referencia).toLocaleString('es-MX', {
                           minimumFractionDigits: 2,

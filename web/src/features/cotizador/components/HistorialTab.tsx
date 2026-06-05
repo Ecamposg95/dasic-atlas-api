@@ -39,11 +39,11 @@ const ESTATUS_CLASS: Record<EstatusOrden, string> = {
   cotizacion: 'bg-cyan-900/30 text-cyan-300 border border-cyan-700/50',
   pendiente: 'bg-amber-900/30 text-amber-300 border border-amber-700/50',
   pagada: 'bg-emerald-900/30 text-emerald-300 border border-emerald-700/50',
-  cancelada: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700',
+  cancelada: 'bg-surface-2 text-muted-foreground border border-border-strong',
 };
 
 function badgeEstatus(estatus: EstatusOrden) {
-  const cls = ESTATUS_CLASS[estatus] ?? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700';
+  const cls = ESTATUS_CLASS[estatus] ?? 'bg-surface-2 text-muted-foreground border border-border-strong';
   return `text-[10px] font-bold uppercase px-2 py-0.5 rounded ${cls}`;
 }
 
@@ -157,9 +157,9 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
   return (
     <div className="space-y-2">
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 grid grid-cols-1 md:grid-cols-5 gap-2">
+      <div className="bg-card border border-border rounded-xl p-2 grid grid-cols-1 md:grid-cols-5 gap-2">
         <div className="md:col-span-2 relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Folio o cliente…"
             value={filtros.q ?? ''}
@@ -170,14 +170,14 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
         <select
           value={filtros.estatus ?? ''}
           onChange={(e) => setFiltros((f) => ({ ...f, estatus: e.target.value as EstatusOrden | '', page: 1 }))}
-          className="h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs"
+          className="h-8 rounded border border-border-strong bg-card px-2 text-xs"
         >
           {ESTATUS_OPCIONES.map((o) => (
             <option key={o.key} value={o.key}>{o.label}</option>
           ))}
         </select>
         <div className="relative">
-          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             type="date"
             value={filtros.desde ?? ''}
@@ -186,7 +186,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
           />
         </div>
         <div className="relative">
-          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             type="date"
             value={filtros.hasta ?? ''}
@@ -197,61 +197,61 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
       </div>
 
       {/* Tabla */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-xs">
-          <thead className="bg-slate-100 dark:bg-slate-800/50 text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
+          <thead className="bg-slate-100 dark:bg-slate-800/50 text-[10px] text-muted-foreground uppercase tracking-[0.15em] sticky top-0 z-10">
             <tr>
               <th className="p-2 text-left">
                 <span className="inline-flex items-center gap-1">
-                  <Hash className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Folio
+                  <Hash className="h-3 w-3 text-muted-foreground" /> Folio
                 </span>
               </th>
               <th className="p-2 text-left">
                 <span className="inline-flex items-center gap-1">
-                  <User className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Cliente
+                  <User className="h-3 w-3 text-muted-foreground" /> Cliente
                 </span>
               </th>
               <th className="p-2 text-left">
                 <span className="inline-flex items-center gap-1">
-                  <CircleDot className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Estatus
+                  <CircleDot className="h-3 w-3 text-muted-foreground" /> Estatus
                 </span>
               </th>
               <th className="p-2 text-right w-28">
                 <span className="inline-flex items-center gap-1 justify-end">
-                  <Coins className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Total
+                  <Coins className="h-3 w-3 text-muted-foreground" /> Total
                 </span>
               </th>
               <th className="p-2 text-center w-24">
                 <span className="inline-flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3 text-slate-500 dark:text-slate-400" /> F. creación
+                  <CalendarDays className="h-3 w-3 text-muted-foreground" /> F. creación
                 </span>
               </th>
               <th className="p-2 text-center w-12">
                 <span className="inline-flex items-center gap-1">
-                  <GitBranch className="h-3 w-3 text-slate-500 dark:text-slate-400" /> v.
+                  <GitBranch className="h-3 w-3 text-muted-foreground" /> v.
                 </span>
               </th>
               <th className="p-2 text-right w-56">
                 <span className="inline-flex items-center gap-1 justify-end">
-                  <Zap className="h-3 w-3 text-slate-500 dark:text-slate-400" /> Acciones
+                  <Zap className="h-3 w-3 text-muted-foreground" /> Acciones
                 </span>
               </th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-slate-500 dark:text-slate-400">Cargando historial…</td></tr>
+              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-muted-foreground">Cargando historial…</td></tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-slate-500 dark:text-slate-400">Sin cotizaciones que coincidan</td></tr>
+              <tr><td colSpan={7} className="p-4 text-center text-[11px] text-muted-foreground">Sin cotizaciones que coincidan</td></tr>
             )}
             {items.map((o) => (
-              <tr key={o.id} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/30">
+              <tr key={o.id} className="border-b border-border hover:bg-slate-100 dark:hover:bg-slate-800/30">
                 <td className="p-2 font-mono text-[11px] font-bold text-cyan-400">{o.folio}</td>
-                <td className="p-2 text-slate-700 dark:text-slate-300 max-w-xs truncate">{o.cliente ?? '—'}</td>
+                <td className="p-2 text-foreground max-w-xs truncate">{o.cliente ?? '—'}</td>
                 <td className="p-2"><span className={badgeEstatus(o.estatus)}>{o.estatus.toUpperCase()}</span></td>
                 <td className="p-2 text-right font-mono font-bold">{fmtMoney(o.total, o.moneda)}</td>
-                <td className="p-2 text-center text-[11px] text-slate-600 dark:text-slate-400">{fmtDate(o.fecha)}</td>
+                <td className="p-2 text-center text-[11px] text-muted-foreground">{fmtDate(o.fecha)}</td>
                 <td className="p-2 text-center">
                   {o.version > 1 && (
                     <span className="text-[10px] bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded">v{o.version}</span>
@@ -261,12 +261,12 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
                   <div className="flex items-center justify-end gap-1 flex-wrap">
                     <a
                       href={`/api/ventas/${o.id}/pdf`} target="_blank" rel="noreferrer"
-                      className="text-[11px] px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 flex items-center gap-1"
+                      className="text-[11px] px-1.5 py-0.5 rounded border border-border-strong hover:border-accent-glow text-foreground flex items-center gap-1"
                       title="Ver PDF"
                     ><FileText className="h-3 w-3" /> PDF</a>
                     <a
                       href={`/api/ventas/${o.id}/word`} target="_blank" rel="noreferrer"
-                      className="text-[11px] px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 flex items-center gap-1"
+                      className="text-[11px] px-1.5 py-0.5 rounded border border-border-strong hover:border-accent-glow text-foreground flex items-center gap-1"
                       title="Descargar Word"
                     ><FileText className="h-3 w-3" /> Word</a>
                     {o.estatus === 'cotizacion' && (
@@ -312,7 +312,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
 
       {/* Paginación */}
       {total > pageSize && (
-        <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <div>Página {page} de {totalPages} · {total} cotizaciones</div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" disabled={page === 1}

@@ -147,12 +147,12 @@ export function EditLineModal() {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Pen className="h-4 w-4 text-accent-glow" /> Editar línea
           </h3>
-          <button type="button" onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -169,21 +169,21 @@ export function EditLineModal() {
 
         {!showReplace ? (
           <>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
+            <label className="block text-xs text-muted-foreground mb-1">Descripción</label>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={3}
-              className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 mb-3 focus:border-accent-glow outline-none"
+              className="w-full text-sm rounded border border-border-strong bg-card px-2 py-1.5 mb-3 focus:border-accent-glow outline-none"
             />
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div>
-                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU</label>
+                <label className="block text-xs text-muted-foreground mb-1">SKU</label>
                 <Input value={sku} onChange={(e) => setSku(e.target.value)} />
               </div>
               <div>
-                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Costo base</label>
+                <label className="block text-xs text-muted-foreground mb-1">Costo base</label>
                 <Input type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
               </div>
             </div>
@@ -191,18 +191,18 @@ export function EditLineModal() {
             {esFantasma && (
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Moneda</label>
                   <select
                     value={moneda}
                     onChange={(e) => setMoneda(e.target.value as Moneda)}
-                    className="w-full h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs px-2 focus:border-accent-glow outline-none"
+                    className="w-full h-8 rounded border border-border-strong bg-card text-xs px-2 focus:border-accent-glow outline-none"
                   >
                     <option value="MXN">MXN</option>
                     <option value="USD">USD</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor sugerido</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Proveedor sugerido</label>
                   <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
                 </div>
               </div>
@@ -228,7 +228,7 @@ export function EditLineModal() {
                   type="button"
                   onClick={onRestore}
                   disabled={!hayDatosCatalogo}
-                  className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
+                  className="text-xs text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100 hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
                 >
                   <RotateCcw className="h-3 w-3" /> Restaurar valores del catálogo
                 </button>
@@ -255,12 +255,12 @@ export function EditLineModal() {
                   );
                 }, 100);
               }}
-              className="text-xs text-slate-600 dark:text-slate-400 hover:text-accent-glow hover:underline mb-3 flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-accent-glow hover:underline mb-3 flex items-center gap-1"
             >
               <MessageSquare className="h-3 w-3" /> Editar nota larga / productos similares…
             </button>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 flex-wrap">
+            <div className="flex justify-end gap-2 pt-3 border-t border-border flex-wrap">
               <Button variant="ghost" size="sm" onClick={onClose} disabled={savingCat}>Cancelar</Button>
               {esCatalogo && isAdmin && (
                 <Button variant="outline" size="sm" onClick={onSaveAndCatalog} disabled={savingCat}>
@@ -272,7 +272,7 @@ export function EditLineModal() {
           </>
         ) : (
           <>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Buscar producto para reemplazar</label>
+            <label className="block text-xs text-muted-foreground mb-1">Buscar producto para reemplazar</label>
             <Input
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
@@ -281,7 +281,7 @@ export function EditLineModal() {
             />
             <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
               {productos.length === 0 && (
-                <div className="text-xs text-slate-500 dark:text-slate-400 text-center p-4">
+                <div className="text-xs text-muted-foreground text-center p-4">
                   {searchQ ? 'Sin coincidencias' : 'Escribe para buscar productos del catálogo'}
                 </div>
               )}
@@ -296,7 +296,7 @@ export function EditLineModal() {
                     {p.sku_comercial || p.sku || '—'}
                   </div>
                   <div className="text-xs text-slate-800 dark:text-slate-200 truncate">{p.nombre}</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="text-[11px] text-muted-foreground">
                     {p.moneda_compra || 'MXN'} ${Number(p.costo_compra ?? 0).toFixed(2)} · Stock {p.stock_actual ?? 0}
                   </div>
                 </button>
@@ -305,7 +305,7 @@ export function EditLineModal() {
             <button
               type="button"
               onClick={() => setShowReplace(false)}
-              className="text-xs text-slate-600 dark:text-slate-400 hover:underline mt-2 flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:underline mt-2 flex items-center gap-1"
             >
               <ArrowLeft className="h-3 w-3" /> Volver a editar
             </button>

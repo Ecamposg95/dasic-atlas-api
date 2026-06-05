@@ -177,12 +177,12 @@ export function AgregarFantasmaModal() {
       <div className="bg-white dark:bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col">
         {/* US-004: header y footer fijos (shrink-0), cuerpo scrolleable. El
             modal nunca excede 90vh y los botones quedan siempre visibles. */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0 border-b border-border">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Ghost className="h-4 w-4 text-amber-400" />
             {reusingFantasma ? 'Reusar fantasma previo' : 'Agregar producto fantasma'}
           </h3>
-          <button type="button" onClick={requestClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={requestClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -226,8 +226,8 @@ export function AgregarFantasmaModal() {
           {/* US-002: SKU como primer campo. Recibe el texto buscado arrastrado
               desde el buscador; editable antes de guardar. */}
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-              <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-slate-600 dark:text-slate-400 normal-case">(opcional)</span>
+            <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+              <Hash className="h-2.5 w-2.5" /> SKU libre <span className="text-muted-foreground normal-case">(opcional)</span>
             </label>
             <Input
               value={skuLibre}
@@ -238,7 +238,7 @@ export function AgregarFantasmaModal() {
           </div>
 
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
               Descripción <span className="text-rose-400">*</span>
             </label>
             <textarea
@@ -247,7 +247,7 @@ export function AgregarFantasmaModal() {
               rows={2}
               placeholder='Ej. "Sensor inductivo M12 24VDC PNP NA marca Balluff"'
               autoFocus
-              className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus:border-accent-glow outline-none resize-none"
+              className="w-full text-sm rounded border border-border-strong bg-card px-3 py-2 focus:border-accent-glow outline-none resize-none"
             />
             {sugerenciasMostradas.length > 0 && (
               <div className="mt-2 border border-amber-700/40 bg-amber-950/30 rounded-md overflow-hidden">
@@ -270,7 +270,7 @@ export function AgregarFantasmaModal() {
                             <span className="font-mono text-[11px] font-bold text-amber-300">{f.sku_libre}</span>
                           )}
                           {f.proveedor_sugerido_nombre && (
-                            <span className="text-[11px] text-slate-600 dark:text-slate-400">· {f.proveedor_sugerido_nombre}</span>
+                            <span className="text-[11px] text-muted-foreground">· {f.proveedor_sugerido_nombre}</span>
                           )}
                           {f.veces_solicitado > 1 && (
                             <span className="text-[11px] bg-amber-900/50 text-amber-200 px-1.5 py-0.5 rounded">
@@ -280,7 +280,7 @@ export function AgregarFantasmaModal() {
                         </div>
                         <div className="text-[11px] text-slate-800 dark:text-slate-200 truncate">{f.descripcion}</div>
                       </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">
+                      <div className="text-[11px] text-muted-foreground font-mono whitespace-nowrap">
                         {(f.moneda || 'MXN').toUpperCase()} ${Number(f.costo_referencia).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </div>
                     </button>
@@ -292,7 +292,7 @@ export function AgregarFantasmaModal() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
                 <DollarSign className="h-2.5 w-2.5" /> Costo unit. <span className="text-rose-400">*</span>
               </label>
               <Input
@@ -305,18 +305,18 @@ export function AgregarFantasmaModal() {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Moneda costo</label>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Moneda costo</label>
               <select
                 value={moneda}
                 onChange={(e) => setMoneda(e.target.value as Moneda)}
-                className="w-full h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs"
+                className="w-full h-8 rounded border border-border-strong bg-card px-2 text-xs"
               >
                 <option value="MXN">MXN</option>
                 <option value="USD">USD</option>
               </select>
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
                 <Percent className="h-2.5 w-2.5" /> Utilidad %
               </label>
               <Input
@@ -329,7 +329,7 @@ export function AgregarFantasmaModal() {
               />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
                 Cantidad <span className="text-rose-400">*</span>
               </label>
               <Input
@@ -343,12 +343,12 @@ export function AgregarFantasmaModal() {
           </div>
 
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+            <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <Building2 className="h-2.5 w-2.5" />
-              Proveedor sugerido <span className="text-slate-600 dark:text-slate-400 normal-case">(opcional pero recomendado)</span>
+              Proveedor sugerido <span className="text-muted-foreground normal-case">(opcional pero recomendado)</span>
             </label>
             <ProveedorPicker value={proveedorId} onChange={setProveedorId} />
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            <div className="text-[11px] text-muted-foreground mt-1">
               Sin proveedor, esta línea quedará en el bucket "sin proveedor" al generar OCs.
             </div>
           </div>
@@ -357,19 +357,19 @@ export function AgregarFantasmaModal() {
               apilan en el pool de fantasmas y se snapshotean en la línea. */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Marca</label>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Marca</label>
               <Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Marca del producto" className="h-8 text-xs" />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Clave prod/serv SAT</label>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Clave prod/serv SAT</label>
               <SatCombobox value={claveProdServ} onChange={setClaveProdServ} endpoint="/api/sat/clave-prod-serv" minChars={2} maxLength={8} placeholder="Buscar o escribir" className="h-8 text-xs font-mono" />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Clave unidad SAT</label>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Clave unidad SAT</label>
               <SatCombobox value={claveUnidadSat} onChange={setClaveUnidadSat} endpoint="/api/sat/clave-unidad" minChars={1} maxLength={10} placeholder="Buscar unidad" className="h-8 text-xs font-mono" />
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Observaciones</label>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Observaciones</label>
               <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Notas" className="h-8 text-xs" />
             </div>
           </div>
@@ -382,7 +382,7 @@ export function AgregarFantasmaModal() {
         )}
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-4 shrink-0 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-2 px-5 py-4 shrink-0 border-t border-border">
           <Button variant="ghost" size="sm" onClick={requestClose}>Cancelar</Button>
           <Button size="sm" onClick={onSave} className="bg-amber-600 hover:bg-amber-700 text-white">
             {reusingFantasma ? (

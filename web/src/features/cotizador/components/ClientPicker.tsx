@@ -56,14 +56,14 @@ export function ClientPicker() {
 
   if (isLoading) {
     return (
-      <div className="text-xs text-slate-500 dark:text-slate-400 px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900">
+      <div className="text-xs text-muted-foreground px-3 py-2 border border-border-strong rounded-md bg-card">
         Cargando clientes…
       </div>
     );
   }
   if (error) {
     return (
-      <div className="text-xs text-rose-400 px-3 py-2 border border-rose-800 rounded-md bg-white dark:bg-slate-900">
+      <div className="text-xs text-rose-400 px-3 py-2 border border-rose-800 rounded-md bg-card">
         Error al cargar clientes
       </div>
     );
@@ -76,10 +76,10 @@ export function ClientPicker() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="w-full text-left px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900 hover:border-accent-glow transition"
+            className="w-full text-left px-3 py-2 border border-border-strong rounded-md bg-card hover:border-accent-glow transition"
           >
             <div className="text-sm font-medium">{selected.nombre_empresa}</div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {selected.rfc_tax_id && <span className="font-mono">{selected.rfc_tax_id}</span>}
               {selected.email && <span className="truncate">{selected.email}</span>}
             </div>
@@ -87,7 +87,7 @@ export function ClientPicker() {
         ) : (
           <div>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -98,9 +98,9 @@ export function ClientPicker() {
               />
             </div>
             {open && (
-              <div className="absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md shadow-xl z-20">
+              <div className="absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
                 {matches.length === 0 ? (
-                  <div className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400 text-center">
+                  <div className="px-3 py-4 text-xs text-muted-foreground text-center">
                     Sin coincidencias
                   </div>
                 ) : (
@@ -114,10 +114,10 @@ export function ClientPicker() {
                         setQ('');
                         setOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-b border-slate-200 dark:border-slate-800 last:border-b-0"
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-b border-border last:border-b-0"
                     >
                       <div className="text-sm">{c.nombre_empresa}</div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         {c.rfc_tax_id && <span className="font-mono">{c.rfc_tax_id}</span>}
                         {c.email && <span className="truncate">{c.email}</span>}
                       </div>
@@ -133,7 +133,7 @@ export function ClientPicker() {
                       setQ('');
                       setOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-900/20 border-t border-slate-300 dark:border-slate-700"
+                    className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-900/20 border-t border-border-strong"
                   >
                     Quitar selección
                   </button>
@@ -146,11 +146,11 @@ export function ClientPicker() {
 
       {cliente_id !== null && (contactos ?? []).length > 0 && (
         <div>
-          <label className="block text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Atiende a</label>
+          <label className="block text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Atiende a</label>
           <select
             value={contacto_id ?? ''}
             onChange={(e) => setContacto(e.target.value ? Number(e.target.value) : null)}
-            className="w-full h-8 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs"
+            className="w-full h-8 rounded border border-border-strong bg-card px-2 text-xs"
           >
             <option value="">— Sin contacto —</option>
             {(contactos ?? []).map((c) => (

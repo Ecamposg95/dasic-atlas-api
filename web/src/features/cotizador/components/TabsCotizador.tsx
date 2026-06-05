@@ -12,14 +12,14 @@ export function TabsCotizador({
   countHistorial?: number;
 }) {
   return (
-    <div className="flex items-center gap-1 border-b-2 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/40 rounded-t-md px-1 -mt-2 mb-4">
+    <div className="flex items-center gap-1 border-b-2 border-border bg-slate-100 dark:bg-slate-900/40 rounded-t-md px-1 -mt-2 mb-4">
       <button
         type="button"
         onClick={() => onChange('editor')}
         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-[2px] ${
           active === 'editor'
             ? 'text-accent-glow border-accent-glow'
-            : 'text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-slate-200'
+            : 'text-muted-foreground border-transparent hover:text-slate-800 dark:hover:text-slate-200'
         }`}
       >
         <Edit3 className="h-4 w-4" /> Cotizador
@@ -30,7 +30,7 @@ export function TabsCotizador({
         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-[2px] ${
           active === 'historial'
             ? 'text-accent-glow border-accent-glow'
-            : 'text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-slate-200'
+            : 'text-muted-foreground border-transparent hover:text-slate-800 dark:hover:text-slate-200'
         }`}
       >
         <History className="h-4 w-4" /> Historial
