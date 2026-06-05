@@ -90,6 +90,11 @@ def actualizar_usuario(
     if nuevo_rol == RolUsuario.SUPERADMIN and current_user_rol != RolUsuario.SUPERADMIN:
         raise HTTPException(status_code=403, detail="Solo un superadmin puede asignar el rol superadmin.")
 
+    # Anti-escalada: solo un superadmin puede MODIFICAR a otro superadmin
+    # (un admin no puede degradar/desactivar/renombrar una cuenta superadmin).
+    if target_rol == RolUsuario.SUPERADMIN and current_user_rol != RolUsuario.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Solo un superadmin puede modificar a otro superadmin.")
+
     # Auto-protección: un superadmin no puede degradarse ni desactivarse a sí mismo
     if target.id == current_user.id:
         if nuevo_rol is not None and nuevo_rol != RolUsuario.SUPERADMIN and current_user_rol == RolUsuario.SUPERADMIN:
@@ -141,6 +146,13 @@ def reset_password(
     if not user:
         raise HTTPException(404, "Usuario no encontrado")
 
+    # Anti-escalada: solo un superadmin puede resetear la contraseña de otro superadmin.
+    if (
+        RolUsuario.from_input(user.rol) == RolUsuario.SUPERADMIN
+        and RolUsuario.from_input(current_user.rol) != RolUsuario.SUPERADMIN
+    ):
+        raise HTTPException(status_code=403, detail="Solo un superadmin puede resetear la contraseña de otro superadmin.")
+
     try:
         user.password_hash = UserService.get_password_hash(payload.password)
         db.commit()
@@ -171,6 +183,13 @@ def eliminar_usuario(
 
     if user_to_delete.id == current_user.id:
         raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo")
+
+    # Anti-escalada: solo un superadmin puede eliminar a otro superadmin.
+    if (
+        RolUsuario.from_input(user_to_delete.rol) == RolUsuario.SUPERADMIN
+        and RolUsuario.from_input(current_user.rol) != RolUsuario.SUPERADMIN
+    ):
+        raise HTTPException(status_code=403, detail="Solo un superadmin puede eliminar a otro superadmin.")
 
     # Protección último superadmin activo
     if (
