@@ -208,6 +208,140 @@ def marcar_vencidos(db: Session) -> int:
     return n
 
 
+def calcular_aging(db: Session) -> dict:
+    """Agrupa todos los CARGOs abiertos en 4 buckets de antigüedad.
+
+    Buckets:
+      0-30d  → dias_atraso entre 0 y 30 (incluye cargos aún vigentes)
+      31-60d → 31-60
+      61-90d → 61-90
+      90+    → >= 91
+
+    Devuelve un dict con ``buckets`` (lista siempre de 4 items) + ``total`` +
+    ``total_count``.  Usa la misma lógica de ``dias_atraso`` que
+    ``listar_vencimientos``: si ``fecha_vencimiento`` existe y es anterior a
+    hoy → ``(hoy - fecha_vencimiento).days``; en caso contrario → 0.
+    """
+    hoy = _hoy()
+
+    rows = (
+        db.query(models.TransaccionCliente)
+        .filter(models.TransaccionCliente.tipo == TipoMovimiento.CARGO)
+        .filter(models.TransaccionCliente.estatus_pago != "pagado")
+        .all()
+    )
+
+    # Definición de buckets en orden canónico
+    _BUCKETS = [
+        {"rango": "0-30",  "dias_min": 0,  "dias_max": 30,  "monto": 0.0, "count": 0},
+        {"rango": "31-60", "dias_min": 31, "dias_max": 60,  "monto": 0.0, "count": 0},
+        {"rango": "61-90", "dias_min": 61, "dias_max": 90,  "monto": 0.0, "count": 0},
+        {"rango": "90+",   "dias_min": 91, "dias_max": None, "monto": 0.0, "count": 0},
+    ]
+
+    total = 0.0
+
+    for r in rows:
+        saldo = float(Decimal(r.monto or 0) - Decimal(r.monto_pagado or 0))
+        if saldo <= 0:
+            continue
+
+        # Misma lógica que listar_vencimientos
+        if r.fecha_vencimiento and r.fecha_vencimiento < hoy:
+            dias_atraso = (hoy - r.fecha_vencimiento).days
+        else:
+            dias_atraso = 0
+
+        # Asignar bucket
+        if dias_atraso <= 30:
+            idx = 0
+        elif dias_atraso <= 60:
+            idx = 1
+        elif dias_atraso <= 90:
+            idx = 2
+        else:
+            idx = 3
+
+        _BUCKETS[idx]["monto"] += saldo
+        _BUCKETS[idx]["count"] += 1
+        total += saldo
+
+    return {
+        "buckets": _BUCKETS,
+        "total": round(total, 2),
+        "total_count": sum(b["count"] for b in _BUCKETS),
+    }
+
+
+def top_deudores(db: Session, *, limit: int = 10) -> list[dict]:
+    """Top N clientes por saldo abierto real (suma de CARGOs con saldo > 0).
+
+    Calcula desde las transacciones reales (no confía en ``cliente.saldo_actual``),
+    de modo que los montos estén en sintonía con el aging.  Devuelve la lista
+    ordenada de mayor a menor saldo, con:
+      - ``cliente_id``
+      - ``nombre_empresa``  (join a clientes — batch con IN, sin N+1)
+      - ``saldo``           (total open saldo del cliente)
+      - ``dias_max_atraso`` (máximo días de atraso entre sus cargos abiertos)
+      - ``n_cargos_abiertos``
+    """
+    hoy = _hoy()
+
+    rows = (
+        db.query(models.TransaccionCliente)
+        .filter(models.TransaccionCliente.tipo == TipoMovimiento.CARGO)
+        .filter(models.TransaccionCliente.estatus_pago != "pagado")
+        .all()
+    )
+
+    # Agregar por cliente en Python (DB puede ser pequeña; evita SQL complejo)
+    from collections import defaultdict
+    agg: dict[int, dict] = defaultdict(lambda: {"saldo": 0.0, "dias_max_atraso": 0, "n_cargos_abiertos": 0})
+
+    for r in rows:
+        saldo = float(Decimal(r.monto or 0) - Decimal(r.monto_pagado or 0))
+        if saldo <= 0:
+            continue
+
+        if r.fecha_vencimiento and r.fecha_vencimiento < hoy:
+            dias_atraso = (hoy - r.fecha_vencimiento).days
+        else:
+            dias_atraso = 0
+
+        bucket = agg[r.cliente_id]
+        bucket["saldo"] += saldo
+        bucket["n_cargos_abiertos"] += 1
+        if dias_atraso > bucket["dias_max_atraso"]:
+            bucket["dias_max_atraso"] = dias_atraso
+
+    if not agg:
+        return []
+
+    # Ordenar por saldo DESC y tomar top N
+    sorted_ids = sorted(agg.keys(), key=lambda cid: agg[cid]["saldo"], reverse=True)[:limit]
+
+    # Batch-fetch nombres — single IN query, sin N+1
+    clientes = (
+        db.query(models.Cliente.id, models.Cliente.nombre_empresa)
+        .filter(models.Cliente.id.in_(sorted_ids))
+        .all()
+    )
+    nombre_by_id = {c.id: c.nombre_empresa for c in clientes}
+
+    result = []
+    for cid in sorted_ids:
+        datos = agg[cid]
+        result.append({
+            "cliente_id": cid,
+            "nombre_empresa": nombre_by_id.get(cid, f"Cliente #{cid}"),
+            "saldo": round(datos["saldo"], 2),
+            "dias_max_atraso": datos["dias_max_atraso"],
+            "n_cargos_abiertos": datos["n_cargos_abiertos"],
+        })
+
+    return result
+
+
 def listar_vencimientos(db: Session, *, dias: int = 7) -> list[dict]:
     """Lista CARGOs por vencer (en N días) o ya vencidos, agrupados por cliente."""
     hoy = _hoy()

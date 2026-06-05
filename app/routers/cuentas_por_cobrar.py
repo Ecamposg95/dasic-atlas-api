@@ -15,8 +15,10 @@ from app import models
 from app.db import get_db
 from app.security import allow_admin, allow_all_staff
 from app.services.cuentas_por_cobrar import (
+    calcular_aging,
     listar_vencimientos,
     marcar_vencidos,
+    top_deudores,
 )
 from app.models.enums import TipoMovimiento
 
@@ -89,3 +91,51 @@ def marcar_vencidos_endpoint(db: Session = Depends(get_db)):
     Idempotente — solo afecta los que no estaban ya pagados/vencidos."""
     n = marcar_vencidos(db)
     return {"ok": True, "actualizados": n}
+
+
+@router.get("/aging", dependencies=[Depends(allow_all_staff)])
+def aging_report(db: Session = Depends(get_db)):
+    """Reporte de antigüedad de saldos (aging buckets 0-30 / 31-60 / 61-90 / 90+).
+
+    Considera todos los CARGOs con saldo pendiente > 0. El ``dias_atraso`` de
+    cada cargo se calcula igual que en ``/vencimientos``: si
+    ``fecha_vencimiento`` existe y es anterior a hoy →
+    ``(hoy − fecha_vencimiento).days``, si no → 0.
+
+    Response::
+
+        {
+          "buckets": [
+            {"rango": "0-30",  "dias_min": 0,  "dias_max": 30,   "monto": float, "count": int},
+            {"rango": "31-60", "dias_min": 31, "dias_max": 60,   "monto": float, "count": int},
+            {"rango": "61-90", "dias_min": 61, "dias_max": 90,   "monto": float, "count": int},
+            {"rango": "90+",   "dias_min": 91, "dias_max": None, "monto": float, "count": int}
+          ],
+          "total": float,
+          "total_count": int
+        }
+    """
+    return calcular_aging(db)
+
+
+@router.get("/top-deudores", dependencies=[Depends(allow_all_staff)])
+def top_deudores_endpoint(
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Top N clientes por saldo abierto real (calculado de CARGOs, no del cache).
+
+    Response: lista de hasta ``limit`` items::
+
+        [
+          {
+            "cliente_id": int,
+            "nombre_empresa": str,
+            "saldo": float,
+            "dias_max_atraso": int,
+            "n_cargos_abiertos": int
+          },
+          ...
+        ]
+    """
+    return top_deudores(db, limit=limit)
