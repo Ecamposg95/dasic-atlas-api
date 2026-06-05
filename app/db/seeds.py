@@ -504,6 +504,53 @@ def seed_super_admin(db: Session) -> None:
     logger.info("Admin creado: admin@dasic.mx")
 
 
+def seed_dedicated_superadmin(db: Session) -> None:
+    """Crea o promueve al superadmin dedicado definido por variables de entorno.
+
+    Variables:
+        SUPERADMIN_EMAIL    — email del superadmin (requerido; si falta, no-op).
+        SUPERADMIN_PASSWORD — contraseña inicial (requerido; si falta, no-op).
+        SUPERADMIN_NOMBRE   — nombre del usuario (opcional; default "Super Admin").
+
+    Idempotente:
+        - Si el usuario existe y ya es SUPERADMIN → no hace nada.
+        - Si el usuario existe pero NO es SUPERADMIN → lo promueve (sin tocar password).
+        - Si el usuario no existe → lo crea con bcrypt vía UserService.create_user.
+    """
+    import os
+
+    email = (os.getenv("SUPERADMIN_EMAIL") or "").strip().lower()
+    password = (os.getenv("SUPERADMIN_PASSWORD") or "").strip()
+    nombre = (os.getenv("SUPERADMIN_NOMBRE") or "Super Admin").strip()
+
+    if not email or not password:
+        return
+
+    try:
+        u = db.query(models.Usuario).filter(func.lower(models.Usuario.email) == email).first()
+        if u:
+            if u.rol == models.RolUsuario.SUPERADMIN:
+                return
+            u.rol = models.RolUsuario.SUPERADMIN
+            db.commit()
+            logger.info("seed_dedicated_superadmin: usuario %s promovido a SUPERADMIN", email)
+        else:
+            UserService.create_user(
+                db,
+                UsuarioCreate(
+                    nombre=nombre,
+                    email=email,
+                    password=password,
+                    rol=models.RolUsuario.SUPERADMIN,
+                    activo=True,
+                ),
+            )
+            logger.info("seed_dedicated_superadmin: superadmin dedicado creado (%s)", email)
+    except Exception as exc:
+        db.rollback()
+        logger.warning("seed_dedicated_superadmin: error al procesar env superadmin (%s): %s", email, exc)
+
+
 def promote_superadmin_from_env(db: Session) -> None:
     """Promueve a SUPERADMIN el usuario cuyo email == BOOTSTRAP_SUPERADMIN_EMAIL.
     Idempotente. Para elevar un admin existente en prod sin auto-escalado por UI."""
@@ -739,6 +786,7 @@ def run_all_seeds(db: Session) -> None:
     """Punto de entrada único para tareas de startup."""
     run_backfill_ddl(db)
     seed_super_admin(db)
+    seed_dedicated_superadmin(db)
     promote_superadmin_from_env(db)
     seed_marcas(db)
     seed_sat_catalogos_pequenos(db)
