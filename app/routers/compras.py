@@ -541,16 +541,20 @@ def confirmar_ocs_desde_cotizacion(
                     continue  # servicios no se ordenan
 
                 cantidad = linea_in.cantidad or det.cantidad
-                costo_unitario = Decimal(det.costo_base_linea or 0)
-
-                # Convertir moneda si origen difiere de la moneda de la cotización
-                origen = (det.moneda_origen_linea or "MXN").upper()
-                if origen != quote.moneda:
-                    if quote.moneda == "USD":
-                        costo_unitario = costo_unitario / Decimal(quote.tipo_cambio or 1)
-                    else:
-                        costo_unitario = costo_unitario * Decimal(quote.tipo_cambio or 1)
-                costo_unitario = costo_unitario.quantize(Decimal("0.01"))
+                # Costo OC = costo vivo del catálogo (fallback snapshot), NETO de
+                # descuento_proveedor, convertido a DOF puro (sin spread). Coincide
+                # con "Costo OC (DOF)" del cotizador (RowExpanded / CotProveedor!I6).
+                if det.producto_id and det.producto and det.producto.costo_compra:
+                    costo_origen_oc = Decimal(det.producto.costo_compra)
+                    origen = (det.producto.moneda_compra or det.moneda_origen_linea or "MXN").upper()
+                else:
+                    costo_origen_oc = Decimal(det.costo_base_linea or 0)
+                    origen = (det.moneda_origen_linea or "MXN").upper()
+                descprov = Decimal(det.descuento_proveedor or 0)
+                costo_origen_oc = costo_origen_oc * (Decimal("1") - descprov / Decimal("100"))
+                costo_unitario = _convertir_costo_compra(
+                    costo_origen_oc, origen, quote.moneda, Decimal(quote.tipo_cambio or 1)
+                ).quantize(Decimal("0.01"))
 
                 importe = (costo_unitario * cantidad).quantize(Decimal("0.01"))
                 total += importe
@@ -655,14 +659,20 @@ def crear_oc_desde_cotizacion(
             if producto is None:
                 # FK apuntando a producto borrado (orphan). Saltar sin tronar.
                 continue
-            costo_unitario = Decimal(producto.costo_compra or item.costo_base_linea or 0)
-            origen = (item.moneda_origen_linea or producto.moneda_compra or "MXN").upper()
-            if origen != quote.moneda:
-                if quote.moneda == "USD":
-                    costo_unitario = costo_unitario / Decimal(quote.tipo_cambio or 1)
-                else:
-                    costo_unitario = costo_unitario * Decimal(quote.tipo_cambio or 1)
-            costo_unitario = costo_unitario.quantize(Decimal("0.01"))
+            # Costo OC = costo vivo del catálogo (fallback snapshot), NETO de
+            # descuento_proveedor, convertido a DOF puro (sin spread). Coincide
+            # con "Costo OC (DOF)" del cotizador (RowExpanded / CotProveedor!I6).
+            if producto.costo_compra:
+                costo_origen_oc = Decimal(producto.costo_compra)
+                origen = (producto.moneda_compra or item.moneda_origen_linea or "MXN").upper()
+            else:
+                costo_origen_oc = Decimal(item.costo_base_linea or 0)
+                origen = (item.moneda_origen_linea or "MXN").upper()
+            descprov = Decimal(item.descuento_proveedor or 0)
+            costo_origen_oc = costo_origen_oc * (Decimal("1") - descprov / Decimal("100"))
+            costo_unitario = _convertir_costo_compra(
+                costo_origen_oc, origen, quote.moneda, Decimal(quote.tipo_cambio or 1)
+            ).quantize(Decimal("0.01"))
             importe = (costo_unitario * item.cantidad).quantize(Decimal("0.01"))
             total += importe
 

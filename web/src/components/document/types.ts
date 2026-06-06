@@ -36,7 +36,9 @@ export type DocRowVM = {
 
   // Costo (solo si caps.showCosto)
   costOrigen: number;          // crudo del catálogo, moneda nativa
-  costoOc: number;             // DOF puro convertido a moneda doc
+  costoOc: number;             // costo convertido a moneda doc; el productor define el TC:
+                               // cotizador = base de VENTA (DOF+tolerancia, sin descProv);
+                               // el costo OC real (DOF puro, neto descProv) vive en RowExpanded
 
   // Util / Desc / Entrega (solo si sus caps)
   utilidad: number;

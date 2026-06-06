@@ -602,6 +602,8 @@ def crear_orden(
 
     moneda_cotizacion = _normalize_currency(orden_data.moneda)
     tipo_cambio = _resolve_exchange_rate(moneda_cotizacion, orden_data.tipo_cambio)
+    if not (Decimal("1.0") <= Decimal(tipo_cambio) <= Decimal("100.0")):
+        raise HTTPException(400, "tipo_cambio fuera de rango (1.0 a 100.0)")
     tolerancia_tc = (
         Decimal(orden_data.tolerancia_tc)
         if orden_data.tolerancia_tc is not None
