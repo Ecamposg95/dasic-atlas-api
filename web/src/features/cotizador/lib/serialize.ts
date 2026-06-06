@@ -30,10 +30,6 @@ function hayOverrideNom(it: CartItem): boolean {
   return it.nom_original != null && it.nom !== it.nom_original;
 }
 
-function hayOverrideCosto(it: CartItem): boolean {
-  return Number(it.cost) !== Number(it.cost_original);
-}
-
 export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
   return {
     cliente_id: s.cliente_id,
@@ -123,7 +119,11 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
         moneda_origen: i.productCurrency,
         sku_libre: hayOverrideSku(i) ? i.sku : null,
         descripcion_libre: hayOverrideNom(i) ? i.nom : null,
-        costo_unitario: hayOverrideCosto(i) ? i.cost : null,
+        // Pin del costo cotizado: SIEMPRE se manda el costo de la línea (no se
+        // gatilla por diff vs catálogo vivo). Evita que reabrir+guardar cambie
+        // precios silenciosamente cuando el catálogo se movió, y que un override
+        // se pierda/falsee por drift. La OC sí usa el costo vivo (lado compras).
+        costo_unitario: i.cost,
         tipo_linea: 'producto_catalogo' as const,
         proveedor_sugerido_id: null,
         entrega_min: i.entrega_min,

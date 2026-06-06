@@ -1,4 +1,5 @@
 // web/src/features/cotizador/components/TCMiniTable.tsx
+import { useEffect } from 'react';
 import { RefreshCw, ArrowDown, ArrowUp } from 'lucide-react';
 import { useCotizador } from '../store';
 import { resolveDirectionalTcs } from '../lib/calc';
@@ -42,6 +43,18 @@ export function TCMiniTable() {
   const tcNecesario = moneda === 'USD' || hayLineasOtraMoneda;
 
   const tcInvalido = !Number.isFinite(tc) || tc <= 0;
+
+  // Auto-rellenar el TC desde Banxico cuando la cotización requiere conversión
+  // (USD, o líneas en otra moneda) y el TC sigue en un valor implausible
+  // (default 1 o cualquier valor < 5; USD/MXN nunca está por debajo). Evita que
+  // se cotice a ×2 por dejar el TC sin capturar. No pisa un TC ya válido.
+  useEffect(() => {
+    if (!tcNecesario) return;
+    const rate = Number(fx?.usd_mxn);
+    if (Number.isFinite(rate) && rate > 0 && (!Number.isFinite(tc) || tc < 5)) {
+      setTc(rate);
+    }
+  }, [tcNecesario, fx, tc, setTc]);
 
   async function onRefresh() {
     try {

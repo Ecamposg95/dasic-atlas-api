@@ -52,13 +52,16 @@ export function TotalsBar() {
 
   const noEditable = !!editingEstatus && editingEstatus.toUpperCase() !== 'COTIZACION';
   const tieneNoSoportadas = lineasNoSoportadas.length > 0;
-  const tcInvalido = moneda === 'USD' && tc <= 0;
+  // TC necesario si la cot es USD o tiene líneas en otra moneda. Implausible si
+  // sigue < 5 (USD/MXN nunca baja de ahí) → bloquea guardar para no subvaluar ×2.
+  const tcNecesario = moneda === 'USD' || hayLineasEnOtraMoneda;
+  const tcImplausible = tcNecesario && (!Number.isFinite(tc) || tc < 5);
 
   const reasons: string[] = [];
   if (cart.length === 0) reasons.push('agrega productos');
   if (cliente_id == null) reasons.push('selecciona cliente');
   if (cart.some((l) => l.qty <= 0)) reasons.push('hay líneas con cantidad 0');
-  if (tcInvalido) reasons.push('captura TC');
+  if (tcImplausible) reasons.push('captura el TC de Banxico (TC actual implausible)');
   if (tieneNoSoportadas) reasons.push('cotización contiene líneas ad-hoc no soportadas');
   if (noEditable) reasons.push(`cotización en estatus ${editingEstatus}`);
   const disabled = reasons.length > 0 || guardar.isPending;

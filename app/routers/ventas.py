@@ -95,8 +95,10 @@ def _iva_rate() -> Decimal:
     return Decimal(str(get_settings().iva_rate))
 
 
-def _iva_pct_label() -> str:
-    rate = get_settings().iva_rate * 100
+def _iva_pct_label(db: Session) -> str:
+    # IVA efectivo de DB (PlatformConfig override), NO el de env — debe coincidir
+    # con el MONTO de IVA del PDF, que usa get_iva_rate(db).
+    rate = float(get_iva_rate(db)) * 100
     return f"{rate:g}%"
 
 
@@ -706,9 +708,9 @@ def crear_orden(
                     except ValueError as exc:
                         raise HTTPException(400, f"Stock insuficiente para {producto.sku}: {exc}")
 
-                moneda_origen_linea = (
-                    item.moneda_origen or producto.moneda_compra or "MXN"
-                ).upper()
+                # Producto de catálogo: la moneda origen SIEMPRE es la del catálogo,
+                # nunca la del payload (evita inflación ×TC por moneda_origen falsa vía API).
+                moneda_origen_linea = (producto.moneda_compra or "MXN").upper()
                 # Override de costo: si el frontend manda costo_unitario > 0, es un
                 # override para esta cotización. Schema acepta ge=0 pero aquí 0 (o None)
                 # se interpreta como "no override" — el frontend valida cost > 0 antes
@@ -730,6 +732,14 @@ def crear_orden(
                         "Producto fantasma requiere costo unitario > 0.",
                     )
 
+            # Guarda anti-subvaluación: si la línea requiere conversión USD↔MXN y el
+            # TC es implausible (USD/MXN nunca < 5), rechazar en vez de cotizar a ×2.
+            if moneda_origen_linea != moneda_cotizacion and tipo_cambio < Decimal("5"):
+                raise HTTPException(
+                    400,
+                    f"Tipo de cambio implausible ({tipo_cambio}) para convertir líneas en "
+                    f"{moneda_origen_linea} a {moneda_cotizacion}. Captura el TC de Banxico.",
+                )
             costo_base = _convert_cost_to_quote_currency(
                 costo_origen,
                 moneda_origen_linea,
@@ -740,11 +750,14 @@ def crear_orden(
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
             precio_unit_bruto = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+            # Redondear el subtotal por línea ANTES de acumular: así la suma de los
+            # subtotales impresos en el PDF cuadra exacto con orden.total (sin descuadre
+            # de centavos por redondear sólo el gran total).
             subtotal = (
                 precio_unit_bruto
                 * item.cantidad
                 * (Decimal("1.0") - (descuento_pct / Decimal("100")))
-            )
+            ).quantize(Decimal("0.01"))
             total_orden += subtotal
 
             # Upsert fantasma solo para líneas ad-hoc (sin producto ni servicio del catálogo)
@@ -976,9 +989,9 @@ def actualizar_orden(
                 producto = _productos_by_id_upd.get(item.producto_id)
                 if not producto:
                     raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
-                moneda_origen_linea = (
-                    item.moneda_origen or producto.moneda_compra or "MXN"
-                ).upper()
+                # Producto de catálogo: la moneda origen SIEMPRE es la del catálogo,
+                # nunca la del payload (evita inflación ×TC por moneda_origen falsa vía API).
+                moneda_origen_linea = (producto.moneda_compra or "MXN").upper()
                 # Override de costo (mismo contrato que POST): costo_unitario > 0 = override
                 # para esta cotización; 0/None = snapshot del catálogo.
                 if item.costo_unitario and Decimal(item.costo_unitario) > 0:
@@ -991,6 +1004,14 @@ def actualizar_orden(
                 if costo_origen <= 0:
                     raise HTTPException(400, "Producto fantasma requiere costo unitario > 0.")
 
+            # Guarda anti-subvaluación: si la línea requiere conversión USD↔MXN y el
+            # TC es implausible (USD/MXN nunca < 5), rechazar en vez de cotizar a ×2.
+            if moneda_origen_linea != moneda_cotizacion and tipo_cambio < Decimal("5"):
+                raise HTTPException(
+                    400,
+                    f"Tipo de cambio implausible ({tipo_cambio}) para convertir líneas en "
+                    f"{moneda_origen_linea} a {moneda_cotizacion}. Captura el TC de Banxico.",
+                )
             costo_base = _convert_cost_to_quote_currency(
                 costo_origen,
                 moneda_origen_linea,
@@ -1001,11 +1022,14 @@ def actualizar_orden(
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
             precio_unit_bruto = costo_base * (Decimal("1.0") + (utilidad_pct / Decimal("100")))
+            # Redondear el subtotal por línea ANTES de acumular: así la suma de los
+            # subtotales impresos en el PDF cuadra exacto con orden.total (sin descuadre
+            # de centavos por redondear sólo el gran total).
             subtotal = (
                 precio_unit_bruto
                 * item.cantidad
                 * (Decimal("1.0") - (descuento_pct / Decimal("100")))
-            )
+            ).quantize(Decimal("0.01"))
             total_orden += subtotal
 
             # Upsert fantasma solo para líneas ad-hoc (sin producto ni servicio del catálogo)
@@ -1690,7 +1714,7 @@ def generar_pdf(
         etiqueta_moneda_corta=etiqueta_moneda_corta,
         vigencia_dias=vigencia_dias,
         fecha_str=fecha_str,
-        iva_pct_label=_iva_pct_label(),
+        iva_pct_label=_iva_pct_label(db),
         qr_data_uri=qr_data_uri,
         view_detalles=view_detalles,
     )

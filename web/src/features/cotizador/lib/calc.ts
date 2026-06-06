@@ -104,8 +104,12 @@ export function computeTotals(
   tcs: TcSet,
   ivaRate: number,
 ): Totals {
+  // Redondear el importe por línea a 2 decimales antes de sumar — igual que el
+  // backend (subtotal.quantize por línea) — para que el subtotal del preview
+  // cuadre con orden.total guardado y con la suma de las líneas del PDF.
   const subtotal = cart.reduce(
-    (acc, item) => acc + lineImporte(item, monedaCotizacion, tcs),
+    (acc, item) =>
+      acc + Math.round(lineImporte(item, monedaCotizacion, tcs) * 100) / 100,
     0,
   );
   const iva = subtotal * ivaRate;
