@@ -1429,7 +1429,7 @@ def listar_historial(
         "folio": o.folio,
         "fecha": o.fecha_creacion,
         "fecha_vencimiento": o.fecha_vencimiento,
-        "cliente": o.cliente.nombre_empresa,
+        "cliente": o.cliente.nombre_empresa if o.cliente else None,
         "total": o.total,
         "moneda": o.moneda,
         "tipo_cambio": o.tipo_cambio,

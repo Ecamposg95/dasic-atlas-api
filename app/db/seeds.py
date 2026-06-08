@@ -472,6 +472,25 @@ _BACKFILL_DDL = [
 
     # 20260603_02 — config de plataforma editable en runtime (consola super-admin)
     "CREATE TABLE IF NOT EXISTS platform_config (clave VARCHAR(60) PRIMARY KEY, valor TEXT, actualizado_por_id INTEGER, actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
+
+    # 20260608_01 — enum nativo → VARCHAR (TolerantEnum). El enum nativo de PG
+    # (estatusorden / tipomovimiento) revienta la HIDRATACIÓN de SQLAlchemy con
+    # `LookupError` ante cualquier label legacy (minúsculas / valores viejos),
+    # tirando 500 en TODO endpoint que cargue la fila (no solo el reportado).
+    # Convertimos a VARCHAR para que el `TolerantEnum` coaccione en Python sin
+    # validación rígida de la DB, y normalizamos labels legacy → NOMBRE canónico
+    # (UPPER) para que los filtros SQL por estatus sigan siendo correctos.
+    # DROP DEFAULT defensivo: si la columna trae un default `'x'::estatusorden`,
+    # el cambio de tipo fallaría; el default es Python-side, así que es seguro.
+    "ALTER TABLE IF EXISTS ordenes_venta ALTER COLUMN estatus DROP DEFAULT",
+    "ALTER TABLE IF EXISTS ordenes_venta ALTER COLUMN estatus TYPE VARCHAR(50) USING estatus::text",
+    "UPDATE ordenes_venta SET estatus = UPPER(estatus) WHERE estatus IS NOT NULL AND estatus <> UPPER(estatus)",
+    "ALTER TABLE IF EXISTS transacciones_clientes ALTER COLUMN tipo DROP DEFAULT",
+    "ALTER TABLE IF EXISTS transacciones_clientes ALTER COLUMN tipo TYPE VARCHAR(50) USING tipo::text",
+    "UPDATE transacciones_clientes SET tipo = UPPER(tipo) WHERE tipo IS NOT NULL AND tipo <> UPPER(tipo)",
+    "ALTER TABLE IF EXISTS transacciones_proveedores ALTER COLUMN tipo DROP DEFAULT",
+    "ALTER TABLE IF EXISTS transacciones_proveedores ALTER COLUMN tipo TYPE VARCHAR(50) USING tipo::text",
+    "UPDATE transacciones_proveedores SET tipo = UPPER(tipo) WHERE tipo IS NOT NULL AND tipo <> UPPER(tipo)",
 ]
 
 

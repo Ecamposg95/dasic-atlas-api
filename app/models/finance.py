@@ -2,12 +2,12 @@
 Finance models: TransaccionCliente, TransaccionProveedor.
 """
 
-from sqlalchemy import Column, Date, DateTime, DECIMAL, Enum, ForeignKey, Integer, String
+from sqlalchemy import Column, Date, DateTime, DECIMAL, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db import Base
-from app.models.enums import TipoMovimiento
+from app.models.enums import TipoMovimiento, TolerantEnum
 
 
 class TransaccionCliente(Base):
@@ -15,7 +15,7 @@ class TransaccionCliente(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"))
-    tipo = Column(Enum(TipoMovimiento))
+    tipo = Column(TolerantEnum(TipoMovimiento))
     monto = Column(DECIMAL(12, 2), nullable=False)
     fecha = Column(DateTime(timezone=True), server_default=func.now())
     descripcion = Column(String(200))
@@ -37,7 +37,7 @@ class TransaccionProveedor(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     proveedor_id = Column(Integer, ForeignKey("proveedores.id"))
-    tipo = Column(Enum(TipoMovimiento))
+    tipo = Column(TolerantEnum(TipoMovimiento))
     monto = Column(DECIMAL(12, 2), nullable=False)
     fecha = Column(DateTime(timezone=True), server_default=func.now())
     descripcion = Column(String(200))

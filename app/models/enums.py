@@ -4,6 +4,79 @@ Importar desde aquí para evitar dependencias circulares.
 """
 
 import enum
+import logging
+
+from sqlalchemy import String
+from sqlalchemy.types import TypeDecorator
+
+logger = logging.getLogger(__name__)
+
+
+class TolerantEnum(TypeDecorator):
+    """Columna de enum que NO revienta al leer labels legacy de la DB.
+
+    Contexto: `Column(Enum(MiEnum))` de SQLAlchemy valida el valor que viene
+    de la DB contra los miembros del enum de Python en su capa de hidratación
+    y lanza ``LookupError`` para cualquier label que no matchee un NOMBRE de
+    miembro — SIN consultar ``MiEnum._missing_``. En esta base, la DB de
+    producción (anterior a varias migraciones) puede tener labels legacy
+    (minúsculas, valores viejos), por lo que ``db.query(OrdenVenta).all()``
+    revienta con 500 en CUALQUIER endpoint que cargue una fila legacy
+    (seguimiento, dashboard, reportes…), no solo en el reportado.
+
+    Esta clase lee la columna como texto y coacciona en Python vía
+    ``MiEnum(value)`` (que SÍ dispara ``_missing_``, tolerando minúsculas y
+    valores viejos). Un label genuinamente desconocido degrada a ``None`` y se
+    loguea, en vez de tirar el request. Al escribir, persiste el NOMBRE del
+    miembro (p.ej. ``"COTIZACION"``) para alinearse con los labels que el enum
+    nativo de PG ya tiene en producción.
+    """
+
+    impl = String(50)
+    cache_ok = True
+
+    def __init__(self, enumtype, *args, **kwargs):
+        self._enumtype = enumtype
+        super().__init__(*args, **kwargs)
+
+    def _coerce(self, value):
+        """Resuelve un valor (miembro o texto) al miembro del enum, matcheando
+        por NOMBRE o por VALUE, case-insensitive. No depende de ``_missing_``
+        (no todos los enums lo definen). Devuelve None si no matchea nada."""
+        if isinstance(value, self._enumtype):
+            return value
+        raw = str(value).strip()
+        for miembro in self._enumtype:
+            if (
+                raw == miembro.name
+                or raw.lower() == miembro.name.lower()
+                or raw.lower() == str(miembro.value).lower()
+            ):
+                return miembro
+        return None
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        miembro = self._coerce(value)
+        # Persistimos el NOMBRE canónico (uppercase) para alinear con los labels
+        # que el enum nativo de PG ya tenía y con la normalización del backfill.
+        if miembro is not None:
+            return miembro.name
+        return str(value)  # desconocido: persiste tal cual, no lo perdemos
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        miembro = self._coerce(value)
+        if miembro is not None:
+            return miembro
+        logger.warning(
+            "%s: label legacy desconocido '%s' en DB → None (fila tolerada)",
+            self._enumtype.__name__,
+            value,
+        )
+        return None
 
 
 class RolUsuario(str, enum.Enum):

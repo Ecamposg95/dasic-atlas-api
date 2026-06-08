@@ -2,12 +2,12 @@
 Sales models: OrdenVenta, DetalleOrden.
 """
 
-from sqlalchemy import Boolean, Column, DateTime, DECIMAL, Enum, ForeignKey, Integer, String, Text, text
+from sqlalchemy import Boolean, Column, DateTime, DECIMAL, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db import Base
-from app.models.enums import EstatusOrden
+from app.models.enums import EstatusOrden, TolerantEnum
 
 
 class OrdenVenta(Base):
@@ -21,7 +21,7 @@ class OrdenVenta(Base):
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_vencimiento = Column(DateTime, nullable=True)
 
-    estatus = Column(Enum(EstatusOrden), default=EstatusOrden.COTIZACION)
+    estatus = Column(TolerantEnum(EstatusOrden), default=EstatusOrden.COTIZACION)
     moneda = Column(String(3), nullable=False, default="MXN")
     # Modelo TC Excel (V_03): tipo_cambio se reinterpreta como "DOF" (TC oficial
     # Banxico). tc_mn_a_usd y tc_usd_a_mn son los TCs efectivos POR DIRECCIÓN
