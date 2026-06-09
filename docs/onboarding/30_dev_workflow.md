@@ -13,8 +13,8 @@
 
 ```bash
 # 1. clonar
-git clone git@github.com:Ecamposg95/Dasic_Atlas_api.git
-cd Dasic_Atlas_api
+git clone git@github.com:Ecamposg95/dasic-atlas-api.git
+cd dasic-atlas-api
 
 # 2. crear virtualenv e instalar deps (uv es ~5x más rápido que pip)
 uv venv .venv

@@ -1,6 +1,6 @@
 # Onboarding DASIC ERP
 
-Manual para desarrolladores nuevos, partners de implementación y operadores que se integren al proyecto **Dasic_Atlas_api** (CRM/ERP B2B de DASIC, automatización industrial mexicana).
+Manual para desarrolladores nuevos, partners de implementación y operadores que se integren al proyecto **dasic-atlas-api** (CRM/ERP B2B de DASIC, automatización industrial mexicana).
 
 ## Orden recomendado de lectura
 

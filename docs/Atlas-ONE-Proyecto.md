@@ -2,7 +2,7 @@
 title: Atlas ONE — DASIC Industrial (ERP/CRM)
 tags: [proyecto, dasic, atlas-one, erp, crm, fastapi, react, documentacion]
 updated: 2026-06-05
-repo: Dasic_Atlas_api
+repo: dasic-atlas-api
 estado: producción (Railway, autodeploy desde main)
 ---
 

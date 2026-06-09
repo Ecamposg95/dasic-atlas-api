@@ -1,4 +1,4 @@
-# Estado Actual del Repo (Dasic_Atlas_api / Atlas ONE)
+# Estado Actual del Repo (dasic-atlas-api / Atlas ONE)
 
 > **Actualizado:** 2026-06-05. Rama de referencia: `main` (autodeploy a Railway).
 > Fuente de verdad del stack: `CLAUDE.md` (raíz) + `docs/Atlas-ONE-Proyecto.md`.

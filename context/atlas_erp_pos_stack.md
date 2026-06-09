@@ -4,7 +4,7 @@ Documento extraído de [Atlas_ERP_POS](../Atlas_ERP_POS) para uso como base en n
 
 ## Estatus en este repositorio
 
-Este documento es el **baseline canonico de desarrollo** para `Dasic_Atlas_api`.
+Este documento es el **baseline canonico de desarrollo** para `dasic-atlas-api`.
 
 Regla operativa:
 
