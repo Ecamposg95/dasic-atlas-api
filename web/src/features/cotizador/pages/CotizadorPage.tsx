@@ -129,6 +129,10 @@ export function CotizadorPage() {
             entrega_max: it.entrega_max,
             entrega_unidad: it.entrega_unidad,
             observaciones_linea: it.observaciones_linea,
+            descuento_proveedor: it.descuento_proveedor ?? 0,
+            marca: it.marca ?? null,
+            mostrar_marca: it.mostrar_marca ?? false,
+            proveedor_sugerido_id: it.proveedor_sugerido_id ?? null,
           });
         }
         agregadas += 1;
@@ -138,10 +142,13 @@ export function CotizadorPage() {
         saltadas += 1;
       }
     }
+    if (saltadas > 0) {
+      toast({ kind: 'warning', title: `${saltadas} línea(s) ad-hoc/fantasma no se importaron`, description: 'El import JSON solo rehidrata líneas de catálogo.' });
+    }
     toast({
-      kind: saltadas > 0 ? 'warning' : 'success',
+      kind: 'success',
       title: 'Borrador importado',
-      description: `${agregadas} línea(s) cargadas${saltadas > 0 ? ` · ${saltadas} omitida(s)` : ''}`,
+      description: `${agregadas} línea(s) cargadas`,
     });
   }
 
