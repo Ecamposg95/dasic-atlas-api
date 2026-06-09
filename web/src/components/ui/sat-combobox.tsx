@@ -61,12 +61,13 @@ export function SatCombobox({
 
   // Cerrar al click fuera.
   useEffect(() => {
+    if (!open) return;
     function onDocClick(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
+  }, [open]);
 
   function label(it: SatItem) {
     return it.descripcion ?? it.nombre ?? '';
@@ -81,6 +82,7 @@ export function SatCombobox({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
         placeholder={placeholder}
         maxLength={maxLength}
         className={className}

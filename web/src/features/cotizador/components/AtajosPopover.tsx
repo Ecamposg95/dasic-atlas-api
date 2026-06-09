@@ -14,6 +14,13 @@ export function AtajosPopover({ atajos }: { atajos: AtajoHandler[] }) {
     return () => window.removeEventListener('cot:open-atajos', onOpen);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
     <>
       <button
