@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { confirm } from '@/lib/confirm';
 import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,6 +112,7 @@ export function EditLineModal() {
     const c = parseFloat(cost);
     if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
     if (!uid || !it?.producto_id) return;
+    if (!(await confirm({ mensaje: 'Esto cambiará el costo en el catálogo maestro para futuras cotizaciones. ¿Continuar?', tono: 'warning' }))) return;
     updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
     setSavingCat(true);
     try {

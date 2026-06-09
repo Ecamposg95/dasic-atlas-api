@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/lib/confirm';
 import { toast } from '@/lib/toast';
 import type { ApiError } from '@/lib/api';
 import { useHistorial } from '../hooks/useHistorial';
@@ -123,7 +124,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
   );
 
   async function onVender(orden: OrdenHistorial) {
-    if (!confirm(`Convertir ${orden.folio} a VENTA? Esta acción crea la orden de venta y consume el stock.`)) return;
+    if (!(await confirm({ mensaje: `Convertir ${orden.folio} a VENTA? Esta acción crea la orden de venta y consume el stock.`, tono: 'danger' }))) return;
     try {
       const r = await convertir.mutateAsync(orden.id);
       toast({ kind: 'success', title: `${orden.folio} convertida`, description: `Nuevo folio: ${r.nuevo_folio}` });
@@ -134,7 +135,7 @@ export function HistorialTab({ clienteIdFiltro: _clienteIdFiltro }: { clienteIdF
   }
 
   async function onRecotizar(orden: OrdenHistorial) {
-    if (!confirm(`Crear nueva versión de ${orden.folio}? Te llevará al editor con los datos copiados.`)) return;
+    if (!(await confirm({ mensaje: `Crear nueva versión de ${orden.folio}? Te llevará al editor con los datos copiados.`, tono: 'danger' }))) return;
     try {
       const r = await recotizar.mutateAsync(orden.id);
       navigate(`/ventas/cotizador?edit=${r.id}`);

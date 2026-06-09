@@ -80,6 +80,12 @@ export function PlantillasModal() {
   }
 
   async function onCargar(p: Plantilla) {
+    if (
+      useCotizador.getState().cart.length > 0 &&
+      !(await confirm({ mensaje: 'Cargar esta plantilla reemplazará el carrito actual. ¿Continuar?', tono: 'warning' }))
+    ) {
+      return;
+    }
     const { reset, addProducto, updateLinea } = useCotizador.getState();
     reset();
     let cargadas = 0;

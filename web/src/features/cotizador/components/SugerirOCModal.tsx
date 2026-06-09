@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { X, Truck, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/lib/confirm';
 import { toast } from '@/lib/toast';
 import type { ApiError } from '@/lib/api';
 import { useGenerarOC } from '../hooks/useSugerirOC';
@@ -44,9 +45,10 @@ export function SugerirOCModal({
       return;
     }
     if (haySinProveedor) {
-      const cont = confirm(
-        `Hay ${sinProveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
-      );
+      const cont = await confirm({
+        mensaje: `Hay ${sinProveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
+        tono: 'danger',
+      });
       if (!cont) return;
     }
     try {
