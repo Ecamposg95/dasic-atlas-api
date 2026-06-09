@@ -360,6 +360,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
             marca: d.marca ?? prod.marca ?? null,
             mostrar_marca: !!d.mostrar_marca,
             max: 0,
+            proveedor_sugerido_id: (d as { proveedor_sugerido_id?: number | null }).proveedor_sugerido_id ?? null,
             qty: d.cantidad,
             utilidad: Number(d.utilidad_aplicada),
             descuento: Number(d.descuento_aplicado),
