@@ -48,7 +48,7 @@ export function ContactosPage() {
 
   const { data, isLoading, isPlaceholderData } = useContactosGlobal(qDebounced, empresaId, page);
   // Empresas para el selector del filtro: carga 500 para llenar el dropdown completo
-  const { data: empresas } = useClientes(1, '', 500);
+  const { data: empresas } = useClientes({ page: 1, q: '', pageSize: 500 });
   const contactos = useMemo(() => data?.items ?? [], [data]);
 
   function onCotizar(c: ContactoGlobal) {

@@ -31,7 +31,7 @@ export function CrmKanbanPage() {
 
   const { data: board, isLoading: loadingBoard } = useCrmBoard(activePipelineId);
 
-  const { data: clientes = [] } = useClientes(1, '', 500);
+  const { data: clientes = [] } = useClientes({ page: 1, q: '', pageSize: 500 });
   const { data: usuarios = [] } = useUsuarios();
 
   // Build lookup maps for O(1) access in DealCard.

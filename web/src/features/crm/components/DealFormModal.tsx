@@ -36,7 +36,7 @@ export function DealFormModal({ pipelineId, stages, deal, defaultStageId, onClos
   );
   const [ownerId, setOwnerId] = useState<string>(deal?.owner_user_id != null ? String(deal.owner_user_id) : '');
 
-  const { data: clientes = [] } = useClientes(1, '', 500);
+  const { data: clientes = [] } = useClientes({ page: 1, q: '', pageSize: 500 });
   const { data: usuarios = [] } = useUsuarios();
 
   const createDeal = useCreateDeal();
