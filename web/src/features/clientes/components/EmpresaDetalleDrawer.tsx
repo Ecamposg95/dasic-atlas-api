@@ -1,75 +1,18 @@
-import { useState } from 'react';
-import { confirm } from '@/lib/confirm';
-import { useNavigate } from 'react-router-dom';
-import { X, Plus, Star, Trash2, Pencil, FileText, Download } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { toast } from '@/lib/toast';
-import type { Cliente, Contacto, ContactoInput } from '../types';
-import {
-  useContactos,
-  useGuardarContacto,
-  useEliminarContacto,
-  useCxCCliente,
-  useEstadoCuenta,
-  useRegistrarPago,
-  useOrdenesEmpresa,
-} from '../hooks/useEmpresaDetalle';
+import type { Cliente } from '../types';
+import { ContactosTab } from './tabs/ContactosTab';
+import { EstadoCuentaTab } from './tabs/EstadoCuentaTab';
 
 function fmtMoney(n: number | string, m = 'MXN') {
   return `${m} $${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 }
-
-const VACIO: ContactoInput = { nombre: '', cargo: '', email: '', telefono: '', es_principal: false };
 
 export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
   empresa: Cliente;
   onEditarDatos: () => void;
   onClose: () => void;
 }) {
-  const navigate = useNavigate();
-  const { data: contactos } = useContactos(empresa.id);
-  const { data: cxc } = useCxCCliente(empresa.id);
-  const { data: estadoCuenta, isLoading: edcLoading } = useEstadoCuenta(empresa.id);
-  const { data: ordenes, isLoading: ordenesLoading } = useOrdenesEmpresa(empresa.id);
-  const guardar = useGuardarContacto(empresa.id);
-  const eliminar = useEliminarContacto(empresa.id);
-  const pago = useRegistrarPago(empresa.id);
-
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<ContactoInput>(VACIO);
-  const [showForm, setShowForm] = useState(false);
-  const [montoPago, setMontoPago] = useState('');
-
-  function abrirNuevo() { setEditId(null); setForm(VACIO); setShowForm(true); }
-  function abrirEditar(c: Contacto) {
-    setEditId(c.id);
-    setForm({ nombre: c.nombre, cargo: c.cargo ?? '', email: c.email ?? '', telefono: c.telefono ?? '', es_principal: c.es_principal });
-    setShowForm(true);
-  }
-  function guardarContacto() {
-    if (!form.nombre.trim()) { toast({ kind: 'warning', title: 'El nombre es requerido' }); return; }
-    guardar.mutate(
-      { id: editId ?? undefined, data: { ...form, nombre: form.nombre.trim() } },
-      {
-        onSuccess: () => { toast({ kind: 'success', title: 'Contacto guardado' }); setShowForm(false); },
-        onError: (e) => toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail }),
-      },
-    );
-  }
-  function onRegistrarPago() {
-    const m = parseFloat(montoPago);
-    if (!Number.isFinite(m) || m <= 0) { toast({ kind: 'warning', title: 'Monto inválido' }); return; }
-    pago.mutate(
-      { monto: m, descripcion: 'Abono a cuenta' },
-      {
-        onSuccess: (r) => { toast({ kind: 'success', title: 'Pago registrado', description: `Nuevo saldo: ${fmtMoney(r.nuevo_saldo, empresa.moneda_credito)}` }); setMontoPago(''); },
-        onError: (e) => toast({ kind: 'error', title: 'No se pudo registrar', description: e.detail }),
-      },
-    );
-  }
-
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-slate-950/60"
@@ -101,180 +44,12 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
 
           {/* Contactos */}
           <section>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Contactos</h3>
-              <Button size="sm" onClick={abrirNuevo}><Plus className="h-3.5 w-3.5 mr-1" /> Agregar</Button>
-            </div>
-            <div className="space-y-1">
-              {(contactos ?? []).map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      {c.es_principal && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-                      <span className="font-medium truncate">{c.nombre}</span>
-                      {c.cargo && <span className="text-xs text-slate-500">· {c.cargo}</span>}
-                    </div>
-                    <div className="text-xs text-slate-500 truncate">{[c.email, c.telefono].filter(Boolean).join(' · ') || '—'}</div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => navigate(`/spa/cotizador?cliente=${empresa.id}&contacto=${c.id}`)}
-                      className="p-1 text-slate-400 hover:text-emerald-500"
-                      title="Cotizar"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => abrirEditar(c)} className="p-1 text-slate-400 hover:text-cyan-500" title="Editar"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={async () => { if (await confirm({ mensaje: `¿Eliminar a ${c.nombre}?`, tono: 'danger' })) eliminar.mutate(c.id); }} className="p-1 text-slate-400 hover:text-rose-500" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-              ))}
-              {(contactos ?? []).length === 0 && <p className="text-xs text-slate-500 py-2">Sin contactos.</p>}
-            </div>
-
-            {showForm && (
-              <div className="mt-3 rounded-md border border-border p-3 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre *" />
-                  <Input value={form.cargo ?? ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} placeholder="Cargo" />
-                  <Input value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Correo" />
-                  <Input value={form.telefono ?? ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
-                </div>
-                <label className="flex items-center gap-2 text-xs text-slate-500">
-                  <input type="checkbox" checked={form.es_principal ?? false} onChange={(e) => setForm({ ...form, es_principal: e.target.checked })} />
-                  Contacto principal
-                </label>
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
-                  <Button size="sm" onClick={guardarContacto} disabled={guardar.isPending}>Guardar</Button>
-                </div>
-              </div>
-            )}
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">Contactos</h3>
+            <ContactosTab clienteId={empresa.id} />
           </section>
 
-          {/* Cotizaciones / Órdenes */}
-          <section>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">Cotizaciones / Órdenes</h3>
-            {ordenesLoading ? (
-              <p className="text-xs text-slate-500 py-2">Cargando…</p>
-            ) : (ordenes ?? []).length === 0 ? (
-              <p className="text-xs text-slate-500 py-2">Sin documentos.</p>
-            ) : (
-              <div className="rounded-md border border-border overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-surface-2 text-slate-500 uppercase">
-                    <tr>
-                      <th className="p-2 text-left">Folio</th>
-                      <th className="p-2 text-left">Fecha</th>
-                      <th className="p-2 text-center">Estatus</th>
-                      <th className="p-2 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(ordenes ?? []).map((o) => (
-                      <tr key={o.id} className="border-t border-border">
-                        <td className="p-2 font-mono">
-                          <a
-                            href={`/spa/cotizador?edit=${o.id}`}
-                            className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300"
-                          >
-                            {o.folio}
-                          </a>
-                        </td>
-                        <td className="p-2">{o.fecha ? o.fecha.slice(0, 10) : '—'}</td>
-                        <td className="p-2 text-center">
-                          <Badge variant="slate">{o.estatus}</Badge>
-                        </td>
-                        <td className="p-2 text-right whitespace-nowrap">
-                          {`${o.moneda || 'MXN'} $${Number(o.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          {/* Estado de cuenta / CxC */}
-          <section>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-2">Estado de cuenta / CxC</h3>
-            <div className="flex items-end gap-2 mb-3">
-              <div className="flex-1">
-                <label className="block text-xs text-slate-500 mb-1">Registrar pago (abono)</label>
-                <Input type="number" min="0" step="0.01" value={montoPago} onChange={(e) => setMontoPago(e.target.value)} placeholder="Monto" />
-              </div>
-              <Button size="sm" onClick={onRegistrarPago} disabled={pago.isPending}>Registrar</Button>
-            </div>
-            <div className="rounded-md border border-border overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-surface-2 text-slate-500 uppercase">
-                  <tr><th className="p-2 text-left">Folio</th><th className="p-2 text-left">Vence</th><th className="p-2 text-right">Pendiente</th><th className="p-2 text-center">Estatus</th></tr>
-                </thead>
-                <tbody>
-                  {(cxc?.cargos ?? []).map((c) => (
-                    <tr key={c.id} className="border-t border-border">
-                      <td className="p-2 font-mono">{c.folio ?? '—'}</td>
-                      <td className="p-2">{c.fecha_vencimiento ? c.fecha_vencimiento.slice(0, 10) : '—'}</td>
-                      <td className="p-2 text-right">{fmtMoney(c.saldo_pendiente, empresa.moneda_credito)}</td>
-                      <td className="p-2 text-center">{c.estatus_pago}{c.dias_atraso > 0 ? ` (${c.dias_atraso}d)` : ''}</td>
-                    </tr>
-                  ))}
-                  {(cxc?.cargos ?? []).length === 0 && (
-                    <tr><td colSpan={4} className="p-3 text-center text-slate-500">Sin cargos abiertos.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Historial de movimientos (estado de cuenta completo) */}
-          <section>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Historial de movimientos</h3>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.open(`/api/clientes/${empresa.id}/pdf-estado-cuenta`, '_blank')}
-              >
-                <Download className="h-3.5 w-3.5 mr-1" /> Descargar PDF
-              </Button>
-            </div>
-            {edcLoading ? (
-              <p className="text-xs text-slate-500 py-2">Cargando historial…</p>
-            ) : (estadoCuenta ?? []).length === 0 ? (
-              <p className="text-xs text-slate-500 py-2">Sin movimientos registrados.</p>
-            ) : (
-              <div className="rounded-md border border-border overflow-hidden max-h-72 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-surface-2 text-slate-500 uppercase">
-                    <tr>
-                      <th className="p-2 text-left">Fecha</th>
-                      <th className="p-2 text-left">Concepto</th>
-                      <th className="p-2 text-center">Tipo</th>
-                      <th className="p-2 text-right">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(estadoCuenta ?? []).map((t) => (
-                      <tr key={t.id} className="border-t border-border">
-                        <td className="p-2 whitespace-nowrap">{t.fecha ? t.fecha.slice(0, 10) : '—'}</td>
-                        <td className="p-2 max-w-[180px] truncate" title={t.descripcion}>{t.descripcion}</td>
-                        <td className="p-2 text-center">
-                          <Badge variant={(t.tipo || '').toUpperCase() === 'CARGO' ? 'rose' : 'emerald'}>
-                            {(t.tipo || '').toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="p-2 text-right whitespace-nowrap">
-                          {fmtMoney(t.monto, empresa.moneda_credito)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+          {/* Estado de cuenta / CxC / Órdenes */}
+          <EstadoCuentaTab clienteId={empresa.id} monedaCredito={empresa.moneda_credito} />
         </div>
       </div>
     </div>
