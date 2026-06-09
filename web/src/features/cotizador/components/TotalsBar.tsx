@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,10 @@ function fmtMoney(n: number, moneda: string) {
 
 export function TotalsBar() {
   const [err, setErr] = useState<string | null>(null);
+  // Guard síncrono contra doble submit: `isPending` se actualiza async vía render,
+  // así que dos clicks rápidos (primario + secundario) podrían disparar 2 POST
+  // antes de que los botones se deshabiliten, creando una orden duplicada.
+  const submittingRef = useRef(false);
   const cart = useCotizador((s) => s.cart);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
@@ -90,22 +94,30 @@ export function TotalsBar() {
   // cancela cualquiera de ellas; true si todo OK. Compartida por los flujos
   // "Guardar y quedarse", "Guardar e ir a Seguimiento" y "Ver PDF".
   async function validar(): Promise<boolean> {
-    if (margenStats.criticas > 0) {
+    // Leer del store vivo (no del cierre del render): este `validar()` se invoca
+    // también desde el listener `cot:ver-pdf` con deps [], que captura el closure
+    // del primer render (cart/margenStats vacíos al montar). Recalcular aquí
+    // garantiza el resultado correcto sin importar desde dónde se llame.
+    const cartNow = useCotizador.getState().cart;
+    const criticas = cartNow.filter((l) => l.utilidad < 5).length;
+    const bajas = cartNow.filter((l) => l.utilidad < 15).length;
+
+    if (criticas > 0) {
       if (
         !(await confirm({
-          mensaje: `⚠ ${margenStats.criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
+          mensaje: `⚠ ${criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
           tono: 'warning',
         }))
       ) {
         return false;
       }
-    } else if (margenStats.bajas > 0) {
-      if (!(await confirm({ mensaje: `${margenStats.bajas} línea(s) con utilidad < 15 %. ¿Continuar?`, tono: 'warning' }))) {
+    } else if (bajas > 0) {
+      if (!(await confirm({ mensaje: `${bajas} línea(s) con utilidad < 15 %. ¿Continuar?`, tono: 'warning' }))) {
         return false;
       }
     }
 
-    const entregaParcial = cart.filter((l) => {
+    const entregaParcial = cartNow.filter((l) => {
       const tiene = (v: unknown) => v != null && v !== '';
       const campos = [tiene(l.entrega_min), tiene(l.entrega_max), tiene(l.entrega_unidad)];
       return campos.some(Boolean) && !campos.every(Boolean);
@@ -148,8 +160,10 @@ export function TotalsBar() {
   // store a modo edición → el siguiente guardado hace PUT (no duplica).
   // `afterSave` opcional permite encadenar (ej. abrir PDF) sin redirigir.
   async function onGuardarQuedarse(afterSave?: (data: { id: number; folio: string }) => void) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setErr(null);
-    if (!(await validar())) return;
+    if (!(await validar())) { submittingRef.current = false; return; }
     guardar.mutate(snapshot(), {
       onSuccess: (data) => {
         useCotizador.getState().setEditing(data.id, data.folio);
@@ -161,6 +175,7 @@ export function TotalsBar() {
         toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail });
         setErr(e.detail || 'No se pudo guardar');
       },
+      onSettled: () => { submittingRef.current = false; },
     });
   }
 
@@ -183,8 +198,10 @@ export function TotalsBar() {
   }, []);
 
   async function onGuardarEIrSeguimiento() {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setErr(null);
-    if (!(await validar())) return;
+    if (!(await validar())) { submittingRef.current = false; return; }
     guardar.mutate(snapshot(), {
       onSuccess: (data) => { window.location.href = `/seguimiento?folio=${encodeURIComponent(data.folio)}`; },
       onError: (e: { status?: number; detail?: string }) => {
@@ -192,6 +209,7 @@ export function TotalsBar() {
         toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail });
         setErr(e.detail || 'No se pudo guardar');
       },
+      onSettled: () => { submittingRef.current = false; },
     });
   }
 

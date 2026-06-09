@@ -123,7 +123,10 @@ function nextUid(prefix: string): string {
 export const useCotizador = create<CotizadorState>((set) => ({
   ...initialState,
 
-  setEditing: (id, folio) => set({ editingId: id, editingFolio: folio }),
+  // Un POST siempre crea una COTIZACION; fijamos editingEstatus para que la
+  // guarda `noEditable` no quede null tras un guardado in-place (hydrateFromOrden
+  // sí lo setea al cargar; setEditing es el camino post-POST).
+  setEditing: (id, folio) => set({ editingId: id, editingFolio: folio, editingEstatus: 'COTIZACION' }),
 
   // Al CAMBIAR de empresa se limpia el contacto: un contacto pertenece a una
   // sola empresa, y dejar el contacto_id anterior arrastraba el contacto de una
