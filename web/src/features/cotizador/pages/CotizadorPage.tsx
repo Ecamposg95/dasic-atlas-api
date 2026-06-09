@@ -186,6 +186,16 @@ export function CotizadorPage() {
   ], []);
   useAtajos(atajos);
 
+  // Reset síncrono al navegar de una cot a otra (edit→edit) o recotizar, para
+  // que editingId no apunte al pedido anterior durante la carga del nuevo
+  // detalle. La hidratación de abajo repuebla editingId al id correcto cuando
+  // llega `orden`.
+  useEffect(() => {
+    if (editIdNum != null && useCotizador.getState().editingId !== editIdNum) {
+      reset();
+    }
+  }, [editIdNum, reset]);
+
   // Hydrate when the GET resolves
   useEffect(() => {
     if (orden) hydrateFromOrden(orden);
