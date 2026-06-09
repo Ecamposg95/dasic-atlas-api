@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { useDismiss } from '@/lib/useDismiss';
 import { useClientes } from '../hooks/useClientes';
 import { useCotizador } from '../store';
 import type { ContactoLite } from '../types';
@@ -15,6 +16,9 @@ export function ClientPicker() {
   const setContacto = useCotizador((s) => s.setContacto);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(rootRef, close, open);
 
   const selected = useMemo(
     () => clientes?.find((c) => c.id === cliente_id) ?? null,
@@ -77,7 +81,7 @@ export function ClientPicker() {
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="relative" ref={rootRef}>
         {selected && !open ? (
           <button
             type="button"
