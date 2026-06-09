@@ -361,6 +361,45 @@ def obtener_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
 
+@router.get("/{cliente_id}/resumen", dependencies=[Depends(allow_all_staff)])
+def empresa_resumen(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Métricas 360 de la empresa, computadas de órdenes existentes."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
+
+    ventas_estatus = [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
+    base = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
+    ventas = base.filter(models.OrdenVenta.estatus.in_(ventas_estatus))
+
+    from sqlalchemy import func
+    total_vendido = ventas.with_entities(func.coalesce(func.sum(models.OrdenVenta.total), 0)).scalar() or 0
+    n_ventas = ventas.count()
+    n_cotizaciones = base.filter(models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION).count()
+    ultima = ventas.with_entities(func.max(models.OrdenVenta.fecha_creacion)).scalar()
+    ticket = (Decimal(total_vendido) / n_ventas) if n_ventas else Decimal(0)
+    limite = Decimal(cliente.limite_credito or 0)
+    saldo = Decimal(cliente.saldo_actual or 0)
+
+    return {
+        "total_vendido": float(total_vendido),
+        "n_ventas": n_ventas,
+        "n_cotizaciones": n_cotizaciones,
+        "ticket_promedio": float(ticket.quantize(Decimal("0.01"))),
+        "ultima_compra": ultima.isoformat() if ultima else None,
+        "saldo_actual": float(saldo),
+        "limite_credito": float(limite),
+        "credito_disponible": float(limite - saldo),
+        "estatus": cliente.estatus,
+    }
+
+
 # --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
