@@ -20,6 +20,7 @@ class ClienteBase(BaseModel):
     dias_credito: Optional[int] = 0
     dia_corte: Optional[int] = None
     moneda_credito: Optional[str] = "MXN"
+    estatus: Optional[str] = "activo"
 
 
 class ClienteCreate(ClienteBase):
@@ -37,6 +38,7 @@ class ClienteUpdate(BaseModel):
     dias_credito: Optional[int] = None
     dia_corte: Optional[int] = None
     moneda_credito: Optional[str] = None
+    estatus: Optional[str] = None
 
 
 class ClienteResponse(ClienteBase):
@@ -44,6 +46,7 @@ class ClienteResponse(ClienteBase):
     saldo_actual: Decimal
     creado_por_id: Optional[int] = None
     n_contactos: Optional[int] = None
+    ultima_compra: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -93,3 +96,25 @@ class ContactoResponse(ContactoBase):
 class MergeEmpresasInput(BaseModel):
     survivor_id: int
     loser_ids: List[int]
+
+
+from datetime import datetime
+
+
+class NotaEmpresaCreate(BaseModel):
+    texto: str
+
+
+class NotaEmpresaResponse(BaseModel):
+    id: int
+    cliente_id: int
+    autor_id: Optional[int] = None
+    autor_nombre: Optional[str] = None
+    texto: str
+    creado_en: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BulkEstatusRequest(BaseModel):
+    ids: List[int]
+    estatus: str
