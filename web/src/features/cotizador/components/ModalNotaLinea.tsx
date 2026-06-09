@@ -25,10 +25,11 @@ export function ModalNotaLinea() {
   }, []);
 
   useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  }, [open]);
 
   function onSave() {
     if (!uid) return;

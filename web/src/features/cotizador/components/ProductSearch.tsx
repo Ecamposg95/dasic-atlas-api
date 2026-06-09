@@ -141,7 +141,6 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
             value={q}
             onChange={(e) => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
-            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
             placeholder={
               tipo === 'servicio'
                 ? 'Buscar servicio (ej. "instalación" o "SRV-0001")…'

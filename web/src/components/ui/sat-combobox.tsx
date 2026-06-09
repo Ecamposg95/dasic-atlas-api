@@ -82,7 +82,7 @@ export function SatCombobox({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.nativeEvent.stopImmediatePropagation(); setOpen(false); } }}
         placeholder={placeholder}
         maxLength={maxLength}
         className={className}
