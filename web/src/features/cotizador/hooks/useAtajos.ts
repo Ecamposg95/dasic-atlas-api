@@ -42,6 +42,7 @@ export function useAtajos(atajos: AtajoHandler[]) {
       if (!a) return;
       // Atajos sin modificadores no disparan mientras tecleas (excepto `/`)
       if (!a.combo.includes('+') && isTyping && a.combo !== '/') return;
+      if (document.querySelector('[data-overlay]')) return; // hay un modal/drawer abierto
       e.preventDefault();
       a.handler(e);
     }
