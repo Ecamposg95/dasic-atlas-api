@@ -85,7 +85,6 @@ type CotizadorState = {
   addServicio: (s: Servicio, qty?: number) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
-  moverLinea: (uid: string, delta: number) => void;
   reordenarLinea: (fromUid: string, toUid: string) => void;
   toggleExpand: (uid: string) => void;
   reset: () => void;
@@ -286,17 +285,6 @@ export const useCotizador = create<CotizadorState>((set) => ({
     set((s) => ({
       cart: s.cart.map((x) => (x.uid === uid ? { ...x, ...patch } : x)),
     })),
-
-  moverLinea: (uid, delta) =>
-    set((s) => {
-      const idx = s.cart.findIndex((x) => x.uid === uid);
-      const nuevoIdx = idx + delta;
-      if (idx < 0 || nuevoIdx < 0 || nuevoIdx >= s.cart.length) return {};
-      const next = s.cart.slice();
-      const [it] = next.splice(idx, 1);
-      next.splice(nuevoIdx, 0, it);
-      return { cart: next };
-    }),
 
   reordenarLinea: (fromUid, toUid) =>
     set((s) => {

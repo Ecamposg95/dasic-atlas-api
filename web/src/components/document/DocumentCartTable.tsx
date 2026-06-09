@@ -35,7 +35,7 @@ export function DocumentCartTable({
 }) {
   // Hooks de DnD siempre se llaman (regla de hooks); solo se usan si sortable.
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const seenUids = useRef<Set<string>>(new Set());
