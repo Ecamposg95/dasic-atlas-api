@@ -105,6 +105,22 @@ export function TotalsBar() {
       }
     }
 
+    const entregaParcial = cart.filter((l) => {
+      const tiene = (v: unknown) => v != null && v !== '';
+      const campos = [tiene(l.entrega_min), tiene(l.entrega_max), tiene(l.entrega_unidad)];
+      return campos.some(Boolean) && !campos.every(Boolean);
+    });
+    if (entregaParcial.length > 0) {
+      if (
+        !(await confirm({
+          mensaje: `${entregaParcial.length} línea(s) con tiempo de entrega incompleto (falta min, max o unidad). ¿Guardar de todas formas?`,
+          tono: 'warning',
+        }))
+      ) {
+        return;
+      }
+    }
+
     guardar.mutate(
       {
         cliente_id: s.cliente_id,
