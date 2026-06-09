@@ -154,6 +154,10 @@ def merge_empresas(
             "transacciones": db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id.in_(payload.loser_ids)).update({models.TransaccionCliente.cliente_id: survivor.id}, synchronize_session=False),
             "remisiones": db.query(models.Remision).filter(models.Remision.cliente_id.in_(payload.loser_ids)).update({models.Remision.cliente_id: survivor.id}, synchronize_session=False),
             "contactos": db.query(models.Contacto).filter(models.Contacto.cliente_id.in_(payload.loser_ids)).update({models.Contacto.cliente_id: survivor.id}, synchronize_session=False),
+            # deals (CRM Pipeline) también referencia cliente_id con ON DELETE
+            # NO ACTION: si un loser tiene deals y no se re-mapean, el DELETE de
+            # abajo revienta por FK (o los deja huérfanos). Re-mapear siempre.
+            "deals": db.query(models.Deal).filter(models.Deal.cliente_id.in_(payload.loser_ids)).update({models.Deal.cliente_id: survivor.id}, synchronize_session=False),
         }
 
         saldo = Decimal("0")
