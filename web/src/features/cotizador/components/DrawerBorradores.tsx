@@ -22,12 +22,25 @@ export function DrawerBorradores() {
 
   useEffect(() => {
     function onOpen() {
+      window.dispatchEvent(new CustomEvent('cot:close-preview-oc'));
       setOpen(true);
       setPage(1);
     }
+    function onClose() { setOpen(false); }
     window.addEventListener('cot:open-borradores', onOpen);
-    return () => window.removeEventListener('cot:open-borradores', onOpen);
+    window.addEventListener('cot:close-borradores', onClose);
+    return () => {
+      window.removeEventListener('cot:open-borradores', onOpen);
+      window.removeEventListener('cot:close-borradores', onClose);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   if (!open) return null;
 
@@ -39,6 +52,7 @@ export function DrawerBorradores() {
   return (
     <>
       <div
+        data-overlay
         className="fixed inset-0 z-40 bg-slate-100 dark:bg-slate-950/60"
         onClick={() => setOpen(false)}
       />
