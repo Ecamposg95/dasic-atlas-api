@@ -32,6 +32,7 @@ type CotizadorState = {
   editingId: number | null;
   editingFolio: string | null;
   editingEstatus: string | null;
+  setEditing: (id: number, folio: string) => void;
 
   // Header:
   cliente_id: number | null;
@@ -121,6 +122,8 @@ function nextUid(prefix: string): string {
 
 export const useCotizador = create<CotizadorState>((set) => ({
   ...initialState,
+
+  setEditing: (id, folio) => set({ editingId: id, editingFolio: folio }),
 
   // Al CAMBIAR de empresa se limpia el contacto: un contacto pertenece a una
   // sola empresa, y dejar el contacto_id anterior arrastraba el contacto de una
