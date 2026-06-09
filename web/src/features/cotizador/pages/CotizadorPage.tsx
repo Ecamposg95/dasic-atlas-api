@@ -50,6 +50,7 @@ export function CotizadorPage() {
   const editingId = useCotizador((s) => s.editingId);
   const editingEstatus = useCotizador((s) => s.editingEstatus);
   const cliente_id = useCotizador((s) => s.cliente_id);
+  const cartLen = useCotizador((s) => s.cart.length);
   const observaciones = useCotizador((s) => s.observaciones);
   const setObservaciones = useCotizador((s) => s.setObservaciones);
   const terminos = useCotizador((s) => s.terminos_condiciones);
@@ -311,15 +312,24 @@ export function CotizadorPage() {
                 e.target.value = '';
               }}
             />
-            {editingId != null && (
-              <a
-                href={`/api/ventas/${editingId}/pdf`}
-                target="_blank"
-                rel="noreferrer"
+            {(editingId != null || (cliente_id != null && cartLen > 0)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  // Con editingId ya guardado: abrir el PDF directo. Sin él:
+                  // delegar en TotalsBar (vía evento) para guardar in-place y
+                  // luego abrir el PDF del id recién creado.
+                  if (editingId != null) {
+                    window.open(`/api/ventas/${editingId}/pdf`, '_blank');
+                  } else {
+                    window.dispatchEvent(new CustomEvent('cot:ver-pdf'));
+                  }
+                }}
+                title={editingId != null ? 'Ver PDF' : 'Guarda y abre el PDF'}
                 className="text-[11px] px-2 py-1 rounded border border-border-strong hover:border-accent-glow text-foreground hover:text-accent-glow transition flex items-center gap-1"
               >
                 <FileText className="h-3 w-3" /> Ver PDF
-              </a>
+              </button>
             )}
           </div>
         </header>
