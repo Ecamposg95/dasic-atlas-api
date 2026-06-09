@@ -502,6 +502,30 @@ def borrar_nota(cliente_id: int, nota_id: int, db: Session = Depends(get_db)):
     return {"deleted": nota_id}
 
 
+@router.get("/{cliente_id}/deals", dependencies=[Depends(allow_all_staff)])
+def empresa_deals(cliente_id: int, db: Session = Depends(get_db)):
+    """Deals del CRM enlazados a esta empresa."""
+    deals = (
+        db.query(models.Deal)
+        .filter(models.Deal.cliente_id == cliente_id)
+        .order_by(models.Deal.creado_en.desc())
+        .all()
+    )
+    out = []
+    for d in deals:
+        out.append({
+            "id": d.id,
+            "titulo": d.titulo,
+            "monto": float(d.monto) if d.monto is not None else None,
+            "moneda": d.moneda,
+            "stage": d.stage.nombre if d.stage else None,
+            "owner": d.owner.nombre if d.owner else None,
+            "creado_en": d.creado_en.isoformat() if d.creado_en else None,
+            "cerrado_en": d.cerrado_en.isoformat() if d.cerrado_en else None,
+        })
+    return out
+
+
 # --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
