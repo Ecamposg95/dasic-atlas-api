@@ -14,6 +14,13 @@ export function AtajosPopover({ atajos }: { atajos: AtajoHandler[] }) {
     return () => window.removeEventListener('cot:open-atajos', onOpen);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
     <>
       <button
@@ -25,7 +32,7 @@ export function AtajosPopover({ atajos }: { atajos: AtajoHandler[] }) {
         <Keyboard className="h-4 w-4" />
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
+        <div data-overlay className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="bg-card border border-border rounded-xl shadow-2xl max-w-md w-full p-5">
             <div className="flex items-center justify-between mb-3">

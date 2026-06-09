@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { X, Truck, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/lib/confirm';
 import { toast } from '@/lib/toast';
 import type { ApiError } from '@/lib/api';
 import { useGenerarOC } from '../hooks/useSugerirOC';
@@ -24,6 +26,13 @@ export function SugerirOCModal({
   onClose: () => void;
 }) {
   const generar = useGenerarOC();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const porProveedor = data.por_proveedor ?? [];
   const sinProveedor = data.sin_proveedor ?? [];
   const hayProveedores = porProveedor.length > 0;
@@ -36,9 +45,10 @@ export function SugerirOCModal({
       return;
     }
     if (haySinProveedor) {
-      const cont = confirm(
-        `Hay ${sinProveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
-      );
+      const cont = await confirm({
+        mensaje: `Hay ${sinProveedor.length} línea(s) sin proveedor asignado que NO entrarán en la OC. ¿Continuar de todos modos?`,
+        tono: 'danger',
+      });
       if (!cont) return;
     }
     try {
@@ -53,6 +63,7 @@ export function SugerirOCModal({
 
   return (
     <div
+      data-overlay
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >

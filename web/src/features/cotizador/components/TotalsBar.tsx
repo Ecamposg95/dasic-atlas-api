@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,10 @@ function fmtMoney(n: number, moneda: string) {
 
 export function TotalsBar() {
   const [err, setErr] = useState<string | null>(null);
+  // Guard síncrono contra doble submit: `isPending` se actualiza async vía render,
+  // así que dos clicks rápidos (primario + secundario) podrían disparar 2 POST
+  // antes de que los botones se deshabiliten, creando una orden duplicada.
+  const submittingRef = useRef(false);
   const cart = useCotizador((s) => s.cart);
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
@@ -86,56 +90,127 @@ export function TotalsBar() {
     return { criticas, bajas, avg };
   }, [cart]);
 
-  async function onSave() {
-    setErr(null);
-    const s = useCotizador.getState();
+  // Todas las confirmaciones previas al guardado. Devuelve false si el usuario
+  // cancela cualquiera de ellas; true si todo OK. Compartida por los flujos
+  // "Guardar y quedarse", "Guardar e ir a Seguimiento" y "Ver PDF".
+  async function validar(): Promise<boolean> {
+    // Leer del store vivo (no del cierre del render): este `validar()` se invoca
+    // también desde el listener `cot:ver-pdf` con deps [], que captura el closure
+    // del primer render (cart/margenStats vacíos al montar). Recalcular aquí
+    // garantiza el resultado correcto sin importar desde dónde se llame.
+    const cartNow = useCotizador.getState().cart;
+    const criticas = cartNow.filter((l) => l.utilidad < 5).length;
+    const bajas = cartNow.filter((l) => l.utilidad < 15).length;
 
-    if (margenStats.criticas > 0) {
+    if (criticas > 0) {
       if (
         !(await confirm({
-          mensaje: `⚠ ${margenStats.criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
+          mensaje: `⚠ ${criticas} línea(s) con utilidad < 5 %. Riesgo de venta en pérdida. ¿Continuar?`,
           tono: 'warning',
         }))
       ) {
-        return;
+        return false;
       }
-    } else if (margenStats.bajas > 0) {
-      if (!(await confirm({ mensaje: `${margenStats.bajas} línea(s) con utilidad < 15 %. ¿Continuar?`, tono: 'warning' }))) {
-        return;
+    } else if (bajas > 0) {
+      if (!(await confirm({ mensaje: `${bajas} línea(s) con utilidad < 15 %. ¿Continuar?`, tono: 'warning' }))) {
+        return false;
       }
     }
 
-    guardar.mutate(
-      {
-        cliente_id: s.cliente_id,
-        contacto_id: s.contacto_id,
-        moneda: s.moneda,
-        tc: s.tc,
-        tc_mn_a_usd: s.tc_mn_a_usd,
-        tc_usd_a_mn: s.tc_usd_a_mn,
-        tolerancia_tc: s.tolerancia_tc,
-        fecha_creacion: s.fecha_creacion,
-        fecha_vencimiento: s.fecha_vencimiento,
-        observaciones: s.observaciones,
-        terminos_condiciones: s.terminos_condiciones,
-        pdf_concepto_unificado: s.pdf_concepto_unificado,
-        pdf_concepto_enabled: s.pdf_concepto_enabled,
-        cart: s.cart,
+    const entregaParcial = cartNow.filter((l) => {
+      const tiene = (v: unknown) => v != null && v !== '';
+      const campos = [tiene(l.entrega_min), tiene(l.entrega_max), tiene(l.entrega_unidad)];
+      return campos.some(Boolean) && !campos.every(Boolean);
+    });
+    if (entregaParcial.length > 0) {
+      if (
+        !(await confirm({
+          mensaje: `${entregaParcial.length} línea(s) con tiempo de entrega incompleto (falta min, max o unidad). ¿Guardar de todas formas?`,
+          tono: 'warning',
+        }))
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Arma el payload del guardado desde el estado vivo del store.
+  function snapshot() {
+    const s = useCotizador.getState();
+    return {
+      cliente_id: s.cliente_id,
+      contacto_id: s.contacto_id,
+      moneda: s.moneda,
+      tc: s.tc,
+      tc_mn_a_usd: s.tc_mn_a_usd,
+      tc_usd_a_mn: s.tc_usd_a_mn,
+      tolerancia_tc: s.tolerancia_tc,
+      fecha_creacion: s.fecha_creacion,
+      fecha_vencimiento: s.fecha_vencimiento,
+      observaciones: s.observaciones,
+      terminos_condiciones: s.terminos_condiciones,
+      pdf_concepto_unificado: s.pdf_concepto_unificado,
+      pdf_concepto_enabled: s.pdf_concepto_enabled,
+      cart: s.cart,
+    };
+  }
+
+  // Guarda y SE QUEDA en el editor. Tras un POST, setEditing(id) cambia el
+  // store a modo edición → el siguiente guardado hace PUT (no duplica).
+  // `afterSave` opcional permite encadenar (ej. abrir PDF) sin redirigir.
+  async function onGuardarQuedarse(afterSave?: (data: { id: number; folio: string }) => void) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setErr(null);
+    if (!(await validar())) { submittingRef.current = false; return; }
+    guardar.mutate(snapshot(), {
+      onSuccess: (data) => {
+        useCotizador.getState().setEditing(data.id, data.folio);
+        toast({ kind: 'success', title: `Guardado ${data.folio}` });
+        afterSave?.(data);
       },
-      {
-        onSuccess: (data) => {
-          window.location.href = `/seguimiento?folio=${encodeURIComponent(data.folio)}`;
-        },
-        onError: (e: { status?: number; detail?: string }) => {
-          if (e.status === 401) {
-            window.location.href = '/spa/login';
-            return;
-          }
-          toast({ kind: 'error', title: 'No se pudo guardar la cotización', description: e.detail });
-          setErr(e.detail || 'No se pudo guardar la cotización');
-        },
+      onError: (e: { status?: number; detail?: string }) => {
+        if (e.status === 401) { window.location.href = '/spa/login'; return; }
+        toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail });
+        setErr(e.detail || 'No se pudo guardar');
       },
-    );
+      onSettled: () => { submittingRef.current = false; },
+    });
+  }
+
+  // "Ver PDF" sin editingId: guarda in-place y luego abre el PDF del id recién
+  // creado. Disparado por el botón "Ver PDF" de CotizadorPage vía evento para
+  // no acoplar el header al flujo de guardado.
+  function onVerPdf() {
+    void onGuardarQuedarse((data) => {
+      window.open(`/api/ventas/${data.id}/pdf`, '_blank');
+    });
+  }
+
+  useEffect(() => {
+    function handler() { onVerPdf(); }
+    window.addEventListener('cot:ver-pdf', handler);
+    return () => window.removeEventListener('cot:ver-pdf', handler);
+    // onVerPdf cierra sobre validar()/snapshot() que leen del store vivo;
+    // re-suscribir cada render es innecesario y la lógica no depende de props.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onGuardarEIrSeguimiento() {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setErr(null);
+    if (!(await validar())) { submittingRef.current = false; return; }
+    guardar.mutate(snapshot(), {
+      onSuccess: (data) => { window.location.href = `/seguimiento?folio=${encodeURIComponent(data.folio)}`; },
+      onError: (e: { status?: number; detail?: string }) => {
+        if (e.status === 401) { window.location.href = '/spa/login'; return; }
+        toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail });
+        setErr(e.detail || 'No se pudo guardar');
+      },
+      onSettled: () => { submittingRef.current = false; },
+    });
   }
 
   const avgClass =
@@ -214,8 +289,11 @@ export function TotalsBar() {
       actions={
         <>
           <Button variant="ghost" onClick={onCancel} disabled={guardar.isPending}>Cancelar</Button>
-          <Button onClick={onSave} disabled={disabled} data-cot-save>
+          <Button onClick={() => onGuardarQuedarse()} disabled={disabled} data-cot-save>
             {guardar.isPending ? 'Guardando…' : editingId != null ? 'Actualizar cotización' : 'Guardar cotización'}
+          </Button>
+          <Button variant="outline" onClick={onGuardarEIrSeguimiento} disabled={disabled}>
+            Guardar e ir a Seguimiento
           </Button>
         </>
       }

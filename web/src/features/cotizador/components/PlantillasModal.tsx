@@ -33,6 +33,13 @@ export function PlantillasModal() {
     return () => window.removeEventListener('cot:open-plantillas', onOpen);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   async function onGuardar() {
     if (!nombre.trim()) {
       toast({ kind: 'error', title: 'Falta nombre', description: 'Dale un nombre a la plantilla.' });
@@ -73,6 +80,12 @@ export function PlantillasModal() {
   }
 
   async function onCargar(p: Plantilla) {
+    if (
+      useCotizador.getState().cart.length > 0 &&
+      !(await confirm({ mensaje: 'Cargar esta plantilla reemplazará el carrito actual. ¿Continuar?', tono: 'warning' }))
+    ) {
+      return;
+    }
     const { reset, addProducto, updateLinea } = useCotizador.getState();
     reset();
     let cargadas = 0;
@@ -122,7 +135,7 @@ export function PlantillasModal() {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
+    <div data-overlay className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
       <div className="bg-card border border-border rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">

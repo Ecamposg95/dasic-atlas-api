@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useDismiss } from '@/lib/useDismiss';
 import { Search, Package, Sparkles, Ghost, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { ApiError } from '@/lib/api';
@@ -82,19 +83,10 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
     if (status === 401) window.location.href = '/spa/login';
   }, [error]);
 
-  // Close on outside click — check contra containerRef (incluye filtros,
+  // Close on outside click or Escape — check contra containerRef (incluye filtros,
   // input, botón fantasma Y dropdown). Si target está dentro, no cerrar.
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!containerRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+  const closeSearch = useCallback(() => setOpen(false), []);
+  useDismiss(containerRef, closeSearch, open);
 
   async function onSelect(p: Producto) {
     await h.onPickProducto(p, cantidadParseada ?? 1);
@@ -149,7 +141,6 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
             value={q}
             onChange={(e) => { setQ(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
-            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
             placeholder={
               tipo === 'servicio'
                 ? 'Buscar servicio (ej. "instalación" o "SRV-0001")…'

@@ -19,11 +19,15 @@ type SaveResult = { id: number; folio: string };
 
 export function useGuardarCotizacion() {
   const qc = useQueryClient();
-  const editingId = useCotizador((s) => s.editingId);
 
   return useMutation<SaveResult, { status?: number; detail?: string }, CotizadorSnapshot>({
     mutationFn: async (snapshot) => {
       const payload = buildSavePayload(snapshot);
+      // Leer editingId del store EN EL MOMENTO del mutate (no de un closure a
+      // nivel de hook). Tras un POST, `onGuardarQuedarse` llama setEditing(id)
+      // y dispara un 2º guardado en el mismo render: con getState() ese 2º
+      // save usa PUT con el id recién creado en vez de POST → no duplica.
+      const editingId = useCotizador.getState().editingId;
       if (editingId != null) {
         return api.put<SaveResult>(`/api/ventas/${editingId}`, payload);
       }

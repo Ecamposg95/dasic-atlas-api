@@ -51,6 +51,8 @@ export type DocRowVM = {
   importe: number;
   precioUnitario?: number;
 
+  tieneNota?: boolean;         // chip/icono de nota de línea (solo cotizador)
+
   expanded: boolean;
 };
 

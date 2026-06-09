@@ -32,6 +32,7 @@ type CotizadorState = {
   editingId: number | null;
   editingFolio: string | null;
   editingEstatus: string | null;
+  setEditing: (id: number, folio: string) => void;
 
   // Header:
   cliente_id: number | null;
@@ -85,7 +86,7 @@ type CotizadorState = {
   addServicio: (s: Servicio, qty?: number) => void;
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
-  moverLinea: (uid: string, delta: number) => void;
+  reordenarLinea: (fromUid: string, toUid: string) => void;
   toggleExpand: (uid: string) => void;
   reset: () => void;
   hydrateFromOrden: (orden: OrdenVentaDetail) => void;
@@ -121,6 +122,11 @@ function nextUid(prefix: string): string {
 
 export const useCotizador = create<CotizadorState>((set) => ({
   ...initialState,
+
+  // Un POST siempre crea una COTIZACION; fijamos editingEstatus para que la
+  // guarda `noEditable` no quede null tras un guardado in-place (hydrateFromOrden
+  // sí lo setea al cargar; setEditing es el camino post-POST).
+  setEditing: (id, folio) => set({ editingId: id, editingFolio: folio, editingEstatus: 'COTIZACION' }),
 
   // Al CAMBIAR de empresa se limpia el contacto: un contacto pertenece a una
   // sola empresa, y dejar el contacto_id anterior arrastraba el contacto de una
@@ -286,15 +292,15 @@ export const useCotizador = create<CotizadorState>((set) => ({
       cart: s.cart.map((x) => (x.uid === uid ? { ...x, ...patch } : x)),
     })),
 
-  moverLinea: (uid, delta) =>
+  reordenarLinea: (fromUid, toUid) =>
     set((s) => {
-      const idx = s.cart.findIndex((x) => x.uid === uid);
-      const nuevoIdx = idx + delta;
-      if (idx < 0 || nuevoIdx < 0 || nuevoIdx >= s.cart.length) return {};
-      const next = s.cart.slice();
-      const [it] = next.splice(idx, 1);
-      next.splice(nuevoIdx, 0, it);
-      return { cart: next };
+      const cart = [...s.cart];
+      const from = cart.findIndex((l) => l.uid === fromUid);
+      const to = cart.findIndex((l) => l.uid === toUid);
+      if (from < 0 || to < 0 || from === to) return {};
+      const [moved] = cart.splice(from, 1);
+      cart.splice(to, 0, moved);
+      return { cart };
     }),
 
   toggleExpand: (uid) =>
@@ -360,6 +366,7 @@ export const useCotizador = create<CotizadorState>((set) => ({
             marca: d.marca ?? prod.marca ?? null,
             mostrar_marca: !!d.mostrar_marca,
             max: 0,
+            proveedor_sugerido_id: (d as { proveedor_sugerido_id?: number | null }).proveedor_sugerido_id ?? null,
             qty: d.cantidad,
             utilidad: Number(d.utilidad_aplicada),
             descuento: Number(d.descuento_aplicado),

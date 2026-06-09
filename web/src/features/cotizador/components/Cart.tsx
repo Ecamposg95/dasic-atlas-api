@@ -53,6 +53,7 @@ export function Cart() {
       entrega_max: item.entrega_max,
       entrega_unidad: item.entrega_unidad as 'dias' | 'semanas' | null,
       importe: lineImporte(item, moneda, tcs),
+      tieneNota: !!(item.observaciones_linea && item.observaciones_linea.trim()),
       expanded: expandedUids.has(item.uid),
     };
   });
@@ -116,6 +117,8 @@ export function Cart() {
         rows={rows}
         caps={QUOTE_CAPS}
         cb={cb}
+        sortable
+        onReorder={(f, t) => useCotizador.getState().reordenarLinea(f, t)}
         expandedRenderer={(uid) => {
           const item = cart.find((c) => c.uid === uid);
           return item ? <RowExpanded item={item} /> : null;

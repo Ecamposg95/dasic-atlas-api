@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Building2, ChevronDown, X } from 'lucide-react';
+import { useDismiss } from '@/lib/useDismiss';
 import { useProveedores } from '../hooks/useProveedores';
 
 type Props = {
@@ -21,15 +22,8 @@ export function ProveedorPicker({ value, onChange, placeholder = 'Sin asignar â€
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { data: proveedores } = useProveedores();
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(rootRef, close, open);
 
   const seleccionado = (proveedores ?? []).find((p) => p.id === value) ?? null;
   const needle = q.trim().toLowerCase();

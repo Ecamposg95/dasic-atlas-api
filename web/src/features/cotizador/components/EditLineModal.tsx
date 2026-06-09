@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { confirm } from '@/lib/confirm';
 import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,12 @@ export function EditLineModal() {
   });
   const productos = (searchData?.items ?? []).map((it) => it.producto);
 
+  const onClose = useCallback(() => {
+    setOpen(false);
+    setUid(null);
+    setShowReplace(false);
+  }, []);
+
   // Listen for the event
   useEffect(() => {
     function onEdit(e: Event) {
@@ -56,18 +63,18 @@ export function EditLineModal() {
     return () => window.removeEventListener('cot:edit-line', onEdit);
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const it: CartItem | undefined = cart.find((x) => x.uid === uid);
   const esFantasma = !!it && it.tipo_linea === 'producto_fantasma';
   const esCatalogo = !!it && it.producto_id != null;
   const hayDatosCatalogo = !!it && (
     !!it.sku_original || !!it.nom_original || (it.cost_original != null && it.cost_original > 0)
   );
-
-  function onClose() {
-    setOpen(false);
-    setUid(null);
-    setShowReplace(false);
-  }
 
   function onRestore() {
     if (!it || !hayDatosCatalogo) return;
@@ -105,6 +112,7 @@ export function EditLineModal() {
     const c = parseFloat(cost);
     if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
     if (!uid || !it?.producto_id) return;
+    if (!(await confirm({ mensaje: 'Esto cambiará el costo en el catálogo maestro para futuras cotizaciones. ¿Continuar?', tono: 'warning' }))) return;
     updateLinea(uid, { nom: desc.trim(), sku: sku.trim() || it?.sku || '', cost: c });
     setSavingCat(true);
     try {
@@ -146,7 +154,7 @@ export function EditLineModal() {
   if (!open || !it) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div data-overlay className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold flex items-center gap-2">

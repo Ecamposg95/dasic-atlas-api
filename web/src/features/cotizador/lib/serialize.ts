@@ -125,7 +125,7 @@ export function buildSavePayload(s: CotizadorSnapshot): OrdenVentaCreate {
         // se pierda/falsee por drift. La OC sí usa el costo vivo (lado compras).
         costo_unitario: i.cost,
         tipo_linea: 'producto_catalogo' as const,
-        proveedor_sugerido_id: null,
+        proveedor_sugerido_id: i.proveedor_sugerido_id ?? null,
         entrega_min: i.entrega_min,
         entrega_max: i.entrega_max,
         entrega_unidad: i.entrega_unidad,

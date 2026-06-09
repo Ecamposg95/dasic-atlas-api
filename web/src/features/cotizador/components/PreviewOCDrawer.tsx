@@ -37,11 +37,24 @@ export function PreviewOCDrawer() {
 
   useEffect(() => {
     function onOpen() {
+      window.dispatchEvent(new CustomEvent('cot:close-borradores'));
       setOpen(true);
     }
+    function onClose() { setOpen(false); }
     window.addEventListener('cot:open-preview-oc', onOpen);
-    return () => window.removeEventListener('cot:open-preview-oc', onOpen);
+    window.addEventListener('cot:close-preview-oc', onClose);
+    return () => {
+      window.removeEventListener('cot:open-preview-oc', onOpen);
+      window.removeEventListener('cot:close-preview-oc', onClose);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const grupos = useMemo<GrupoOC[]>(() => agruparOCs(cart), [cart]);
 
@@ -55,6 +68,7 @@ export function PreviewOCDrawer() {
   return (
     <>
       <div
+        data-overlay
         className="fixed inset-0 z-40 bg-slate-100 dark:bg-slate-950/60"
         onClick={() => setOpen(false)}
       />

@@ -23,6 +23,13 @@ export function ModalTerminos() {
     return () => window.removeEventListener('cot:open-terminos', onOpen);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const lineCount = draft.split('\n').filter((l) => l.trim()).length;
 
   function onSave() {
@@ -33,6 +40,7 @@ export function ModalTerminos() {
   if (!open) return null;
   return (
     <div
+      data-overlay
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);

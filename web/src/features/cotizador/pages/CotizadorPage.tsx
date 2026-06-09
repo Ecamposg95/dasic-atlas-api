@@ -50,6 +50,7 @@ export function CotizadorPage() {
   const editingId = useCotizador((s) => s.editingId);
   const editingEstatus = useCotizador((s) => s.editingEstatus);
   const cliente_id = useCotizador((s) => s.cliente_id);
+  const cartLen = useCotizador((s) => s.cart.length);
   const observaciones = useCotizador((s) => s.observaciones);
   const setObservaciones = useCotizador((s) => s.setObservaciones);
   const terminos = useCotizador((s) => s.terminos_condiciones);
@@ -129,6 +130,10 @@ export function CotizadorPage() {
             entrega_max: it.entrega_max,
             entrega_unidad: it.entrega_unidad,
             observaciones_linea: it.observaciones_linea,
+            descuento_proveedor: it.descuento_proveedor ?? 0,
+            marca: it.marca ?? null,
+            mostrar_marca: it.mostrar_marca ?? false,
+            proveedor_sugerido_id: it.proveedor_sugerido_id ?? null,
           });
         }
         agregadas += 1;
@@ -138,10 +143,13 @@ export function CotizadorPage() {
         saltadas += 1;
       }
     }
+    if (saltadas > 0) {
+      toast({ kind: 'warning', title: `${saltadas} línea(s) ad-hoc/fantasma no se importaron`, description: 'El import JSON solo rehidrata líneas de catálogo.' });
+    }
     toast({
-      kind: saltadas > 0 ? 'warning' : 'success',
+      kind: 'success',
       title: 'Borrador importado',
-      description: `${agregadas} línea(s) cargadas${saltadas > 0 ? ` · ${saltadas} omitida(s)` : ''}`,
+      description: `${agregadas} línea(s) cargadas`,
     });
   }
 
@@ -178,6 +186,16 @@ export function CotizadorPage() {
     },
   ], []);
   useAtajos(atajos);
+
+  // Reset síncrono al navegar de una cot a otra (edit→edit) o recotizar, para
+  // que editingId no apunte al pedido anterior durante la carga del nuevo
+  // detalle. La hidratación de abajo repuebla editingId al id correcto cuando
+  // llega `orden`.
+  useEffect(() => {
+    if (editIdNum != null && useCotizador.getState().editingId !== editIdNum) {
+      reset();
+    }
+  }, [editIdNum, reset]);
 
   // Hydrate when the GET resolves
   useEffect(() => {
@@ -294,15 +312,24 @@ export function CotizadorPage() {
                 e.target.value = '';
               }}
             />
-            {editingId != null && (
-              <a
-                href={`/api/ventas/${editingId}/pdf`}
-                target="_blank"
-                rel="noreferrer"
+            {(editingId != null || (cliente_id != null && cartLen > 0)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  // Con editingId ya guardado: abrir el PDF directo. Sin él:
+                  // delegar en TotalsBar (vía evento) para guardar in-place y
+                  // luego abrir el PDF del id recién creado.
+                  if (editingId != null) {
+                    window.open(`/api/ventas/${editingId}/pdf`, '_blank');
+                  } else {
+                    window.dispatchEvent(new CustomEvent('cot:ver-pdf'));
+                  }
+                }}
+                title={editingId != null ? 'Ver PDF' : 'Guarda y abre el PDF'}
                 className="text-[11px] px-2 py-1 rounded border border-border-strong hover:border-accent-glow text-foreground hover:text-accent-glow transition flex items-center gap-1"
               >
                 <FileText className="h-3 w-3" /> Ver PDF
-              </a>
+              </button>
             )}
           </div>
         </header>
