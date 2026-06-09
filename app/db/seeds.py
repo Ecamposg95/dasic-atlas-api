@@ -491,6 +491,17 @@ _BACKFILL_DDL = [
     "ALTER TABLE IF EXISTS transacciones_proveedores ALTER COLUMN tipo DROP DEFAULT",
     "ALTER TABLE IF EXISTS transacciones_proveedores ALTER COLUMN tipo TYPE VARCHAR(50) USING tipo::text",
     "UPDATE transacciones_proveedores SET tipo = UPPER(tipo) WHERE tipo IS NOT NULL AND tipo <> UPPER(tipo)",
+
+    # Empresas vista 360 (2026-06-08) — espejo de migración 20260608_02
+    "ALTER TABLE IF EXISTS clientes ADD COLUMN IF NOT EXISTS estatus VARCHAR(12) NOT NULL DEFAULT 'activo'",
+    """CREATE TABLE IF NOT EXISTS notas_empresa (
+        id SERIAL PRIMARY KEY,
+        cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+        autor_id INTEGER REFERENCES usuarios(id),
+        texto TEXT NOT NULL,
+        creado_en TIMESTAMPTZ DEFAULT now()
+    )""",
+    "CREATE INDEX IF NOT EXISTS ix_notas_empresa_cliente_id ON notas_empresa(cliente_id)",
 ]
 
 
