@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench } from 'lucide-react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/features/cotizador/components/StockBadge';
 import { EntregaChip } from '@/features/cotizador/components/EntregaChip';
@@ -94,6 +94,19 @@ export function DocumentRow({
             <EntregaChip min={vm.entrega_min} max={vm.entrega_max} unidad={vm.entrega_unidad} />
           )}
           {caps.showUtilidad && <MargenChip utilidad={vm.utilidad} />}
+          {vm.tieneNota && (
+            <button
+              type="button"
+              title="Nota de línea"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('cot:open-nota', { detail: { uid: vm.uid } }));
+              }}
+              className="text-accent-glow hover:opacity-80"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </button>
+          )}
           <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
             {vm.expanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
             {vm.expanded ? 'Cerrar' : 'Detalles'}

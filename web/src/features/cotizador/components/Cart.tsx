@@ -53,6 +53,7 @@ export function Cart() {
       entrega_max: item.entrega_max,
       entrega_unidad: item.entrega_unidad as 'dias' | 'semanas' | null,
       importe: lineImporte(item, moneda, tcs),
+      tieneNota: !!(item.observaciones_linea && item.observaciones_linea.trim()),
       expanded: expandedUids.has(item.uid),
     };
   });
