@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { confirm } from '@/lib/confirm';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GitMerge, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +13,10 @@ function fmt(n: number) {
   return `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 }
 
-function GrupoCard({ grupo }: { grupo: GrupoDuplicado }) {
-  const [survivor, setSurvivor] = useState<number>(grupo.miembros[0]?.id ?? 0);
+function GrupoCard({ grupo, preselectedIds }: { grupo: GrupoDuplicado; preselectedIds: number[] }) {
+  // If any preselected id is in this group, start with the first match as survivor
+  const preselectedMatch = grupo.miembros.find((m) => preselectedIds.includes(m.id));
+  const [survivor, setSurvivor] = useState<number>(preselectedMatch?.id ?? grupo.miembros[0]?.id ?? 0);
   const merge = useMergeEmpresas();
   const losers = grupo.miembros.filter((m) => m.id !== survivor);
 
@@ -93,6 +95,20 @@ export function UnificarEmpresasPage() {
   const navigate = useNavigate();
   const isAdmin = useIsAdmin();
   const { data, isLoading } = useDuplicados();
+  const [searchParams] = useSearchParams();
+
+  // ?ids=1,2,3 from BulkActionBar preselects those empresa IDs as survivor candidates
+  const preselectedIds: number[] = searchParams.get('ids')
+    ? searchParams.get('ids')!.split(',').map(Number).filter(Boolean)
+    : [];
+
+  // If preselectedIds are provided, filter groups to only show those containing those ids (if any match),
+  // otherwise show all groups.
+  const grupos = data ?? [];
+  const filteredGrupos = preselectedIds.length > 0
+    ? grupos.filter((g) => g.miembros.some((m) => preselectedIds.includes(m.id)))
+    : grupos;
+  const showingFiltered = preselectedIds.length > 0 && filteredGrupos.length > 0;
 
   if (!isAdmin) {
     return <div className="p-6 text-sm text-slate-500">Solo administradores pueden unificar empresas.</div>;
@@ -113,15 +129,25 @@ export function UnificarEmpresasPage() {
         (órdenes, transacciones, remisiones y contactos se mueven; el saldo se recalcula) y se borran.
         Acción irreversible — toma un respaldo antes.
       </p>
+      {showingFiltered && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Badge variant="cyan">Mostrando {filteredGrupos.length} grupo(s) con las empresas seleccionadas</Badge>
+          <button onClick={() => navigate('/spa/empresas-unificar')} className="text-xs hover:underline text-muted-foreground">
+            Ver todos
+          </button>
+        </div>
+      )}
       {isLoading ? (
         <p className="text-sm text-slate-400">Cargando…</p>
-      ) : !data?.length ? (
+      ) : !(showingFiltered ? filteredGrupos : grupos).length ? (
         <div className="text-center py-12">
           <Badge variant="emerald">Sin duplicados por RFC 🎉</Badge>
         </div>
       ) : (
         <div className="space-y-4">
-          {data.map((g) => <GrupoCard key={g.rfc} grupo={g} />)}
+          {(showingFiltered ? filteredGrupos : grupos).map((g) => (
+            <GrupoCard key={g.rfc} grupo={g} preselectedIds={preselectedIds} />
+          ))}
         </div>
       )}
     </div>

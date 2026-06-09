@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, ChevronUp, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,11 @@ import {
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useIsAdmin } from '@/lib/permissions';
-import { useClientes } from '../hooks/useClientes';
+import { useClientes, useClientesCount } from '../hooks/useClientes';
 import { useDuplicados } from '../hooks/useDuplicados';
 import { ClienteFormModal } from '../components/ClienteFormModal';
 import { EmpresaDetalleDrawer } from '../components/EmpresaDetalleDrawer';
+import { BulkActionBar } from '../components/BulkActionBar';
 import type { Cliente, ClienteCreate, ClienteUpdate, MonedaCredito } from '../types';
 
 const PAGE_SIZE = 50;
@@ -41,9 +42,31 @@ function fmtMoney(moneda: MonedaCredito, value: number | string) {
   return moneda && moneda !== 'MXN' ? `${moneda} ${amount}` : amount;
 }
 
+function fmtDate(val: string | null | undefined) {
+  if (!val) return '—';
+  try {
+    return new Date(val).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return val;
+  }
+}
+
+type SortDir = 'asc' | 'desc';
+
+function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return null;
+  return dir === 'asc'
+    ? <ChevronUp className="inline h-3 w-3 ml-0.5" />
+    : <ChevronDown className="inline h-3 w-3 ml-0.5" />;
+}
+
 export function ClientesPage() {
   const [filtroQ, setFiltroQ] = useState('');
   const [page, setPage] = useState(1);
+  const [estatus, setEstatus] = useState('');
+  const [sort, setSort] = useState('');
+  const [dir, setDir] = useState<SortDir>('asc');
+  const [selected, setSelected] = useState<number[]>([]);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Cliente | null>(null);
   const [detalle, setDetalle] = useState<Cliente | null>(null);
@@ -54,16 +77,28 @@ export function ClientesPage() {
 
   const filtroQDebounced = useDebounced(filtroQ);
 
-  // Reset page when search changes
+  // Reset page when search or estatus changes
   const prevQ = useRef(filtroQDebounced);
+  const prevEstatus = useRef(estatus);
   useEffect(() => {
-    if (prevQ.current !== filtroQDebounced) {
+    if (prevQ.current !== filtroQDebounced || prevEstatus.current !== estatus) {
       setPage(1);
       prevQ.current = filtroQDebounced;
+      prevEstatus.current = estatus;
     }
-  }, [filtroQDebounced]);
+  }, [filtroQDebounced, estatus]);
 
-  const { data: clientes, isLoading, isPlaceholderData, error } = useClientes({ page, q: filtroQDebounced });
+  const { data: clientes, isLoading, isPlaceholderData, error } = useClientes({
+    page,
+    q: filtroQDebounced,
+    pageSize: PAGE_SIZE,
+    estatus,
+    sort,
+    dir,
+  });
+  const { data: countData } = useClientesCount(filtroQDebounced, estatus);
+  const totalCount = countData?.total ?? 0;
+
   const qc = useQueryClient();
 
   // 401 → login
@@ -73,6 +108,43 @@ export function ClientesPage() {
   }, [error]);
 
   const filtrados = clientes ?? [];
+
+  // Sorting helpers
+  function toggleSort(col: string) {
+    if (sort === col) {
+      setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSort(col);
+      setDir('asc');
+    }
+    setPage(1);
+  }
+
+  // Selection helpers
+  const currentPageIds = filtrados.map((c) => c.id);
+  const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selected.includes(id));
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected((prev) => prev.filter((id) => !currentPageIds.includes(id)));
+    } else {
+      setSelected((prev) => [...new Set([...prev, ...currentPageIds])]);
+    }
+  }
+
+  function toggleRow(id: number) {
+    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  // Estatus badge
+  function estatusBadge(est: string | undefined) {
+    if (!est) return <span className="text-xs text-muted-foreground">—</span>;
+    const lower = est.toLowerCase();
+    if (lower === 'activo') return <Badge variant="emerald">activo</Badge>;
+    if (lower === 'inactivo') return <Badge variant="slate">inactivo</Badge>;
+    if (lower === 'prospecto') return <Badge variant="cyan">prospecto</Badge>;
+    return <Badge variant="slate">{est}</Badge>;
+  }
 
   // Mutations
   const crearMut = useMutation<Cliente, { status?: number; detail?: string }, ClienteCreate>({
@@ -128,6 +200,10 @@ export function ClientesPage() {
 
   const isAdmin = useIsAdmin();
 
+  // Pagination
+  const totalForPagination = totalCount || (filtrados.length === PAGE_SIZE ? page * PAGE_SIZE + 1 : (page - 1) * PAGE_SIZE + filtrados.length);
+  const showPagination = page > 1 || filtrados.length === PAGE_SIZE || totalCount > PAGE_SIZE;
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">
       <header className="flex items-center justify-between gap-2 flex-wrap">
@@ -135,7 +211,10 @@ export function ClientesPage() {
           <Users className="h-5 w-5 text-cyan-400" /> Empresas
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{filtrados.length} empresa(s){page > 1 ? ` — p. ${page}` : ''}</span>
+          <span className="text-xs text-slate-500">
+            {totalCount > 0 ? `${totalCount} empresa(s)` : `${filtrados.length} empresa(s)`}
+            {page > 1 ? ` — p. ${page}` : ''}
+          </span>
           {isAdmin && dupCount > 0 && (
             <Button size="sm" variant="outline" onClick={() => navigate('/spa/empresas-unificar')}>
               Unificar duplicados ({dupCount})
@@ -155,46 +234,89 @@ export function ClientesPage() {
           placeholder="Buscar empresa, RFC, contacto…"
           className="flex-1 w-full sm:w-auto sm:min-w-[220px]"
         />
-        {filtroQ && (
+        <select
+          value={estatus}
+          onChange={(e) => { setEstatus(e.target.value); setPage(1); }}
+          className="text-sm rounded-md border border-border bg-card px-2 py-1.5 text-foreground"
+        >
+          <option value="">Todos los estatus</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+          <option value="prospecto">Prospecto</option>
+        </select>
+        {(filtroQ || estatus) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setFiltroQ('')}
+            onClick={() => { setFiltroQ(''); setEstatus(''); }}
           >
             Limpiar
           </Button>
         )}
       </div>
 
+      {/* Bulk action bar */}
+      <BulkActionBar selectedIds={selected} onClear={() => setSelected([])} />
+
       {/* Tabla */}
       <DataTable>
         <DataTableHead>
           <tr>
-            <th className="p-3 text-left">Empresa</th>
+            <th className="p-3 w-8">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                className="rounded"
+                title="Seleccionar página"
+              />
+            </th>
+            <th
+              className="p-3 text-left cursor-pointer select-none hover:text-foreground"
+              onClick={() => toggleSort('nombre_empresa')}
+            >
+              Empresa <SortIndicator active={sort === 'nombre_empresa'} dir={dir} />
+            </th>
             <th className="p-3 text-left">Contacto</th>
             <th className="p-3 text-left">RFC</th>
             <th className="p-3 text-left">Teléfono</th>
             <th className="p-3 text-left">Email</th>
             <th className="p-2 text-center">Contactos</th>
+            <th className="p-3 text-left">Estatus</th>
+            <th className="p-3 text-left">Última compra</th>
             <th className="p-3 text-right">Crédito</th>
-            <th className="p-3 text-right">Saldo</th>
+            <th
+              className="p-3 text-right cursor-pointer select-none hover:text-foreground"
+              onClick={() => toggleSort('saldo_actual')}
+            >
+              Saldo <SortIndicator active={sort === 'saldo_actual'} dir={dir} />
+            </th>
             <th className="p-3 text-right">Acciones</th>
           </tr>
         </DataTableHead>
         <DataTableBody>
           {isLoading && (
-            <DataTableEmpty colSpan={9}>Cargando clientes…</DataTableEmpty>
+            <DataTableEmpty colSpan={12}>Cargando clientes…</DataTableEmpty>
           )}
           {!isLoading && filtrados.length === 0 && (
-            <DataTableEmpty colSpan={9}>
+            <DataTableEmpty colSpan={12}>
               <Users className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-              {filtroQDebounced ? 'Sin coincidencias con la búsqueda' : 'Sin clientes registrados'}
+              {filtroQDebounced || estatus ? 'Sin coincidencias con la búsqueda' : 'Sin clientes registrados'}
             </DataTableEmpty>
           )}
           {filtrados.map((c) => {
             const saldo = Number(c.saldo_actual) || 0;
+            const isSelected = selected.includes(c.id);
             return (
-              <DataTableRow key={c.id}>
+              <DataTableRow key={c.id} className={isSelected ? 'bg-accent-glow/5' : undefined}>
+                <td className="p-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleRow(c.id)}
+                    className="rounded"
+                  />
+                </td>
                 <td className="p-3">
                   <div className="font-medium text-foreground truncate max-w-[180px]" title={c.nombre_empresa}>
                     {c.nombre_empresa}
@@ -213,6 +335,10 @@ export function ClientesPage() {
                   {c.email || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
                 <td className="p-2 text-center"><Badge variant="slate">{c.n_contactos ?? 0}</Badge></td>
+                <td className="p-3">{estatusBadge(c.estatus)}</td>
+                <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
+                  {fmtDate(c.ultima_compra)}
+                </td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <Badge variant="cyan">
                     {fmtMoney(c.moneda_credito, c.limite_credito)}
@@ -232,11 +358,18 @@ export function ClientesPage() {
                 </td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <button
-                    onClick={() => setDetalle(c)}
+                    onClick={() => navigate(`/spa/empresas/${c.id}`)}
                     className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 px-1.5 text-xs"
-                    title="Ver empresa"
+                    title="Ver ficha completa"
                   >
                     Ver
+                  </button>
+                  <button
+                    onClick={() => setDetalle(c)}
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 px-1.5 text-xs"
+                    title="Vista rápida"
+                  >
+                    ⊞
                   </button>
                   <button
                     onClick={() => setModalEditar(c)}
@@ -263,13 +396,26 @@ export function ClientesPage() {
       </DataTable>
 
       {/* Paginación */}
-      {(page > 1 || filtrados.length === PAGE_SIZE) && (
+      {showPagination && (
         <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
-          <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1 || isPlaceholderData}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>
-          <span>Página {page}{filtrados.length === PAGE_SIZE ? ' — hay más registros' : ''}</span>
-          <Button variant="outline" size="sm" disabled={filtrados.length < PAGE_SIZE || isPlaceholderData} onClick={() => setPage((p) => p + 1)}>
+          <span>
+            Página {page}
+            {totalCount > 0 ? ` · ${totalCount} empresa(s)` : filtrados.length === PAGE_SIZE ? ' — hay más registros' : ''}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={(totalCount > 0 ? page * PAGE_SIZE >= totalForPagination : filtrados.length < PAGE_SIZE) || isPlaceholderData}
+            onClick={() => setPage((p) => p + 1)}
+          >
             Siguiente <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
@@ -296,7 +442,7 @@ export function ClientesPage() {
         />
       )}
 
-      {/* Drawer detalle empresa */}
+      {/* Drawer detalle empresa (vista rápida) */}
       {detalle && (
         <EmpresaDetalleDrawer
           empresa={detalle}

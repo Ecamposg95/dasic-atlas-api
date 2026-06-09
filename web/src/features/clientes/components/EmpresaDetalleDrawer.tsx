@@ -1,4 +1,5 @@
 import { X, Pencil } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { Cliente } from '../types';
 import { ContactosTab } from './tabs/ContactosTab';
@@ -13,6 +14,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
   onEditarDatos: () => void;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-slate-950/60"
@@ -24,7 +26,15 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
             <h2 className="text-lg font-semibold">{empresa.nombre_empresa}</h2>
             <p className="text-xs text-slate-500">{empresa.rfc_tax_id ?? 'Sin RFC'}</p>
           </div>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/spa/empresas/${empresa.id}`)}
+              className="text-sm text-accent-glow hover:underline"
+            >
+              Ver ficha completa →
+            </button>
+            <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
+          </div>
         </div>
 
         <div className="p-5 space-y-6">
