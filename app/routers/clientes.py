@@ -283,6 +283,24 @@ def crear_cliente(
                     "Usa esa empresa (agrégale un contacto) en vez de crear un duplicado."
                 ),
             )
+    # Guard anti-duplicado por NOMBRE normalizado (lower+trim): cubre empresas
+    # SIN RFC, que el guard de RFC no atrapa. Caso real: una "Vitracoat" sin RFC
+    # se coló como duplicado del id2 que sí tiene RFC.
+    nombre_norm = (cliente.nombre_empresa or "").strip().lower()
+    if nombre_norm:
+        dup_nombre = (
+            db.query(models.Cliente)
+            .filter(func.lower(func.btrim(models.Cliente.nombre_empresa)) == nombre_norm)
+            .first()
+        )
+        if dup_nombre:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Ya existe una empresa con el nombre «{dup_nombre.nombre_empresa}». "
+                    "Usa esa empresa (agrégale un contacto) en vez de crear un duplicado."
+                ),
+            )
 
     try:
         nuevo_cliente = models.Cliente(**cliente.model_dump(), creado_por_id=current_user.id)
@@ -334,6 +352,22 @@ def editar_cliente(
             raise HTTPException(
                 status_code=409,
                 detail=f"Ya existe otra empresa con el RFC {rfc}: «{otro_rfc.nombre_empresa}».",
+            )
+    # Guard por NOMBRE normalizado al renombrar (excluye la propia empresa).
+    if "nombre_empresa" in data and data["nombre_empresa"] and data["nombre_empresa"].strip():
+        nombre_norm = data["nombre_empresa"].strip().lower()
+        otro_nombre = (
+            db.query(models.Cliente)
+            .filter(
+                func.lower(func.btrim(models.Cliente.nombre_empresa)) == nombre_norm,
+                models.Cliente.id != cliente_id,
+            )
+            .first()
+        )
+        if otro_nombre:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Ya existe otra empresa con el nombre «{otro_nombre.nombre_empresa}».",
             )
 
     try:
