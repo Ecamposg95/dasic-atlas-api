@@ -400,6 +400,54 @@ def empresa_resumen(
     }
 
 
+@router.get("/{cliente_id}/actividad", dependencies=[Depends(allow_all_staff)])
+def empresa_actividad(
+    cliente_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Timeline unificado: cotizaciones, ventas, remisiones, pagos."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
+
+    eventos = []
+    for o in db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id).all():
+        es_cot = o.estatus == models.EstatusOrden.COTIZACION
+        eventos.append({
+            "tipo": "cotizacion" if es_cot else "venta",
+            "fecha": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+            "ref": o.folio,
+            "monto": float(o.total or 0),
+            "moneda": o.moneda,
+            "descripcion": f"{'Cotización' if es_cot else 'Venta'} {o.folio} ({o.estatus})",
+        })
+    for r in db.query(models.Remision).filter(models.Remision.cliente_id == cliente_id).all():
+        eventos.append({
+            "tipo": "remision",
+            "fecha": r.creado_en.isoformat() if getattr(r, "creado_en", None) else None,
+            "ref": getattr(r, "folio", None),
+            "monto": None,
+            "moneda": None,
+            "descripcion": f"Remisión {getattr(r, 'folio', '')}",
+        })
+    for t in db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id == cliente_id).all():
+        eventos.append({
+            "tipo": "pago" if t.tipo == models.TipoMovimiento.ABONO else "cargo",
+            "fecha": t.fecha.isoformat() if t.fecha else None,
+            "ref": t.referencia_id,
+            "monto": float(t.monto or 0),
+            "moneda": None,
+            "descripcion": t.descripcion or ("Abono" if t.tipo == models.TipoMovimiento.ABONO else "Cargo"),
+        })
+
+    eventos.sort(key=lambda e: e["fecha"] or "", reverse=True)
+    return eventos[:limit]
+
+
 # --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
