@@ -41,7 +41,7 @@ function GrupoCard({ grupo }: { grupo: GrupoDuplicado }) {
   }
 
   return (
-    <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-3">
+    <div className="border border-border rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">RFC <span className="font-mono">{grupo.rfc}</span> · {grupo.miembros.length} registros</h3>
       </div>
@@ -62,7 +62,7 @@ function GrupoCard({ grupo }: { grupo: GrupoDuplicado }) {
           </thead>
           <tbody>
             {grupo.miembros.map((m) => (
-              <tr key={m.id} className={`border-t border-slate-100 dark:border-slate-800 ${m.id === survivor ? 'bg-emerald-50 dark:bg-emerald-900/10' : ''}`}>
+              <tr key={m.id} className={`border-t border-border ${m.id === survivor ? 'bg-emerald-50 dark:bg-emerald-900/10' : ''}`}>
                 <td className="p-2 text-center">
                   <input type="radio" name={`surv-${grupo.rfc}`} checked={m.id === survivor} onChange={() => setSurvivor(m.id)} />
                 </td>

@@ -68,7 +68,7 @@ export function RegistrarPagoModal({ clienteId, nombreEmpresa, onClose }: Props)
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Monto */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+          <label className="text-xs font-medium text-foreground uppercase tracking-wide">
             Monto (MXN) <span className="text-rose-500">*</span>
           </label>
           <Input
@@ -88,7 +88,7 @@ export function RegistrarPagoModal({ clienteId, nombreEmpresa, onClose }: Props)
 
         {/* Descripción */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+          <label className="text-xs font-medium text-foreground uppercase tracking-wide">
             Descripción (opcional)
           </label>
           <Input

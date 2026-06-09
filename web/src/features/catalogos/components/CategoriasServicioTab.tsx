@@ -18,7 +18,7 @@ export function CategoriasServicioTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-muted-foreground">
           {items.length} categoría(s) de servicio en uso
         </p>
         <p className="text-xs text-slate-500">
@@ -42,7 +42,7 @@ export function CategoriasServicioTab() {
           )}
           {items.map((c) => (
             <DataTableRow key={c.categoria}>
-              <td className="p-3 text-slate-800 dark:text-slate-200">{c.categoria}</td>
+              <td className="p-3 text-foreground">{c.categoria}</td>
               <td className="p-3 text-center">
                 <Badge variant={c.n_servicios > 0 ? 'cyan' : 'slate'}>{c.n_servicios}</Badge>
               </td>
@@ -52,7 +52,7 @@ export function CategoriasServicioTab() {
       </DataTable>
 
       {sugeridas.length > 0 && (
-        <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="text-xs text-muted-foreground">
           <span className="font-semibold">Sugeridas:</span>{' '}
           {sugeridas.join(', ')}
         </div>

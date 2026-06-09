@@ -75,8 +75,8 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
       className="fixed inset-0 z-50 flex justify-end bg-slate-950/60"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="h-full w-full max-w-2xl overflow-y-auto bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
+      <div className="h-full w-full max-w-2xl overflow-y-auto bg-card border-l border-border shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-border bg-white/90 dark:bg-slate-900/90 backdrop-blur">
           <div>
             <h2 className="text-lg font-semibold">{empresa.nombre_empresa}</h2>
             <p className="text-xs text-slate-500">{empresa.rfc_tax_id ?? 'Sin RFC'}</p>
@@ -107,7 +107,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
             </div>
             <div className="space-y-1">
               {(contactos ?? []).map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2">
+                <div key={c.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 text-sm">
                       {c.es_principal && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
@@ -133,7 +133,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
             </div>
 
             {showForm && (
-              <div className="mt-3 rounded-md border border-slate-200 dark:border-slate-800 p-3 space-y-2">
+              <div className="mt-3 rounded-md border border-border p-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre *" />
                   <Input value={form.cargo ?? ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} placeholder="Cargo" />
@@ -160,9 +160,9 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
             ) : (ordenes ?? []).length === 0 ? (
               <p className="text-xs text-slate-500 py-2">Sin documentos.</p>
             ) : (
-              <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="rounded-md border border-border overflow-hidden">
                 <table className="w-full text-xs">
-                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+                  <thead className="bg-surface-2 text-slate-500 uppercase">
                     <tr>
                       <th className="p-2 text-left">Folio</th>
                       <th className="p-2 text-left">Fecha</th>
@@ -172,7 +172,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
                   </thead>
                   <tbody>
                     {(ordenes ?? []).map((o) => (
-                      <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <tr key={o.id} className="border-t border-border">
                         <td className="p-2 font-mono">
                           <a
                             href={`/spa/cotizador?edit=${o.id}`}
@@ -206,14 +206,14 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
               </div>
               <Button size="sm" onClick={onRegistrarPago} disabled={pago.isPending}>Registrar</Button>
             </div>
-            <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="rounded-md border border-border overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+                <thead className="bg-surface-2 text-slate-500 uppercase">
                   <tr><th className="p-2 text-left">Folio</th><th className="p-2 text-left">Vence</th><th className="p-2 text-right">Pendiente</th><th className="p-2 text-center">Estatus</th></tr>
                 </thead>
                 <tbody>
                   {(cxc?.cargos ?? []).map((c) => (
-                    <tr key={c.id} className="border-t border-slate-100 dark:border-slate-800">
+                    <tr key={c.id} className="border-t border-border">
                       <td className="p-2 font-mono">{c.folio ?? '—'}</td>
                       <td className="p-2">{c.fecha_vencimiento ? c.fecha_vencimiento.slice(0, 10) : '—'}</td>
                       <td className="p-2 text-right">{fmtMoney(c.saldo_pendiente, empresa.moneda_credito)}</td>
@@ -245,9 +245,9 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
             ) : (estadoCuenta ?? []).length === 0 ? (
               <p className="text-xs text-slate-500 py-2">Sin movimientos registrados.</p>
             ) : (
-              <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden max-h-72 overflow-y-auto">
+              <div className="rounded-md border border-border overflow-hidden max-h-72 overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+                  <thead className="sticky top-0 bg-surface-2 text-slate-500 uppercase">
                     <tr>
                       <th className="p-2 text-left">Fecha</th>
                       <th className="p-2 text-left">Concepto</th>
@@ -257,7 +257,7 @@ export function EmpresaDetalleDrawer({ empresa, onEditarDatos, onClose }: {
                   </thead>
                   <tbody>
                     {(estadoCuenta ?? []).map((t) => (
-                      <tr key={t.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <tr key={t.id} className="border-t border-border">
                         <td className="p-2 whitespace-nowrap">{t.fecha ? t.fecha.slice(0, 10) : '—'}</td>
                         <td className="p-2 max-w-[180px] truncate" title={t.descripcion}>{t.descripcion}</td>
                         <td className="p-2 text-center">

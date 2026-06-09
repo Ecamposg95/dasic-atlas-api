@@ -13,7 +13,7 @@ export function ContactoHistorialDrawer({ contacto, onClose }: { contacto: Conta
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full overflow-y-auto p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="relative w-full max-w-md bg-card h-full overflow-y-auto p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-lg font-semibold">{contacto.nombre}</h3>
@@ -29,7 +29,7 @@ export function ContactoHistorialDrawer({ contacto, onClose }: { contacto: Conta
         ) : (
           <ul className="space-y-2">
             {data.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-2 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2">
+              <li key={o.id} className="flex items-center justify-between gap-2 border border-border rounded-lg px-3 py-2">
                 <div className="min-w-0">
                   <a href={`/spa/cotizador?edit=${o.id}`} className="font-mono text-sm text-accent-glow hover:underline">{o.folio}</a>
                   <div className="text-[11px] text-slate-500">{o.fecha ? o.fecha.slice(0, 10) : ''}</div>

@@ -47,9 +47,9 @@ function BucketSkeleton() {
     <Card>
       <CardContent className="pt-5">
         <div className="space-y-2">
-          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-          <div className="h-7 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-          <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-3 w-20 bg-surface-2 rounded animate-pulse" />
+          <div className="h-7 w-32 bg-surface-2 rounded animate-pulse" />
+          <div className="h-3 w-16 bg-surface-2 rounded animate-pulse" />
         </div>
       </CardContent>
     </Card>
@@ -73,7 +73,7 @@ export function AgingBuckets({ buckets, loading }: Props) {
         const meta = BUCKET_META[bucket.rango] ?? {
           label: bucket.rango,
           accentClass: 'bg-slate-500',
-          textClass: 'text-slate-600 dark:text-slate-400',
+          textClass: 'text-muted-foreground',
           borderClass: 'border-l-slate-500',
         };
         return (
@@ -82,7 +82,7 @@ export function AgingBuckets({ buckets, loading }: Props) {
             className={`border-l-4 ${meta.borderClass}`}
           >
             <CardContent className="pt-5">
-              <p className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                 {meta.label}
               </p>
               <p className={`text-xl font-bold tabular-nums ${meta.textClass}`}>

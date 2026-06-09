@@ -167,7 +167,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
   return (
     <Modal title="Nueva orden de compra" onClose={onClose} size="xl">
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-muted-foreground">
           MVP: líneas libres (fantasma) — captura SKU/descripción a mano. La OC
           se crea en estatus <span className="font-medium">borrador</span> y no
           afecta stock ni cuentas por pagar hasta que se reciba.
@@ -176,7 +176,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
         {/* Cabecera */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               Proveedor <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Select
@@ -197,7 +197,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               Moneda OC
             </label>
             <Select
@@ -211,7 +211,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               Tipo de cambio
             </label>
             <Input
@@ -227,9 +227,9 @@ export function OrdenCompraFormModal({ onClose }: Props) {
         </div>
 
         {/* Líneas */}
-        <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+            <thead className="bg-slate-100 dark:bg-slate-800/50 text-muted-foreground">
               <tr>
                 <th className="px-2 py-2 text-left w-32">SKU (P/N)</th>
                 <th className="px-2 py-2 text-left">Descripción *</th>
@@ -243,7 +243,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
               {lineas.map((l, idx) => (
                 <tr
                   key={idx}
-                  className="border-t border-slate-200 dark:border-slate-800"
+                  className="border-t border-border"
                 >
                   <td className="p-1">
                     <Input
@@ -326,7 +326,7 @@ export function OrdenCompraFormModal({ onClose }: Props) {
                     Añadir línea
                   </Button>
                 </td>
-                <td colSpan={2} className="px-2 py-2 text-right font-bold text-slate-700 dark:text-slate-300">
+                <td colSpan={2} className="px-2 py-2 text-right font-bold text-foreground">
                   Total estimado:{' '}
                   <span className="font-mono text-cyan-700 dark:text-cyan-300">
                     {fmtMoneda(totalEstimado)}

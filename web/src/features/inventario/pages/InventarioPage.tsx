@@ -34,7 +34,7 @@ type ImportFeedback = {
 };
 
 const PAGE_SIZE = 50;
-const SELECT_CLS = 'h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm';
+const SELECT_CLS = 'h-10 rounded-md border border-border-strong bg-card px-2 text-sm';
 
 // Debounce helper
 function useDebounced<T>(value: T, delay = 300): T {
@@ -273,7 +273,7 @@ export function InventarioPage() {
                     <li key={i} className="text-rose-700 dark:text-rose-200">{err}</li>
                   ))}
                   {importFeedback.errores.length > 50 && (
-                    <li className="text-slate-500 dark:text-slate-400 italic">
+                    <li className="text-muted-foreground italic">
                       (+{importFeedback.errores.length - 50} errores adicionales no mostrados)
                     </li>
                   )}
@@ -285,7 +285,7 @@ export function InventarioPage() {
       )}
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -312,7 +312,7 @@ export function InventarioPage() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <label className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+        <label className="flex items-center gap-1.5 text-sm text-foreground cursor-pointer select-none">
           <input
             type="checkbox"
             checked={soloBajoStock}
@@ -356,18 +356,18 @@ export function InventarioPage() {
           )}
           {filtrados.map((p) => (
             <DataTableRow key={p.id}>
-              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{p.sku ?? '—'}</td>
-              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{p.sku_comercial ?? '—'}</td>
+              <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku ?? '—'}</td>
+              <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku_comercial ?? '—'}</td>
               <td className="p-3 max-w-xs">
-                <div className="truncate text-slate-800 dark:text-slate-200 font-medium" title={p.nombre}>
+                <div className="truncate text-foreground font-medium" title={p.nombre}>
                   {p.nombre}
                 </div>
               </td>
-              <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.marca ?? '—'}</td>
-              <td className="p-3 text-xs text-slate-700 dark:text-slate-300">{p.categoria ?? '—'}</td>
+              <td className="p-3 text-xs text-foreground">{p.marca ?? '—'}</td>
+              <td className="p-3 text-xs text-foreground">{p.categoria ?? '—'}</td>
               <td className="p-3 text-xs font-mono">
                 {p.clave_prod_serv ? (
-                  <span className="text-slate-700 dark:text-slate-300">
+                  <span className="text-foreground">
                     {p.clave_prod_serv}
                     {p.clave_unidad_sat && (
                       <span className="block text-[10px] text-slate-500 dark:text-slate-500">{p.clave_unidad_sat}</span>
@@ -379,11 +379,11 @@ export function InventarioPage() {
               </td>
               <td className="p-3 text-right">{stockBadge(p)}</td>
               {isAdmin && (
-                <td className="p-3 text-right font-mono text-xs text-slate-700 dark:text-slate-300">
+                <td className="p-3 text-right font-mono text-xs text-foreground">
                   {fmtMoney(p.costo_compra, p.moneda_compra)}
                 </td>
               )}
-              <td className="p-3 text-right font-mono text-xs text-slate-700 dark:text-slate-300">
+              <td className="p-3 text-right font-mono text-xs text-foreground">
                 {fmtMoney(p.precio_publico)}
               </td>
               <td className="p-3 text-right whitespace-nowrap">
@@ -428,7 +428,7 @@ export function InventarioPage() {
 
       {/* Paginación */}
       {(page > 1 || productos.length === PAGE_SIZE) && (
-        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
           <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>

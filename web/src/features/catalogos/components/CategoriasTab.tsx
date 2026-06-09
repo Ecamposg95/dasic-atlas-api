@@ -23,10 +23,10 @@ function ModalShell({
       className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-md w-full p-5">
+      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-md w-full p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">{title}</h3>
-          <button type="button" onClick={onClose} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -76,11 +76,11 @@ function RenombrarModal({
     <ModalShell title="Renombrar categoría" onClose={onClose}>
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Nombre actual</label>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{categoria.categoria}</p>
+          <label className="block text-xs text-muted-foreground mb-1">Nombre actual</label>
+          <p className="text-sm font-medium text-foreground">{categoria.categoria}</p>
         </div>
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Nuevo nombre *</label>
+          <label className="block text-xs text-muted-foreground mb-1">Nuevo nombre *</label>
           <Input
             value={nuevo}
             onChange={(e) => setNuevo(e.target.value)}
@@ -94,7 +94,7 @@ function RenombrarModal({
         {err && (
           <div className="text-xs bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700/50 dark:text-rose-300 rounded p-2">{err}</div>
         )}
-        <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-2 pt-3 border-t border-border">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={renameMut.isPending}>Cancelar</Button>
           <Button size="sm" onClick={onSubmit} disabled={renameMut.isPending}>
             {renameMut.isPending ? 'Renombrando…' : 'Renombrar'}
@@ -140,7 +140,7 @@ export function CategoriasTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600 dark:text-slate-400">{items.length} categoría(s) de producto en uso</p>
+      <p className="text-sm text-muted-foreground">{items.length} categoría(s) de producto en uso</p>
 
       <DataTable>
         <DataTableHead>
@@ -159,7 +159,7 @@ export function CategoriasTab() {
           )}
           {items.map((c) => (
             <DataTableRow key={c.categoria}>
-              <td className="p-3 text-slate-800 dark:text-slate-200">{c.categoria}</td>
+              <td className="p-3 text-foreground">{c.categoria}</td>
               <td className="p-3 text-center">
                 <Badge variant={c.n_productos > 0 ? 'cyan' : 'slate'}>{c.n_productos}</Badge>
               </td>
@@ -167,7 +167,7 @@ export function CategoriasTab() {
                 <button
                   onClick={() => setModalRename(c)}
                   title="Renombrar"
-                  className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 px-1"
+                  className="text-foreground hover:text-slate-900 dark:hover:text-slate-100 px-1"
                 >
                   <Pen className="h-4 w-4 inline" />
                 </button>

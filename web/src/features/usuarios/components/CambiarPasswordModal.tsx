@@ -38,7 +38,7 @@ export function CambiarPasswordModal({ usuario, onSave, onClose, busy }: Props) 
     >
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Nueva contraseña <span className="text-rose-400">*</span>
           </label>
           <Input
@@ -49,7 +49,7 @@ export function CambiarPasswordModal({ usuario, onSave, onClose, busy }: Props) 
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Confirmar contraseña <span className="text-rose-400">*</span>
           </label>
           <Input

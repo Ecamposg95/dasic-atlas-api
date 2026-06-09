@@ -90,13 +90,13 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
   return (
     <Modal title="Registrar pago a proveedor" onClose={onClose} size="sm">
       <div className="space-y-3 text-sm">
-        <p className="text-slate-600 dark:text-slate-400 text-xs">
+        <p className="text-muted-foreground text-xs">
           OC: <span className="font-mono text-cyan-700 dark:text-cyan-300">{orden.folio ?? `#${orden.id}`}</span> —{' '}
           Proveedor:{' '}
           {cargandoDetalle ? (
             <span className="inline-block h-3 w-24 align-middle bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
           ) : (
-            <span className="font-medium text-slate-800 dark:text-slate-200">{proveedorNombre}</span>
+            <span className="font-medium text-foreground">{proveedorNombre}</span>
           )}
         </p>
 
@@ -107,7 +107,7 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
         )}
 
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Monto ({orden.moneda}) <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
@@ -121,7 +121,7 @@ export function RegistrarPagoModal({ orden, onClose }: Props) {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Referencia / nota
           </label>
           <Input

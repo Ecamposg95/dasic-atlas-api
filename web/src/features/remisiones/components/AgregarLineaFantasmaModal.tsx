@@ -48,8 +48,8 @@ export function AgregarLineaFantasmaModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-lg w-full">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-200 dark:border-slate-800">
+      <div className="bg-card border border-amber-700/50 rounded-xl shadow-2xl max-w-lg w-full">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Ghost className="h-4 w-4 text-amber-500" /> Agregar producto fantasma
           </h3>
@@ -82,7 +82,7 @@ export function AgregarLineaFantasmaModal({
           </div>
           {err && <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 text-rose-700 dark:text-rose-300">{err}</div>}
         </div>
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
           <Button variant="ghost" size="sm" onClick={() => { reset(); onClose(); }}>Cancelar</Button>
           <Button size="sm" onClick={onSave} className="bg-amber-600 hover:bg-amber-700 text-white">Agregar</Button>
         </div>

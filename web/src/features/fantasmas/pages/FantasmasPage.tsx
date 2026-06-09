@@ -240,7 +240,7 @@ export function FantasmasPage() {
             cyan: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300',
             emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300',
             violet: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300',
-            slate: 'bg-slate-100 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300',
+            slate: 'bg-slate-100 dark:bg-slate-800/40 text-foreground',
           };
           return (
             <button
@@ -250,7 +250,7 @@ export function FantasmasPage() {
               className={`p-3 rounded-lg border text-left transition ${
                 filtroEstado === e.key
                   ? 'border-accent-glow ring-2 ring-accent-glow/40'
-                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  : 'border-border hover:border-slate-300 dark:hover:border-slate-700'
               } ${tone[e.variant]}`}
             >
               <div className="text-[10px] uppercase font-bold opacity-80">{e.label}</div>
@@ -261,7 +261,7 @@ export function FantasmasPage() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -271,7 +271,7 @@ export function FantasmasPage() {
         <select
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value as EstadoFantasma | '')}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-border-strong bg-card px-2 text-sm"
         >
           <option value="">Todos estados</option>
           {ESTADOS.map((e) => (
@@ -281,7 +281,7 @@ export function FantasmasPage() {
         <select
           value={filtroProveedor}
           onChange={(e) => setFiltroProveedor(e.target.value)}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm min-w-[160px]"
+          className="h-10 rounded-md border border-border-strong bg-card px-2 text-sm min-w-[160px]"
         >
           <option value="">Todos proveedores</option>
           <option value="__sin_asignar__">— Sin asignar</option>
@@ -292,7 +292,7 @@ export function FantasmasPage() {
         <select
           value={filtroMoneda}
           onChange={(e) => setFiltroMoneda(e.target.value as Moneda | '')}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-border-strong bg-card px-2 text-sm"
         >
           <option value="">Cualquier moneda</option>
           <option value="MXN">MXN</option>
@@ -319,7 +319,7 @@ export function FantasmasPage() {
           <button onClick={() => setModalAsignar(true)} className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline text-xs">
             <Truck className="h-3 w-3 inline mr-0.5" /> Asignar proveedor
           </button>
-          <button onClick={clearSel} className="ml-auto text-slate-600 dark:text-slate-400 hover:underline text-xs">Cancelar</button>
+          <button onClick={clearSel} className="ml-auto text-muted-foreground hover:underline text-xs">Cancelar</button>
         </div>
       )}
 
@@ -364,7 +364,7 @@ export function FantasmasPage() {
                 />
               </td>
               <td className="p-3 max-w-xs">
-                <div className="truncate text-slate-800 dark:text-slate-200" title={f.descripcion}>{f.descripcion}</div>
+                <div className="truncate text-foreground" title={f.descripcion}>{f.descripcion}</div>
                 {(f.marca || f.clave_prod_serv || f.clave_unidad_sat) && (
                   <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-500">
                     {f.marca && <span>{f.marca}</span>}
@@ -373,12 +373,12 @@ export function FantasmasPage() {
                   </div>
                 )}
               </td>
-              <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">{f.sku_libre || '—'}</td>
+              <td className="p-3 font-mono text-xs text-muted-foreground">{f.sku_libre || '—'}</td>
               <td className="p-3 text-xs">
                 {f.proveedor_sugerido_nombre || <span className="text-slate-500">Sin asignar</span>}
               </td>
               <td className="p-3 text-right">
-                <span className="inline-block min-w-[28px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-xs font-bold">
+                <span className="inline-block min-w-[28px] px-1.5 py-0.5 rounded bg-surface-2 text-xs font-bold">
                   {f.veces_solicitado}
                 </span>
               </td>
@@ -455,7 +455,7 @@ export function FantasmasPage() {
 
       {/* Paginación */}
       {(page > 1 || items.length === PAGE_SIZE) && (
-        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
           <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>
@@ -484,7 +484,7 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
   return (
     <ModalShell title="Detalle fantasma" onClose={onClose}>
       {err && <div className="text-rose-600 dark:text-rose-400 text-sm">{err}</div>}
-      {!d && !err && <div className="text-slate-600 dark:text-slate-400 text-sm">Cargando…</div>}
+      {!d && !err && <div className="text-muted-foreground text-sm">Cargando…</div>}
       {d && (
         <div className="text-sm space-y-2">
           <div><span className="text-slate-500">Descripción:</span> {d.descripcion}</div>
@@ -496,7 +496,7 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
             <div><span className="text-slate-500">Creado:</span> {fmtDate(d.creado_en)}</div>
             <div><span className="text-slate-500">Actividad:</span> {fmtDate(d.ultimo_visto_en)}</div>
           </div>
-          <hr className="border-slate-200 dark:border-slate-800" />
+          <hr className="border-border" />
           <div>
             <div className="font-medium mb-1">Cotizaciones donde aparece ({d.cotizaciones.length}):</div>
             {d.cotizaciones.length === 0 ? (
@@ -507,7 +507,7 @@ function DetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
                   <li key={c.id}>
                     <span className="font-mono text-cyan-600 dark:text-cyan-400">{c.folio}</span>
                     <span className="text-slate-500"> ({c.estatus})</span>
-                    <span className="text-slate-600 dark:text-slate-400"> ×{c.cantidad}</span>
+                    <span className="text-muted-foreground"> ×{c.cantidad}</span>
                   </li>
                 ))}
               </ul>
@@ -559,59 +559,59 @@ function EditarModal({
 
   return (
     <ModalShell title="Editar fantasma" onClose={onClose}>
-      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
+      <label className="block text-xs text-muted-foreground mb-1">Descripción</label>
       <textarea
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
         rows={3}
-        className="w-full text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 mb-3"
+        className="w-full text-sm rounded border border-border-strong bg-card px-2 py-1.5 mb-3"
       />
-      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">SKU</label>
+      <label className="block text-xs text-muted-foreground mb-1">SKU</label>
       <Input value={sku} onChange={(e) => setSku(e.target.value)} className="mb-3" />
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Costo ref</label>
+          <label className="block text-xs text-muted-foreground mb-1">Costo ref</label>
           <Input type="number" step="0.01" value={costo} onChange={(e) => setCosto(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
+          <label className="block text-xs text-muted-foreground mb-1">Moneda</label>
           <select
             value={moneda}
             onChange={(e) => setMoneda(e.target.value as Moneda)}
-            className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
+            className="w-full h-10 rounded-md border border-border-strong bg-card px-2 text-sm"
           >
             <option value="MXN">MXN</option>
             <option value="USD">USD</option>
           </select>
         </div>
       </div>
-      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Proveedor sugerido</label>
+      <label className="block text-xs text-muted-foreground mb-1">Proveedor sugerido</label>
       <select
         value={provId}
         onChange={(e) => setProvId(e.target.value)}
-        className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm mb-3"
+        className="w-full h-10 rounded-md border border-border-strong bg-card px-2 text-sm mb-3"
       >
         <option value="">— Sin asignar —</option>
         {proveedores.map((p) => (
           <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
         ))}
       </select>
-      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Marca</label>
+      <label className="block text-xs text-muted-foreground mb-1">Marca</label>
       <Input value={marca} onChange={(e) => setMarca(e.target.value)} className="mb-3" placeholder="Marca del producto" />
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave prod/serv SAT</label>
+          <label className="block text-xs text-muted-foreground mb-1">Clave prod/serv SAT</label>
           <SatCombobox value={claveProdServ} onChange={setClaveProdServ} endpoint="/api/sat/clave-prod-serv" minChars={2} maxLength={8} placeholder="Buscar o escribir (ej. 31181701)" className="font-mono" />
         </div>
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Clave unidad SAT</label>
+          <label className="block text-xs text-muted-foreground mb-1">Clave unidad SAT</label>
           <SatCombobox value={claveUnidadSat} onChange={setClaveUnidadSat} endpoint="/api/sat/clave-unidad" minChars={1} maxLength={10} placeholder="Buscar unidad (ej. H87)" className="font-mono" />
         </div>
       </div>
-      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Observaciones</label>
+      <label className="block text-xs text-muted-foreground mb-1">Observaciones</label>
       <Input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="mb-3" placeholder="Notas del fantasma" />
       {err && <div className="text-xs bg-rose-50 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-700/50 rounded p-2 mb-3 text-rose-700 dark:text-rose-300">{err}</div>}
-      <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+      <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button size="sm" onClick={onSubmit} disabled={busy}>
           {busy ? 'Guardando…' : 'Guardar'}
@@ -658,14 +658,14 @@ function AsignarProveedorModal({
       <select
         value={provId}
         onChange={(e) => setProvId(e.target.value)}
-        className="w-full h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm mb-3"
+        className="w-full h-10 rounded-md border border-border-strong bg-card px-2 text-sm mb-3"
       >
         <option value="">— Selecciona —</option>
         {proveedores.map((p) => (
           <option key={p.id} value={p.id}>{p.nombre_empresa}</option>
         ))}
       </select>
-      <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+      <div className="flex justify-end gap-2 pt-3 border-t border-border">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>Cancelar</Button>
         <Button size="sm" onClick={onSubmit} disabled={busy}>
           {busy ? 'Asignando…' : 'Asignar'}
@@ -683,7 +683,7 @@ function ModalShell({
       className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button type="button" onClick={onClose} className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">

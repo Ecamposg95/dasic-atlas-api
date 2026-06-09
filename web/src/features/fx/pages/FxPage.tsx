@@ -95,7 +95,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
     <Modal title="Override manual TC" onClose={onClose} size="sm">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Fecha <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
@@ -105,7 +105,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             TC USD/MXN <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
@@ -119,7 +119,7 @@ function OverrideModal({ onClose, onSaved }: OverrideModalProps) {
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Nota (opcional)</label>
+          <label className="block text-xs text-muted-foreground mb-1">Nota (opcional)</label>
           <Input
             value={nota}
             onChange={(e) => setNota(e.target.value)}
@@ -189,9 +189,9 @@ export function FxPage() {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">TC Hoy</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">TC Hoy</p>
               {loadingHoy ? (
-                <div className="h-12 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-12 w-48 bg-surface-2 rounded animate-pulse" />
               ) : (
                 <>
                   <p className="text-4xl font-bold tabular-nums text-accent-glow">
@@ -238,7 +238,7 @@ export function FxPage() {
 
       {/* Historial */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Historial últimos 30 días
         </h2>
         <DataTable>
@@ -253,10 +253,10 @@ export function FxPage() {
           <DataTableBody>
             {loadingHist ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b border-slate-200 dark:border-slate-800">
+                <tr key={i} className="border-b border-border">
                   {Array.from({ length: 4 }).map((__, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                      <div className="h-4 bg-surface-2 rounded animate-pulse" />
                     </td>
                   ))}
                 </tr>
@@ -271,8 +271,8 @@ export function FxPage() {
             ) : (
               items.map((row) => (
                 <DataTableRow key={row.fecha}>
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-sm">{fmtFecha(row.fecha)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100 font-medium">
+                  <td className="px-4 py-3 text-muted-foreground text-sm">{fmtFecha(row.fecha)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-foreground font-medium">
                     {Number(row.usd_mxn).toLocaleString('es-MX', {
                       minimumFractionDigits: 4,
                       maximumFractionDigits: 4,

@@ -361,7 +361,7 @@ export function SeguimientoPage() {
           <select
             value={estatusFilter}
             onChange={(e) => setEstatusFilter(e.target.value as EstatusFilter)}
-            className="text-sm rounded-md border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:border-accent-glow outline-none"
+            className="text-sm rounded-md border border-border-strong bg-card text-foreground px-3 py-2 focus:border-accent-glow outline-none"
           >
             {ESTATUS_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
@@ -373,7 +373,7 @@ export function SeguimientoPage() {
           <select
             value={vencimientoFilter}
             onChange={(e) => setVencimientoFilter(e.target.value as VencimientoFilter)}
-            className="text-sm rounded-md border border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 px-3 py-2 focus:border-accent-glow outline-none"
+            className="text-sm rounded-md border border-border-strong bg-card text-foreground px-3 py-2 focus:border-accent-glow outline-none"
           >
             {VENCIMIENTO_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
@@ -391,7 +391,7 @@ export function SeguimientoPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-200 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card border border-border rounded-lg p-4">
             <Loader2 className="h-4 w-4 animate-spin" />
             Cargando historial…
           </div>
@@ -427,7 +427,7 @@ export function SeguimientoPage() {
                     <DataTableRow key={item.id}>
                       {/* Folio + badge versión */}
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-slate-900 dark:text-slate-100">{item.folio}</span>
+                        <span className="font-mono text-xs text-foreground">{item.folio}</span>
                         {item.version > 1 && (
                           <Badge variant="amber" className="ml-1.5">
                             v{item.version}
@@ -436,12 +436,12 @@ export function SeguimientoPage() {
                       </td>
 
                       {/* Cliente */}
-                      <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 max-w-[180px] truncate" title={item.cliente}>
+                      <td className="px-4 py-3 text-sm text-foreground max-w-[180px] truncate" title={item.cliente}>
                         {item.cliente}
                       </td>
 
                       {/* Fecha */}
-                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {formatDate(item.fecha)}
                       </td>
 
@@ -464,7 +464,7 @@ export function SeguimientoPage() {
                       </td>
 
                       {/* Total */}
-                      <td className="px-4 py-3 text-right text-sm font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                      <td className="px-4 py-3 text-right text-sm font-mono text-foreground whitespace-nowrap">
                         {formatTotal(item)}
                       </td>
 
@@ -495,7 +495,7 @@ export function SeguimientoPage() {
 
         {/* Paginación */}
         {(page > 1 || (historial && historial.length === PAGE_SIZE)) && (
-          <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+          <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
             <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
               <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
             </Button>

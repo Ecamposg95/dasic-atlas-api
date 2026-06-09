@@ -53,7 +53,7 @@ function ComparativaPanel({ productoId }: { productoId: number }) {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-8 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div key={i} className="h-8 bg-surface-2 rounded animate-pulse" />
         ))}
       </div>
     );
@@ -62,7 +62,7 @@ function ComparativaPanel({ productoId }: { productoId: number }) {
   const items = data?.items ?? [];
   if (items.length === 0) {
     return (
-      <p className="text-slate-500 dark:text-slate-400 text-sm">
+      <p className="text-muted-foreground text-sm">
         Sin precios registrados para este producto.
       </p>
     );
@@ -78,20 +78,20 @@ function ComparativaPanel({ productoId }: { productoId: number }) {
         return (
           <div key={item.proveedor_id}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[60%]">
+              <span className="text-xs text-foreground truncate max-w-[60%]">
                 {item.proveedor_nombre ?? `Prov. ${item.proveedor_id}`}
               </span>
               <span
                 className={`text-xs font-medium tabular-nums ${
                   isMenor
                     ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-slate-700 dark:text-slate-300'
+                    : 'text-foreground'
                 }`}
               >
                 {fmtPrecio(item.precio, item.moneda)}
               </span>
             </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2">
+            <div className="w-full bg-surface-2 rounded-full h-2">
               <div
                 className={`h-2 rounded-full ${
                   isMenor ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'
@@ -112,10 +112,10 @@ function ComparativaPanel({ productoId }: { productoId: number }) {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -189,11 +189,11 @@ export function PreciosPage() {
       <header className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
           <Tags className="h-6 w-6 text-accent-glow" />
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-semibold text-foreground">
             Precios proveedores
           </h1>
           {!isLoading && (
-            <span className="text-slate-500 dark:text-slate-400 text-sm">
+            <span className="text-muted-foreground text-sm">
               ({items.length} {items.length === 1 ? 'precio' : 'precios'})
             </span>
           )}
@@ -257,7 +257,7 @@ export function PreciosPage() {
                 Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               ) : items.length === 0 ? (
                 <DataTableEmpty colSpan={isAdmin ? 6 : 5}>
-                  <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Tags className="h-10 w-10 opacity-30" />
                     <p>Sin precios registrados para estos filtros</p>
                   </div>
@@ -270,10 +270,10 @@ export function PreciosPage() {
                     `ID ${item.id}`;
                   return (
                     <DataTableRow key={item.id}>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
                         {fmtFecha(item.fecha_vigencia_desde ?? item.creado_en)}
                       </td>
-                      <td className="px-4 py-3 text-slate-800 dark:text-slate-200 text-sm">
+                      <td className="px-4 py-3 text-foreground text-sm">
                         <div className="font-medium">{label}</div>
                         {item.sku_libre && (
                           <div className="text-slate-500 dark:text-slate-500 text-xs">
@@ -281,10 +281,10 @@ export function PreciosPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm">
+                      <td className="px-4 py-3 text-foreground text-sm">
                         {item.proveedor_nombre ?? `Prov. ${item.proveedor_id}`}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-900 dark:text-slate-100">
+                      <td className="px-4 py-3 text-right tabular-nums font-medium text-foreground">
                         {fmtPrecio(item.precio, item.moneda)}
                         {item.moneda === 'USD' && (
                           <Badge variant="cyan" className="ml-2 text-xs">USD</Badge>
@@ -324,7 +324,7 @@ export function PreciosPage() {
               <CardContent className="pt-5">
                 <div className="flex items-center gap-2 mb-4">
                   <BarChart2 className="h-4 w-4 text-accent-glow" />
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Comparativa por proveedor
                   </h3>
                 </div>

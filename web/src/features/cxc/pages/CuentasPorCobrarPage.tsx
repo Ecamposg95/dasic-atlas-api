@@ -68,9 +68,9 @@ function KpiCard({ label, value, sub, Icon, color = 'text-accent-glow', loading 
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
             {loading ? (
-              <div className="h-8 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-8 w-32 bg-surface-2 rounded animate-pulse" />
             ) : (
               <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
             )}
@@ -103,7 +103,7 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
 
   return (
     <DataTableRow>
-      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm font-mono">
+      <td className="px-4 py-3 text-foreground text-sm font-mono">
         {item.orden_venta_id ? (
           <a
             href={`/api/ventas/${item.orden_venta_id}/pdf`}
@@ -117,11 +117,11 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
           <span className="text-slate-500 italic">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-800 dark:text-slate-200 text-sm">{item.cliente ?? '—'}</td>
-      <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100 font-medium">
+      <td className="px-4 py-3 text-foreground text-sm">{item.cliente ?? '—'}</td>
+      <td className="px-4 py-3 text-right tabular-nums text-foreground font-medium">
         ${fmtMXN(item.saldo_pendiente)}
       </td>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{fmtFecha(item.fecha_vencimiento)}</td>
+      <td className="px-4 py-3 text-muted-foreground text-xs">{fmtFecha(item.fecha_vencimiento)}</td>
       <td className="px-4 py-3">{diasBadge}</td>
     </DataTableRow>
   );
@@ -133,10 +133,10 @@ function VencimientoRow({ item }: { item: VencimientoItem }) {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -149,7 +149,7 @@ function SkeletonRow() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">
+    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
       {children}
     </h2>
   );
@@ -216,7 +216,7 @@ export function CuentasPorCobrarPage() {
           <TrendingDown className="h-6 w-6 text-accent-glow" />
           <div>
             <h1 className="text-2xl font-semibold leading-tight">Centro de cobranza</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Cuentas por cobrar · Aging · Top deudores
             </p>
           </div>
@@ -268,7 +268,7 @@ export function CuentasPorCobrarPage() {
             value={String(resumen?.n_cargos_abiertos ?? 0)}
             sub="cargos abiertos"
             Icon={Users}
-            color="text-slate-700 dark:text-slate-300"
+            color="text-foreground"
             loading={loadingResumen}
           />
         </div>

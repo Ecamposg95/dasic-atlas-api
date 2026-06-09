@@ -81,7 +81,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
       <div className="space-y-3">
         {/* Nombre empresa */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Empresa <span className="text-rose-400">*</span>
           </label>
           <Input
@@ -94,7 +94,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Contacto */}
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Contacto</label>
+            <label className="block text-xs text-muted-foreground mb-1">Contacto</label>
             <Input
               value={contacto}
               onChange={(e) => setContacto(e.target.value)}
@@ -103,7 +103,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
           </div>
           {/* RFC */}
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">RFC / Tax ID</label>
+            <label className="block text-xs text-muted-foreground mb-1">RFC / Tax ID</label>
             <Input
               value={rfc}
               onChange={(e) => setRfc(e.target.value)}
@@ -112,7 +112,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
           </div>
           {/* Email */}
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Email</label>
+            <label className="block text-xs text-muted-foreground mb-1">Email</label>
             <Input
               type="email"
               value={email}
@@ -122,7 +122,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
           </div>
           {/* Teléfono */}
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Teléfono</label>
+            <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
             <Input
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
@@ -133,20 +133,20 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
 
         {/* Dirección */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Dirección</label>
+          <label className="block text-xs text-muted-foreground mb-1">Dirección</label>
           <textarea
             value={direccion}
             onChange={(e) => setDireccion(e.target.value)}
             rows={2}
             placeholder="Calle, colonia, ciudad, estado, CP"
-            className="w-full text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent-glow/40"
+            className="w-full text-sm rounded-md border border-border-strong bg-card px-3 py-2 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-accent-glow/40"
           />
         </div>
 
         {/* Crédito */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Límite crédito</label>
+            <label className="block text-xs text-muted-foreground mb-1">Límite crédito</label>
             <Input
               type="number"
               step="0.01"
@@ -157,7 +157,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
             <div className="text-[10px] text-slate-500 mt-0.5">{limiteDisplay}</div>
           </div>
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Días crédito</label>
+            <label className="block text-xs text-muted-foreground mb-1">Días crédito</label>
             <Input
               type="number"
               min="0"
@@ -166,7 +166,7 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Día de corte (1-31)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Día de corte (1-31)</label>
             <Input
               type="number"
               min="1"
@@ -180,11 +180,11 @@ export function ClienteFormModal({ mode, cliente, onSave, onClose, busy }: Props
 
         {/* Moneda crédito */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda crédito</label>
+          <label className="block text-xs text-muted-foreground mb-1">Moneda crédito</label>
           <select
             value={moneda}
             onChange={(e) => setMoneda(e.target.value as MonedaCredito)}
-            className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
+            className="h-10 w-full rounded-md border border-border-strong bg-card px-3 text-sm"
           >
             <option value="MXN">MXN</option>
             <option value="USD">USD</option>

@@ -37,10 +37,10 @@ function fmtFecha(iso: string | null): string {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -82,7 +82,7 @@ function RecepcionModal({ remisionId, folio, onClose }: RecepcionModalProps) {
     <Modal title={`Registrar recepción — ${folio}`} onClose={onClose} size="sm">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Recibido por <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
@@ -126,12 +126,12 @@ function DetalleModal({ remisionId, onClose }: DetalleModalProps) {
       {isLoading || !data ? (
         <div className="space-y-2 py-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+            <div key={i} className="h-4 bg-surface-2 rounded animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-slate-700 dark:text-slate-300">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-foreground">
             <div>
               <span className="text-slate-500 text-xs">Orden de venta</span>
               <div>{data.orden_folio ?? '—'}</div>
@@ -163,17 +163,17 @@ function DetalleModal({ remisionId, onClose }: DetalleModalProps) {
             {data.observaciones && (
               <div className="col-span-2">
                 <span className="text-slate-500 text-xs">Observaciones</span>
-                <div className="text-slate-600 dark:text-slate-400">{data.observaciones}</div>
+                <div className="text-muted-foreground">{data.observaciones}</div>
               </div>
             )}
           </div>
 
           {data.detalles.length > 0 && (
             <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">Líneas ({data.detalles.length})</p>
-              <table className="w-full text-xs border border-slate-200 dark:border-slate-800 rounded">
+              <p className="text-xs text-muted-foreground mb-2">Líneas ({data.detalles.length})</p>
+              <table className="w-full text-xs border border-border rounded">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                  <tr className="border-b border-border text-muted-foreground">
                     <th className="px-3 py-2 text-left">SKU</th>
                     <th className="px-3 py-2 text-left">Descripción</th>
                     <th className="px-3 py-2 text-right">Cantidad</th>
@@ -182,7 +182,7 @@ function DetalleModal({ remisionId, onClose }: DetalleModalProps) {
                 <tbody>
                   {data.detalles.map((d) => (
                     <tr key={d.id} className="border-b border-slate-200/60 dark:border-slate-800/60">
-                      <td className="px-3 py-2 font-mono text-slate-600 dark:text-slate-400">{d.sku ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-muted-foreground">{d.sku ?? '—'}</td>
                       <td className="px-3 py-2">{d.descripcion ?? '—'}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{d.cantidad}</td>
                     </tr>
@@ -231,10 +231,10 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
           <span className="text-slate-500 italic text-xs">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm">
+      <td className="px-4 py-3 text-foreground text-sm">
         {item.cliente_nombre ?? <span className="text-slate-500 italic">—</span>}
       </td>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{fmtFecha(item.fecha_remision)}</td>
+      <td className="px-4 py-3 text-muted-foreground text-xs">{fmtFecha(item.fecha_remision)}</td>
       <td className="px-4 py-3">
         <Badge variant={recibida ? 'emerald' : 'amber'}>
           {recibida ? 'RECIBIDA' : 'PENDIENTE'}
@@ -364,7 +364,7 @@ export function RemisionesPage() {
       {/* Paginación */}
       {(hasPrev || hasMore) && (
         <div
-          className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}
+          className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}
         >
           <Button
             variant="outline"

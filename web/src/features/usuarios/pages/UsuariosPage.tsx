@@ -164,8 +164,8 @@ export function UsuariosPage() {
           )}
           {items.map((u) => (
             <DataTableRow key={u.id}>
-              <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{u.nombre}</td>
-              <td className="p-3 text-xs text-slate-500 dark:text-slate-400">{u.email}</td>
+              <td className="p-3 font-medium text-foreground">{u.nombre}</td>
+              <td className="p-3 text-xs text-muted-foreground">{u.email}</td>
               <td className="p-3">
                 <Badge variant="cyan">{ROL_LABELS[u.rol] ?? u.rol}</Badge>
               </td>

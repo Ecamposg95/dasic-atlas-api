@@ -86,7 +86,7 @@ const CATALOGS: CatalogDef[] = [
 ];
 
 const SELECT_CLS =
-  'h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm';
+  'h-10 rounded-md border border-border-strong bg-card px-2 text-sm';
 
 // ---------------------------------------------------------------------------
 // Debounce helper

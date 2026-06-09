@@ -88,9 +88,9 @@ export function RegistrarRecepcionModal({ id, folio, onClose }: Props) {
               {lineas.map((l) => {
                 const p = pendiente(l);
                 return (
-                  <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800">
+                  <tr key={l.id} className="border-t border-border">
                     <td className="p-1.5">
-                      <div className="text-slate-800 dark:text-slate-200">
+                      <div className="text-foreground">
                         {l.producto?.nombre ?? l.descripcion_libre ?? l.sku_libre ?? '—'}
                         {l.producto_id == null && <span className="ml-1 text-[10px] text-amber-500">fantasma</span>}
                       </div>

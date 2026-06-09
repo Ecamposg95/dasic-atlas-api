@@ -74,7 +74,7 @@ export function ContactosPage() {
         <select
           value={empresaId ?? ''}
           onChange={(e) => setEmpresaId(e.target.value ? parseInt(e.target.value, 10) : null)}
-          className="w-full sm:w-auto h-9 text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2"
+          className="w-full sm:w-auto h-9 text-sm rounded border border-border-strong bg-card px-2"
         >
           <option value="">Todas las empresas</option>
           {(empresas ?? []).map((c) => (<option key={c.id} value={c.id}>{c.nombre_empresa}</option>))}
@@ -101,7 +101,7 @@ export function ContactosPage() {
             contactos.map((c) => (
               <DataTableRow key={c.id}>
                 <td className="p-2">
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{c.nombre}</span>
+                  <span className="font-medium text-foreground">{c.nombre}</span>
                   {c.es_principal && <Badge variant="cyan" className="ml-1">Principal</Badge>}
                 </td>
                 <td className="p-2">
@@ -126,7 +126,7 @@ export function ContactosPage() {
 
       {/* Paginación */}
       {(page > 1 || contactos.length === PAGE_SIZE) && (
-        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
           <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>

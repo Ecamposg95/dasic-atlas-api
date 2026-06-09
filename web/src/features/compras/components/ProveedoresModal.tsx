@@ -60,14 +60,14 @@ export function ProveedoresModal({ onClose }: Props) {
     <Modal title="Proveedores" onClose={onClose} size="lg">
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
         {/* Lista */}
-        {isLoading && <div className="text-slate-600 dark:text-slate-400 text-sm">Cargando proveedores…</div>}
+        {isLoading && <div className="text-muted-foreground text-sm">Cargando proveedores…</div>}
         {!isLoading && (!proveedores || proveedores.length === 0) && (
           <div className="text-slate-500 text-sm text-center py-4">Sin proveedores registrados.</div>
         )}
         {(proveedores ?? []).length > 0 && (
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+              <tr className="border-b border-border text-muted-foreground">
                 <th className="text-left py-1.5 pr-2">Empresa</th>
                 <th className="text-left py-1.5 px-2">Contacto</th>
                 <th className="text-left py-1.5 px-2">Teléfono</th>
@@ -77,10 +77,10 @@ export function ProveedoresModal({ onClose }: Props) {
             <tbody>
               {(proveedores ?? []).map((p) => (
                 <tr key={p.id} className="border-b border-slate-200 dark:border-slate-800/50 hover:bg-slate-100/40 dark:hover:bg-slate-800/30">
-                  <td className="py-1.5 pr-2 font-medium text-slate-800 dark:text-slate-200">{p.nombre_empresa}</td>
-                  <td className="py-1.5 px-2 text-slate-600 dark:text-slate-400">{p.contacto_nombre ?? '—'}</td>
-                  <td className="py-1.5 px-2 text-slate-600 dark:text-slate-400">{p.telefono ?? '—'}</td>
-                  <td className="py-1.5 pl-2 text-right font-mono text-slate-700 dark:text-slate-300">
+                  <td className="py-1.5 pr-2 font-medium text-foreground">{p.nombre_empresa}</td>
+                  <td className="py-1.5 px-2 text-muted-foreground">{p.contacto_nombre ?? '—'}</td>
+                  <td className="py-1.5 px-2 text-muted-foreground">{p.telefono ?? '—'}</td>
+                  <td className="py-1.5 pl-2 text-right font-mono text-foreground">
                     ${Number(p.saldo_actual || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -91,10 +91,10 @@ export function ProveedoresModal({ onClose }: Props) {
 
         {/* Formulario nuevo proveedor */}
         {showForm && (
-          <div className="border border-slate-300 dark:border-slate-700 rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/50">
-            <div className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-2">Nuevo proveedor</div>
+          <div className="border border-border-strong rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/50">
+            <div className="text-sm font-medium text-foreground mb-2">Nuevo proveedor</div>
             <div>
-              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block text-xs text-muted-foreground mb-1">
                 Nombre empresa <span className="text-rose-600 dark:text-rose-400">*</span>
               </label>
               <Input
@@ -105,16 +105,16 @@ export function ProveedoresModal({ onClose }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Contacto</label>
+                <label className="block text-xs text-muted-foreground mb-1">Contacto</label>
                 <Input value={contacto} onChange={(e) => setContacto(e.target.value)} placeholder="Nombre contacto" />
               </div>
               <div>
-                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Teléfono</label>
+                <label className="block text-xs text-muted-foreground mb-1">Teléfono</label>
                 <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="55 1234 5678" />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Email</label>
+              <label className="block text-xs text-muted-foreground mb-1">Email</label>
               <Input
                 type="email"
                 value={email}

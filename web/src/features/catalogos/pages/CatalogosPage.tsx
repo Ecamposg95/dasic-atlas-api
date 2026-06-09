@@ -45,19 +45,19 @@ export function CatalogosPage() {
       {/* KPIs */}
       {resumen && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <div className="bg-card border border-border rounded-lg p-3">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Marcas</div>
             <div className="text-2xl font-bold">{resumen.total_marcas}</div>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <div className="bg-card border border-border rounded-lg p-3">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Productos</div>
             <div className="text-2xl font-bold">{resumen.total_productos}</div>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <div className="bg-card border border-border rounded-lg p-3">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Categorías</div>
             <div className="text-2xl font-bold">{resumen.total_categorias_producto}</div>
           </div>
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
+          <div className="bg-card border border-border rounded-lg p-3">
             <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Unidades</div>
             <div className="text-2xl font-bold">{resumen.total_unidades}</div>
           </div>
@@ -65,7 +65,7 @@ export function CatalogosPage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 dark:border-slate-800 flex gap-1 overflow-x-auto whitespace-nowrap">
+      <div className="border-b border-border flex gap-1 overflow-x-auto whitespace-nowrap">
         {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
@@ -74,7 +74,7 @@ export function CatalogosPage() {
             className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px inline-flex items-center gap-1.5 ${
               tab === key
                 ? 'border-accent-glow text-accent-glow'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                : 'border-transparent text-muted-foreground hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />

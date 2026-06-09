@@ -42,10 +42,10 @@ function fmtFecha(iso: string): string {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -66,14 +66,14 @@ interface RowProps {
 function GastoRow({ item, onEdit, onDelete, isDeleting }: RowProps) {
   return (
     <DataTableRow>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{fmtFecha(item.fecha)}</td>
-      <td className="px-4 py-3 text-slate-800 dark:text-slate-200 text-sm">
+      <td className="px-4 py-3 text-muted-foreground text-xs">{fmtFecha(item.fecha)}</td>
+      <td className="px-4 py-3 text-foreground text-sm">
         {item.descripcion ?? <span className="text-slate-500 italic">—</span>}
       </td>
       <td className="px-4 py-3">
         <Badge variant="default">{item.categoria}</Badge>
       </td>
-      <td className="px-4 py-3 text-right tabular-nums text-slate-800 dark:text-slate-200 font-medium">
+      <td className="px-4 py-3 text-right tabular-nums text-foreground font-medium">
         {fmtMonto(item.monto, item.moneda)}
       </td>
       <td className="px-4 py-3 text-slate-500 text-xs">
@@ -259,7 +259,7 @@ export function GastosPage() {
           ))}
         </Select>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 dark:text-slate-400">Desde</span>
+          <span className="text-xs text-muted-foreground">Desde</span>
           <Input
             type="date"
             className="max-w-[150px]"
@@ -268,7 +268,7 @@ export function GastosPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 dark:text-slate-400">Hasta</span>
+          <span className="text-xs text-muted-foreground">Hasta</span>
           <Input
             type="date"
             className="max-w-[150px]"
@@ -316,19 +316,19 @@ export function GastosPage() {
 
       {/* Total al pie */}
       {filtered.length > 0 && (
-        <footer className="flex justify-end gap-6 text-sm border-t border-slate-200 dark:border-slate-800 pt-4">
+        <footer className="flex justify-end gap-6 text-sm border-t border-border pt-4">
           {totalMXN > 0 && (
             <div className="text-right">
-              <span className="text-slate-600 dark:text-slate-400 text-xs block">Total MXN ({filtered.filter((g) => g.moneda === 'MXN').length} gastos)</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
+              <span className="text-muted-foreground text-xs block">Total MXN ({filtered.filter((g) => g.moneda === 'MXN').length} gastos)</span>
+              <span className="font-semibold text-foreground">
                 MXN ${totalMXN.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
             </div>
           )}
           {totalUSD > 0 && (
             <div className="text-right">
-              <span className="text-slate-600 dark:text-slate-400 text-xs block">Total USD ({filtered.filter((g) => g.moneda === 'USD').length} gastos)</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">
+              <span className="text-muted-foreground text-xs block">Total USD ({filtered.filter((g) => g.moneda === 'USD').length} gastos)</span>
+              <span className="font-semibold text-foreground">
                 USD ${totalUSD.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
             </div>

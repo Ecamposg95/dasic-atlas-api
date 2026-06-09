@@ -79,7 +79,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
     >
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Nombre <span className="text-rose-400">*</span>
           </label>
           <Input
@@ -90,7 +90,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
         </div>
 
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Correo electrónico <span className="text-rose-400">*</span>
           </label>
           <Input
@@ -102,11 +102,11 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
         </div>
 
         <div>
-          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Rol</label>
+          <label className="block text-xs text-muted-foreground mb-1">Rol</label>
           <select
             value={rol}
             onChange={(e) => setRol(e.target.value as RolUsuario)}
-            className="h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100"
+            className="h-10 w-full rounded-md border border-border-strong bg-card px-3 text-sm text-foreground"
           >
             {ROL_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -124,7 +124,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
             onChange={(e) => setActivo(e.target.checked)}
             className="rounded border-slate-400 dark:border-slate-600"
           />
-          <label htmlFor="activo-check" className="text-sm text-slate-700 dark:text-slate-300">
+          <label htmlFor="activo-check" className="text-sm text-foreground">
             Usuario activo
           </label>
         </div>
@@ -132,7 +132,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
         {mode === 'create' && (
           <>
             <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs text-muted-foreground mb-1">
                 Contraseña <span className="text-rose-400">*</span>
               </label>
               <Input
@@ -143,7 +143,7 @@ export function UsuarioFormModal({ mode, usuario, onSave, onClose, busy }: Props
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs text-muted-foreground mb-1">
                 Confirmar contraseña <span className="text-rose-400">*</span>
               </label>
               <Input

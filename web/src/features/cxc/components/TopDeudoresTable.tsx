@@ -33,10 +33,10 @@ interface PagoModal {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -78,12 +78,12 @@ export function TopDeudoresTable({ deudores, loading }: Props) {
             deudores.map((d) => (
               <DataTableRow key={d.cliente_id}>
                 {/* Empresa */}
-                <td className="px-4 py-3 text-slate-800 dark:text-slate-200 text-sm font-medium">
+                <td className="px-4 py-3 text-foreground text-sm font-medium">
                   {d.nombre_empresa}
                 </td>
 
                 {/* Saldo */}
-                <td className="px-4 py-3 text-right tabular-nums text-slate-900 dark:text-slate-100 font-medium text-sm">
+                <td className="px-4 py-3 text-right tabular-nums text-foreground font-medium text-sm">
                   ${fmtMXN(d.saldo)}
                 </td>
 
@@ -93,7 +93,7 @@ export function TopDeudoresTable({ deudores, loading }: Props) {
                 </td>
 
                 {/* Cargos */}
-                <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400 text-sm tabular-nums">
+                <td className="px-4 py-3 text-right text-muted-foreground text-sm tabular-nums">
                   {d.n_cargos_abiertos}
                 </td>
 

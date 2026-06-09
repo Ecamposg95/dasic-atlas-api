@@ -35,7 +35,7 @@ export function ComparadorRapido() {
   return (
     <Card>
       <CardContent className="p-4">
-        <h2 className="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+        <h2 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-3">
           Comparador rápido
         </h2>
 
@@ -64,13 +64,13 @@ export function ComparadorRapido() {
                 No se pudo comparar. Intenta de nuevo.
               </p>
             ) : items.length === 0 && !isFetching ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-4">
                 Sin coincidencias para «{queryText}».
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+              <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-muted-foreground uppercase tracking-wider">
                     <tr>
                       <th className="text-left p-2 w-10">#</th>
                       <th className="text-left p-2">Proveedor</th>
@@ -87,11 +87,11 @@ export function ComparadorRapido() {
                           key={`${it.proveedor_id}-${it.precio_id}`}
                           className={
                             isWinner
-                              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-b border-slate-200 dark:border-slate-800'
-                              : 'border-b border-slate-200 dark:border-slate-800'
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-b border-border'
+                              : 'border-b border-border'
                           }
                         >
-                          <td className="p-2 text-xs text-slate-700 dark:text-slate-300">
+                          <td className="p-2 text-xs text-foreground">
                             <span className="inline-flex items-center gap-1">
                               {idx + 1}
                               {isWinner && (
@@ -99,22 +99,22 @@ export function ComparadorRapido() {
                               )}
                             </span>
                           </td>
-                          <td className="p-2 text-slate-800 dark:text-slate-200">
+                          <td className="p-2 text-foreground">
                             {it.proveedor_nombre ?? `Prov. ${it.proveedor_id}`}
                           </td>
                           <td
                             className={`p-2 text-right font-mono tabular-nums ${
                               isWinner
                                 ? 'text-emerald-700 dark:text-emerald-300 font-semibold'
-                                : 'text-slate-700 dark:text-slate-300'
+                                : 'text-foreground'
                             }`}
                           >
                             {fmtPrecio(it.precio, it.moneda)}
                           </td>
-                          <td className="p-2 text-center text-xs font-mono text-slate-600 dark:text-slate-400">
+                          <td className="p-2 text-center text-xs font-mono text-muted-foreground">
                             {it.moneda}
                           </td>
-                          <td className="p-2 text-xs text-slate-600 dark:text-slate-400">
+                          <td className="p-2 text-xs text-muted-foreground">
                             {it.fecha_vigencia_desde ?? '—'}
                           </td>
                         </tr>

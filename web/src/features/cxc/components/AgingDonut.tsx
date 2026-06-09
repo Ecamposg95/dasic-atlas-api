@@ -96,7 +96,7 @@ export function AgingDonut({ buckets, loading }: Props) {
                   />
                   <span className="text-slate-600 dark:text-slate-300 flex-1">{d.label}</span>
                   <span className="text-slate-400">{d.count} cargos</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-200 w-32 text-right">
+                  <span className="font-mono text-foreground w-32 text-right">
                     {fmtMXN(d.value)}
                   </span>
                 </li>

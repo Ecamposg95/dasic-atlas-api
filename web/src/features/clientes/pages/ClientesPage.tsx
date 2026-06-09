@@ -148,7 +148,7 @@ export function ClientesPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -196,20 +196,20 @@ export function ClientesPage() {
             return (
               <DataTableRow key={c.id}>
                 <td className="p-3">
-                  <div className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[180px]" title={c.nombre_empresa}>
+                  <div className="font-medium text-foreground truncate max-w-[180px]" title={c.nombre_empresa}>
                     {c.nombre_empresa}
                   </div>
                 </td>
-                <td className="p-3 text-slate-600 dark:text-slate-400 text-xs">
+                <td className="p-3 text-muted-foreground text-xs">
                   {c.contacto_nombre || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                <td className="p-3 font-mono text-xs text-muted-foreground">
                   {c.rfc_tax_id || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 text-xs text-slate-600 dark:text-slate-400">
+                <td className="p-3 text-xs text-muted-foreground">
                   {c.telefono || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
-                <td className="p-3 text-xs text-slate-600 dark:text-slate-400 truncate max-w-[140px]">
+                <td className="p-3 text-xs text-muted-foreground truncate max-w-[140px]">
                   {c.email || <span className="text-slate-400 dark:text-slate-600">—</span>}
                 </td>
                 <td className="p-2 text-center"><Badge variant="slate">{c.n_contactos ?? 0}</Badge></td>
@@ -264,7 +264,7 @@ export function ClientesPage() {
 
       {/* Paginación */}
       {(page > 1 || filtrados.length === PAGE_SIZE) && (
-        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
           <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>

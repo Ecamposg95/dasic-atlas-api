@@ -62,12 +62,12 @@ export function ContactoFormModal({
         <div>
           <label className="block text-xs text-slate-500 mb-1">Empresa *</label>
           {editing ? (
-            <div className="text-sm text-slate-700 dark:text-slate-200">{editing.empresa_nombre}</div>
+            <div className="text-sm text-foreground">{editing.empresa_nombre}</div>
           ) : (
             <select
               value={empresaId ?? ''}
               onChange={(e) => setEmpresaId(e.target.value ? parseInt(e.target.value, 10) : null)}
-              className="w-full h-9 text-sm rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2"
+              className="w-full h-9 text-sm rounded border border-border-strong bg-card px-2"
             >
               <option value="">— Elige empresa —</option>
               {(empresas ?? []).map((c) => (

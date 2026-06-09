@@ -26,9 +26,9 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
       className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-border shrink-0">
           <div>
             <h2 className="text-base font-semibold">Kardex — {producto.nombre}</h2>
             {producto.sku && (
@@ -42,7 +42,7 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
 
         {/* Métricas históricas */}
         {data && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-5 py-3 border-b border-slate-200 dark:border-slate-800 text-xs shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-5 py-3 border-b border-border text-xs shrink-0">
             <div>
               <div className="text-slate-500 uppercase font-bold text-[10px]">Stock actual</div>
               <div className="text-lg font-bold">{fmt(data.inventario.stock_actual)}</div>
@@ -76,7 +76,7 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
           )}
           {!isLoading && data && data.movimientos.length > 0 && (
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
+              <thead className="sticky top-0 bg-surface-2 text-slate-500 uppercase">
                 <tr>
                   <th className="p-3 text-left">Fecha</th>
                   <th className="p-3 text-center">Tipo</th>
@@ -92,7 +92,7 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
                   const tipo = (m.tipo || '').toUpperCase();
                   const esEgreso = tipo === 'SALIDA' || tipo === 'RESERVA';
                   return (
-                  <tr key={m.id} className="border-t border-slate-100 dark:border-slate-800">
+                  <tr key={m.id} className="border-t border-border">
                     <td className="p-3 whitespace-nowrap">
                       {m.creado_en ? m.creado_en.slice(0, 16).replace('T', ' ') : '—'}
                     </td>
@@ -103,12 +103,12 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
                       {esEgreso ? '−' : '+'}{fmt(Math.abs(m.cantidad))}
                     </td>
                     <td className="p-3 text-right font-mono">{fmt(m.stock_resultante)}</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400">
+                    <td className="p-3 text-muted-foreground">
                       {m.referencia_tipo
                         ? `${m.referencia_tipo}${m.referencia_id ? ` #${m.referencia_id}` : ''}`
                         : '—'}
                     </td>
-                    <td className="p-3 max-w-[160px] truncate text-slate-600 dark:text-slate-400" title={m.motivo ?? undefined}>
+                    <td className="p-3 max-w-[160px] truncate text-muted-foreground" title={m.motivo ?? undefined}>
                       {m.motivo ?? '—'}
                     </td>
                   </tr>
@@ -120,7 +120,7 @@ export function KardexModal({ producto, onClose }: { producto: Producto; onClose
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 shrink-0">
+        <div className="px-5 py-3 border-t border-border text-xs text-slate-500 shrink-0">
           Últimos 100 movimientos · ordenados por más reciente primero.
         </div>
       </div>

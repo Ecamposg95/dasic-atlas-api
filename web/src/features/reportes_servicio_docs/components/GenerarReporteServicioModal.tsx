@@ -78,13 +78,13 @@ export function GenerarReporteServicioModal() {
       size="md"
     >
       <div className="space-y-3">
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+        <p className="text-[11px] text-muted-foreground">
           Acta de servicio ejecutado. Solo aplica si la cotización tiene al menos
           una línea de tipo servicio (el backend valida y rechaza si no).
         </p>
 
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Técnico que ejecuta
           </label>
           <Input
@@ -96,7 +96,7 @@ export function GenerarReporteServicioModal() {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Persona que recibe en cliente
           </label>
           <Input
@@ -111,7 +111,7 @@ export function GenerarReporteServicioModal() {
         </div>
 
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Observaciones
           </label>
           <Textarea

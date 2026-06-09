@@ -148,7 +148,7 @@ export function ServiciosPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -158,7 +158,7 @@ export function ServiciosPage() {
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-3 text-sm"
+          className="h-10 rounded-md border border-border-strong bg-card text-foreground px-3 text-sm"
         >
           <option value="">Todas las categorías</option>
           {categorias.map((c) => (
@@ -208,7 +208,7 @@ export function ServiciosPage() {
           {items.map((s) => (
             <DataTableRow key={s.id}>
               <td className="p-3 font-mono text-xs text-cyan-700 dark:text-cyan-300">{s.codigo}</td>
-              <td className="p-3 font-medium text-slate-900 dark:text-slate-200">{s.nombre}</td>
+              <td className="p-3 font-medium text-foreground">{s.nombre}</td>
               <td className="p-3">
                 {s.categoria_servicio ? (
                   <Badge variant="violet">{s.categoria_servicio}</Badge>
@@ -230,7 +230,7 @@ export function ServiciosPage() {
                 {isAdminOrAsistente && (
                   <button
                     onClick={() => setModalEditar(s)}
-                    className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 px-1.5 text-xs"
+                    className="text-foreground hover:text-slate-900 dark:hover:text-slate-100 px-1.5 text-xs"
                   >
                     Editar
                   </button>

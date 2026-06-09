@@ -44,7 +44,7 @@ export function OrdenCompraDetalleModal({
 
   return (
     <Modal title="Detalle de Orden de Compra" onClose={onClose} size="xl">
-      {isLoading && <div className="text-slate-600 dark:text-slate-400 text-sm py-4">Cargando…</div>}
+      {isLoading && <div className="text-muted-foreground text-sm py-4">Cargando…</div>}
       {error && (
         <div className="text-rose-600 dark:text-rose-400 text-sm py-4">
           No se pudo cargar el detalle.
@@ -102,7 +102,7 @@ export function OrdenCompraDetalleModal({
             </div>
             <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                <tr className="border-b border-border text-muted-foreground">
                   <th className="text-left py-1.5 pr-2">SKU / Descripción</th>
                   <th className="text-center py-1.5 px-2">Cant.</th>
                   <th className="text-center py-1.5 px-2">Recibido</th>
@@ -118,8 +118,8 @@ export function OrdenCompraDetalleModal({
                   return (
                     <tr key={d.id} className="border-b border-slate-200 dark:border-slate-800/50">
                       <td className="py-1.5 pr-2">
-                        <span className="font-mono text-slate-700 dark:text-slate-300">{sku}</span>{' '}
-                        <span className="text-slate-600 dark:text-slate-400">{nombre}</span>
+                        <span className="font-mono text-foreground">{sku}</span>{' '}
+                        <span className="text-muted-foreground">{nombre}</span>
                         {(d.clave_unidad_sat || d.clave_prod_serv) && (
                           <div className="text-[10px] font-mono text-slate-400">SAT {d.clave_prod_serv ?? '—'} · {d.clave_unidad_sat ?? '—'}</div>
                         )}
@@ -159,7 +159,7 @@ export function OrdenCompraDetalleModal({
             href={`/api/compras/${oc.id}/imprimir`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sm border border-slate-300 dark:border-slate-700"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-surface-2 dark:hover:bg-slate-700 text-sm border border-border-strong"
           >
             Imprimir
           </a>

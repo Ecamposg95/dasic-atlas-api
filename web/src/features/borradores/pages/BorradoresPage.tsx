@@ -54,10 +54,10 @@ function formatTotal(total: number, moneda: string): string {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -79,13 +79,13 @@ function BorradorRow({ item, onDiscard, isDiscarding, onContinuar }: RowProps) {
   return (
     <DataTableRow>
       <td className="px-4 py-3 font-mono text-xs text-accent-glow">{item.folio}</td>
-      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+      <td className="px-4 py-3 text-foreground">
         {item.cliente_nombre ?? <span className="text-slate-500 italic">Sin cliente</span>}
       </td>
       <td className="px-4 py-3 text-right tabular-nums">
         {formatTotal(item.total, item.moneda)}
       </td>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{formatDistancia(item.actualizado_en)}</td>
+      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDistancia(item.actualizado_en)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 justify-end">
           <Button
@@ -204,7 +204,7 @@ export function BorradoresPage() {
       {/* Paginación */}
       {(hasPrev || hasMore) && (
         <div
-          className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}
+          className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}
         >
           <Button
             variant="outline"

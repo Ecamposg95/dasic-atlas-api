@@ -72,7 +72,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
         <div className="grid grid-cols-2 gap-3 p-3 bg-slate-100/60 dark:bg-slate-800/50 rounded-lg text-sm">
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Stock actual</div>
-            <div className="text-xl font-bold text-slate-800 dark:text-slate-200">{producto.stock_actual}</div>
+            <div className="text-xl font-bold text-foreground">{producto.stock_actual}</div>
           </div>
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Stock proyectado</div>
@@ -90,7 +90,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
 
         {/* Delta */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Ajuste (positivo = entrada, negativo = salida)
           </label>
           <Input
@@ -103,7 +103,7 @@ export function AjusteStockModal({ producto, onClose }: Props) {
 
         {/* Motivo */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Motivo *</label>
+          <label className="block text-xs text-muted-foreground mb-1">Motivo *</label>
           <Textarea
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}

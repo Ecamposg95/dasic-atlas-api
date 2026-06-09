@@ -32,10 +32,10 @@ function fmtFecha(iso: string | null): string {
 
 function SkeletonRow() {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -77,7 +77,7 @@ function RecepcionModal({ reporteId, folio, onClose }: RecepcionModalProps) {
     <Modal title={`Registrar recepción — ${folio}`} onClose={onClose} size="sm">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Recibido por <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Input
@@ -127,13 +127,13 @@ function ReporteRow({ item, onRecepcion }: RowProps) {
           <span className="text-slate-500 italic text-xs">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm">
+      <td className="px-4 py-3 text-foreground text-sm">
         {item.cliente_nombre ?? <span className="text-slate-500 italic">—</span>}
       </td>
-      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">
+      <td className="px-4 py-3 text-muted-foreground text-xs">
         {fmtFecha(item.fecha_reporte)}
       </td>
-      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm">
+      <td className="px-4 py-3 text-foreground text-sm">
         {item.tecnico_nombre ?? <span className="text-slate-500 italic">—</span>}
       </td>
       <td className="px-4 py-3">
@@ -246,7 +246,7 @@ export function ReportesServicioDocsPage() {
 
       {(hasPrev || hasMore) && (
         <div
-          className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${
+          className={`flex items-center justify-between text-sm text-muted-foreground ${
             isPlaceholderData ? 'opacity-50' : ''
           }`}
         >

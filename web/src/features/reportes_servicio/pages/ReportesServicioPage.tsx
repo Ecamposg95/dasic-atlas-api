@@ -27,10 +27,10 @@ function fmt(n: number): string {
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
-    <tr className="border-b border-slate-200 dark:border-slate-800">
+    <tr className="border-b border-border">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 bg-surface-2 rounded animate-pulse" />
         </td>
       ))}
     </tr>
@@ -46,7 +46,7 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{title}</h2>
+      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -66,10 +66,10 @@ function ConversionSection({ dias }: { dias: number }) {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2"
+              className="bg-card border border-border rounded-xl p-4 space-y-2"
             >
-              <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded animate-pulse w-24" />
-              <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded animate-pulse w-16" />
+              <div className="h-3 bg-surface-2 rounded animate-pulse w-24" />
+              <div className="h-6 bg-surface-2 rounded animate-pulse w-16" />
             </div>
           ))}
         </div>
@@ -111,7 +111,7 @@ function ConversionSection({ dias }: { dias: number }) {
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4"
+            className="bg-card border border-border rounded-xl p-4"
           >
             <p className="text-xs text-slate-600 dark:text-slate-500 mb-1">{k.label}</p>
             <p className="text-2xl font-bold text-accent-glow">{k.value}</p>
@@ -119,16 +119,16 @@ function ConversionSection({ dias }: { dias: number }) {
           </div>
         ))}
       </div>
-      <div className="flex gap-6 text-sm text-slate-500 dark:text-slate-400 mt-2 flex-wrap">
+      <div className="flex gap-6 text-sm text-muted-foreground mt-2 flex-wrap">
         <span>
           Monto convertido:{' '}
-          <span className="text-slate-900 dark:text-slate-200 font-semibold">
+          <span className="text-foreground font-semibold">
             ${fmt(data.monto_convertido_mxn)} MXN
           </span>
         </span>
         <span>
           Pipeline activo:{' '}
-          <span className="text-slate-900 dark:text-slate-200 font-semibold">
+          <span className="text-foreground font-semibold">
             ${fmt(data.monto_pipeline_activo_mxn)} MXN
           </span>
         </span>
@@ -178,18 +178,18 @@ function TopServiciosSection({ dias }: { dias: number }) {
             items.map((row, idx) => (
               <DataTableRow key={`${row.servicio_id ?? 'libre'}-${idx}`}>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-500 text-xs">{idx + 1}</td>
-                <td className="px-4 py-3 text-slate-900 dark:text-slate-200">{row.nombre}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-foreground">{row.nombre}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {row.cantidad_lineas}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-right tabular-nums text-foreground">
                   {row.cantidad_total}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-foreground">
                   ${fmt(row.monto_mxn)}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded overflow-hidden">
+                  <div className="h-2 bg-surface-2 rounded overflow-hidden">
                     <div
                       className="h-full bg-cyan-500 rounded"
                       style={{
@@ -249,7 +249,7 @@ function FantasmasSection() {
               className="space-y-2"
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-slate-900 dark:text-slate-200">
+                <span className="font-medium text-foreground">
                   {grupo.proveedor_nombre}
                 </span>
                 <Badge variant="amber">{grupo.cantidad} pendientes</Badge>
@@ -268,13 +268,13 @@ function FantasmasSection() {
                 <DataTableBody>
                   {grupo.items.map((item) => (
                     <DataTableRow key={item.id}>
-                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                      <td className="px-4 py-3 text-foreground">
                         {item.descripcion}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                      <td className="px-4 py-3 text-right tabular-nums text-foreground">
                         {item.veces_solicitado}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-slate-700 dark:text-slate-300">
+                      <td className="px-4 py-3 text-right tabular-nums text-foreground">
                         {item.moneda === 'USD' ? 'USD ' : '$'}
                         {fmt(item.costo_referencia)}
                       </td>
@@ -337,13 +337,13 @@ function VencimientosSection({ dias }: { dias: number }) {
                 <td className="px-4 py-3 font-mono text-xs text-accent-glow">
                   {row.folio}
                 </td>
-                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-foreground">
                   {row.cliente_nombre ?? '—'}
                 </td>
-                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
+                <td className="px-4 py-3 text-muted-foreground text-xs">
                   {row.vendedor_nombre ?? '—'}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-foreground">
                   ${fmt(row.total_mxn)}
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -398,16 +398,16 @@ function OrdenesPendientesSection() {
                 <td className="px-4 py-3 font-mono text-xs text-accent-glow">
                   {row.folio}
                 </td>
-                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-foreground">
                   {row.cliente_nombre ?? '—'}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant="cyan">{row.estatus}</Badge>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900 dark:text-slate-200">
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-foreground">
                   ${fmt(row.total_mxn)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-500 dark:text-slate-400">
+                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                   {row.dias_desde_venta != null ? `${row.dias_desde_venta}d` : '—'}
                 </td>
               </DataTableRow>
@@ -452,7 +452,7 @@ export function ReportesServicioPage() {
               className={`px-3 py-1.5 rounded-lg text-sm transition ${
                 dias === r.value
                   ? 'bg-accent-glow/20 text-accent-glow font-semibold border border-accent-glow/40'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                  : 'bg-surface-2 text-muted-foreground hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {r.label}

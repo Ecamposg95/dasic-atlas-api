@@ -54,7 +54,7 @@ export function CrearRemisionPage() {
           <Truck className="h-5 w-5 text-cyan-400" /> Nueva remisión
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+          <div className="border border-border rounded-xl p-4">
             <h2 className="text-sm font-semibold mb-2">Nueva libre (sin orden)</h2>
             <p className="text-xs text-slate-500 mb-3">Elige un cliente y arma la remisión desde el catálogo.</p>
             <RemisionClientPicker
@@ -64,7 +64,7 @@ export function CrearRemisionPage() {
               }}
             />
           </div>
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+          <div className="border border-border rounded-xl p-4">
             <h2 className="text-sm font-semibold mb-2">Desde una orden de venta</h2>
             <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
               {(ordenes ?? []).map((o) => (
@@ -165,7 +165,7 @@ export function CrearRemisionPage() {
             <button
               type="button"
               onClick={() => s.setMostrarPrecios(!s.mostrarPrecios)}
-              className="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:border-accent-glow text-slate-700 dark:text-slate-300 hover:text-accent-glow transition flex items-center gap-1"
+              className="text-[11px] px-2 py-1 rounded border border-border-strong hover:border-accent-glow text-foreground hover:text-accent-glow transition flex items-center gap-1"
             >
               {s.mostrarPrecios ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
               {s.mostrarPrecios ? 'Precios visibles' : 'Precios ocultos'}
@@ -177,13 +177,13 @@ export function CrearRemisionPage() {
         </header>
 
         {s.clienteNombre && (
-          <div className="text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-4 py-2 flex items-center gap-3 flex-wrap">
+          <div className="text-sm bg-slate-50 dark:bg-slate-900 border border-border rounded-md px-4 py-2 flex items-center gap-3 flex-wrap">
             <span className="text-slate-500">{s.clienteNombre}</span>
             {s.modo === 'libre' ? (
               <select
                 value={s.moneda}
                 onChange={(e) => s.setMoneda(e.target.value)}
-                className="h-7 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1"
+                className="h-7 text-xs rounded border border-border-strong bg-card px-1"
               >
                 <option value="MXN">MXN</option>
                 <option value="USD">USD</option>

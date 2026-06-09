@@ -141,7 +141,7 @@ export function ComprasPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <Input
           value={filtroQ}
           onChange={(e) => setFiltroQ(e.target.value)}
@@ -151,7 +151,7 @@ export function ComprasPage() {
         <select
           value={filtroEstatus}
           onChange={(e) => setFiltroEstatus(e.target.value as EstatusOC | '')}
-          className="h-10 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm"
+          className="h-10 rounded-md border border-border-strong bg-card px-2 text-sm"
         >
           {ESTATUS_OPTS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -196,7 +196,7 @@ export function ComprasPage() {
                 {o.folio ?? `#${o.id}`}
               </td>
               <td className="p-3 text-sm">{o.proveedor}</td>
-              <td className="p-3 text-xs text-slate-600 dark:text-slate-400">{fmtDate(o.fecha)}</td>
+              <td className="p-3 text-xs text-muted-foreground">{fmtDate(o.fecha)}</td>
               <td className="p-3 text-right font-mono text-sm">
                 {fmtMoney(o.total, o.moneda)}{' '}
                 <span className="text-xs text-slate-500">{o.moneda}</span>
@@ -265,7 +265,7 @@ export function ComprasPage() {
 
       {/* Paginación */}
       {(page > 1 || filtradas.length === PAGE_SIZE) && (
-        <div className={`flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 ${isPlaceholderData ? 'opacity-50' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}>
           <Button variant="outline" size="sm" disabled={page <= 1 || isPlaceholderData} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
           </Button>

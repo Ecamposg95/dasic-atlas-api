@@ -56,7 +56,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
       <div className="space-y-3">
         {/* Categoría */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+          <label className="block text-xs text-muted-foreground mb-1">
             Categoría <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <Select
@@ -75,7 +75,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
 
         {isNewCategoria && (
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               Nueva categoría <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
@@ -89,7 +89,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
 
         {/* Descripción */}
         <div>
-          <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Descripción</label>
+          <label className="block text-xs text-muted-foreground mb-1">Descripción</label>
           <Input
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
@@ -100,7 +100,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
         {/* Monto + Moneda */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs text-muted-foreground mb-1">
               Monto <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <Input
@@ -113,7 +113,7 @@ export function GastoFormModal({ mode, gasto, categorias, onSave, onClose, busy 
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Moneda</label>
+            <label className="block text-xs text-muted-foreground mb-1">Moneda</label>
             <Select value={moneda} onChange={(e) => setMoneda(e.target.value)}>
               {MONEDAS.map((m) => (
                 <option key={m} value={m}>

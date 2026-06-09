@@ -69,7 +69,7 @@ export function PipelineDonut({ pipeline, loading }: { pipeline?: PipelineRespon
                   <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
                   <span className="text-slate-600 dark:text-slate-300 flex-1">{d.label}</span>
                   <span className="text-slate-400">{d.count}</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-200 w-28 text-right">{fmtMoney(d.value)}</span>
+                  <span className="font-mono text-foreground w-28 text-right">{fmtMoney(d.value)}</span>
                 </li>
               ))}
             </ul>

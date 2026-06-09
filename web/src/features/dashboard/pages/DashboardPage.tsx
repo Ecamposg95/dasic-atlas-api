@@ -216,12 +216,12 @@ export function DashboardPage() {
             {alertItems.map((a) => (
               <div
                 key={a.key}
-                className="flex items-start gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2"
+                className="flex items-start gap-3 bg-card border border-border rounded-lg px-3 py-2"
               >
                 <Badge variant={severityVariant(a.severity)} className="mt-0.5 shrink-0">
                   {severityLabel(a.severity)}
                 </Badge>
-                <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 leading-snug">{a.text}</span>
+                <span className="text-sm text-foreground flex-1 leading-snug">{a.text}</span>
                 {a.link && (
                   <a href={a.link} className="text-xs text-cyan-400 hover:text-cyan-300 shrink-0 self-center">
                     ver →
@@ -280,10 +280,10 @@ export function DashboardPage() {
                     {items.map((r) => (
                       <li key={r.id} className="flex items-center gap-2 text-xs">
                         <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${r.dias < 0 ? 'bg-rose-500' : 'bg-amber-400'}`} />
-                        <span className="font-mono text-slate-600 dark:text-slate-400 shrink-0">
+                        <span className="font-mono text-muted-foreground shrink-0">
                           {r.folio ?? `#${r.orden_id}`}
                         </span>
-                        <span className="text-slate-700 dark:text-slate-300 truncate flex-1">
+                        <span className="text-foreground truncate flex-1">
                           {r.cliente ?? '—'}
                         </span>
                         <span className="text-slate-400 shrink-0">
@@ -325,7 +325,7 @@ export function DashboardPage() {
                       <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{p.nombre}</span>
+                          <span className="font-medium text-foreground truncate">{p.nombre}</span>
                           {p.stock_riesgo && <Badge variant="rose">Stock bajo</Badge>}
                         </div>
                         <p className="text-xs text-slate-500 font-mono">
@@ -361,7 +361,7 @@ export function DashboardPage() {
                     <li key={c.id} className="flex items-start gap-2 text-sm">
                       <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 dark:text-slate-200 truncate">{c.empresa}</p>
+                        <p className="font-medium text-foreground truncate">{c.empresa}</p>
                         <p className="text-xs text-slate-500">
                           {fmtMoney(c.monto_mxn)} · {fmtInt(c.orden_count)} orden(es)
                         </p>
@@ -396,7 +396,7 @@ export function DashboardPage() {
                       <li key={v.id} className="flex items-start gap-2 text-sm">
                         <span className="text-xs text-slate-400 dark:text-slate-600 w-4 pt-0.5">{i + 1}.</span>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-800 dark:text-slate-200">{v.nombre}</p>
+                          <p className="font-medium text-foreground">{v.nombre}</p>
                           <p className="text-xs text-slate-500">
                             {fmtMoney(v.monto_mxn)} · {fmtInt(v.orden_count)} venta(s)
                           </p>
