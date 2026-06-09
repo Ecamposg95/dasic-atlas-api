@@ -16,7 +16,7 @@ export function ContactoFormModal({
   onClose: () => void;
   editing: ContactoGlobal | null;
 }) {
-  const { data: empresas } = useClientes(1, '', 500);
+  const { data: empresas } = useClientes({ page: 1, q: '', pageSize: 500 });
   const [empresaId, setEmpresaId] = useState<number | null>(editing?.cliente_id ?? null);
   const [nombre, setNombre] = useState(editing?.nombre ?? '');
   const [cargo, setCargo] = useState(editing?.cargo ?? '');

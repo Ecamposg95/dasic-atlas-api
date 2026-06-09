@@ -26,6 +26,7 @@ class Cliente(Base):
     dias_credito = Column(Integer, nullable=False, default=0)
     dia_corte = Column(Integer, nullable=True)  # 1-28 si aplica
     moneda_credito = Column(String(3), nullable=False, default="MXN")
+    estatus = Column(String(12), nullable=False, default="activo")  # activo|inactivo|prospecto
 
     creado_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, index=True)
 
@@ -33,6 +34,7 @@ class Cliente(Base):
     transacciones = relationship("TransaccionCliente", back_populates="cliente")
     creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
     contactos = relationship("Contacto", back_populates="cliente", cascade="all, delete-orphan")
+    notas = relationship("NotaEmpresa", back_populates="cliente", cascade="all, delete-orphan")
 
 
 class Contacto(Base):
@@ -83,3 +85,17 @@ class ClienteMergeLog(Base):
     n_contactos = Column(Integer)
     merged_by_id = Column(Integer)
     merged_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class NotaEmpresa(Base):
+    """Bitácora append-only por empresa (sub vista 360). Solo crear/borrar."""
+    __tablename__ = "notas_empresa"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("clientes.id", ondelete="CASCADE"), index=True, nullable=False)
+    autor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    texto = Column(Text, nullable=False)
+    creado_en = Column(DateTime(timezone=True), server_default=func.now())
+
+    cliente = relationship("Cliente", back_populates="notas")
+    autor = relationship("Usuario", foreign_keys=[autor_id])

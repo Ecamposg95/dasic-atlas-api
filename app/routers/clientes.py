@@ -25,10 +25,13 @@ def listar_clientes(
     skip: int = 0,
     limit: int = 100,
     q: Optional[str] = None,
+    estatus: Optional[str] = None,
+    sort: Optional[str] = None,   # nombre | saldo | ultima_compra
+    dir: str = "asc",
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Lista clientes (empresas) con conteo de contactos. VENTAS solo ve los suyos."""
+    """Lista empresas con conteo de contactos + última compra. VENTAS solo ve las suyas."""
     from sqlalchemy import func
     query = db.query(models.Cliente)
     if is_owner_scoped(current_user, "read", "cliente"):
@@ -40,18 +43,62 @@ def listar_clientes(
             models.Cliente.contacto_nombre.ilike(like),
             models.Cliente.email.ilike(like),
         ))
-    rows = (
-        query.order_by(models.Cliente.nombre_empresa.asc())
-        .offset(skip).limit(limit).all()
-    )
+    if estatus:
+        query = query.filter(models.Cliente.estatus == estatus)
+
+    desc = dir == "desc"
+    if sort == "saldo":
+        col = models.Cliente.saldo_actual
+        query = query.order_by(col.desc() if desc else col.asc())
+    elif sort != "ultima_compra":
+        col = models.Cliente.nombre_empresa
+        query = query.order_by(col.desc() if desc else col.asc())
+
+    rows = query.offset(skip).limit(limit).all() if sort != "ultima_compra" else query.all()
+
     counts = dict(
         db.query(models.Contacto.cliente_id, func.count(models.Contacto.id))
-        .group_by(models.Contacto.cliente_id)
-        .all()
+        .group_by(models.Contacto.cliente_id).all()
     )
+    ventas_estatus = [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
+    row_ids = [c.id for c in rows]
+    ultimas = dict(
+        db.query(models.OrdenVenta.cliente_id, func.max(models.OrdenVenta.fecha_creacion))
+        .filter(models.OrdenVenta.estatus.in_(ventas_estatus))
+        .filter(models.OrdenVenta.cliente_id.in_(row_ids))
+        .group_by(models.OrdenVenta.cliente_id).all()
+    ) if row_ids else {}
     for c in rows:
         c.n_contactos = counts.get(c.id, 0)
+        u = ultimas.get(c.id)
+        c.ultima_compra = u.isoformat() if u else None
+
+    if sort == "ultima_compra":
+        rows.sort(key=lambda c: c.ultima_compra or "", reverse=desc)
+        rows = rows[skip: skip + limit]
     return rows
+
+
+@router.get("/count", dependencies=[Depends(allow_all_staff)])
+def contar_clientes(
+    q: Optional[str] = None,
+    estatus: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    query = db.query(func.count(models.Cliente.id))
+    if is_owner_scoped(current_user, "read", "cliente"):
+        query = query.filter(models.Cliente.creado_por_id == current_user.id)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.Cliente.nombre_empresa.ilike(like),
+            models.Cliente.contacto_nombre.ilike(like),
+            models.Cliente.email.ilike(like),
+        ))
+    if estatus:
+        query = query.filter(models.Cliente.estatus == estatus)
+    return {"total": query.scalar() or 0}
 
 
 # --- DUPLICADOS / MERGE ---
@@ -178,6 +225,26 @@ def merge_empresas(
         db.rollback()
         logger.exception("clientes.merge_empresas falló")
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
+
+
+@router.patch("/bulk-estatus", dependencies=[Depends(allow_admin_asistente)])
+def bulk_estatus(
+    payload: schemas.BulkEstatusRequest,
+    db: Session = Depends(get_db),
+):
+    """Cambia el estatus de varias empresas a la vez."""
+    validos = {"activo", "inactivo", "prospecto"}
+    if payload.estatus not in validos:
+        raise HTTPException(422, f"estatus inválido (usa {validos})")
+    if not payload.ids:
+        raise HTTPException(400, "ids vacío")
+    n = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.id.in_(payload.ids))
+        .update({models.Cliente.estatus: payload.estatus}, synchronize_session=False)
+    )
+    db.commit()
+    return {"updated": n, "estatus": payload.estatus}
 
 
 # --- 2. CREAR CLIENTE ---
@@ -360,6 +427,182 @@ def obtener_cliente(
     if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return cliente
+
+@router.get("/{cliente_id}/resumen", dependencies=[Depends(allow_all_staff)])
+def empresa_resumen(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Métricas 360 de la empresa, computadas de órdenes existentes."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
+
+    ventas_estatus = [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
+    base = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
+    ventas = base.filter(models.OrdenVenta.estatus.in_(ventas_estatus))
+
+    total_vendido = ventas.with_entities(func.coalesce(func.sum(models.OrdenVenta.total), 0)).scalar() or 0
+    n_ventas = ventas.count()
+    n_cotizaciones = base.filter(models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION).count()
+    ultima = ventas.with_entities(func.max(models.OrdenVenta.fecha_creacion)).scalar()
+    ticket = (Decimal(total_vendido) / n_ventas) if n_ventas else Decimal(0)
+    limite = Decimal(cliente.limite_credito or 0)
+    saldo = Decimal(cliente.saldo_actual or 0)
+
+    return {
+        "total_vendido": float(total_vendido),
+        "n_ventas": n_ventas,
+        "n_cotizaciones": n_cotizaciones,
+        "ticket_promedio": float(ticket.quantize(Decimal("0.01"))),
+        "ultima_compra": ultima.isoformat() if ultima else None,
+        "saldo_actual": float(saldo),
+        "limite_credito": float(limite),
+        "credito_disponible": float(limite - saldo),
+        "estatus": cliente.estatus,
+    }
+
+
+@router.get("/{cliente_id}/actividad", dependencies=[Depends(allow_all_staff)])
+def empresa_actividad(
+    cliente_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Timeline unificado: cotizaciones, ventas, remisiones, pagos."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
+
+    eventos = []
+    for o in db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id).all():
+        es_cot = o.estatus == models.EstatusOrden.COTIZACION
+        eventos.append({
+            "tipo": "cotizacion" if es_cot else "venta",
+            "fecha": o.fecha_creacion.isoformat() if o.fecha_creacion else None,
+            "ref": o.folio,
+            "monto": float(o.total or 0),
+            "moneda": o.moneda,
+            "descripcion": f"{'Cotización' if es_cot else 'Venta'} {o.folio} ({o.estatus})",
+        })
+    for r in db.query(models.Remision).filter(models.Remision.cliente_id == cliente_id).all():
+        eventos.append({
+            "tipo": "remision",
+            "fecha": r.creado_en.isoformat() if getattr(r, "creado_en", None) else None,
+            "ref": getattr(r, "folio", None),
+            "monto": None,
+            "moneda": None,
+            "descripcion": f"Remisión {getattr(r, 'folio', '')}",
+        })
+    for t in db.query(models.TransaccionCliente).filter(models.TransaccionCliente.cliente_id == cliente_id).all():
+        eventos.append({
+            "tipo": "pago" if t.tipo == models.TipoMovimiento.ABONO else "cargo",
+            "fecha": t.fecha.isoformat() if t.fecha else None,
+            "ref": t.referencia_id,
+            "monto": float(t.monto or 0),
+            "moneda": None,
+            "descripcion": t.descripcion or ("Abono" if t.tipo == models.TipoMovimiento.ABONO else "Cargo"),
+        })
+
+    eventos.sort(key=lambda e: e["fecha"] or "", reverse=True)
+    return eventos[:limit]
+
+
+@router.get("/{cliente_id}/notas", response_model=List[schemas.NotaEmpresaResponse], dependencies=[Depends(allow_all_staff)])
+def listar_notas(cliente_id: int, db: Session = Depends(get_db)):
+    notas = (
+        db.query(models.NotaEmpresa)
+        .filter(models.NotaEmpresa.cliente_id == cliente_id)
+        .order_by(models.NotaEmpresa.creado_en.desc())
+        .all()
+    )
+    autor_ids = [n.autor_id for n in notas if n.autor_id]
+    autores = dict(
+        db.query(models.Usuario.id, models.Usuario.nombre).filter(models.Usuario.id.in_(autor_ids)).all()
+    ) if autor_ids else {}
+    out = []
+    for n in notas:
+        out.append(schemas.NotaEmpresaResponse(
+            id=n.id, cliente_id=n.cliente_id, autor_id=n.autor_id,
+            autor_nombre=autores.get(n.autor_id), texto=n.texto, creado_en=n.creado_en,
+        ))
+    return out
+
+
+@router.post("/{cliente_id}/notas", response_model=schemas.NotaEmpresaResponse, dependencies=[Depends(allow_all_staff)])
+def crear_nota(
+    cliente_id: int,
+    payload: schemas.NotaEmpresaCreate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    if not db.query(models.Cliente.id).filter(models.Cliente.id == cliente_id).first():
+        raise HTTPException(404, "Empresa no encontrada")
+    texto = (payload.texto or "").strip()
+    if not texto:
+        raise HTTPException(422, "La nota no puede estar vacía")
+    nota = models.NotaEmpresa(cliente_id=cliente_id, autor_id=current_user.id, texto=texto)
+    db.add(nota)
+    db.commit()
+    db.refresh(nota)
+    return schemas.NotaEmpresaResponse(
+        id=nota.id, cliente_id=nota.cliente_id, autor_id=nota.autor_id,
+        autor_nombre=current_user.nombre, texto=nota.texto, creado_en=nota.creado_en,
+    )
+
+
+@router.delete("/{cliente_id}/notas/{nota_id}", dependencies=[Depends(allow_all_staff)])
+def borrar_nota(cliente_id: int, nota_id: int, db: Session = Depends(get_db)):
+    nota = (
+        db.query(models.NotaEmpresa)
+        .filter(models.NotaEmpresa.id == nota_id, models.NotaEmpresa.cliente_id == cliente_id)
+        .first()
+    )
+    if not nota:
+        raise HTTPException(404, "Nota no encontrada")
+    db.delete(nota)
+    db.commit()
+    return {"deleted": nota_id}
+
+
+@router.get("/{cliente_id}/deals", dependencies=[Depends(allow_all_staff)])
+def empresa_deals(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Deals del CRM enlazados a esta empresa."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
+    deals = (
+        db.query(models.Deal)
+        .filter(models.Deal.cliente_id == cliente_id)
+        .order_by(models.Deal.creado_en.desc())
+        .all()
+    )
+    out = []
+    for d in deals:
+        out.append({
+            "id": d.id,
+            "titulo": d.titulo,
+            "monto": float(d.monto) if d.monto is not None else None,
+            "moneda": d.moneda,
+            "stage": d.stage.nombre if d.stage else None,
+            "owner": d.owner.nombre if d.owner else None,
+            "creado_en": d.creado_en.isoformat() if d.creado_en else None,
+            "cerrado_en": d.cerrado_en.isoformat() if d.cerrado_en else None,
+        })
+    return out
+
 
 # --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
