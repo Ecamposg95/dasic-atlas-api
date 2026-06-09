@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench, MessageSquare } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { MoreVertical, Pen, Trash2, ChevronDown, ChevronUp, Ghost, Wrench, MessageSquare, GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/features/cotizador/components/StockBadge';
 import { EntregaChip } from '@/features/cotizador/components/EntregaChip';
@@ -10,19 +12,28 @@ function fmt(n: number) {
   return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** Wiring opcional de drag-and-drop, inyectado por SortableDocumentRow. */
+type DragWiring = {
+  setNodeRef: (el: HTMLElement | null) => void;
+  style: CSSProperties;
+  handle: ReactNode; // botón/icono con attributes+listeners ya aplicados
+};
+
 export function DocumentRow({
   vm,
   caps,
   cb,
   justAdded,
+  drag,
 }: {
   vm: DocRowVM;
   caps: DocRowCaps;
   cb: DocRowCallbacks;
   justAdded: boolean;
+  drag?: DragWiring;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const rowRef = useRef<HTMLTableRowElement>(null);
+  const rowRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
     if (justAdded && rowRef.current) {
@@ -49,7 +60,11 @@ export function DocumentRow({
 
   return (
     <tr
-      ref={rowRef}
+      ref={(el) => {
+        rowRef.current = el;
+        drag?.setNodeRef(el);
+      }}
+      style={drag?.style}
       className={`border-b border-slate-200 dark:border-slate-800 transition cursor-pointer ${rowClass}`}
       onClick={(e) => {
         const target = e.target as HTMLElement;
@@ -60,6 +75,7 @@ export function DocumentRow({
       {/* SKU / Descripción */}
       <td className="p-2.5 align-top max-w-md">
         <div className="flex items-center gap-1.5 flex-wrap">
+          {drag?.handle}
           {esFantasma && (
             <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded flex items-center gap-0.5">
               <Ghost className="h-2.5 w-2.5" /> Fantasma
@@ -294,6 +310,40 @@ export function DocumentRow({
       </td>
     </tr>
   );
+}
+
+/**
+ * Versión sortable de la fila (solo cotizador desktop). useSortable es un hook,
+ * por eso vive en un subcomponente: DocumentCartTable solo lo monta dentro de
+ * un SortableContext y solo cuando sortable=true. La remisión nunca lo usa.
+ */
+export function SortableDocumentRow(props: {
+  vm: DocRowVM;
+  caps: DocRowCaps;
+  cb: DocRowCallbacks;
+  justAdded: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.vm.uid,
+  });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    ...(isDragging ? { position: 'relative', zIndex: 30, opacity: 0.85 } : {}),
+  };
+  const handle = (
+    <button
+      type="button"
+      title="Arrastra para reordenar"
+      onClick={(e) => e.stopPropagation()}
+      className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-3.5 w-3.5" />
+    </button>
+  );
+  return <DocumentRow {...props} drag={{ setNodeRef, style, handle }} />;
 }
 
 export function DocumentRowCard({

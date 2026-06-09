@@ -117,6 +117,8 @@ export function Cart() {
         rows={rows}
         caps={QUOTE_CAPS}
         cb={cb}
+        sortable
+        onReorder={(f, t) => useCotizador.getState().reordenarLinea(f, t)}
         expandedRenderer={(uid) => {
           const item = cart.find((c) => c.uid === uid);
           return item ? <RowExpanded item={item} /> : null;

@@ -86,6 +86,7 @@ type CotizadorState = {
   removeLinea: (uid: string) => void;
   updateLinea: (uid: string, patch: Partial<CartItem>) => void;
   moverLinea: (uid: string, delta: number) => void;
+  reordenarLinea: (fromUid: string, toUid: string) => void;
   toggleExpand: (uid: string) => void;
   reset: () => void;
   hydrateFromOrden: (orden: OrdenVentaDetail) => void;
@@ -295,6 +296,17 @@ export const useCotizador = create<CotizadorState>((set) => ({
       const [it] = next.splice(idx, 1);
       next.splice(nuevoIdx, 0, it);
       return { cart: next };
+    }),
+
+  reordenarLinea: (fromUid, toUid) =>
+    set((s) => {
+      const cart = [...s.cart];
+      const from = cart.findIndex((l) => l.uid === fromUid);
+      const to = cart.findIndex((l) => l.uid === toUid);
+      if (from < 0 || to < 0 || from === to) return {};
+      const [moved] = cart.splice(from, 1);
+      cart.splice(to, 0, moved);
+      return { cart };
     }),
 
   toggleExpand: (uid) =>

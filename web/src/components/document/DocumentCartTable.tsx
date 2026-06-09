@@ -1,6 +1,19 @@
 import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Tag, Hash, DollarSign, Percent, Truck, Calculator, Minus } from 'lucide-react';
-import { DocumentRow, DocumentRowCard } from './DocumentRow';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { DocumentRow, SortableDocumentRow, DocumentRowCard } from './DocumentRow';
 import type { DocRowVM, DocRowCaps, DocRowCallbacks } from './types';
 
 export function DocumentCartTable({
@@ -9,13 +22,22 @@ export function DocumentCartTable({
   cb,
   expandedRenderer,
   emptyHint,
+  sortable = false,
+  onReorder,
 }: {
   rows: DocRowVM[];
   caps: DocRowCaps;
   cb: DocRowCallbacks;
   expandedRenderer?: (uid: string) => ReactNode;
   emptyHint?: ReactNode;
+  sortable?: boolean;
+  onReorder?: (fromUid: string, toUid: string) => void;
 }) {
+  // Hooks de DnD siempre se llaman (regla de hooks); solo se usan si sortable.
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const seenUids = useRef<Set<string>>(new Set());
   const justAdded = useMemo(() => {
     const added = new Set<string>();
@@ -30,10 +52,24 @@ export function DocumentCartTable({
 
   if (rows.length === 0) return <>{emptyHint ?? null}</>;
 
-  return (
-    <>
-      <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
-        <table className="w-full text-[13px] min-w-[680px]">
+  const body = (
+    <tbody>
+      {rows.map((vm) => (
+        <Fragment key={vm.uid}>
+          {sortable ? (
+            <SortableDocumentRow vm={vm} caps={caps} cb={cb} justAdded={justAdded.has(vm.uid)} />
+          ) : (
+            <DocumentRow vm={vm} caps={caps} cb={cb} justAdded={justAdded.has(vm.uid)} />
+          )}
+          {vm.expanded && expandedRenderer?.(vm.uid)}
+        </Fragment>
+      ))}
+    </tbody>
+  );
+
+  const desktopTable = (
+    <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+      <table className="w-full text-[13px] min-w-[680px]">
           <thead className="bg-slate-100 dark:bg-slate-800/50 text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-[0.15em] sticky top-0 z-10">
             <tr>
               <th className="p-2.5 text-left">
@@ -84,16 +120,29 @@ export function DocumentCartTable({
               <th className="p-2.5 text-center w-8"></th>
             </tr>
           </thead>
-          <tbody>
-            {rows.map((vm) => (
-              <Fragment key={vm.uid}>
-                <DocumentRow vm={vm} caps={caps} cb={cb} justAdded={justAdded.has(vm.uid)} />
-                {vm.expanded && expandedRenderer?.(vm.uid)}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          {body}
+      </table>
+    </div>
+  );
+
+  return (
+    <>
+      {sortable ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e) => {
+            const { active, over } = e;
+            if (over && active.id !== over.id) onReorder?.(String(active.id), String(over.id));
+          }}
+        >
+          <SortableContext items={rows.map((r) => r.uid)} strategy={verticalListSortingStrategy}>
+            {desktopTable}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        desktopTable
+      )}
       <div className="md:hidden space-y-2">
         {rows.map((vm) => (
           <DocumentRowCard key={vm.uid} vm={vm} caps={caps} cb={cb} />
