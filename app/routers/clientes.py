@@ -448,6 +448,60 @@ def empresa_actividad(
     return eventos[:limit]
 
 
+@router.get("/{cliente_id}/notas", response_model=List[schemas.NotaEmpresaResponse], dependencies=[Depends(allow_all_staff)])
+def listar_notas(cliente_id: int, db: Session = Depends(get_db)):
+    notas = (
+        db.query(models.NotaEmpresa)
+        .filter(models.NotaEmpresa.cliente_id == cliente_id)
+        .order_by(models.NotaEmpresa.creado_en.desc())
+        .all()
+    )
+    autores = dict(db.query(models.Usuario.id, models.Usuario.nombre).all())
+    out = []
+    for n in notas:
+        out.append(schemas.NotaEmpresaResponse(
+            id=n.id, cliente_id=n.cliente_id, autor_id=n.autor_id,
+            autor_nombre=autores.get(n.autor_id), texto=n.texto, creado_en=n.creado_en,
+        ))
+    return out
+
+
+@router.post("/{cliente_id}/notas", response_model=schemas.NotaEmpresaResponse, dependencies=[Depends(allow_all_staff)])
+def crear_nota(
+    cliente_id: int,
+    payload: schemas.NotaEmpresaCreate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    if not db.query(models.Cliente.id).filter(models.Cliente.id == cliente_id).first():
+        raise HTTPException(404, "Empresa no encontrada")
+    texto = (payload.texto or "").strip()
+    if not texto:
+        raise HTTPException(422, "La nota no puede estar vacía")
+    nota = models.NotaEmpresa(cliente_id=cliente_id, autor_id=current_user.id, texto=texto)
+    db.add(nota)
+    db.commit()
+    db.refresh(nota)
+    return schemas.NotaEmpresaResponse(
+        id=nota.id, cliente_id=nota.cliente_id, autor_id=nota.autor_id,
+        autor_nombre=current_user.nombre, texto=nota.texto, creado_en=nota.creado_en,
+    )
+
+
+@router.delete("/{cliente_id}/notas/{nota_id}", dependencies=[Depends(allow_all_staff)])
+def borrar_nota(cliente_id: int, nota_id: int, db: Session = Depends(get_db)):
+    nota = (
+        db.query(models.NotaEmpresa)
+        .filter(models.NotaEmpresa.id == nota_id, models.NotaEmpresa.cliente_id == cliente_id)
+        .first()
+    )
+    if not nota:
+        raise HTTPException(404, "Nota no encontrada")
+    db.delete(nota)
+    db.commit()
+    return {"deleted": nota_id}
+
+
 # --- 4. VER ESTADO DE CUENTA (HISTORIAL) ---
 @router.get("/{cliente_id}/estado-cuenta", response_model=List[schemas.TransaccionResponse], dependencies=[Depends(allow_all_staff)])
 def ver_estado_cuenta(
