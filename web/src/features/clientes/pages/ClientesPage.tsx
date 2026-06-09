@@ -273,9 +273,9 @@ export function ClientesPage() {
             </th>
             <th
               className="p-3 text-left cursor-pointer select-none hover:text-foreground"
-              onClick={() => toggleSort('nombre_empresa')}
+              onClick={() => toggleSort('nombre')}
             >
-              Empresa <SortIndicator active={sort === 'nombre_empresa'} dir={dir} />
+              Empresa <SortIndicator active={sort === 'nombre'} dir={dir} />
             </th>
             <th className="p-3 text-left">Contacto</th>
             <th className="p-3 text-left">RFC</th>
@@ -287,9 +287,9 @@ export function ClientesPage() {
             <th className="p-3 text-right">Crédito</th>
             <th
               className="p-3 text-right cursor-pointer select-none hover:text-foreground"
-              onClick={() => toggleSort('saldo_actual')}
+              onClick={() => toggleSort('saldo')}
             >
-              Saldo <SortIndicator active={sort === 'saldo_actual'} dir={dir} />
+              Saldo <SortIndicator active={sort === 'saldo'} dir={dir} />
             </th>
             <th className="p-3 text-right">Acciones</th>
           </tr>
