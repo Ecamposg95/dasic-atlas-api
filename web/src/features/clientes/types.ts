@@ -18,6 +18,8 @@ export type Cliente = {
   saldo_actual: number | string;
   creado_por_id: number | null;
   n_contactos?: number;
+  estatus?: string;
+  ultima_compra?: string | null;
 };
 
 export type ClienteCreate = {
@@ -110,4 +112,47 @@ export type MergeResult = {
   survivor_id: number;
   merged: number;
   remapped: { ordenes: number; transacciones: number; remisiones: number; contactos: number };
+};
+
+export type EstatusEmpresa = 'activo' | 'inactivo' | 'prospecto';
+
+export type EmpresaResumen = {
+  total_vendido: number;
+  n_ventas: number;
+  n_cotizaciones: number;
+  ticket_promedio: number;
+  ultima_compra: string | null;
+  saldo_actual: number;
+  limite_credito: number;
+  credito_disponible: number;
+  estatus: string;
+};
+
+export type ActividadEvento = {
+  tipo: 'cotizacion' | 'venta' | 'remision' | 'pago' | 'cargo';
+  fecha: string | null;
+  ref: string | number | null;
+  monto: number | null;
+  moneda: string | null;
+  descripcion: string;
+};
+
+export type NotaEmpresa = {
+  id: number;
+  cliente_id: number;
+  autor_id: number | null;
+  autor_nombre: string | null;
+  texto: string;
+  creado_en: string | null;
+};
+
+export type DealEnlazado = {
+  id: number;
+  titulo: string;
+  monto: number | null;
+  moneda: string | null;
+  stage: string | null;
+  owner: string | null;
+  creado_en: string | null;
+  cerrado_en: string | null;
 };

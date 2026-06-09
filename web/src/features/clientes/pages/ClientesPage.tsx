@@ -63,7 +63,7 @@ export function ClientesPage() {
     }
   }, [filtroQDebounced]);
 
-  const { data: clientes, isLoading, isPlaceholderData, error } = useClientes(page, filtroQDebounced);
+  const { data: clientes, isLoading, isPlaceholderData, error } = useClientes({ page, q: filtroQDebounced });
   const qc = useQueryClient();
 
   // 401 → login
