@@ -24,6 +24,12 @@ export function ModalNotaLinea() {
     return () => window.removeEventListener('cot:open-nota', onOpen);
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   function onSave() {
     if (!uid) return;
     updateLinea(uid, { observaciones_linea: texto.slice(0, MAX) });
@@ -33,6 +39,7 @@ export function ModalNotaLinea() {
   if (!open) return null;
   return (
     <div
+      data-overlay
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) setOpen(false);

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Truck, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
@@ -24,6 +25,13 @@ export function SugerirOCModal({
   onClose: () => void;
 }) {
   const generar = useGenerarOC();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const porProveedor = data.por_proveedor ?? [];
   const sinProveedor = data.sin_proveedor ?? [];
   const hayProveedores = porProveedor.length > 0;
@@ -53,6 +61,7 @@ export function SugerirOCModal({
 
   return (
     <div
+      data-overlay
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
