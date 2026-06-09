@@ -180,6 +180,26 @@ def merge_empresas(
         raise HTTPException(500, detail=f"{type(exc).__name__}: {exc}")
 
 
+@router.patch("/bulk-estatus", dependencies=[Depends(allow_admin_asistente)])
+def bulk_estatus(
+    payload: schemas.BulkEstatusRequest,
+    db: Session = Depends(get_db),
+):
+    """Cambia el estatus de varias empresas a la vez."""
+    validos = {"activo", "inactivo", "prospecto"}
+    if payload.estatus not in validos:
+        raise HTTPException(422, f"estatus inválido (usa {validos})")
+    if not payload.ids:
+        raise HTTPException(400, "ids vacío")
+    n = (
+        db.query(models.Cliente)
+        .filter(models.Cliente.id.in_(payload.ids))
+        .update({models.Cliente.estatus: payload.estatus}, synchronize_session=False)
+    )
+    db.commit()
+    return {"updated": n, "estatus": payload.estatus}
+
+
 # --- 2. CREAR CLIENTE ---
 @router.post("/", response_model=schemas.ClienteResponse, dependencies=[Depends(allow_all_staff)])
 def crear_cliente(
