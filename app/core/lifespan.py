@@ -55,14 +55,27 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     try:
         run_all_seeds(db)
 
-        # 3. Ingesta de datos de context/ — siempre al startup. Idempotente:
-        #    no duplica registros existentes (match por SKU / email / folio).
-        #    Para desactivar setear env var SEED_CONTEXT_DISABLED=1.
+        # 3. Ingesta de datos de context/ — SOLO en bootstrap inicial (DB sin
+        #    clientes). NO es idempotente como se creía: su dedup es por EMAIL,
+        #    así que cuando una empresa se fusiona/renombra y desaparece ese
+        #    email, el siguiente deploy la RE-CREA como duplicado (caso real:
+        #    Vitracoat/auxcompras3 reaparecía id8→id9→id10 en cada deploy,
+        #    fragmentando el historial del cliente). Con datos reales ya
+        #    presentes, jamás se re-siembra. Para forzar desactivado: env
+        #    SEED_CONTEXT_DISABLED=1.
         if os.getenv("SEED_CONTEXT_DISABLED", "").strip() != "1":
             try:
-                from scripts.import_context_data import run_seed
-                resultado = run_seed(db, dry_run=False)
-                logger.info("Seed context/ OK → %s", resultado)
+                n_clientes = db.query(models.Cliente).count()
+                if n_clientes == 0:
+                    from scripts.import_context_data import run_seed
+                    resultado = run_seed(db, dry_run=False)
+                    logger.info("Seed context/ (bootstrap) OK → %s", resultado)
+                else:
+                    logger.info(
+                        "Seed context/ OMITIDO: la DB ya tiene %d cliente(s) "
+                        "(no es bootstrap inicial; evita recrear duplicados).",
+                        n_clientes,
+                    )
             except Exception as exc:
                 logger.error("Seed context/ FALLÓ (no bloqueante): %s", exc, exc_info=True)
     except Exception as exc:
