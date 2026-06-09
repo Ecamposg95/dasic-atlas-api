@@ -25,10 +25,13 @@ def listar_clientes(
     skip: int = 0,
     limit: int = 100,
     q: Optional[str] = None,
+    estatus: Optional[str] = None,
+    sort: Optional[str] = None,   # nombre | saldo | ultima_compra
+    dir: str = "asc",
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    """Lista clientes (empresas) con conteo de contactos. VENTAS solo ve los suyos."""
+    """Lista empresas con conteo de contactos + última compra. VENTAS solo ve las suyas."""
     from sqlalchemy import func
     query = db.query(models.Cliente)
     if is_owner_scoped(current_user, "read", "cliente"):
@@ -40,18 +43,61 @@ def listar_clientes(
             models.Cliente.contacto_nombre.ilike(like),
             models.Cliente.email.ilike(like),
         ))
-    rows = (
-        query.order_by(models.Cliente.nombre_empresa.asc())
-        .offset(skip).limit(limit).all()
-    )
+    if estatus:
+        query = query.filter(models.Cliente.estatus == estatus)
+
+    desc = dir == "desc"
+    if sort == "saldo":
+        col = models.Cliente.saldo_actual
+        query = query.order_by(col.desc() if desc else col.asc())
+    elif sort != "ultima_compra":
+        col = models.Cliente.nombre_empresa
+        query = query.order_by(col.desc() if desc else col.asc())
+
+    rows = query.offset(skip).limit(limit).all() if sort != "ultima_compra" else query.all()
+
     counts = dict(
         db.query(models.Contacto.cliente_id, func.count(models.Contacto.id))
-        .group_by(models.Contacto.cliente_id)
-        .all()
+        .group_by(models.Contacto.cliente_id).all()
+    )
+    ventas_estatus = [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
+    ultimas = dict(
+        db.query(models.OrdenVenta.cliente_id, func.max(models.OrdenVenta.fecha_creacion))
+        .filter(models.OrdenVenta.estatus.in_(ventas_estatus))
+        .group_by(models.OrdenVenta.cliente_id).all()
     )
     for c in rows:
         c.n_contactos = counts.get(c.id, 0)
+        u = ultimas.get(c.id)
+        c.ultima_compra = u.isoformat() if u else None
+
+    if sort == "ultima_compra":
+        rows.sort(key=lambda c: c.ultima_compra or "", reverse=desc)
+        rows = rows[skip: skip + limit]
     return rows
+
+
+@router.get("/count", dependencies=[Depends(allow_all_staff)])
+def contar_clientes(
+    q: Optional[str] = None,
+    estatus: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    from sqlalchemy import func
+    query = db.query(func.count(models.Cliente.id))
+    if is_owner_scoped(current_user, "read", "cliente"):
+        query = query.filter(models.Cliente.creado_por_id == current_user.id)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(
+            models.Cliente.nombre_empresa.ilike(like),
+            models.Cliente.contacto_nombre.ilike(like),
+            models.Cliente.email.ilike(like),
+        ))
+    if estatus:
+        query = query.filter(models.Cliente.estatus == estatus)
+    return {"total": query.scalar() or 0}
 
 
 # --- DUPLICADOS / MERGE ---
