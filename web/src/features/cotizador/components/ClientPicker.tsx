@@ -47,10 +47,13 @@ export function ClientPicker() {
     enabled: cliente_id !== null,
   });
 
+  const editingId = useCotizador((s) => s.editingId);
+
   // Autollenar con el contacto principal cuando hay contactos y aún no hay
   // contacto elegido. El guard "solo si null" evita pisar el contacto de una
   // orden ya cargada en edición.
   useEffect(() => {
+    if (editingId != null) return; // al editar no se auto-asigna contacto
     if (cliente_id === null) return;
     const lista = contactos ?? [];
     if (lista.length === 0) return;
@@ -62,7 +65,7 @@ export function ClientPicker() {
     if (pertenece) return;
     const principal = lista.find((c) => c.es_principal) ?? lista[0];
     setContacto(principal.id);
-  }, [contactos, cliente_id, contacto_id, setContacto]);
+  }, [contactos, cliente_id, contacto_id, setContacto, editingId]);
 
   if (isLoading) {
     return (
