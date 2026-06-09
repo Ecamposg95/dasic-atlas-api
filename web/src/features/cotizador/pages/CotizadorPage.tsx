@@ -187,6 +187,16 @@ export function CotizadorPage() {
   // Reset store on unmount so the next visit starts fresh
   useEffect(() => () => reset(), [reset]);
 
+  // Cotización NUEVA (sin ?edit=) pero el store trae una cotización cargada o
+  // guardada antes (editingId !== null): limpiar para no arrastrar
+  // cliente/contacto/carrito de la anterior. No pisa un borrador fresco sin
+  // guardar (editingId === null). Corre antes del pre-poblado de abajo.
+  useEffect(() => {
+    if (editIdNum == null && useCotizador.getState().editingId != null) {
+      reset();
+    }
+  }, [editIdNum, reset]);
+
   // Pre-poblar desde Contactos/Empresas: ?cliente=<id>&contacto=<id>.
   // Solo en cotización nueva (sin ?edit=) y una vez al montar.
   useEffect(() => {
