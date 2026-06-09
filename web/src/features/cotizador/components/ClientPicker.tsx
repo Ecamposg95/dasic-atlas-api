@@ -47,9 +47,15 @@ export function ClientPicker() {
   // contacto elegido. El guard "solo si null" evita pisar el contacto de una
   // orden ya cargada en edición.
   useEffect(() => {
-    if (cliente_id === null || contacto_id !== null) return;
+    if (cliente_id === null) return;
     const lista = contactos ?? [];
     if (lista.length === 0) return;
+    // Si ya hay un contacto y PERTENECE a esta empresa, respetarlo (no pisar la
+    // edición de una orden cargada). Si no hay contacto, o el contacto_id quedó
+    // arrastrado de otra empresa/cotización (no está en esta lista), asignar el
+    // principal de la empresa actual.
+    const pertenece = contacto_id != null && lista.some((c) => c.id === contacto_id);
+    if (pertenece) return;
     const principal = lista.find((c) => c.es_principal) ?? lista[0];
     setContacto(principal.id);
   }, [contactos, cliente_id, contacto_id, setContacto]);

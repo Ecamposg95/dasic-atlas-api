@@ -122,7 +122,12 @@ function nextUid(prefix: string): string {
 export const useCotizador = create<CotizadorState>((set) => ({
   ...initialState,
 
-  setCliente: (cliente_id) => set({ cliente_id }),
+  // Al CAMBIAR de empresa se limpia el contacto: un contacto pertenece a una
+  // sola empresa, y dejar el contacto_id anterior arrastraba el contacto de una
+  // cotización/empresa previa a la nueva (bug: PDF salía con el contacto viejo).
+  // El auto-relleno del ClientPicker repuebla con el principal de la empresa nueva.
+  setCliente: (cliente_id) =>
+    set((s) => (s.cliente_id === cliente_id ? { cliente_id } : { cliente_id, contacto_id: null })),
   setContacto: (contacto_id) => set({ contacto_id }),
   setMoneda: (moneda) => set({ moneda }),
   setTc: (tc) => set({ tc }),

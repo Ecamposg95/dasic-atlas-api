@@ -455,14 +455,19 @@ PDF_TEMPLATE_VENTA = """
   </div>
 
   <div class="cliente">
-    {% if orden.cliente.contacto_nombre %}
-      <div class="row"><span class="lbl">Nombre:</span> <span class="name">{{ orden.cliente.contacto_nombre }}</span></div>
+    {# Contacto destinatario: el SELECCIONADO en la cotización (orden.contacto)
+       manda; si no se eligió ninguno, cae al contacto por defecto de la empresa
+       (cliente.contacto_nombre/email). Antes el PDF mostraba siempre el default
+       de la empresa e ignoraba el contacto elegido. #}
+    {% set _nombre = orden.contacto.nombre if orden.contacto else orden.cliente.contacto_nombre %}
+    {% set _email = (orden.contacto.email if (orden.contacto and orden.contacto.email) else orden.cliente.email) %}
+    {% if _nombre %}
+      <div class="row"><span class="lbl">Nombre:</span> <span class="name">{{ _nombre }}</span></div>
     {% endif %}
     <div class="row"><span class="lbl">Compañía:</span> {{ orden.cliente.nombre_empresa }}</div>
-    {% if orden.cliente.email %}
-      <div class="row email"><span class="lbl">E-mail:</span> <a href="mailto:{{ orden.cliente.email }}">{{ orden.cliente.email }}</a></div>
+    {% if _email %}
+      <div class="row email"><span class="lbl">E-mail:</span> <a href="mailto:{{ _email }}">{{ _email }}</a></div>
     {% endif %}
-    {% if orden.contacto %}<div class="row"><span class="lbl">Atención:</span> {{ orden.contacto.nombre }}</div>{% endif %}
   </div>
 
   {# PDF unificado: si view_detalles viene del backend, usarlo; si no, orden.detalles #}
