@@ -217,13 +217,21 @@ export function resolveDirectionalTcs(
   tolerancia: number = 1,
 ): TcSet {
   const t = Number.isFinite(tolerancia) && tolerancia > 0 ? tolerancia : 1;
+  // Banda de plausibilidad [DOF·0.5, DOF·1.5]: un TC direccional real jamás
+  // se aleja >50% del DOF. Un valor fuera de banda (p.ej. el sentinela legacy
+  // 0.000001 persistido en cotizaciones viejas, o un 2.0 corrupto) se IGNORA y
+  // se deriva del DOF — antes se confiaba en él y `costo / 0.000001` reventaba
+  // el importe ×1,000,000. Espejo exacto de `_resolve_directional_tcs` (backend).
+  const lo = tc_dof * 0.5;
+  const hi = tc_dof * 1.5;
+  const trust = (v: number | null): v is number =>
+    v != null && v >= lo && v <= hi;
   return {
     tc_dof,
-    tc_mn_a_usd:
-      tc_mn_a_usd != null && tc_mn_a_usd > 0
-        ? tc_mn_a_usd
-        : Math.max(tc_dof - t, 0.000001),
-    tc_usd_a_mn:
-      tc_usd_a_mn != null && tc_usd_a_mn > 0 ? tc_usd_a_mn : tc_dof + t,
+    // Derivado pisado a DOF·0.5: nunca un divisor cercano a 0 en MXN→USD.
+    tc_mn_a_usd: trust(tc_mn_a_usd)
+      ? tc_mn_a_usd
+      : Math.max(tc_dof - t, tc_dof * 0.5),
+    tc_usd_a_mn: trust(tc_usd_a_mn) ? tc_usd_a_mn : tc_dof + t,
   };
 }

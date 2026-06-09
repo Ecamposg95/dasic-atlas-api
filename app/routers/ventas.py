@@ -173,23 +173,33 @@ def _resolve_directional_tcs(
 ) -> tuple[Decimal, Decimal]:
     """Resuelve los 2 TCs direccionales (modelo Excel V_03, 2026-05-23).
 
-    - Si el payload manda los 2 (>0), se respetan ambos.
-    - Si vienen None/cero, se derivan de tipo_cambio (DOF): MN→USD = DOF-T,
-      USD→MN = DOF+T, donde T es la tolerancia (default 1.0; configurable
-      0.1-1.0 por cotización). El spread cubre riesgo cambiario entre
-      cotización y cobro.
-    - MN→USD nunca puede ser ≤ 0 (división); usa GREATEST(DOF-T, 0.000001).
+    - Si el payload manda overrides PLAUSIBLES, se respetan.
+    - Si vienen None o fuera de banda, se derivan de tipo_cambio (DOF):
+      MN→USD = DOF-T, USD→MN = DOF+T, donde T es la tolerancia (default 1.0;
+      configurable 0.1-1.0 por cotización). El spread cubre riesgo cambiario
+      entre cotización y cobro.
+    - Banda de plausibilidad [DOF·0.5, DOF·1.5]: un TC direccional real jamás
+      se aleja >50% del DOF. Esto descarta el sentinela legacy `0.000001` (y
+      cualquier valor corrupto persistido) en vez de confiar en él, lo que
+      antes producía `costo / 0.000001` = ×1,000,000 en MXN→USD.
+    - El derivado MN→USD se pisa a GREATEST(DOF-T, DOF·0.5): nunca un divisor
+      cercano a 0, así la división MXN→USD no puede explotar.
     """
     dof = Decimal(tipo_cambio)
     t = Decimal(tolerancia)
-    if tc_mn_a_usd is None or Decimal(tc_mn_a_usd) <= 0:
-        tc_mn_a_usd_eff = max(dof - t, Decimal("0.000001"))
-    else:
+    lo, hi = dof * Decimal("0.5"), dof * Decimal("1.5")
+
+    def _trust(v: Decimal | None) -> bool:
+        return v is not None and lo <= Decimal(v) <= hi
+
+    if _trust(tc_mn_a_usd):
         tc_mn_a_usd_eff = Decimal(tc_mn_a_usd)
-    if tc_usd_a_mn is None or Decimal(tc_usd_a_mn) <= 0:
-        tc_usd_a_mn_eff = dof + t
     else:
+        tc_mn_a_usd_eff = max(dof - t, dof * Decimal("0.5"))
+    if _trust(tc_usd_a_mn):
         tc_usd_a_mn_eff = Decimal(tc_usd_a_mn)
+    else:
+        tc_usd_a_mn_eff = dof + t
     return tc_mn_a_usd_eff, tc_usd_a_mn_eff
 
 
@@ -611,7 +621,10 @@ def crear_orden(
         if orden_data.tolerancia_tc is not None
         else Decimal("1.0")
     )
-    tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
+    # _eff = valores resueltos (DOF±T) que se usan SOLO para calcular importes.
+    # Lo que se PERSISTE es el override crudo nullable (abajo) — guardar el
+    # resuelto congelaba el sentinela/derivado y reaparecía al reabrir la cot.
+    tc_mn_a_usd_eff, tc_usd_a_mn_eff = _resolve_directional_tcs(
         tipo_cambio,
         orden_data.tc_mn_a_usd,
         orden_data.tc_usd_a_mn,
@@ -637,8 +650,8 @@ def crear_orden(
             observaciones=orden_data.observaciones,
             moneda=moneda_cotizacion,
             tipo_cambio=tipo_cambio,
-            tc_mn_a_usd=tc_mn_a_usd,
-            tc_usd_a_mn=tc_usd_a_mn,
+            tc_mn_a_usd=orden_data.tc_mn_a_usd,
+            tc_usd_a_mn=orden_data.tc_usd_a_mn,
             tolerancia_tc=tolerancia_tc,
             fecha_vencimiento=datetime.utcnow() + timedelta(days=get_quote_validity_days(db)),
             total=0,
@@ -744,8 +757,8 @@ def crear_orden(
                 costo_origen,
                 moneda_origen_linea,
                 moneda_cotizacion,
-                tc_mn_a_usd,
-                tc_usd_a_mn,
+                tc_mn_a_usd_eff,
+                tc_usd_a_mn_eff,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
@@ -905,7 +918,8 @@ def actualizar_orden(
         if orden_update.tolerancia_tc is not None
         else Decimal("1.0")
     )
-    tc_mn_a_usd, tc_usd_a_mn = _resolve_directional_tcs(
+    # _eff solo para cálculo de importes; se persiste el override crudo (abajo).
+    tc_mn_a_usd_eff, tc_usd_a_mn_eff = _resolve_directional_tcs(
         tipo_cambio,
         orden_update.tc_mn_a_usd,
         orden_update.tc_usd_a_mn,
@@ -921,8 +935,8 @@ def actualizar_orden(
             orden.terminos_condiciones = orden_update.terminos_condiciones
         orden.moneda = moneda_cotizacion
         orden.tipo_cambio = tipo_cambio
-        orden.tc_mn_a_usd = tc_mn_a_usd
-        orden.tc_usd_a_mn = tc_usd_a_mn
+        orden.tc_mn_a_usd = orden_update.tc_mn_a_usd
+        orden.tc_usd_a_mn = orden_update.tc_usd_a_mn
         orden.tolerancia_tc = tolerancia_tc
         if orden_update.fecha_creacion is not None:
             orden.fecha_creacion = orden_update.fecha_creacion
@@ -1016,8 +1030,8 @@ def actualizar_orden(
                 costo_origen,
                 moneda_origen_linea,
                 moneda_cotizacion,
-                tc_mn_a_usd,
-                tc_usd_a_mn,
+                tc_mn_a_usd_eff,
+                tc_usd_a_mn_eff,
             )
             utilidad_pct = Decimal(item.utilidad or 0)
             descuento_pct = Decimal(item.descuento or 0)
