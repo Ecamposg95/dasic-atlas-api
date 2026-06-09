@@ -2,6 +2,7 @@
 Clients & Suppliers schemas: Cliente, Proveedor.
 """
 
+from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 
@@ -96,9 +97,6 @@ class ContactoResponse(ContactoBase):
 class MergeEmpresasInput(BaseModel):
     survivor_id: int
     loser_ids: List[int]
-
-
-from datetime import datetime
 
 
 class NotaEmpresaCreate(BaseModel):

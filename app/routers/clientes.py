@@ -61,11 +61,13 @@ def listar_clientes(
         .group_by(models.Contacto.cliente_id).all()
     )
     ventas_estatus = [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
+    row_ids = [c.id for c in rows]
     ultimas = dict(
         db.query(models.OrdenVenta.cliente_id, func.max(models.OrdenVenta.fecha_creacion))
         .filter(models.OrdenVenta.estatus.in_(ventas_estatus))
+        .filter(models.OrdenVenta.cliente_id.in_(row_ids))
         .group_by(models.OrdenVenta.cliente_id).all()
-    )
+    ) if row_ids else {}
     for c in rows:
         c.n_contactos = counts.get(c.id, 0)
         u = ultimas.get(c.id)
@@ -84,7 +86,6 @@ def contar_clientes(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    from sqlalchemy import func
     query = db.query(func.count(models.Cliente.id))
     if is_owner_scoped(current_user, "read", "cliente"):
         query = query.filter(models.Cliente.creado_por_id == current_user.id)
@@ -444,7 +445,6 @@ def empresa_resumen(
     base = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
     ventas = base.filter(models.OrdenVenta.estatus.in_(ventas_estatus))
 
-    from sqlalchemy import func
     total_vendido = ventas.with_entities(func.coalesce(func.sum(models.OrdenVenta.total), 0)).scalar() or 0
     n_ventas = ventas.count()
     n_cotizaciones = base.filter(models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION).count()
@@ -522,7 +522,10 @@ def listar_notas(cliente_id: int, db: Session = Depends(get_db)):
         .order_by(models.NotaEmpresa.creado_en.desc())
         .all()
     )
-    autores = dict(db.query(models.Usuario.id, models.Usuario.nombre).all())
+    autor_ids = [n.autor_id for n in notas if n.autor_id]
+    autores = dict(
+        db.query(models.Usuario.id, models.Usuario.nombre).filter(models.Usuario.id.in_(autor_ids)).all()
+    ) if autor_ids else {}
     out = []
     for n in notas:
         out.append(schemas.NotaEmpresaResponse(
@@ -569,8 +572,17 @@ def borrar_nota(cliente_id: int, nota_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{cliente_id}/deals", dependencies=[Depends(allow_all_staff)])
-def empresa_deals(cliente_id: int, db: Session = Depends(get_db)):
+def empresa_deals(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
     """Deals del CRM enlazados a esta empresa."""
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(404, "Empresa no encontrada")
+    if is_owner_scoped(current_user, "read", "cliente") and cliente.creado_por_id != current_user.id:
+        raise HTTPException(403, "Sin acceso a esta empresa")
     deals = (
         db.query(models.Deal)
         .filter(models.Deal.cliente_id == cliente_id)
