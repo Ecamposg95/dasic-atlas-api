@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { useCotizador } from '../store';
 
 const MAX = 1000;
@@ -10,6 +11,8 @@ export function ModalNotaLinea() {
   const [uid, setUid] = useState<string | null>(null);
   const [texto, setTexto] = useState('');
   const updateLinea = useCotizador((s) => s.updateLinea);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     function onOpen(e: Event) {
@@ -46,9 +49,9 @@ export function ModalNotaLinea() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="notalinea-title" className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="notalinea-title" className="text-lg font-semibold flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-accent-glow" /> Nota / productos similares
           </h3>
           <button

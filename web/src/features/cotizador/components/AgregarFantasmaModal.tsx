@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { Ghost, X, Building2, DollarSign, Hash, Percent, Recycle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { SatCombobox } from '@/components/ui/sat-combobox';
@@ -166,6 +167,9 @@ export function AgregarFantasmaModal() {
   const requestCloseRef = useRef(requestClose);
   requestCloseRef.current = requestClose;
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open);
+
   if (!open) return null;
 
   return (
@@ -174,11 +178,11 @@ export function AgregarFantasmaModal() {
       // El click fuera NO cierra: evita perder datos capturados por accidente.
       // El cierre solo ocurre vía Esc / X / Cancelar (con guarda) o Guardar.
     >
-      <div className="bg-white dark:bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="fantasma-title" className="bg-white dark:bg-slate-900 border border-amber-700/50 rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col">
         {/* US-004: header y footer fijos (shrink-0), cuerpo scrolleable. El
             modal nunca excede 90vh y los botones quedan siempre visibles. */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0 border-b border-border">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="fantasma-title" className="text-lg font-semibold flex items-center gap-2">
             <Ghost className="h-4 w-4 text-amber-400" />
             {reusingFantasma ? 'Reusar fantasma previo' : 'Agregar producto fantasma'}
           </h3>

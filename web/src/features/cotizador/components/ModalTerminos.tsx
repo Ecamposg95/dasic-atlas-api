@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, FileText, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 
@@ -8,6 +9,8 @@ export function ModalTerminos() {
   const [open, setOpen] = useState(false);
   const setTerminos = useCotizador((s) => s.setTerminos);
   const [draft, setDraft] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open);
   const { config } = useConfig();
   // El backend aún no expone `terminos_condiciones_default` (ver `types.ts`).
   // Mientras tanto, "Restaurar default" deja el textarea vacío — que es el
@@ -46,9 +49,9 @@ export function ModalTerminos() {
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-2xl w-full p-5">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="terminos-title" className="bg-card border border-border rounded-xl shadow-2xl max-w-2xl w-full p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="terminos-title" className="text-lg font-semibold flex items-center gap-2">
             <FileText className="h-4 w-4 text-accent-glow" /> Términos y condiciones
           </h3>
           <button

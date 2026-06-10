@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X, Truck, AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/lib/confirm';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { toast } from '@/lib/toast';
 import type { ApiError } from '@/lib/api';
 import { useGenerarOC } from '../hooks/useSugerirOC';
@@ -26,6 +27,8 @@ export function SugerirOCModal({
   onClose: () => void;
 }) {
   const generar = useGenerarOC();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -67,9 +70,9 @@ export function SugerirOCModal({
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-3xl w-full p-5 my-4">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="sugeriroc-title" className="bg-card border border-border rounded-xl shadow-2xl max-w-3xl w-full p-5 my-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="sugeriroc-title" className="text-lg font-semibold flex items-center gap-2">
             <Truck className="h-4 w-4 text-accent-glow" /> Sugerir órdenes de compra · {folio}
           </h3>
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
