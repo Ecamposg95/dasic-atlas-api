@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { User, Coins, ArrowRightLeft, CalendarPlus, CalendarClock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { ClientPicker } from './ClientPicker';
 import { Input } from '@/components/ui/input';
 import { useCotizador } from '../store';
@@ -43,6 +43,11 @@ export function HeaderCotizacion() {
   const hayLineasOtraMoneda = cart.some((i) => i.productCurrency && i.productCurrency !== moneda);
   const tcNecesario = moneda === 'USD' || hayLineasOtraMoneda;
 
+  // Densidad: TC (DOF) + mini tabla quedan tras "Opciones avanzadas". Se auto-
+  // expanden cuando el TC es necesario (cot USD o líneas en otra moneda).
+  const [avanzadasOpen, setAvanzadasOpen] = useState(false);
+  useEffect(() => { if (tcNecesario) setAvanzadasOpen(true); }, [tcNecesario]);
+
   // Banner aviso: hay líneas en el cart pero todavía no hay cliente.
   // No bloquea — solo advierte para que el comercial sepa que la cot no
   // se podrá guardar hasta seleccionar cliente.
@@ -66,43 +71,55 @@ export function HeaderCotizacion() {
         <UltimaCotHint clienteId={clienteId} />
       </div>
 
-      <div className="md:col-span-2 grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
-            <Coins className="h-3 w-3" />
-            Moneda
-          </label>
-          <select
-            value={moneda}
-            onChange={(e) => setMoneda(e.target.value as 'MXN' | 'USD')}
-            className="w-full h-8 rounded-md border border-border-strong bg-card px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
-          >
-            <option value="MXN">MXN</option>
-            <option value="USD">USD</option>
-          </select>
-        </div>
-        <div className={tcNecesario ? '' : 'opacity-60'}>
-          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
-            <ArrowRightLeft className="h-3 w-3" />
-            TC
-            {!tcNecesario && (
-              <span className="text-muted-foreground normal-case tracking-normal font-normal text-[10px]">
-                (no requerido)
-              </span>
-            )}
-          </label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            value={tc}
-            onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
-            className="h-8 text-xs text-right font-mono"
-            title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
-          />
-          <TCMiniTable />
-        </div>
+      <div className="md:col-span-2">
+        <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
+          <Coins className="h-3 w-3" />
+          Moneda
+        </label>
+        <select
+          value={moneda}
+          onChange={(e) => setMoneda(e.target.value as 'MXN' | 'USD')}
+          className="w-full md:w-1/2 h-8 rounded-md border border-border-strong bg-card px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
+        >
+          <option value="MXN">MXN</option>
+          <option value="USD">USD</option>
+        </select>
+        <button
+          type="button"
+          onClick={() => setAvanzadasOpen((v) => !v)}
+          aria-expanded={avanzadasOpen}
+          className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
+        >
+          {avanzadasOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          Opciones avanzadas (TC / vigencia)
+        </button>
       </div>
+
+      {avanzadasOpen && (
+        <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
+          <div className={tcNecesario ? '' : 'opacity-60'}>
+            <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
+              <ArrowRightLeft className="h-3 w-3" />
+              TC
+              {!tcNecesario && (
+                <span className="text-muted-foreground normal-case tracking-normal font-normal text-[10px]">
+                  (no requerido)
+                </span>
+              )}
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={tc}
+              onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
+              className="h-8 text-xs text-right font-mono"
+              title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
+            />
+            <TCMiniTable />
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
