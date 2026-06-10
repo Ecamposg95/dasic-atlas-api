@@ -28,6 +28,7 @@ import { ModalTerminos } from '../components/ModalTerminos';
 import { ModalConceptoPDF } from '../components/ModalConceptoPDF';
 import { AgregarFantasmaModal } from '../components/AgregarFantasmaModal';
 import { GenerarReporteServicioModal } from '@/features/reportes_servicio_docs/components/GenerarReporteServicioModal';
+import { CollapsibleCard } from '@/components/ui/CollapsibleCard';
 import { useCotizador } from '../store';
 import { useCotizacionLoader } from '../hooks/useCotizacion';
 import { useAtajos, type AtajoHandler } from '../hooks/useAtajos';
@@ -364,12 +365,11 @@ export function CotizadorPage() {
             <SuggestRelacionados />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-1">
-                  <MessageSquare className="h-3 w-3" />
-                  <span>Observaciones</span>
-                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                </div>
+              <CollapsibleCard
+                title="Observaciones"
+                icon={<MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
+                defaultOpen={!!observaciones.trim()}
+              >
                 <textarea
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
@@ -377,13 +377,12 @@ export function CotizadorPage() {
                   placeholder="Notas internas o para el cliente…"
                   className="w-full text-xs rounded-md border border-border-strong bg-card px-2 py-2 focus:border-accent-glow outline-none"
                 />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mb-1">
-                  <FileText className="h-3 w-3" />
-                  <span>Términos y condiciones</span>
-                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                </div>
+              </CollapsibleCard>
+              <CollapsibleCard
+                title="Términos y condiciones"
+                icon={<FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+                defaultOpen={!!(terminos && terminos.trim())}
+              >
                 <button
                   type="button"
                   onClick={() =>
@@ -401,39 +400,40 @@ export function CotizadorPage() {
                     </div>
                   </div>
                 </button>
-              </div>
+              </CollapsibleCard>
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500 mt-2">
-              <FileOutput className="h-3 w-3" />
-              <span>PDF unificado</span>
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-            </div>
-            <div className="flex items-center gap-3 text-[11px] flex-wrap">
-              <label className="flex items-center gap-2 text-foreground">
-                <input
-                  type="checkbox"
-                  checked={pdfConceptoEnabled}
-                  onChange={(e) => setPdfConceptoEnabled(e.target.checked)}
-                  className="accent-cyan-500"
-                />
-                PDF con concepto unificado
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent('cot:open-concepto'))
-                }
-                className="text-[11px] text-accent-glow hover:underline flex items-center gap-1"
-              >
-                <Pencil className="h-3 w-3" /> Editar concepto…
-              </button>
-              {pdfConceptoEnabled && pdfConceptoUnificado && (
-                <span className="text-[10px] text-muted-foreground truncate max-w-md">
-                  «{pdfConceptoUnificado}»
-                </span>
-              )}
-            </div>
+            <CollapsibleCard
+              title="PDF unificado"
+              icon={<FileOutput className="h-3.5 w-3.5 text-muted-foreground" />}
+              defaultOpen={pdfConceptoEnabled}
+            >
+              <div className="flex items-center gap-3 text-[11px] flex-wrap">
+                <label className="flex items-center gap-2 text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={pdfConceptoEnabled}
+                    onChange={(e) => setPdfConceptoEnabled(e.target.checked)}
+                    className="accent-cyan-500"
+                  />
+                  PDF con concepto unificado
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent('cot:open-concepto'))
+                  }
+                  className="text-[11px] text-accent-glow hover:underline flex items-center gap-1"
+                >
+                  <Pencil className="h-3 w-3" /> Editar concepto…
+                </button>
+                {pdfConceptoEnabled && pdfConceptoUnificado && (
+                  <span className="text-[10px] text-muted-foreground truncate max-w-md">
+                    «{pdfConceptoUnificado}»
+                  </span>
+                )}
+              </div>
+            </CollapsibleCard>
           </>
         )}
 
