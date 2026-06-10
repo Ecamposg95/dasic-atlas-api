@@ -8,7 +8,20 @@ function fmt(n: number) {
   return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function RowExpanded({ item }: { item: CartItem }) {
+/**
+ * El panel de detalle se usa en dos contextos:
+ *  - `variant="row"` (default, desktop): se inyecta en el `<tbody>` de la
+ *    tabla, por eso va envuelto en `<tr><td colSpan>`.
+ *  - `variant="card"` (móvil): vive dentro de un `<div>` (DocumentRowCard),
+ *    donde un `<tr>/<td>` suelto sería HTML inválido — se envuelve en `<div>`.
+ */
+export function RowExpanded({
+  item,
+  variant = 'row',
+}: {
+  item: CartItem;
+  variant?: 'row' | 'card';
+}) {
   const moneda = useCotizador((s) => s.moneda);
   const tc = useCotizador((s) => s.tc);
   const updateLinea = useCotizador((s) => s.updateLinea);
@@ -31,10 +44,8 @@ export function RowExpanded({ item }: { item: CartItem }) {
     tc,
   );
 
-  return (
-    <tr className="bg-slate-100 dark:bg-slate-900/50 border-b border-border">
-      <td colSpan={8} className="p-3">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+  const grid = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
               <Coins className="h-2.5 w-2.5" />
@@ -141,6 +152,16 @@ export function RowExpanded({ item }: { item: CartItem }) {
             </label>
           </div>
         </div>
+  );
+
+  if (variant === 'card') {
+    return grid;
+  }
+
+  return (
+    <tr className="bg-slate-100 dark:bg-slate-900/50 border-b border-border">
+      <td colSpan={8} className="p-3">
+        {grid}
       </td>
     </tr>
   );

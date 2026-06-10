@@ -1,6 +1,7 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { confirm } from '@/lib/confirm';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { Pen, RotateCcw, Shuffle, X, ArrowLeft, MessageSquare, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ export function EditLineModal() {
   const updateLinea = useCotizador((s) => s.updateLinea);
   const qc = useQueryClient();
   const isAdmin = useIsAdmin();
+  const panelRef = useRef<HTMLDivElement>(null);
   const [savingCat, setSavingCat] = useState(false);
   const [open, setOpen] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
@@ -151,16 +153,18 @@ export function EditLineModal() {
     onClose();
   }
 
+  useFocusTrap(panelRef, open && !!it);
+
   if (!open || !it) return null;
 
   return (
     <div data-overlay className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="editline-title" className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="editline-title" className="text-lg font-semibold flex items-center gap-2">
             <Pen className="h-4 w-4 text-accent-glow" /> Editar línea
           </h3>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>

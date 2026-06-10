@@ -12,9 +12,11 @@ export function TabsCotizador({
   countHistorial?: number;
 }) {
   return (
-    <div className="flex items-center gap-1 border-b-2 border-border bg-slate-100 dark:bg-slate-900/40 rounded-t-md px-1 -mt-2 mb-4">
+    <div role="tablist" className="flex items-center gap-1 border-b-2 border-border bg-slate-100 dark:bg-slate-900/40 rounded-t-md px-1 -mt-2 mb-4">
       <button
         type="button"
+        role="tab"
+        aria-selected={active === 'editor'}
         onClick={() => onChange('editor')}
         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-[2px] ${
           active === 'editor'
@@ -26,6 +28,8 @@ export function TabsCotizador({
       </button>
       <button
         type="button"
+        role="tab"
+        aria-selected={active === 'historial'}
         onClick={() => onChange('historial')}
         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition border-b-2 -mb-[2px] ${
           active === 'historial'

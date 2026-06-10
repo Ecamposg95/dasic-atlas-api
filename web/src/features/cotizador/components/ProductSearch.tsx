@@ -148,6 +148,8 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
             }
             className="pl-7 h-8 text-xs"
             data-cot-search
+            aria-haspopup="listbox"
+            aria-expanded={open}
           />
           {cantidadParseada != null && q.trim() && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-900/30 text-violet-300 px-1.5 py-0.5 rounded font-bold pointer-events-none flex items-center gap-1">
@@ -166,7 +168,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
         </button>
       </div>
       {open && (
-        <div className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
+        <div role="listbox" className="absolute left-0 right-0 mt-1 max-h-80 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
           {tipo === 'servicio' ? (
             // Modo Servicios: render del catálogo de servicios.
             <>
@@ -182,7 +184,7 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                 </div>
               )}
               {servicios.map((s) => (
-                <button key={s.id} type="button" onClick={() => onSelectServicio(s)}
+                <button key={s.id} type="button" role="option" aria-selected={false} onClick={() => onSelectServicio(s)}
                   className="w-full text-left px-2 py-1.5 hover:bg-emerald-950/30 transition border-b border-border last:border-b-0 flex items-center gap-2">
                   <Wrench className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -248,6 +250,8 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                     <button
                       key={`p-${p.id}`}
                       type="button"
+                      role="option"
+                      aria-selected={false}
                       onClick={() => onSelect(p)}
                       className="w-full text-left px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-b border-border last:border-b-0 flex items-center gap-2"
                     >
@@ -276,6 +280,8 @@ export function ProductSearch({ handlers }: { handlers?: ProductSearchHandlers }
                     <button
                       key={`f-${f.id}`}
                       type="button"
+                      role="option"
+                      aria-selected={false}
                       onClick={() => onSelectFantasma(f)}
                       className="w-full text-left px-2 py-1.5 hover:bg-amber-950/30 transition border-b border-border last:border-b-0 flex items-center gap-2"
                     >

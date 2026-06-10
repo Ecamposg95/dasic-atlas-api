@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { X, Folder, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFocusTrap } from '@/lib/useFocusTrap';
 import { toast } from '@/lib/toast';
 import { api, type ApiError } from '@/lib/api';
 import { usePlantillas, useCrearPlantilla, useBorrarPlantilla } from '../hooks/usePlantillas';
@@ -26,6 +27,8 @@ export function PlantillasModal() {
   const { data: plantillas, isLoading } = usePlantillas();
   const crear = useCrearPlantilla();
   const borrar = useBorrarPlantilla();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     function onOpen() { setOpen(true); setModo('cargar'); }
@@ -137,12 +140,12 @@ export function PlantillasModal() {
   return (
     <div data-overlay className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="plantillas-title" className="bg-card border border-border rounded-xl shadow-2xl max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 id="plantillas-title" className="text-lg font-semibold flex items-center gap-2">
             <Folder className="h-4 w-4 text-accent-glow" /> Plantillas
           </h3>
-          <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar" className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>

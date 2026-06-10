@@ -119,9 +119,9 @@ export function Cart() {
         cb={cb}
         sortable
         onReorder={(f, t) => useCotizador.getState().reordenarLinea(f, t)}
-        expandedRenderer={(uid) => {
+        expandedRenderer={(uid, variant) => {
           const item = cart.find((c) => c.uid === uid);
-          return item ? <RowExpanded item={item} /> : null;
+          return item ? <RowExpanded item={item} variant={variant} /> : null;
         }}
         emptyHint={emptyHint}
       />
