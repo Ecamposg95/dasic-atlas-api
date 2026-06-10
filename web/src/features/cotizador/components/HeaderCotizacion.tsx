@@ -53,6 +53,21 @@ export function HeaderCotizacion() {
   // se podrá guardar hasta seleccionar cliente.
   const showClienteBanner = clienteId == null && cart.length > 0;
 
+  // Input del TC reutilizable: se renderiza inline (en la línea del cliente)
+  // cuando el TC es necesario, o dentro de "Opciones avanzadas" cuando no.
+  // Son ramas mutuamente excluyentes → se monta una sola vez.
+  const tcInput = (
+    <Input
+      type="number"
+      step="0.01"
+      min="0"
+      value={tc}
+      onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
+      className="h-8 text-xs text-right font-mono max-w-[180px]"
+      title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
+    />
+  );
+
   return (
     <>
       {showClienteBanner && (
@@ -71,7 +86,7 @@ export function HeaderCotizacion() {
         <UltimaCotHint clienteId={clienteId} />
       </div>
 
-      <div className="md:col-span-2">
+      <div className={tcNecesario ? '' : 'md:col-span-2'}>
         <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
           <Coins className="h-3 w-3" />
           Moneda
@@ -91,31 +106,38 @@ export function HeaderCotizacion() {
           className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
         >
           {avanzadasOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          Opciones avanzadas (TC / vigencia)
+          Opciones avanzadas (tabla TC / vigencia)
         </button>
       </div>
 
+      {/* TC inline cuando aplica (cot USD o líneas en otra divisa): vuelve a la
+          línea del cliente para que el valor del dólar esté siempre a la vista. */}
+      {tcNecesario && (
+        <div>
+          <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3" />
+            TC
+          </label>
+          {tcInput}
+        </div>
+      )}
+
       {avanzadasOpen && (
         <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
-          <div className={tcNecesario ? '' : 'opacity-60'}>
-            <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
-              <ArrowRightLeft className="h-3 w-3" />
-              TC
-              {!tcNecesario && (
+          {/* En cot MXN pura el TC no es necesario pero sigue accesible aquí. */}
+          {!tcNecesario && (
+            <div className="opacity-60">
+              <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
+                <ArrowRightLeft className="h-3 w-3" />
+                TC
                 <span className="text-muted-foreground normal-case tracking-normal font-normal text-[10px]">
                   (no requerido)
                 </span>
-              )}
-            </label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={tc}
-              onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
-              className="h-8 text-xs text-right font-mono max-w-[180px]"
-              title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
-            />
+              </label>
+              {tcInput}
+            </div>
+          )}
+          <div>
             <TCMiniTable />
           </div>
         </div>

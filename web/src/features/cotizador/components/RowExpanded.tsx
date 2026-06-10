@@ -52,15 +52,13 @@ export function RowExpanded({
               Moneda origen
             </label>
             <div
-              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center font-mono text-xs text-foreground"
+              className="h-8 px-2 rounded border border-slate-300 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-950/50 flex items-center justify-between gap-2 font-mono text-xs text-foreground"
               title={fuente}
             >
-              {item.productCurrency}
+              <span>{item.productCurrency}</span>
+              <span>${fmt(Number(item.cost))}</span>
             </div>
             <div className="text-[10px] text-muted-foreground mt-0.5">{fuente}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-              Costo origen: {item.productCurrency} ${Number(item.cost).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
             {item.productCurrency !== moneda && (
               <div className="text-[10px] text-amber-400 mt-0.5">
                 Se aplica TC automáticamente.
