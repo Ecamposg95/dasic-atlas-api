@@ -234,7 +234,7 @@ export function TotalsBar() {
   };
   const totalStat: DocStat = {
     label: <><Coins className="h-3 w-3 text-accent-glow" /> Total</>,
-    value: fmtMoney(total, moneda),
+    value: <span aria-live="polite">{fmtMoney(total, moneda)}</span>,
     emphasis: 'accent',
   };
   // Compacto: Total + Margen. Expandido: desglose completo.

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 export type DocStat = {
   label: ReactNode;
-  value: string;
+  value: ReactNode;
   emphasis?: 'big' | 'normal' | 'accent';
   valueClass?: string;
 };

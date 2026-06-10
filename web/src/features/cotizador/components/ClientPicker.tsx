@@ -108,10 +108,12 @@ export function ClientPicker() {
                 placeholder="Buscar cliente por nombre, RFC, contacto, correo…"
                 className="pl-8"
                 autoFocus={open}
+                aria-haspopup="listbox"
+                aria-expanded={open}
               />
             </div>
             {open && (
-              <div className="absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
+              <div role="listbox" className="absolute left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-card border border-border-strong rounded-md shadow-xl z-20">
                 {matches.length === 0 ? (
                   <div className="px-3 py-4 text-xs text-muted-foreground text-center">
                     Sin coincidencias
@@ -121,6 +123,8 @@ export function ClientPicker() {
                     <button
                       key={c.id}
                       type="button"
+                      role="option"
+                      aria-selected={c.id === cliente_id}
                       onClick={() => {
                         setCliente(c.id);
                         setContacto(null);
