@@ -174,6 +174,7 @@ export function AgregarFantasmaModal() {
 
   return (
     <div
+      data-overlay
       className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-950/80 flex items-center justify-center p-4"
       // El click fuera NO cierra: evita perder datos capturados por accidente.
       // El cierre solo ocurre vía Esc / X / Cancelar (con guarda) o Guardar.
