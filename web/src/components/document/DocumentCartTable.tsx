@@ -28,7 +28,7 @@ export function DocumentCartTable({
   rows: DocRowVM[];
   caps: DocRowCaps;
   cb: DocRowCallbacks;
-  expandedRenderer?: (uid: string) => ReactNode;
+  expandedRenderer?: (uid: string, variant?: 'row' | 'card') => ReactNode;
   emptyHint?: ReactNode;
   sortable?: boolean;
   onReorder?: (fromUid: string, toUid: string) => void;
@@ -145,7 +145,7 @@ export function DocumentCartTable({
       )}
       <div className="md:hidden space-y-2">
         {rows.map((vm) => (
-          <DocumentRowCard key={vm.uid} vm={vm} caps={caps} cb={cb} />
+          <DocumentRowCard key={vm.uid} vm={vm} caps={caps} cb={cb} expandedRenderer={expandedRenderer} />
         ))}
       </div>
     </>

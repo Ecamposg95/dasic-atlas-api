@@ -350,10 +350,12 @@ export function DocumentRowCard({
   vm,
   caps,
   cb,
+  expandedRenderer,
 }: {
   vm: DocRowVM;
   caps: DocRowCaps;
   cb: DocRowCallbacks;
+  expandedRenderer?: (uid: string, variant?: 'row' | 'card') => ReactNode;
 }) {
   const esFantasma = vm.tipo === 'producto_fantasma';
   const esServicio = vm.tipo === 'servicio_catalogo';
@@ -504,6 +506,23 @@ export function DocumentRowCard({
             Editar línea
           </button>
         </div>
+      )}
+
+      {expandedRenderer && (
+        <>
+          <button
+            type="button"
+            onClick={() => cb.onToggleExpand(vm.uid)}
+            aria-expanded={vm.expanded}
+            className="text-[11px] text-accent-glow flex items-center gap-1"
+          >
+            {vm.expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {vm.expanded ? 'Cerrar detalles' : 'Detalles'}
+          </button>
+          {vm.expanded && (
+            <div className="mt-2 border-t border-border pt-2">{expandedRenderer(vm.uid, 'card')}</div>
+          )}
+        </>
       )}
     </div>
   );
