@@ -5,6 +5,7 @@ export type DocStat = {
   value: ReactNode;
   emphasis?: 'big' | 'normal' | 'accent';
   valueClass?: string;
+  statKey?: string;
 };
 
 export function DocumentTotalsBar({
@@ -23,8 +24,8 @@ export function DocumentTotalsBar({
       {warnings}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3">
         <div className="flex items-center gap-4 md:gap-6 overflow-x-auto md:flex-wrap md:overflow-visible">
-          {stats.map((s) => (
-            <div className="flex flex-col shrink-0" key={s.label as string}>
+          {stats.map((s, i) => (
+            <div className="flex flex-col shrink-0" key={s.statKey ?? i}>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 {s.label}
               </span>

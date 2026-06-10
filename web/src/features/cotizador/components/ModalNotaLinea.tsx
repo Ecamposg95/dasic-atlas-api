@@ -57,6 +57,7 @@ export function ModalNotaLinea() {
           <button
             type="button"
             onClick={() => setOpen(false)}
+            aria-label="Cerrar"
             className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />

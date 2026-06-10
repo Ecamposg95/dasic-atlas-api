@@ -228,11 +228,13 @@ export function TotalsBar() {
   }
 
   const margenStat: DocStat = {
+    statKey: 'margen',
     label: <><TrendingUp className="h-3 w-3 text-emerald-400" /> Margen</>,
     value: `${fmtMoney(margen, moneda)} (${margenPct.toFixed(1)}%)`,
     valueClass: `font-mono text-sm font-semibold ${margen < 0 ? 'text-rose-400' : margenPct < 15 ? 'text-amber-300' : 'text-emerald-300'}`,
   };
   const totalStat: DocStat = {
+    statKey: 'total',
     label: <><Coins className="h-3 w-3 text-accent-glow" /> Total</>,
     value: <span aria-live="polite">{fmtMoney(total, moneda)}</span>,
     emphasis: 'accent',
@@ -240,10 +242,10 @@ export function TotalsBar() {
   // Compacto: Total + Margen. Expandido: desglose completo.
   const stats: DocStat[] = resumenOpen
     ? [
-        { label: <><Sigma className="h-3 w-3" /> Subtotal</>, value: fmtMoney(subtotal, moneda), emphasis: 'big' },
-        { label: <><Wallet className="h-3 w-3" /> Costo</>, value: fmtMoney(costo, moneda) },
+        { statKey: 'subtotal', label: <><Sigma className="h-3 w-3" /> Subtotal</>, value: fmtMoney(subtotal, moneda), emphasis: 'big' },
+        { statKey: 'costo', label: <><Wallet className="h-3 w-3" /> Costo</>, value: fmtMoney(costo, moneda) },
         margenStat,
-        { label: <><Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})</>, value: fmtMoney(iva, moneda) },
+        { statKey: 'iva', label: <><Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})</>, value: fmtMoney(iva, moneda) },
         totalStat,
       ]
     : [totalStat, margenStat];

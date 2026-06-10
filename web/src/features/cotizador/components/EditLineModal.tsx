@@ -164,7 +164,7 @@ export function EditLineModal() {
           <h3 id="editline-title" className="text-lg font-semibold flex items-center gap-2">
             <Pen className="h-4 w-4 text-accent-glow" /> Editar línea
           </h3>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -145,7 +145,7 @@ export function PlantillasModal() {
           <h3 id="plantillas-title" className="text-lg font-semibold flex items-center gap-2">
             <Folder className="h-4 w-4 text-accent-glow" /> Plantillas
           </h3>
-          <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar" className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>

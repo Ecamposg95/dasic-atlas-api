@@ -187,7 +187,7 @@ export function AgregarFantasmaModal() {
             <Ghost className="h-4 w-4 text-amber-400" />
             {reusingFantasma ? 'Reusar fantasma previo' : 'Agregar producto fantasma'}
           </h3>
-          <button type="button" onClick={requestClose} className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
+          <button type="button" onClick={requestClose} aria-label="Cerrar" className="text-muted-foreground hover:text-slate-900 dark:hover:text-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
