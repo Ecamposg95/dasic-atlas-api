@@ -43,10 +43,10 @@ export function HeaderCotizacion() {
   const hayLineasOtraMoneda = cart.some((i) => i.productCurrency && i.productCurrency !== moneda);
   const tcNecesario = moneda === 'USD' || hayLineasOtraMoneda;
 
-  // Densidad: TC (DOF) + mini tabla quedan tras "Opciones avanzadas". Se auto-
-  // expanden cuando el TC es necesario (cot USD o líneas en otra moneda).
+  // Densidad: cuando el TC NO aplica (cot MXN pura) el TC + su tabla quedan tras
+  // "Opciones avanzadas". Cuando SÍ aplica (USD / multidivisa) salen inline a la
+  // vista, en la línea del cliente y debajo — sin esconderse tras avanzadas.
   const [avanzadasOpen, setAvanzadasOpen] = useState(false);
-  useEffect(() => { if (tcNecesario) setAvanzadasOpen(true); }, [tcNecesario]);
 
   // Banner aviso: hay líneas en el cart pero todavía no hay cliente.
   // No bloquea — solo advierte para que el comercial sepa que la cot no
@@ -99,15 +99,19 @@ export function HeaderCotizacion() {
           <option value="MXN">MXN</option>
           <option value="USD">USD</option>
         </select>
-        <button
-          type="button"
-          onClick={() => setAvanzadasOpen((v) => !v)}
-          aria-expanded={avanzadasOpen}
-          className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
-        >
-          {avanzadasOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          Opciones avanzadas (tabla TC / vigencia)
-        </button>
+        {/* El toggle de avanzadas solo aparece en cot MXN pura. Cuando el TC
+            aplica, el TC + su tabla ya salen inline (no hay nada que esconder). */}
+        {!tcNecesario && (
+          <button
+            type="button"
+            onClick={() => setAvanzadasOpen((v) => !v)}
+            aria-expanded={avanzadasOpen}
+            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
+          >
+            {avanzadasOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            Opciones avanzadas (TC / vigencia)
+          </button>
+        )}
       </div>
 
       {/* TC inline cuando aplica (cot USD o líneas en otra divisa): vuelve a la
@@ -122,22 +126,28 @@ export function HeaderCotizacion() {
         </div>
       )}
 
-      {avanzadasOpen && (
+      {/* La tabla TC (DOF / MN→USD / USD→MN / tolerancia) también sale a la vista
+          cuando el TC aplica — no queda detrás de "Opciones avanzadas". */}
+      {tcNecesario && (
+        <div className="md:col-span-3">
+          <TCMiniTable />
+        </div>
+      )}
+
+      {/* Cot MXN pura: TC + tabla detrás de "Opciones avanzadas" (colapsado). */}
+      {!tcNecesario && avanzadasOpen && (
         <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
-          {/* En cot MXN pura el TC no es necesario pero sigue accesible aquí. */}
-          {!tcNecesario && (
-            <div className="opacity-60">
-              <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
-                <ArrowRightLeft className="h-3 w-3" />
-                TC
-                <span className="text-muted-foreground normal-case tracking-normal font-normal text-[10px]">
-                  (no requerido)
-                </span>
-              </label>
-              {tcInput}
-            </div>
-          )}
-          <div>
+          <div className="opacity-60">
+            <label className="text-[10px] uppercase tracking-[0.15em] font-bold text-muted-foreground mb-1 flex items-center gap-1.5">
+              <ArrowRightLeft className="h-3 w-3" />
+              TC
+              <span className="text-muted-foreground normal-case tracking-normal font-normal text-[10px]">
+                (no requerido)
+              </span>
+            </label>
+            {tcInput}
+          </div>
+          <div className="md:col-span-2">
             <TCMiniTable />
           </div>
         </div>
