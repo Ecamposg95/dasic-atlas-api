@@ -79,7 +79,7 @@ export function HeaderCotizacion() {
         <select
           value={moneda}
           onChange={(e) => setMoneda(e.target.value as 'MXN' | 'USD')}
-          className="w-full md:w-1/2 h-8 rounded-md border border-border-strong bg-card px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
+          className="w-full max-w-[200px] h-8 rounded-md border border-border-strong bg-card px-2 text-xs focus:border-accent-glow focus:ring-2 focus:ring-accent-glow/40 outline-none"
         >
           <option value="MXN">MXN</option>
           <option value="USD">USD</option>
@@ -113,7 +113,7 @@ export function HeaderCotizacion() {
               min="0"
               value={tc}
               onChange={(e) => setTc(parseFloat(e.target.value) || 0)}
-              className="h-8 text-xs text-right font-mono"
+              className="h-8 text-xs text-right font-mono max-w-[180px]"
               title="Tipo de cambio MXN/USD. Se respeta siempre, regardless de la moneda de la cotización — una cot MXN puede tener productos USD."
             />
             <TCMiniTable />
@@ -130,7 +130,7 @@ export function HeaderCotizacion() {
           type="date"
           value={fechaCreacion ?? ''}
           onChange={(e) => setFechaCreacion(e.target.value || null)}
-          className="h-8 text-xs"
+          className="h-8 text-xs max-w-[220px]"
         />
       </div>
 
@@ -143,7 +143,7 @@ export function HeaderCotizacion() {
           type="date"
           value={fechaVencimiento ?? ''}
           onChange={(e) => setFechaVencimiento(e.target.value || null)}
-          className="h-8 text-xs"
+          className="h-8 text-xs max-w-[220px]"
         />
       </div>
 

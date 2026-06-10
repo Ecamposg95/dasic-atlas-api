@@ -252,7 +252,7 @@ export function CotizadorPage() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="flex-1 p-4 max-w-7xl mx-auto w-full space-y-3">
+      <div className="flex-1 p-4 w-full space-y-3">
         <header className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5 text-accent-glow" />
