@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
-import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet } from 'lucide-react';
+import { Sigma, Percent, Coins, TrendingUp, AlertTriangle, Wallet, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DocumentTotalsBar } from '@/components/document/DocumentTotalsBar';
+import { DocumentTotalsBar, type DocStat } from '@/components/document/DocumentTotalsBar';
 import { toast } from '@/lib/toast';
 import { useCotizador } from '../store';
 import { useConfig } from '../hooks/useConfig';
 import { useGuardarCotizacion } from '../hooks/useCotizacion';
+import { agruparOCs } from '../lib/previewOC';
 import {
   computeCostos,
   computeTotals,
@@ -20,6 +21,9 @@ function fmtMoney(n: number, moneda: string) {
 
 export function TotalsBar() {
   const [err, setErr] = useState<string | null>(null);
+  // Densidad: por defecto la barra muestra solo Total + Margen + acciones.
+  // El usuario expande para ver el desglose completo + conteo de OCs.
+  const [resumenOpen, setResumenOpen] = useState(false);
   // Guard síncrono contra doble submit: `isPending` se actualiza async vía render,
   // así que dos clicks rápidos (primario + secundario) podrían disparar 2 POST
   // antes de que los botones se deshabiliten, creando una orden duplicada.
@@ -88,6 +92,16 @@ export function TotalsBar() {
       ? cart.reduce((acc, l) => acc + (Number(l.utilidad) || 0), 0) / cart.length
       : 0;
     return { criticas, bajas, avg };
+  }, [cart]);
+
+  // Proyección de OCs que nacerán al guardar. `agruparOCs(cart)` agrupa por
+  // proveedor sugerido; cada grupo con proveedor_id != null es 1 OC a 1
+  // proveedor real. El bucket "sin proveedor" (proveedor_id === null) genera
+  // OC pero no cuenta como proveedor identificado.
+  const ocInfo = useMemo(() => {
+    const grupos = agruparOCs(cart);
+    const proveedores = grupos.filter((g) => g.proveedor_id != null).length;
+    return { ocs: grupos.length, proveedores };
   }, [cart]);
 
   // Todas las confirmaciones previas al guardado. Devuelve false si el usuario
@@ -213,6 +227,27 @@ export function TotalsBar() {
     });
   }
 
+  const margenStat: DocStat = {
+    label: <><TrendingUp className="h-3 w-3 text-emerald-400" /> Margen</>,
+    value: `${fmtMoney(margen, moneda)} (${margenPct.toFixed(1)}%)`,
+    valueClass: `font-mono text-sm font-semibold ${margen < 0 ? 'text-rose-400' : margenPct < 15 ? 'text-amber-300' : 'text-emerald-300'}`,
+  };
+  const totalStat: DocStat = {
+    label: <><Coins className="h-3 w-3 text-accent-glow" /> Total</>,
+    value: fmtMoney(total, moneda),
+    emphasis: 'accent',
+  };
+  // Compacto: Total + Margen. Expandido: desglose completo.
+  const stats: DocStat[] = resumenOpen
+    ? [
+        { label: <><Sigma className="h-3 w-3" /> Subtotal</>, value: fmtMoney(subtotal, moneda), emphasis: 'big' },
+        { label: <><Wallet className="h-3 w-3" /> Costo</>, value: fmtMoney(costo, moneda) },
+        margenStat,
+        { label: <><Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})</>, value: fmtMoney(iva, moneda) },
+        totalStat,
+      ]
+    : [totalStat, margenStat];
+
   const avgClass =
     margenStats.avg < 5
       ? 'bg-rose-900/30 text-rose-300 border-rose-700/50'
@@ -268,23 +303,29 @@ export function TotalsBar() {
           )}
         </>
       }
-      stats={[
-        { label: <><Sigma className="h-3 w-3" /> Subtotal</>, value: fmtMoney(subtotal, moneda), emphasis: 'big' },
-        { label: <><Wallet className="h-3 w-3" /> Costo</>, value: fmtMoney(costo, moneda) },
-        {
-          label: <><TrendingUp className="h-3 w-3 text-emerald-400" /> Margen</>,
-          value: `${fmtMoney(margen, moneda)} (${margenPct.toFixed(1)}%)`,
-          valueClass: `font-mono text-sm font-semibold ${margen < 0 ? 'text-rose-400' : margenPct < 15 ? 'text-amber-300' : 'text-emerald-300'}`,
-        },
-        { label: <><Percent className="h-3 w-3" /> IVA ({config.iva_pct_label})</>, value: fmtMoney(iva, moneda) },
-        { label: <><Coins className="h-3 w-3 text-accent-glow" /> Total</>, value: fmtMoney(total, moneda), emphasis: 'accent' },
-      ]}
+      stats={stats}
       trailing={
-        cart.length > 0 ? (
-          <span className={`self-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}>
-            <TrendingUp className="h-2.5 w-2.5" /> Util prom. {margenStats.avg.toFixed(1)}%
-          </span>
-        ) : null
+        <div className="flex items-center gap-3 flex-wrap self-center">
+          <button
+            type="button"
+            onClick={() => setResumenOpen((v) => !v)}
+            aria-expanded={resumenOpen}
+            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            {resumenOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />} Resumen
+          </button>
+          {resumenOpen && (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground">{cart.length} línea(s) · {moneda} · TC {tc}</span>
+              <span className="text-xs text-muted-foreground">Creará {ocInfo.ocs} OC para {ocInfo.proveedores} proveedor(es)</span>
+            </div>
+          )}
+          {cart.length > 0 && (
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 ${avgClass}`}>
+              <TrendingUp className="h-2.5 w-2.5" /> Util prom. {margenStats.avg.toFixed(1)}%
+            </span>
+          )}
+        </div>
       }
       actions={
         <>
