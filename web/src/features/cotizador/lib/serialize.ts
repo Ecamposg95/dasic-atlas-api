@@ -8,9 +8,9 @@ export type CotizadorSnapshot = {
   contacto_id: number | null;
   moneda: 'MXN' | 'USD';
   tc: number;                               // DOF (TC oficial Banxico)
-  tc_mn_a_usd: number | null;               // override MN→USD, null = backend deriva DOF-tolerancia_tc
-  tc_usd_a_mn: number | null;               // override USD→MN, null = backend deriva DOF+tolerancia_tc
-  tolerancia_tc: number;                    // spread simétrico DOF±X (0.1-1.0)
+  tc_mn_a_usd: number | null;               // legacy; backend lo ignora (usa tasa de venta = DOF+tol)
+  tc_usd_a_mn: number | null;               // override tasa de venta, null = backend deriva DOF+tolerancia_tc
+  tolerancia_tc: number;                    // spread DOF+X aplicado a la tasa de venta (0.1-1.0)
   fecha_creacion: string | null;     // 'YYYY-MM-DD'
   fecha_vencimiento: string | null;
   observaciones: string;

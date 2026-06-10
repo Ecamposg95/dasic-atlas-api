@@ -1,16 +1,16 @@
 /**
  * calc.ts — Pricing utilities for the cotizador live preview.
  *
- * Modelo TC Excel V_03 (2026-05-23): hay 2 TCs efectivos por dirección,
- * más el DOF (oficial Banxico) que se usa solo para la OC al proveedor.
+ * Modelo TC unificado (2026-06-10): hay UNA sola tasa de venta = DOF + tolerancia,
+ * usada en ambas direcciones, más el DOF (oficial Banxico) que se usa solo para
+ * la OC al proveedor.
  *
- *   - tc_dof:       TC oficial Banxico (lo que llena el usuario)
- *   - tc_mn_a_usd:  TC efectivo cuando convertir MN → USD (default DOF - 1)
- *   - tc_usd_a_mn:  TC efectivo cuando convertir USD → MN (default DOF + 1)
+ *   - tc_dof:       TC oficial Banxico (lo que llena el usuario) → costo / OC
+ *   - tasa venta:   DOF + tolerancia → × para USD→MN, ÷ para MN→USD
  *
- * El spread de ±1 peso cubre riesgo cambiario entre cotización y cobro:
- * Dasic captura un margen implícito sobre el TC además de la utilidad
- * explícita por línea. Match exacto a `CotProveedor!F6` del Excel.
+ * (tc_mn_a_usd y tc_usd_a_mn del TcSet quedan iguales a la tasa de venta.)
+ * El spread cubre riesgo cambiario entre cotización y cobro: Dasic captura un
+ * margen implícito sobre el TC además de la utilidad explícita por línea.
  *
  * Pure functions que reflejan el backend's `_convert_cost_to_quote_currency`.
  */
@@ -32,8 +32,8 @@ export type TcSet = {
  *
  * Reglas:
  *   - Mismo origen y destino → sin conversión
- *   - USD → MXN: costo * tc_usd_a_mn (default DOF + 1)
- *   - MXN → USD: costo / tc_mn_a_usd (default DOF - 1; guarded vs ≤ 0)
+ *   - USD → MXN: costo * tc_usd_a_mn (tasa de venta = DOF + tol)
+ *   - MXN → USD: costo / tc_mn_a_usd (misma tasa de venta = DOF + tol; guarded vs ≤ 0)
  */
 export function convertCost(
   costo: number,
@@ -205,14 +205,16 @@ export function computeTotalsPorMoneda(cart: CartItem[]): TotalsPorMoneda {
 }
 
 /**
- * Resuelve los 2 TCs direccionales a partir del DOF si no vienen seteados.
+ * Resuelve la TASA DE VENTA única a partir del DOF (modelo unificado 2026-06-10).
  * Mismo comportamiento que el helper backend `_resolve_directional_tcs`.
- * `tolerancia` define el spread simétrico (DOF±tolerancia); default 1.0
- * preserva el comportamiento legacy.
+ * Hay UNA sola tasa de venta = DOF + tolerancia, usada en ambas direcciones
+ * (× para USD→MN, ÷ para MN→USD); por eso `tc_mn_a_usd` y `tc_usd_a_mn` del
+ * resultado son iguales. El parámetro `_tc_mn_a_usd` se ignora (el override que
+ * manda es el de la dirección de venta). `tolerancia` define el spread.
  */
 export function resolveDirectionalTcs(
   tc_dof: number,
-  tc_mn_a_usd: number | null,
+  _tc_mn_a_usd: number | null,
   tc_usd_a_mn: number | null,
   tolerancia: number = 1,
 ): TcSet {
@@ -226,12 +228,15 @@ export function resolveDirectionalTcs(
   const hi = tc_dof * 1.5;
   const trust = (v: number | null): v is number =>
     v != null && v >= lo && v <= hi;
+  // Modelo unificado (2026-06-10): una sola TASA DE VENTA = DOF + tolerancia,
+  // usada en AMBAS direcciones (× para USD→MN, ÷ para MN→USD). El cliente pidió
+  // que MN→USD sea el inverso EXACTO de USD→MN; antes MN→USD usaba DOF − tol.
+  // Se honra un override plausible de tc_usd_a_mn; tc_mn_a_usd lo espeja para
+  // garantizar la invariante (nunca un divisor distinto al multiplicador).
+  const tcVenta = trust(tc_usd_a_mn) ? tc_usd_a_mn : tc_dof + t;
   return {
     tc_dof,
-    // Derivado pisado a DOF·0.5: nunca un divisor cercano a 0 en MXN→USD.
-    tc_mn_a_usd: trust(tc_mn_a_usd)
-      ? tc_mn_a_usd
-      : Math.max(tc_dof - t, tc_dof * 0.5),
-    tc_usd_a_mn: trust(tc_usd_a_mn) ? tc_usd_a_mn : tc_dof + t,
+    tc_mn_a_usd: tcVenta,
+    tc_usd_a_mn: tcVenta,
   };
 }

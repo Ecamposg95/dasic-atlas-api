@@ -171,19 +171,18 @@ def _resolve_directional_tcs(
     tc_usd_a_mn: Decimal | None,
     tolerancia: Decimal = Decimal("1.0"),
 ) -> tuple[Decimal, Decimal]:
-    """Resuelve los 2 TCs direccionales (modelo Excel V_03, 2026-05-23).
+    """Resuelve la TASA DE VENTA única (modelo unificado, 2026-06-10).
 
-    - Si el payload manda overrides PLAUSIBLES, se respetan.
-    - Si vienen None o fuera de banda, se derivan de tipo_cambio (DOF):
-      MN→USD = DOF-T, USD→MN = DOF+T, donde T es la tolerancia (default 1.0;
-      configurable 0.1-1.0 por cotización). El spread cubre riesgo cambiario
-      entre cotización y cobro.
-    - Banda de plausibilidad [DOF·0.5, DOF·1.5]: un TC direccional real jamás
-      se aleja >50% del DOF. Esto descarta el sentinela legacy `0.000001` (y
-      cualquier valor corrupto persistido) en vez de confiar en él, lo que
-      antes producía `costo / 0.000001` = ×1,000,000 en MXN→USD.
-    - El derivado MN→USD se pisa a GREATEST(DOF-T, DOF·0.5): nunca un divisor
-      cercano a 0, así la división MXN→USD no puede explotar.
+    - Una sola tasa de venta = DOF + tolerancia se usa en AMBAS direcciones:
+      USD→MN multiplica por ella, MN→USD divide por ella (inverso exacto). El
+      cliente pidió que MN→USD sea el inverso de USD→MN; antes MN→USD usaba
+      DOF − tolerancia. T es la tolerancia (default 1.0; configurable 0.1-1.0).
+    - Si el payload manda un override PLAUSIBLE de tc_usd_a_mn, se respeta y
+      tc_mn_a_usd lo espeja. Si viene None o fuera de banda, se deriva DOF + T.
+    - Banda de plausibilidad [DOF·0.5, DOF·1.5]: descarta el sentinela legacy
+      `0.000001` (y cualquier valor corrupto persistido) en vez de confiar en él,
+      lo que antes producía `costo / 0.000001` = ×1,000,000 en MXN→USD.
+    - Devuelve (tc_mn_a_usd_eff, tc_usd_a_mn_eff) con AMBOS = tasa de venta.
     """
     dof = Decimal(tipo_cambio)
     t = Decimal(tolerancia)
@@ -192,15 +191,13 @@ def _resolve_directional_tcs(
     def _trust(v: Decimal | None) -> bool:
         return v is not None and lo <= Decimal(v) <= hi
 
-    if _trust(tc_mn_a_usd):
-        tc_mn_a_usd_eff = Decimal(tc_mn_a_usd)
-    else:
-        tc_mn_a_usd_eff = max(dof - t, dof * Decimal("0.5"))
-    if _trust(tc_usd_a_mn):
-        tc_usd_a_mn_eff = Decimal(tc_usd_a_mn)
-    else:
-        tc_usd_a_mn_eff = dof + t
-    return tc_mn_a_usd_eff, tc_usd_a_mn_eff
+    # Modelo unificado (2026-06-10): una sola TASA DE VENTA = DOF + tolerancia,
+    # usada en AMBAS direcciones (× para USD→MN, ÷ para MN→USD). MN→USD es el
+    # inverso EXACTO de USD→MN (antes usaba DOF − tolerancia). Se honra un override
+    # plausible de tc_usd_a_mn; tc_mn_a_usd lo espeja. Espejo de
+    # `resolveDirectionalTcs` (frontend).
+    tc_venta = Decimal(tc_usd_a_mn) if _trust(tc_usd_a_mn) else dof + t
+    return tc_venta, tc_venta
 
 
 def _resolve_exchange_rate(moneda: str, tipo_cambio: Decimal | None) -> Decimal:

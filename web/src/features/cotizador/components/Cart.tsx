@@ -43,10 +43,13 @@ export function Cart() {
       qty: item.qty,
       qtyMax: null,
       costOrigen: Number(item.cost),
-      // Costo mostrado en la fila = costo convertido al TC de VENTA (DOF + tolerancia),
-      // la misma base que usa lineImporte. Así costo×(1+util) reconcilia con el IMPORTE.
-      // El costo OC real al proveedor (DOF puro) vive en el detalle expandido (RowExpanded).
-      costoOc: convertCost(Number(item.cost), item.productCurrency, moneda, tcs),
+      // PRECIO UNITARIO mostrado en la columna COSTO = costo convertido al TC de
+      // VENTA (DOF + tolerancia) × (1 + util). El cliente lee esta columna como el
+      // PU; el IMPORTE es este PU × cantidad. El costo OC real al proveedor (DOF
+      // puro) vive en el detalle expandido (RowExpanded).
+      costoOc:
+        convertCost(Number(item.cost), item.productCurrency, moneda, tcs) *
+        (1 + Number(item.utilidad) / 100),
       utilidad: item.utilidad,
       descuento: item.descuento,
       entrega_min: item.entrega_min,

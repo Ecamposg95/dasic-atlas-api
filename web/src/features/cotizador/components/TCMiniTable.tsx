@@ -1,6 +1,6 @@
 // web/src/features/cotizador/components/TCMiniTable.tsx
 import { useEffect } from 'react';
-import { RefreshCw, ArrowDown, ArrowUp } from 'lucide-react';
+import { RefreshCw, ArrowUp } from 'lucide-react';
 import { useCotizador } from '../store';
 import { resolveDirectionalTcs } from '../lib/calc';
 import { useFX, useFXRefresh } from '../hooks/useFX';
@@ -33,13 +33,12 @@ export function TCMiniTable() {
   // para convertir líneas. Si los direccionales no se override-aron en
   // la cot, salen DOF±tolerancia_tc.
   const tcs = resolveDirectionalTcs(tc, tcMnAUsd, tcUsdAMn, toleranciaTc);
-  const deltaMnAUsd = tcs.tc_mn_a_usd - tc;   // = −tolerancia_tc
-  const deltaUsdAMn = tcs.tc_usd_a_mn - tc;   // = +tolerancia_tc
+  // Modelo unificado: una sola tasa de venta = DOF + tolerancia (× a MXN, ÷ a USD).
+  const deltaVenta = tcs.tc_usd_a_mn - tc;   // = +tolerancia_tc
 
-  // Columna "activa" = la que se aplica al cart actual.
+  // La tasa de venta "aplica" cuando hay líneas en divisa distinta a la cotización.
   const hayLineasOtraMoneda = cart.some((i) => i.productCurrency && i.productCurrency !== moneda);
-  const aplicaMnAUsd = moneda === 'USD' && cart.some((i) => i.productCurrency === 'MXN');
-  const aplicaUsdAMn = moneda === 'MXN' && cart.some((i) => i.productCurrency === 'USD');
+  const aplicaVenta = hayLineasOtraMoneda;
   const tcNecesario = moneda === 'USD' || hayLineasOtraMoneda;
 
   const tcInvalido = !Number.isFinite(tc) || tc <= 0;
@@ -116,38 +115,22 @@ export function TCMiniTable() {
       </div>
 
       <div
-        className="grid grid-cols-3 gap-1"
-        title={`Spread ±${toleranciaTc} peso${toleranciaTc === 1 ? '' : 's'}. Aplica solo cuando una línea está en divisa distinta a la cotización. Protege a Dasic de variación cambiaria. La OC al proveedor usa el DOF puro (sin spread).`}
+        className="grid grid-cols-2 gap-1"
+        title={`Una sola tasa de venta = DOF + ${toleranciaTc} peso${toleranciaTc === 1 ? '' : 's'}, usada en ambas direcciones (× para USD→MN, ÷ para MN→USD). Aplica solo cuando una línea está en divisa distinta a la cotización. Protege a Dasic de variación cambiaria. La OC al proveedor usa el DOF puro (sin spread).`}
       >
-        {/* DOF */}
+        {/* DOF — costo / OC al proveedor */}
         <div className={`rounded border px-1.5 py-1 ${idleColClass}`}>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">DOF · Banxico</div>
           <div className="font-mono text-[11px] tabular-nums">
             {tcInvalido ? '—' : `$${fmt4(tc)}`}
           </div>
         </div>
-        {/* MN → USD */}
+        {/* TC VENTA = DOF + tolerancia — usado en ambas direcciones */}
         <div
-          className={`rounded border px-1.5 py-1 ${aplicaMnAUsd ? activeColClass : idleColClass}`}
+          className={`rounded border px-1.5 py-1 ${aplicaVenta ? activeColClass : idleColClass}`}
+          title="× para USD→MN · ÷ para MN→USD"
         >
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">MN → USD</div>
-          <div className="flex items-center gap-1">
-            <span className="font-mono text-[11px] tabular-nums">
-              {tcInvalido ? '—' : `$${fmt4(tcs.tc_mn_a_usd)}`}
-            </span>
-            {!tcInvalido && (
-              <span className={deltaBadge}>
-                <ArrowDown className="h-2 w-2" />
-                {fmtDelta(deltaMnAUsd)}
-              </span>
-            )}
-          </div>
-        </div>
-        {/* USD → MN */}
-        <div
-          className={`rounded border px-1.5 py-1 ${aplicaUsdAMn ? activeColClass : idleColClass}`}
-        >
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">USD → MN</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">TC venta · × MXN ÷ USD</div>
           <div className="flex items-center gap-1">
             <span className="font-mono text-[11px] tabular-nums">
               {tcInvalido ? '—' : `$${fmt4(tcs.tc_usd_a_mn)}`}
@@ -155,7 +138,7 @@ export function TCMiniTable() {
             {!tcInvalido && (
               <span className={deltaBadge}>
                 <ArrowUp className="h-2 w-2" />
-                {fmtDelta(deltaUsdAMn)}
+                {fmtDelta(deltaVenta)}
               </span>
             )}
           </div>
