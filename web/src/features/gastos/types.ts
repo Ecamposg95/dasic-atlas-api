@@ -25,3 +25,17 @@ export type GastoUpdate = {
   monto?: number;
   moneda?: string;
 };
+
+export type GastosPage = {
+  page: number;
+  page_size: number;
+  total: number;
+  items: Gasto[];
+};
+
+export type GastosFiltros = {
+  q?: string;
+  categoria?: string;
+  fechaDesde?: string;
+  fechaHasta?: string;
+};

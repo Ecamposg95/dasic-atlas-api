@@ -2,9 +2,9 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, or_, func
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, date
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
@@ -44,13 +44,51 @@ class GastoResponse(BaseModel):
 
 # --- ENDPOINTS ---
 
-@router.get("/", response_model=List[GastoResponse], dependencies=[Depends(allow_admin_asistente)])
-def listar_gastos(limit: int = 200, db: Session = Depends(get_db)):
-    gastos = db.query(models.Gasto).order_by(desc(models.Gasto.fecha)).limit(limit).all()
-    out = []
+@router.get("/", dependencies=[Depends(allow_admin_asistente)])
+def listar_gastos(
+    page: int = 1,
+    page_size: int = 50,
+    q: Optional[str] = None,
+    categoria: Optional[str] = None,
+    fecha_desde: Optional[date] = None,
+    fecha_hasta: Optional[date] = None,
+    db: Session = Depends(get_db),
+):
+    if page < 1 or page_size < 1 or page_size > 200:
+        raise HTTPException(400, "page o page_size inválido")
+
+    offset = (page - 1) * page_size
+
+    query = db.query(models.Gasto)
+
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                models.Gasto.descripcion.ilike(like),
+                models.Gasto.categoria.ilike(like),
+            )
+        )
+    if categoria:
+        query = query.filter(models.Gasto.categoria == categoria)
+    if fecha_desde:
+        query = query.filter(func.date(models.Gasto.fecha) >= fecha_desde)
+    if fecha_hasta:
+        query = query.filter(func.date(models.Gasto.fecha) <= fecha_hasta)
+
+    total = query.count()
+
+    gastos = (
+        query.order_by(desc(models.Gasto.fecha))
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    items = []
     for g in gastos:
         nombre_user = g.usuario.nombre if g.usuario else "Sistema"
-        out.append(GastoResponse(
+        items.append(GastoResponse(
             id=g.id,
             categoria=g.categoria,
             descripcion=g.descripcion,
@@ -60,7 +98,18 @@ def listar_gastos(limit: int = 200, db: Session = Depends(get_db)):
             usuario=nombre_user,
             usuario_id=g.usuario_id,
         ))
-    return out
+    return {"page": page, "page_size": page_size, "total": total, "items": items}
+
+
+@router.get("/categorias", dependencies=[Depends(allow_admin_asistente)])
+def listar_categorias(db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.Gasto.categoria)
+        .distinct()
+        .order_by(models.Gasto.categoria)
+        .all()
+    )
+    return [r[0] for r in rows if r[0]]
 
 
 @router.post("/", response_model=GastoResponse, dependencies=[Depends(allow_admin_asistente)])

@@ -1,12 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { Receipt, Pencil, Trash2 } from 'lucide-react';
-import { useGastos, useCrearGasto, useEditarGasto, useEliminarGasto } from '../hooks/useGastos';
+import {
+  useGastos,
+  useCategoriasGasto,
+  useCrearGasto,
+  useEditarGasto,
+  useEliminarGasto,
+  GASTOS_PAGE_SIZE,
+} from '../hooks/useGastos';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 import {
   DataTable,
   DataTableHead,
@@ -118,41 +126,44 @@ export function GastosPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<Gasto | null>(null);
 
-  const { data: gastos = [], isLoading } = useGastos();
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaDebounced(busqueda), 300);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
+  const [page, setPage] = useState(1);
+
+  const filtros = useMemo(
+    () => ({
+      q: busquedaDebounced,
+      categoria: filtroCategoria,
+      fechaDesde,
+      fechaHasta,
+    }),
+    [busquedaDebounced, filtroCategoria, fechaDesde, fechaHasta],
+  );
+
+  // Resetear a la primera página cuando cambian filtros/búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [busquedaDebounced, filtroCategoria, fechaDesde, fechaHasta]);
+
+  const { data, isLoading, isPlaceholderData } = useGastos(page, filtros);
+  const gastos = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / GASTOS_PAGE_SIZE));
+
+  const { data: categorias = [] } = useCategoriasGasto();
+
   const crear = useCrearGasto();
   const editar = useEditarGasto();
   const eliminar = useEliminarGasto();
 
-  // Categorías únicas derivadas de la lista
-  const categorias = useMemo(
-    () => Array.from(new Set(gastos.map((g) => g.categoria))).sort(),
-    [gastos],
-  );
+  // La lista ya viene filtrada y paginada del servidor
+  const filtered = gastos;
 
-  // Filtros
-  const filtered = useMemo(() => {
-    let list = gastos;
-    if (busqueda.trim()) {
-      const q = busqueda.toLowerCase();
-      list = list.filter(
-        (g) =>
-          g.descripcion?.toLowerCase().includes(q) ||
-          g.categoria.toLowerCase().includes(q),
-      );
-    }
-    if (filtroCategoria) {
-      list = list.filter((g) => g.categoria === filtroCategoria);
-    }
-    if (fechaDesde) {
-      list = list.filter((g) => g.fecha.slice(0, 10) >= fechaDesde);
-    }
-    if (fechaHasta) {
-      list = list.filter((g) => g.fecha.slice(0, 10) <= fechaHasta);
-    }
-    return list;
-  }, [gastos, busqueda, filtroCategoria, fechaDesde, fechaHasta]);
-
-  // Total de los gastos visibles (solo MXN para simplificar; USD se muestra aparte)
+  // Total de los gastos visibles en esta página (solo MXN/USD por separado)
   const totalMXN = useMemo(
     () => filtered.filter((g) => g.moneda === 'MXN').reduce((acc, g) => acc + Number(g.monto), 0),
     [filtered],
@@ -229,7 +240,7 @@ export function GastosPage() {
           <h1 className="text-2xl font-semibold">Gastos</h1>
           {!isLoading && (
             <span className="text-slate-500 text-sm">
-              ({filtered.length} {filtered.length === 1 ? 'gasto' : 'gastos'})
+              ({total} {total === 1 ? 'gasto' : 'gastos'})
             </span>
           )}
         </div>
@@ -297,7 +308,7 @@ export function GastosPage() {
             <DataTableEmpty colSpan={6}>
               <div className="flex flex-col items-center gap-2 text-slate-500">
                 <Receipt className="h-10 w-10 opacity-30" />
-                <p>{gastos.length === 0 ? 'No hay gastos registrados' : 'Sin resultados para estos filtros'}</p>
+                <p>{total === 0 && !busquedaDebounced && !filtroCategoria && !fechaDesde && !fechaHasta ? 'No hay gastos registrados' : 'Sin resultados para estos filtros'}</p>
               </div>
             </DataTableEmpty>
           ) : (
@@ -314,12 +325,20 @@ export function GastosPage() {
         </DataTableBody>
       </DataTable>
 
-      {/* Total al pie */}
+      {/* Paginación */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        isLoading={isPlaceholderData}
+      />
+
+      {/* Total al pie (de la página actual) */}
       {filtered.length > 0 && (
         <footer className="flex justify-end gap-6 text-sm border-t border-border pt-4">
           {totalMXN > 0 && (
             <div className="text-right">
-              <span className="text-muted-foreground text-xs block">Total MXN ({filtered.filter((g) => g.moneda === 'MXN').length} gastos)</span>
+              <span className="text-muted-foreground text-xs block">Total MXN en esta página ({filtered.filter((g) => g.moneda === 'MXN').length} gastos)</span>
               <span className="font-semibold text-foreground">
                 MXN ${totalMXN.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
@@ -327,7 +346,7 @@ export function GastosPage() {
           )}
           {totalUSD > 0 && (
             <div className="text-right">
-              <span className="text-muted-foreground text-xs block">Total USD ({filtered.filter((g) => g.moneda === 'USD').length} gastos)</span>
+              <span className="text-muted-foreground text-xs block">Total USD en esta página ({filtered.filter((g) => g.moneda === 'USD').length} gastos)</span>
               <span className="font-semibold text-foreground">
                 USD ${totalUSD.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
