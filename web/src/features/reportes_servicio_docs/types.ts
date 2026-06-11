@@ -28,5 +28,6 @@ export type ReporteServicioDocCreate = {
 export type ReportesServicioDocsResponse = {
   page: number;
   page_size: number;
+  total: number;
   items: ReporteServicioDocItem[];
 };

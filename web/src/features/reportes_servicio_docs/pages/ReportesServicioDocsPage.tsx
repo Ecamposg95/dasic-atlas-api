@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { ClipboardCheck, ChevronLeft, ChevronRight, CheckSquare, Download } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ClipboardCheck, CheckSquare, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Modal, ModalFooter } from '@/components/ui/modal';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import { Pagination } from '@/components/ui/pagination';
 import {
   DataTable,
   DataTableHead,
@@ -20,6 +22,16 @@ import type { ReporteServicioDocItem } from '../types';
 import { GenerarReporteServicioModal } from '../components/GenerarReporteServicioModal';
 
 const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 function fmtFecha(iso: string | null): string {
   if (!iso) return '—';
@@ -176,13 +188,25 @@ function ReporteRow({ item, onRecepcion }: RowProps) {
 
 export function ReportesServicioDocsPage() {
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [recepcionTarget, setRecepcionTarget] = useState<{ id: number; folio: string } | null>(null);
 
-  const { data, isLoading, isPlaceholderData } = useReportesServicioDocs(page);
+  const searchDebounced = useDebounced(search);
+
+  // Reset page when search changes
+  const prevQ = useRef(searchDebounced);
+  useEffect(() => {
+    if (prevQ.current !== searchDebounced) {
+      setPage(1);
+      prevQ.current = searchDebounced;
+    }
+  }, [searchDebounced]);
+
+  const { data, isLoading, isPlaceholderData } = useReportesServicioDocs(page, searchDebounced);
 
   const items = data?.items ?? [];
-  const hasMore = items.length === PAGE_SIZE;
-  const hasPrev = page > 1;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -192,8 +216,7 @@ export function ReportesServicioDocsPage() {
           <h1 className="text-2xl font-semibold">Reportes de servicio</h1>
           {!isLoading && (
             <span className="text-slate-500 text-sm">
-              ({items.length} {items.length === 1 ? 'reporte' : 'reportes'}
-              {page > 1 ? ` en página ${page}` : ''})
+              ({total} {total === 1 ? 'reporte' : 'reportes'})
             </span>
           )}
         </div>
@@ -205,6 +228,12 @@ export function ReportesServicioDocsPage() {
           + Nuevo reporte
         </Button>
       </header>
+
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por folio, cliente o técnico…"
+      />
 
       <DataTable>
         <DataTableHead>
@@ -225,11 +254,17 @@ export function ReportesServicioDocsPage() {
             <DataTableEmpty colSpan={7}>
               <div className="flex flex-col items-center gap-2 text-slate-500">
                 <ClipboardCheck className="h-10 w-10 opacity-30" />
-                <p>No hay reportes de servicio registrados</p>
-                <p className="text-xs">
-                  Los reportes se generan desde el Historial del Cotizador, en
-                  cotizaciones con líneas de servicio.
-                </p>
+                {searchDebounced ? (
+                  <p>Sin coincidencias con la búsqueda</p>
+                ) : (
+                  <>
+                    <p>No hay reportes de servicio registrados</p>
+                    <p className="text-xs">
+                      Los reportes se generan desde el Historial del Cotizador, en
+                      cotizaciones con líneas de servicio.
+                    </p>
+                  </>
+                )}
               </div>
             </DataTableEmpty>
           ) : (
@@ -244,36 +279,12 @@ export function ReportesServicioDocsPage() {
         </DataTableBody>
       </DataTable>
 
-      {(hasPrev || hasMore) && (
-        <div
-          className={`flex items-center justify-between text-sm text-muted-foreground ${
-            isPlaceholderData ? 'opacity-50' : ''
-          }`}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasPrev || isPlaceholderData}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Anterior
-          </Button>
-          <span>
-            Página {page}
-            {hasMore ? ' — hay más registros' : ''}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasMore || isPlaceholderData}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Siguiente
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        isLoading={isPlaceholderData}
+      />
 
       {recepcionTarget && (
         <RecepcionModal

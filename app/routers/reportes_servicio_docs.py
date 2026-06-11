@@ -88,6 +88,7 @@ def _serializar(r: models.ReporteServicio) -> dict:
 @router.get("/", dependencies=[Depends(allow_all_staff)])
 def listar(
     orden_venta_id: Optional[int] = None,
+    q: Optional[str] = None,
     page: int = 1,
     page_size: int = 100,
     db: Session = Depends(get_db),
@@ -97,6 +98,22 @@ def listar(
     query = db.query(models.ReporteServicio)
     if orden_venta_id:
         query = query.filter(models.ReporteServicio.orden_venta_id == orden_venta_id)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        # Busca por folio del reporte, nombre del técnico o nombre de empresa
+        # del cliente (vía la orden de venta origen).
+        query = (
+            query
+            .outerjoin(models.ReporteServicio.orden_venta)
+            .outerjoin(models.OrdenVenta.cliente)
+            .filter(
+                models.ReporteServicio.folio.ilike(like)
+                | models.ReporteServicio.tecnico_nombre.ilike(like)
+                | models.Cliente.nombre_empresa.ilike(like)
+            )
+            .distinct()
+        )
+    total = query.count()
     rows = (
         query
         .order_by(desc(models.ReporteServicio.creado_en))
@@ -107,6 +124,7 @@ def listar(
     return {
         "page": page,
         "page_size": page_size,
+        "total": total,
         "items": [_serializar(r) for r in rows],
     }
 

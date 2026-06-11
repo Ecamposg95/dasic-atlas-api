@@ -6,12 +6,16 @@ import type {
   ReportesServicioDocsResponse,
 } from '../types';
 
-export function useReportesServicioDocs(page: number) {
+export function useReportesServicioDocs(page: number, q = '') {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('page_size', '50');
+  if (q.trim()) params.set('q', q.trim());
   return useQuery({
-    queryKey: ['reportes-servicio-docs', page],
+    queryKey: ['reportes-servicio-docs', page, q.trim()],
     queryFn: () =>
       api.get<ReportesServicioDocsResponse>(
-        `/api/reportes-servicio-docs/?page=${page}&page_size=50`,
+        `/api/reportes-servicio-docs/?${params.toString()}`,
       ),
     placeholderData: keepPreviousData,
   });
