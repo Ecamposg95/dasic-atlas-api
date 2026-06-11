@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Eye, Printer, Package, DollarSign, ShoppingCart,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,16 +30,7 @@ const ESTATUS_OPTS: { value: EstatusOC | ''; label: string }[] = [
 ];
 
 function badgeEstatus(e: EstatusOC) {
-  const map: Record<EstatusOC, 'default' | 'amber' | 'cyan' | 'emerald' | 'rose' | 'slate'> = {
-    borrador: 'slate',
-    enviada: 'amber',
-    confirmada: 'cyan',
-    recibido: 'emerald',
-    recibida_parcial: 'amber',
-    pagado: 'emerald',
-    cancelada: 'rose',
-  };
-  return <Badge variant={map[e] ?? 'default'}>{e}</Badge>;
+  return <StatusBadge status={e} />;
 }
 
 function fmtMoney(n: number, m: string) {
