@@ -35,6 +35,7 @@ export type PrecioProveedorCreate = {
 export type PreciosListResponse = {
   page: number;
   page_size: number;
+  total: number;
   items: PrecioProveedor[];
 };
 

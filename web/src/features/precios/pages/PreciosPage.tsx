@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { Tags, Trash2, BarChart2 } from 'lucide-react';
-import { usePrecios, useComparativaPrecios, useCrearPrecio, useEliminarPrecio } from '../hooks/usePrecios';
+import { usePrecios, useComparativaPrecios, useCrearPrecio, useEliminarPrecio, PRECIOS_PAGE_SIZE } from '../hooks/usePrecios';
+import { Pagination } from '@/components/ui/pagination';
 import { useProductos } from '@/features/inventario/hooks/useProductos';
 import { useProveedores } from '@/features/inventario/hooks/useProveedores';
 import { toast } from '@/lib/toast';
@@ -140,6 +141,8 @@ export function PreciosPage() {
   const productos = productosData ?? [];
   const proveedores = proveedoresData ?? [];
 
+  const [page, setPage] = useState(1);
+
   const filtros = useMemo(
     () => ({
       producto_id: filtroProducto ? Number(filtroProducto) : null,
@@ -148,11 +151,18 @@ export function PreciosPage() {
     [filtroProducto, filtroProveedor],
   );
 
-  const { data: preciosData, isLoading } = usePrecios(filtros);
+  // Resetear a la primera página cuando cambian los filtros
+  useEffect(() => {
+    setPage(1);
+  }, [filtroProducto, filtroProveedor]);
+
+  const { data: preciosData, isLoading, isPlaceholderData } = usePrecios(page, filtros);
   const crear = useCrearPrecio();
   const eliminar = useEliminarPrecio();
 
   const items = preciosData?.items ?? [];
+  const total = preciosData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PRECIOS_PAGE_SIZE));
 
   function handleSave(data: PrecioProveedorCreate) {
     crear.mutate(data, {
@@ -194,7 +204,7 @@ export function PreciosPage() {
           </h1>
           {!isLoading && (
             <span className="text-muted-foreground text-sm">
-              ({items.length} {items.length === 1 ? 'precio' : 'precios'})
+              ({total} {total === 1 ? 'precio' : 'precios'})
             </span>
           )}
         </div>
@@ -315,6 +325,14 @@ export function PreciosPage() {
               )}
             </DataTableBody>
           </DataTable>
+
+          {/* Paginación */}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            isLoading={isPlaceholderData}
+          />
         </div>
 
         {/* Panel comparativa lateral */}

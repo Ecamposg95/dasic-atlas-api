@@ -23,7 +23,7 @@ def listar_precios(
     proveedor_id: Optional[int] = None,
     q: Optional[str] = None,
     page: int = 1,
-    page_size: int = 100,
+    page_size: int = 50,
     db: Session = Depends(get_db),
 ):
     if page < 1 or page_size < 1 or page_size > 500:
@@ -41,6 +41,7 @@ def listar_precios(
                 models.PrecioProveedor.sku_libre.ilike(like),
             )
         )
+    total = query.count()
     rows = (
         query
         .order_by(desc(models.PrecioProveedor.creado_en))
@@ -51,6 +52,7 @@ def listar_precios(
     return {
         "page": page,
         "page_size": page_size,
+        "total": total,
         "items": [
             {
                 "id": p.id,

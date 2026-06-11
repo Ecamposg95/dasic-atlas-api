@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
   PreciosListResponse,
@@ -6,19 +6,25 @@ import type {
   ComparativaResponse,
 } from '../types';
 
+export const PRECIOS_PAGE_SIZE = 50;
+
 interface PreciosFiltros {
   producto_id?: number | null;
   proveedor_id?: number | null;
 }
 
-export function usePrecios(filtros: PreciosFiltros = {}) {
-  const qs = new URLSearchParams({ page_size: '200' });
+export function usePrecios(page: number, filtros: PreciosFiltros = {}) {
+  const qs = new URLSearchParams({
+    page: String(page),
+    page_size: String(PRECIOS_PAGE_SIZE),
+  });
   if (filtros.producto_id) qs.set('producto_id', String(filtros.producto_id));
   if (filtros.proveedor_id) qs.set('proveedor_id', String(filtros.proveedor_id));
 
   return useQuery<PreciosListResponse>({
-    queryKey: ['precios', filtros],
+    queryKey: ['precios', page, filtros],
     queryFn: () => api.get<PreciosListResponse>(`/api/precios/?${qs.toString()}`),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }
