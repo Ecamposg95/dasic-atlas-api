@@ -20,6 +20,8 @@ const STATUS_TONE: Record<string, StatusTone> = {
   recibida: 'success', recibida_parcial: 'warning', en_oc: 'info', recibido: 'success',
   promovido: 'success', descartado: 'danger',
   vigente: 'success', vencida: 'danger', por_vencer: 'warning',
+  // Estatus orden de compra
+  enviada: 'warning', confirmada: 'info', pagado: 'success',
 };
 
 export function statusTone(status: string | null | undefined): StatusTone {

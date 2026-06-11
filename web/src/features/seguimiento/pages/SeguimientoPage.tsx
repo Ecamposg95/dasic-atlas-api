@@ -16,6 +16,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
+import type { StatusTone } from '@/lib/status-tones';
 import {
   DataTable,
   DataTableHead,
@@ -51,20 +53,18 @@ function formatDate(iso: string): string {
   });
 }
 
-type BadgeVariant = 'cyan' | 'amber' | 'emerald' | 'rose' | 'violet' | 'slate' | 'default';
-
-function estatusBadge(estatus: string): { label: string; variant: BadgeVariant } {
+function estatusBadge(estatus: string): { label: string; tone: StatusTone } {
   switch (estatus.toUpperCase()) {
     case 'COTIZACION':
-      return { label: 'Cotización', variant: 'cyan' };
+      return { label: 'Cotización', tone: 'info' };
     case 'PENDIENTE':
-      return { label: 'Pendiente de pago', variant: 'amber' };
+      return { label: 'Pendiente de pago', tone: 'warning' };
     case 'PAGADA':
-      return { label: 'Pagada', variant: 'emerald' };
+      return { label: 'Pagada', tone: 'success' };
     case 'CANCELADA':
-      return { label: 'Cancelada', variant: 'rose' };
+      return { label: 'Cancelada', tone: 'danger' };
     default:
-      return { label: estatus, variant: 'slate' };
+      return { label: estatus, tone: 'neutral' };
   }
 }
 
@@ -420,7 +420,7 @@ export function SeguimientoPage() {
                 </DataTableEmpty>
               ) : (
                 filtered.map((item) => {
-                  const { label: estatusLabel, variant: estatusVariant } = estatusBadge(
+                  const { label: estatusLabel, tone: estatusTone } = estatusBadge(
                     item.estatus,
                   );
                   return (
@@ -450,10 +450,10 @@ export function SeguimientoPage() {
                         {item.fecha_vencimiento == null ? (
                           <span className="text-xs text-slate-400 dark:text-slate-600">—</span>
                         ) : item.esta_vencida ? (
-                          <Badge variant="rose">Vencida</Badge>
+                          <StatusBadge tone="danger" label="Vencida" />
                         ) : (
                           <span className="flex items-center gap-1.5">
-                            <Badge variant="emerald">Vigente</Badge>
+                            <StatusBadge tone="success" label="Vigente" />
                             {item.dias_restantes !== null && (
                               <span className="text-[10px] text-slate-500">
                                 {item.dias_restantes}d
@@ -470,7 +470,7 @@ export function SeguimientoPage() {
 
                       {/* Estatus */}
                       <td className="px-4 py-3">
-                        <Badge variant={estatusVariant}>{estatusLabel}</Badge>
+                        <StatusBadge tone={estatusTone} label={estatusLabel} />
                       </td>
 
                       {/* Acciones */}
