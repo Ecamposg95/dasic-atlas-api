@@ -1,10 +1,11 @@
 // web/src/features/usuarios/pages/UsuariosPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserCog } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ListToolbar } from '@/components/ui/list-toolbar';
 import {
   DataTable,
   DataTableBody,
@@ -47,6 +48,11 @@ export function UsuariosPage() {
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Usuario | null>(null);
   const [modalPassword, setModalPassword] = useState<Usuario | null>(null);
+
+  // Filtros client-side (los usuarios son pocos)
+  const [search, setSearch] = useState('');
+  const [rolFiltro, setRolFiltro] = useState('');
+  const [activoFiltro, setActivoFiltro] = useState('');
 
   const { data: usuarios, isLoading, error } = useUsuarios();
 
@@ -126,7 +132,28 @@ export function UsuariosPage() {
     }
   }
 
-  const items = usuarios ?? [];
+  const todos = usuarios ?? [];
+
+  // Roles presentes para poblar el dropdown (sin inventar opciones inexistentes)
+  const rolesPresentes = useMemo(
+    () => Array.from(new Set(todos.map((u) => u.rol))).sort(),
+    [todos],
+  );
+
+  const items = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return todos.filter((u) => {
+      if (q && !u.nombre.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (rolFiltro && u.rol !== rolFiltro) return false;
+      if (activoFiltro === 'activo' && !u.activo) return false;
+      if (activoFiltro === 'inactivo' && u.activo) return false;
+      return true;
+    });
+  }, [todos, search, rolFiltro, activoFiltro]);
+
+  const hasFiltros = Boolean(search.trim() || rolFiltro || activoFiltro);
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-4">
@@ -135,12 +162,45 @@ export function UsuariosPage() {
           <UserCog className="h-5 w-5 text-cyan-400" /> Usuarios
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-slate-500">{items.length} usuario(s)</span>
+          <span className="text-xs text-slate-500 dark:text-slate-500">
+            {hasFiltros ? `${items.length} de ${todos.length}` : `${todos.length}`} usuario(s)
+          </span>
           <Button size="sm" onClick={() => setModalCrear(true)}>
             + Nuevo usuario
           </Button>
         </div>
       </header>
+
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nombre o email…"
+        filters={
+          <>
+            <select
+              value={rolFiltro}
+              onChange={(e) => setRolFiltro(e.target.value)}
+              className="text-sm rounded-md border border-border bg-surface-2 px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-accent-glow"
+            >
+              <option value="">Todos los roles</option>
+              {rolesPresentes.map((r) => (
+                <option key={r} value={r}>
+                  {ROL_LABELS[r] ?? r}
+                </option>
+              ))}
+            </select>
+            <select
+              value={activoFiltro}
+              onChange={(e) => setActivoFiltro(e.target.value)}
+              className="text-sm rounded-md border border-border bg-surface-2 px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-accent-glow"
+            >
+              <option value="">Activos e inactivos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+            </select>
+          </>
+        }
+      />
 
       <DataTable>
         <DataTableHead>
@@ -159,7 +219,7 @@ export function UsuariosPage() {
           {!isLoading && items.length === 0 && (
             <DataTableEmpty colSpan={5}>
               <UserCog className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-              Sin usuarios registrados
+              {hasFiltros ? 'Sin coincidencias con los filtros' : 'Sin usuarios registrados'}
             </DataTableEmpty>
           )}
           {items.map((u) => (
