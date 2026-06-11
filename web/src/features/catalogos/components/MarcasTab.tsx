@@ -204,8 +204,8 @@ export function MarcasTab() {
         </Button>
       </div>
 
-      <DataTable>
-        <DataTableHead>
+      <DataTable maxBodyHeight="calc(100vh - 20rem)">
+        <DataTableHead sticky>
           <tr>
             <th className="p-3 text-left">Abreviatura</th>
             <th className="p-3 text-left">Nombre</th>
