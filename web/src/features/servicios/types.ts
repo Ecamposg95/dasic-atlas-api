@@ -49,3 +49,10 @@ export type CategoriasResponse = {
   items: CategoriaItem[];
   sugeridas: string[];
 };
+
+export type ServiciosListResponse = {
+  page: number;
+  page_size: number;
+  total: number;
+  items: Servicio[];
+};

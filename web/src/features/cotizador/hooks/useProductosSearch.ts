@@ -100,7 +100,12 @@ export function useProductosSearch(scope: SearchScope) {
           } else {
             const p = new URLSearchParams();
             p.set('activo', 'true');
-            servicios = await api.get<Servicio[]>(`/api/servicios/?${p.toString()}`);
+            p.set('page', '1');
+            p.set('page_size', '200');
+            const resp = await api.get<{ items: Servicio[] }>(
+              `/api/servicios/?${p.toString()}`,
+            );
+            servicios = resp.items;
           }
           return { items: [], servicios, cantidad };
         } catch (err) {

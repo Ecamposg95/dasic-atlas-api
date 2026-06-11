@@ -1,10 +1,11 @@
 // web/src/features/servicios/pages/ServiciosPage.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Wrench } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import { Pagination } from '@/components/ui/pagination';
 import {
   DataTable,
   DataTableBody,
@@ -16,7 +17,7 @@ import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
 import { useAuth } from '@/stores/auth';
-import { useServicios } from '../hooks/useServicios';
+import { useServicios, SERVICIOS_PAGE_SIZE } from '../hooks/useServicios';
 import { useCategoriasServicio } from '../hooks/useCategoriasServicio';
 import { ServicioFormModal } from '../components/ServicioFormModal';
 import type { Servicio, ServicioCreate, ServicioUpdate } from '../types';
@@ -34,10 +35,27 @@ export function ServiciosPage() {
 
   const [filtroQ, setFiltroQ] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [page, setPage] = useState(1);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState<Servicio | null>(null);
 
-  const { data: servicios, isLoading, error } = useServicios();
+  // Debounce de la búsqueda para no disparar una request por tecla
+  const [qDebounced, setQDebounced] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(filtroQ), 300);
+    return () => clearTimeout(t);
+  }, [filtroQ]);
+
+  // Resetear a la primera página cuando cambian los filtros
+  useEffect(() => {
+    setPage(1);
+  }, [qDebounced, filtroCategoria]);
+
+  const { data, isLoading, isPlaceholderData, error } = useServicios({
+    q: qDebounced || undefined,
+    categoria: filtroCategoria || undefined,
+    page,
+  });
   const { data: categoriasData } = useCategoriasServicio();
 
   useEffect(() => {
@@ -45,21 +63,9 @@ export function ServiciosPage() {
     if (status === 401) window.location.href = '/spa/login';
   }, [error]);
 
-  // Client-side filter on top of the server-side list for instant UX
-  const items = useMemo(() => {
-    const list = servicios ?? [];
-    const needle = filtroQ.trim().toLowerCase();
-    return list.filter((s) => {
-      if (filtroCategoria && s.categoria_servicio !== filtroCategoria) return false;
-      if (needle) {
-        const hay = [s.codigo, s.nombre, s.descripcion ?? '']
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [servicios, filtroQ, filtroCategoria]);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / SERVICIOS_PAGE_SIZE));
 
   const isAdminOrAsistente =
     user?.rol === 'administrador' ||
@@ -138,7 +144,7 @@ export function ServiciosPage() {
           <Wrench className="h-5 w-5 text-cyan-400" /> Servicios
         </h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 dark:text-slate-500">{items.length} servicio(s)</span>
+          <span className="text-xs text-slate-600 dark:text-slate-500">{total} servicio(s)</span>
           {isAdminOrAsistente && (
             <Button size="sm" onClick={() => setModalCrear(true)}>
               + Nuevo servicio
@@ -148,37 +154,40 @@ export function ServiciosPage() {
       </header>
 
       {/* Filtros */}
-      <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
-        <Input
-          value={filtroQ}
-          onChange={(e) => setFiltroQ(e.target.value)}
-          placeholder="Buscar código, nombre, descripción…"
-          className="flex-1 min-w-[220px]"
+      <div className="bg-card border border-border rounded-xl p-3">
+        <ListToolbar
+          search={filtroQ}
+          onSearchChange={setFiltroQ}
+          searchPlaceholder="Buscar código, nombre, descripción…"
+          filters={
+            <>
+              <select
+                value={filtroCategoria}
+                onChange={(e) => setFiltroCategoria(e.target.value)}
+                className="h-10 rounded-md border border-border-strong bg-card text-foreground px-3 text-sm"
+              >
+                <option value="">Todas las categorías</option>
+                {categorias.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              {(filtroQ || filtroCategoria) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFiltroQ('');
+                    setFiltroCategoria('');
+                  }}
+                >
+                  Limpiar
+                </Button>
+              )}
+            </>
+          }
         />
-        <select
-          value={filtroCategoria}
-          onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="h-10 rounded-md border border-border-strong bg-card text-foreground px-3 text-sm"
-        >
-          <option value="">Todas las categorías</option>
-          {categorias.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        {(filtroQ || filtroCategoria) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setFiltroQ('');
-              setFiltroCategoria('');
-            }}
-          >
-            Limpiar
-          </Button>
-        )}
       </div>
 
       {/* Tabla */}
@@ -200,7 +209,7 @@ export function ServiciosPage() {
           {!isLoading && items.length === 0 && (
             <DataTableEmpty colSpan={6}>
               <Wrench className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
-              {(servicios ?? []).length === 0
+              {!qDebounced && !filtroCategoria
                 ? 'Sin servicios registrados'
                 : 'Sin coincidencias con la búsqueda'}
             </DataTableEmpty>
@@ -249,6 +258,14 @@ export function ServiciosPage() {
           ))}
         </DataTableBody>
       </DataTable>
+
+      {/* Paginación */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        isLoading={isPlaceholderData}
+      />
 
       {modalCrear && (
         <ServicioFormModal

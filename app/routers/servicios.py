@@ -76,14 +76,20 @@ def _siguiente_codigo(db: Session) -> str:
 
 
 # --- LISTAR ---
-@router.get("/", response_model=list[schemas.ServicioResponse],
-            dependencies=[Depends(allow_all_staff)])
+@router.get("/", dependencies=[Depends(allow_all_staff)])
 def listar_servicios(
     activo: Optional[bool] = True,
     categoria: Optional[str] = None,
     q: Optional[str] = Query(None, description="Búsqueda en código/nombre/descripción"),
+    page: int = 1,
+    page_size: int = 50,
     db: Session = Depends(get_db),
 ):
+    if page < 1 or page_size < 1 or page_size > 200:
+        raise HTTPException(400, "page o page_size inválido")
+
+    offset = (page - 1) * page_size
+
     query = db.query(models.Servicio)
     if activo is not None:
         query = query.filter(models.Servicio.activo == activo)
@@ -96,7 +102,16 @@ def listar_servicios(
             models.Servicio.nombre.ilike(like),
             models.Servicio.descripcion.ilike(like),
         ))
-    return query.order_by(models.Servicio.codigo).all()
+
+    total = query.count()
+    rows = (
+        query.order_by(models.Servicio.codigo)
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+    items = [schemas.ServicioResponse.model_validate(r) for r in rows]
+    return {"page": page, "page_size": page_size, "total": total, "items": items}
 
 
 # --- BUSCAR (typeahead para cotizador) ---
