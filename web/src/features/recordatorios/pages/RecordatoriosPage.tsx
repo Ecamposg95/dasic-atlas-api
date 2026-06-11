@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BellRing, CheckCircle2, Clock, Trash2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
+import type { StatusTone } from '@/lib/status-tones';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal, ModalFooter } from '@/components/ui/modal';
+import { Tabs } from '@/components/ui/tabs';
 import {
   DataTable,
   DataTableHead,
@@ -67,10 +70,10 @@ function tipoBadgeVariant(tipo: TipoAccion): BadgeVariant {
   return map[tipo] ?? 'slate';
 }
 
-function estadoBadge(estado: Recordatorio['estado']): { label: string; variant: BadgeVariant } {
-  if (estado === 'completado') return { label: 'Completado', variant: 'emerald' };
-  if (estado === 'pospuesto') return { label: 'Pospuesto', variant: 'amber' };
-  return { label: 'Pendiente', variant: 'cyan' };
+function estadoBadge(estado: Recordatorio['estado']): { label: string; tone: StatusTone } {
+  if (estado === 'completado') return { label: 'Completado', tone: 'success' };
+  if (estado === 'pospuesto') return { label: 'Pospuesto', tone: 'warning' };
+  return { label: 'Pendiente', tone: 'info' };
 }
 
 // ─── Vista tabs ────────────────────────────────────────────────────────────────
@@ -201,22 +204,11 @@ export function RecordatoriosPage() {
         </header>
 
         {/* Tab filter */}
-        <div className="flex flex-wrap gap-1 border-b border-border pb-0">
-          {VISTAS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setVista(value)}
-              className={`px-3 py-1.5 text-sm rounded-t-md transition-colors ${
-                vista === value
-                  ? 'bg-card border border-border border-b-card text-foreground font-medium -mb-px'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          tabs={VISTAS.map((v) => ({ key: v.value, label: v.label }))}
+          value={vista}
+          onChange={setVista}
+        />
 
         {/* Loading */}
         {isLoading && (
@@ -245,7 +237,7 @@ export function RecordatoriosPage() {
                 ) : (
                   rows.map((rec) => {
                     const muted = rec.estado === 'completado';
-                    const { label: estLabel, variant: estVariant } = estadoBadge(rec.estado);
+                    const { label: estLabel, tone: estTone } = estadoBadge(rec.estado);
                     return (
                       <DataTableRow
                         key={rec.id}
@@ -294,7 +286,7 @@ export function RecordatoriosPage() {
 
                         {/* Estado */}
                         <td className="px-4 py-3">
-                          <Badge variant={estVariant}>{estLabel}</Badge>
+                          <StatusBadge tone={estTone} label={estLabel} />
                         </td>
 
                         {/* Usuario */}
