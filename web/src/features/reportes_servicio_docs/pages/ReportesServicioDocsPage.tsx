@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, CheckSquare, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Modal, ModalFooter } from '@/components/ui/modal';
 import { ListToolbar } from '@/components/ui/list-toolbar';
 import { Pagination } from '@/components/ui/pagination';
@@ -149,9 +149,10 @@ function ReporteRow({ item, onRecepcion }: RowProps) {
         {item.tecnico_nombre ?? <span className="text-slate-500 italic">—</span>}
       </td>
       <td className="px-4 py-3">
-        <Badge variant={recibido ? 'emerald' : 'amber'}>
-          {recibido ? 'RECIBIDO' : 'PENDIENTE'}
-        </Badge>
+        <StatusBadge
+          tone={recibido ? 'success' : 'warning'}
+          label={recibido ? 'RECIBIDO' : 'PENDIENTE'}
+        />
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 justify-end">

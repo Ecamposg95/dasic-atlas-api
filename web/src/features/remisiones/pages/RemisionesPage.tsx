@@ -5,7 +5,7 @@ import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hoo
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Modal, ModalFooter } from '@/components/ui/modal';
 import { ListToolbar } from '@/components/ui/list-toolbar';
 import { Pagination } from '@/components/ui/pagination';
@@ -250,9 +250,10 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
       </td>
       <td className="px-4 py-3 text-muted-foreground text-xs">{fmtFecha(item.fecha_remision)}</td>
       <td className="px-4 py-3">
-        <Badge variant={recibida ? 'emerald' : 'amber'}>
-          {recibida ? 'RECIBIDA' : 'PENDIENTE'}
-        </Badge>
+        <StatusBadge
+          tone={recibida ? 'success' : 'warning'}
+          label={recibida ? 'RECIBIDA' : 'PENDIENTE'}
+        />
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 justify-end">
