@@ -302,8 +302,8 @@ export function CuentasPorCobrarPage() {
       {/* ---------------------------------------------------------------- */}
       <section>
         <SectionTitle>Vencimientos pendientes</SectionTitle>
-        <DataTable>
-          <DataTableHead>
+        <DataTable maxBodyHeight="calc(100vh - 20rem)">
+          <DataTableHead sticky>
             <tr>
               <th className="px-4 py-3 text-left">Folio OV</th>
               <th className="px-4 py-3 text-left">Cliente</th>
