@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft, ChevronRight, Eye, Pen, ArrowUp, X, Ghost, FileSpreadsheet, Brush, Truck,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SatCombobox } from '@/components/ui/sat-combobox';
@@ -212,10 +212,7 @@ export function FantasmasPage() {
   }
 
   function badgeEstado(e: EstadoFantasma) {
-    const map: Record<EstadoFantasma, 'amber' | 'cyan' | 'emerald' | 'violet' | 'slate'> = {
-      PENDIENTE: 'amber', EN_OC: 'cyan', RECIBIDO: 'emerald', PROMOVIDO: 'violet', DESCARTADO: 'slate',
-    };
-    return <Badge variant={map[e]}>{e}</Badge>;
+    return <StatusBadge status={e} />;
   }
 
   return (
