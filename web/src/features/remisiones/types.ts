@@ -39,6 +39,7 @@ export type RemisionDetalle = {
 export type RemisionesResponse = {
   page: number;
   page_size: number;
+  total: number;
   items: RemisionItem[];
 };
 

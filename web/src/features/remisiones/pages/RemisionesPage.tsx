@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Truck, ChevronLeft, ChevronRight, Eye, CheckSquare, X, Plus, FileText, FileDown } from 'lucide-react';
+import { Truck, Eye, CheckSquare, X, Plus, FileText, FileDown } from 'lucide-react';
 import { useRemisiones, useRemisionDetalle, useRegistrarRecepcion } from '../hooks/useRemisiones';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Modal, ModalFooter } from '@/components/ui/modal';
+import { ListToolbar } from '@/components/ui/list-toolbar';
+import { Pagination } from '@/components/ui/pagination';
 import {
   DataTable,
   DataTableHead,
@@ -17,6 +19,18 @@ import {
 import type { RemisionItem } from '../types';
 
 const PAGE_SIZE = 50;
+
+// Debounce helper
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+type RecibidaFiltro = 'todas' | 'recibida' | 'pendiente';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -294,14 +308,29 @@ function RemisionRow({ item, onVerDetalle, onRecepcion }: RowProps) {
 export function RemisionesPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [recibidaFiltro, setRecibidaFiltro] = useState<RecibidaFiltro>('todas');
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [recepcionTarget, setRecepcionTarget] = useState<{ id: number; folio: string } | null>(null);
 
-  const { data, isLoading, isPlaceholderData } = useRemisiones(page);
+  const searchDebounced = useDebounced(search);
+  const recibidaParam =
+    recibidaFiltro === 'recibida' ? true : recibidaFiltro === 'pendiente' ? false : null;
+
+  // Reset page when filters change
+  const prevFilters = useRef({ q: searchDebounced, recibida: recibidaFiltro });
+  useEffect(() => {
+    if (prevFilters.current.q !== searchDebounced || prevFilters.current.recibida !== recibidaFiltro) {
+      setPage(1);
+      prevFilters.current = { q: searchDebounced, recibida: recibidaFiltro };
+    }
+  }, [searchDebounced, recibidaFiltro]);
+
+  const { data, isLoading, isPlaceholderData } = useRemisiones(page, searchDebounced, recibidaParam);
 
   const items = data?.items ?? [];
-  const hasMore = items.length === PAGE_SIZE;
-  const hasPrev = page > 1;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -312,8 +341,7 @@ export function RemisionesPage() {
           <h1 className="text-2xl font-semibold">Remisiones</h1>
           {!isLoading && (
             <span className="text-slate-500 text-sm">
-              ({items.length} {items.length === 1 ? 'remisión' : 'remisiones'}
-              {page > 1 ? ` en página ${page}` : ''})
+              ({total} {total === 1 ? 'remisión' : 'remisiones'})
             </span>
           )}
         </div>
@@ -322,6 +350,24 @@ export function RemisionesPage() {
           Nueva remisión
         </Button>
       </header>
+
+      {/* Toolbar: búsqueda + filtro de recepción */}
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por folio o cliente…"
+        filters={
+          <select
+            value={recibidaFiltro}
+            onChange={(e) => setRecibidaFiltro(e.target.value as RecibidaFiltro)}
+            className="text-sm rounded-md border border-border bg-surface-2 px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-accent-glow"
+          >
+            <option value="todas">Todas</option>
+            <option value="recibida">Recibida</option>
+            <option value="pendiente">Pendiente</option>
+          </select>
+        }
+      />
 
       {/* Tabla */}
       <DataTable>
@@ -342,10 +388,16 @@ export function RemisionesPage() {
             <DataTableEmpty colSpan={6}>
               <div className="flex flex-col items-center gap-2 text-slate-500">
                 <Truck className="h-10 w-10 opacity-30" />
-                <p>No hay remisiones registradas</p>
-                <p className="text-xs">
-                  Las remisiones se crean desde el detalle de una orden de venta.
-                </p>
+                {searchDebounced || recibidaFiltro !== 'todas' ? (
+                  <p>Sin coincidencias con los filtros</p>
+                ) : (
+                  <>
+                    <p>No hay remisiones registradas</p>
+                    <p className="text-xs">
+                      Las remisiones se crean desde el detalle de una orden de venta.
+                    </p>
+                  </>
+                )}
               </div>
             </DataTableEmpty>
           ) : (
@@ -362,34 +414,12 @@ export function RemisionesPage() {
       </DataTable>
 
       {/* Paginación */}
-      {(hasPrev || hasMore) && (
-        <div
-          className={`flex items-center justify-between text-sm text-muted-foreground ${isPlaceholderData ? 'opacity-50' : ''}`}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasPrev || isPlaceholderData}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Anterior
-          </Button>
-          <span>
-            Página {page}
-            {hasMore ? ' — hay más registros' : ''}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasMore || isPlaceholderData}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Siguiente
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        isLoading={isPlaceholderData}
+      />
 
       {/* Modal detalle */}
       {detalleId !== null && (

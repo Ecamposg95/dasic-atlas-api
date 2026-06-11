@@ -10,11 +10,20 @@ import type {
   OrdenHistorialItem,
 } from '../types';
 
-export function useRemisiones(page: number) {
+export function useRemisiones(
+  page: number,
+  q = '',
+  recibida: boolean | null = null,
+) {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('page_size', '50');
+  if (q.trim()) params.set('q', q.trim());
+  if (recibida !== null) params.set('recibida', String(recibida));
   return useQuery({
-    queryKey: ['remisiones', page],
+    queryKey: ['remisiones', page, q.trim(), recibida],
     queryFn: () =>
-      api.get<RemisionesResponse>(`/api/remisiones/?page=${page}&page_size=50`),
+      api.get<RemisionesResponse>(`/api/remisiones/?${params.toString()}`),
     placeholderData: keepPreviousData,
   });
 }

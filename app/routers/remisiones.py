@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from jinja2 import BaseLoader, Environment
 from sqlalchemy import desc, func, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app import models, schemas
 from app.db import get_db
@@ -89,6 +89,8 @@ def borrador_remision_desde_orden(orden_id: int, db: Session = Depends(get_db)):
 @router.get("/", dependencies=[Depends(allow_all_staff)])
 def listar_remisiones(
     orden_venta_id: Optional[int] = None,
+    q: Optional[str] = None,
+    recibida: Optional[bool] = None,
     page: int = 1,
     page_size: int = 100,
     db: Session = Depends(get_db),
@@ -98,6 +100,32 @@ def listar_remisiones(
     query = db.query(models.Remision)
     if orden_venta_id:
         query = query.filter(models.Remision.orden_venta_id == orden_venta_id)
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        # Busca por folio de la remisión o por nombre de empresa del cliente,
+        # ya sea el cliente directo (modo libre) o el de la orden de venta.
+        # Aliases explícitos: la misma tabla `clientes` se alcanza por dos
+        # caminos (directo y vía orden) y colisionaría sin alias.
+        cli_directo = aliased(models.Cliente)
+        cli_orden = aliased(models.Cliente)
+        query = (
+            query
+            .outerjoin(cli_directo, models.Remision.cliente.of_type(cli_directo))
+            .outerjoin(models.Remision.orden_venta)
+            .outerjoin(cli_orden, models.OrdenVenta.cliente.of_type(cli_orden))
+            .filter(
+                models.Remision.folio.ilike(like)
+                | cli_directo.nombre_empresa.ilike(like)
+                | cli_orden.nombre_empresa.ilike(like)
+            )
+            .distinct()
+        )
+    if recibida is not None:
+        if recibida:
+            query = query.filter(models.Remision.recibido_at.isnot(None))
+        else:
+            query = query.filter(models.Remision.recibido_at.is_(None))
+    total = query.count()
     rows = (
         query
         .order_by(desc(models.Remision.fecha_remision))
@@ -108,6 +136,7 @@ def listar_remisiones(
     return {
         "page": page,
         "page_size": page_size,
+        "total": total,
         "items": [
             {
                 "id": r.id,
