@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BellRing, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { BellRing, CheckCircle2, Clock, Trash2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,6 +147,7 @@ function PosponerModal({ rec, onClose }: { rec: Recordatorio; onClose: () => voi
 // ─── RecordatoriosPage ─────────────────────────────────────────────────────────
 
 export function RecordatoriosPage() {
+  const navigate = useNavigate();
   const [vista, setVista] = useState<RecordatorioVista>('pendientes');
   const [posponerRec, setPosponerRec] = useState<Recordatorio | null>(null);
 
@@ -187,9 +188,16 @@ export function RecordatoriosPage() {
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       <div className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-4">
         {/* Header */}
-        <header className="flex items-center gap-3">
-          <BellRing className="h-6 w-6 text-accent-glow" />
-          <h1 className="text-2xl font-semibold">Recordatorios</h1>
+        <header className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <BellRing className="h-6 w-6 text-accent-glow" />
+            <h1 className="text-2xl font-semibold">Recordatorios</h1>
+          </div>
+          {/* Los recordatorios se crean por cotización en Seguimiento (requieren orden_id). */}
+          <Button size="sm" onClick={() => navigate('/spa/seguimiento')}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nuevo recordatorio
+          </Button>
         </header>
 
         {/* Tab filter */}
@@ -218,8 +226,8 @@ export function RecordatoriosPage() {
         {/* Table */}
         {!isLoading && (
           <div className={isPlaceholderData ? 'opacity-60 pointer-events-none' : ''}>
-            <DataTable>
-              <DataTableHead>
+            <DataTable maxBodyHeight="calc(100vh - 18rem)">
+              <DataTableHead sticky>
                 <tr>
                   <th className="px-4 py-3 text-left whitespace-nowrap">Vencimiento</th>
                   <th className="px-4 py-3 text-left">Folio</th>
