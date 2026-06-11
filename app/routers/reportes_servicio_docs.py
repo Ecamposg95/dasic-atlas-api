@@ -166,68 +166,104 @@ def detalle(id: int, db: Session = Depends(get_db)):
     return _serializar(r)
 
 
+_BRAND_NAVY = (15, 58, 102)        # #0f3a66 — mismo navy que el PDF de cotización
+_BRAND_BLUE = (29, 111, 184)       # #1d6fb8
+_GRAY_HEAD = (226, 232, 240)       # encabezado de tabla
+_GRAY_BOX = (245, 245, 245)
+
+
 def _render_reporte_servicio_pdf(r: models.ReporteServicio, db: Session) -> bytes:
-    """Render acta de servicio ejecutado. Look sobrio profesional."""
+    """Render del acta de servicio ejecutado como PDF binario (fpdf2).
+
+    Mantiene la identidad visual del documento de cotización (`ventas.py`):
+    header DASIC navy + regla, caja folio/fecha, bloque cliente, tabla de
+    servicios, observaciones, Condiciones Comerciales (heredadas de la
+    cotización origen, con el mismo fallback hardcoded que el cotizador) y
+    bloque de firmas. Mono-tenant — la razón social es fija (no existe un
+    modelo Organization en este esquema).
+    """
     orden = r.orden_venta
     cliente = orden.cliente if orden else None
 
     pdf = FPDF(orientation="P", unit="mm", format="Letter")
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    full_w = pdf.w - pdf.l_margin - pdf.r_margin  # ancho útil
 
-    # Encabezado de la empresa
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 8, _txt("DASIC INDUSTRIAL"), ln=1)
+    # --- Header de marca (navy + regla degradada simulada) ---
+    pdf.set_text_color(*_BRAND_NAVY)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.cell(0, 9, _txt("DASIC INDUSTRIAL"), ln=1)
+    pdf.set_text_color(71, 85, 105)
     pdf.set_font("Helvetica", "", 9)
     pdf.cell(0, 4, _txt("Reporte de Servicio"), ln=1)
-    pdf.ln(2)
+    pdf.ln(1)
+    pdf.set_draw_color(*_BRAND_NAVY)
+    pdf.set_line_width(0.8)
+    y_rule = pdf.get_y()
+    pdf.line(pdf.l_margin, y_rule, pdf.l_margin + full_w, y_rule)
+    pdf.set_line_width(0.2)
+    pdf.ln(4)
+    pdf.set_text_color(15, 23, 42)
 
-    # Caja con folio + fecha
+    # --- Caja folio + fecha + cotización origen ---
+    half = full_w / 2
     pdf.set_draw_color(180, 180, 180)
-    pdf.set_fill_color(245, 245, 245)
+    pdf.set_fill_color(*_GRAY_BOX)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(95, 7, _txt(f"Folio: {r.folio or '-'}"), border=1, fill=True)
+    pdf.cell(half, 7, _txt(f"Folio: {r.folio or '-'}"), border=1, fill=True)
     fecha_txt = r.fecha_reporte.strftime("%d/%m/%Y") if r.fecha_reporte else "-"
-    pdf.cell(95, 7, _txt(f"Fecha: {fecha_txt}"), border=1, fill=True, ln=1)
+    pdf.cell(half, 7, _txt(f"Fecha: {fecha_txt}"), border=1, fill=True, ln=1)
     if orden:
         pdf.set_font("Helvetica", "", 9)
         pdf.cell(0, 6, _txt(f"Cotización origen: {orden.folio or orden.id}"), ln=1)
     pdf.ln(3)
 
-    # Datos del cliente
+    # --- Datos del cliente ---
+    pdf.set_text_color(*_BRAND_NAVY)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, _txt("Cliente"), ln=1)
+    pdf.set_text_color(15, 23, 42)
     pdf.set_font("Helvetica", "", 9)
     if cliente:
         pdf.cell(0, 5, _txt(cliente.nombre_empresa or "-"), ln=1)
         if cliente.rfc_tax_id:
             pdf.cell(0, 5, _txt(f"RFC: {cliente.rfc_tax_id}"), ln=1)
+        if getattr(cliente, "direccion", None):
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(0, 5, _txt(cliente.direccion))
         contacto_bits = []
         if cliente.email:
             contacto_bits.append(cliente.email)
         if cliente.telefono:
             contacto_bits.append(cliente.telefono)
         if contacto_bits:
-            pdf.cell(0, 5, _txt(" · ".join(contacto_bits)), ln=1)
+            pdf.cell(0, 5, _txt(" - ".join(contacto_bits)), ln=1)
     else:
         pdf.cell(0, 5, _txt("(sin cliente)"), ln=1)
     pdf.ln(3)
 
-    # Técnico
+    # --- Técnico responsable ---
+    pdf.set_text_color(*_BRAND_NAVY)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, _txt("Técnico responsable"), ln=1)
+    pdf.set_text_color(15, 23, 42)
     pdf.set_font("Helvetica", "", 9)
     pdf.cell(0, 5, _txt(r.tecnico_nombre or "(no especificado)"), ln=1)
     pdf.ln(3)
 
-    # Servicios ejecutados
+    # --- Servicios ejecutados ---
+    col_cant, col_cod = 18.0, 38.0
+    col_desc = full_w - col_cant - col_cod
+    pdf.set_text_color(*_BRAND_NAVY)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, _txt("Servicios ejecutados"), ln=1)
+    pdf.set_text_color(15, 23, 42)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.set_fill_color(230, 230, 230)
-    pdf.cell(15, 6, _txt("Cant."), border=1, fill=True, align="C")
-    pdf.cell(35, 6, _txt("Código"), border=1, fill=True, align="L")
-    pdf.cell(135, 6, _txt("Descripción"), border=1, fill=True, ln=1)
+    pdf.set_fill_color(*_GRAY_HEAD)
+    pdf.cell(col_cant, 6, _txt("Cant."), border=1, fill=True, align="C")
+    pdf.cell(col_cod, 6, _txt("Código"), border=1, fill=True, align="L")
+    pdf.cell(col_desc, 6, _txt("Descripción"), border=1, fill=True, ln=1)
     pdf.set_font("Helvetica", "", 9)
 
     if orden:
@@ -239,43 +275,70 @@ def _render_reporte_servicio_pdf(r: models.ReporteServicio, db: Session) -> byte
         lineas = []
 
     if not lineas:
-        pdf.cell(0, 6, _txt("(sin líneas de servicio en la cotización)"), ln=1)
+        pdf.cell(full_w, 6, _txt("(sin líneas de servicio en la cotización)"), border=1, ln=1)
     else:
         for d in lineas:
-            codigo = "-"
-            descripcion = "-"
             if d.servicio is not None:
-                codigo = getattr(d.servicio, "codigo", None) or "-"
-                descripcion = getattr(d.servicio, "nombre", None) or d.descripcion_libre or "-"
+                codigo = getattr(d.servicio, "codigo", None) or d.sku_libre or "-"
+                descripcion = (
+                    getattr(d.servicio, "nombre", None)
+                    or d.descripcion_libre
+                    or "-"
+                )
             else:
                 codigo = d.sku_libre or "-"
                 descripcion = d.descripcion_libre or "-"
 
-            x_start = pdf.get_x()
-            y_start = pdf.get_y()
-            pdf.cell(15, 6, _txt(str(d.cantidad or 0)), border=1, align="C")
-            pdf.cell(35, 6, _txt(codigo)[:25], border=1, align="L")
-            pdf.multi_cell(135, 6, _txt(descripcion), border=1, align="L")
-            # Restablece posición para próxima fila
-            if pdf.get_y() < y_start + 6:
-                pdf.set_xy(x_start, y_start + 6)
+            # Altura de fila = la que ocupe la descripción (multilínea segura).
+            desc_lines = pdf.multi_cell(
+                col_desc, 5, _txt(descripcion), border=0, align="L",
+                split_only=True,
+            )
+            row_h = max(6.0, 5.0 * max(1, len(desc_lines)))
+            x0, y0 = pdf.get_x(), pdf.get_y()
+            pdf.cell(col_cant, row_h, _txt(str(d.cantidad or 0)), border=1, align="C")
+            pdf.cell(col_cod, row_h, _txt(codigo)[:28], border=1, align="L")
+            pdf.set_xy(x0 + col_cant + col_cod, y0)
+            pdf.multi_cell(col_desc, 5, _txt(descripcion), border=1, align="L")
+            pdf.set_xy(x0, y0 + row_h)
     pdf.ln(3)
 
-    # Observaciones
+    # --- Observaciones ---
     if r.observaciones:
+        pdf.set_text_color(*_BRAND_NAVY)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(0, 6, _txt("Observaciones"), ln=1)
+        pdf.set_text_color(15, 23, 42)
         pdf.set_font("Helvetica", "", 9)
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(0, 5, _txt(r.observaciones))
         pdf.ln(3)
 
-    # Recepción / firmas
-    pdf.ln(8)
+    # --- Condiciones Comerciales (heredadas de la cotización origen) ---
+    # Import perezoso del fallback hardcoded del cotizador (evita cualquier
+    # sorpresa de orden de import al registrar routers).
+    from app.routers.ventas import _DEFAULT_TERMINOS
+
+    terminos = (orden.terminos_condiciones if orden and orden.terminos_condiciones else _DEFAULT_TERMINOS)
+    lineas_tc = [t.strip() for t in terminos.split("\n") if t.strip()]
+    if lineas_tc:
+        pdf.set_text_color(*_BRAND_NAVY)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(0, 5, _txt("Condiciones comerciales"), ln=1)
+        pdf.set_text_color(71, 85, 105)
+        pdf.set_font("Helvetica", "", 7)
+        for t in lineas_tc:
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(0, 3.5, _txt(f"- {t}"))
+        pdf.set_text_color(15, 23, 42)
+        pdf.ln(2)
+
+    # --- Recepción / firmas ---
+    pdf.ln(6)
+    col_w = full_w / 2
     pdf.set_font("Helvetica", "", 9)
-    col_w = 90
-    y_firmas = pdf.get_y()
-    pdf.cell(col_w, 5, _txt("_" * 40), align="C")
-    pdf.cell(col_w, 5, _txt("_" * 40), align="C", ln=1)
+    pdf.cell(col_w, 5, _txt("_" * 38), align="C")
+    pdf.cell(col_w, 5, _txt("_" * 38), align="C", ln=1)
     pdf.set_font("Helvetica", "B", 8)
     pdf.cell(col_w, 4, _txt("Técnico"), align="C")
     pdf.cell(col_w, 4, _txt("Cliente recibe"), align="C", ln=1)
