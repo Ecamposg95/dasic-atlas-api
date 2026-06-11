@@ -47,8 +47,6 @@ const compras = lazyPage(() => import('@/features/compras/pages/ComprasPage'), '
 const remisiones = lazyPage(() => import('@/features/remisiones/pages/RemisionesPage'), 'RemisionesPage');
 const crearRemision = lazyPage(() => import('@/features/remisiones/pages/CrearRemisionPage'), 'CrearRemisionPage');
 const gastos = lazyPage(() => import('@/features/gastos/pages/GastosPage'), 'GastosPage');
-const reportes = lazyPage(() => import('@/features/reportes/pages/ReportesPage'), 'ReportesPage');
-const reportesServicio = lazyPage(() => import('@/features/reportes_servicio/pages/ReportesServicioPage'), 'ReportesServicioPage');
 const reportesServicioDocs = lazyPage(
   () => import('@/features/reportes_servicio_docs/pages/ReportesServicioDocsPage'),
   'ReportesServicioDocsPage',
@@ -66,6 +64,7 @@ const superadminMantenimiento = lazyPage(() => import('@/features/superadmin/pag
 const superadminUsuarios = lazyPage(() => import('@/features/superadmin/pages/UsuariosPlataformaPage'), 'UsuariosPlataformaPage');
 const crm = lazyPage(() => import('@/features/crm/pages/CrmKanbanPage'), 'CrmKanbanPage');
 const recordatorios = lazyPage(() => import('@/features/recordatorios/pages/RecordatoriosPage'), 'RecordatoriosPage');
+const analitica = lazyPage(() => import('@/features/analitica/pages/KpisPage'), 'KpisPage');
 
 // Helper: ruta legacy que envuelve el mismo Layout y mounta el mismo lazy.
 const legacyRoute = (path: string, lazyLoader: ReturnType<typeof lazyPage>) => ({
@@ -101,8 +100,9 @@ export const router = createBrowserRouter([
       { path: 'remisiones', lazy: remisiones },
       { path: 'remisiones-nueva', lazy: crearRemision },
       { path: 'gastos', lazy: gastos },
-      { path: 'reportes', lazy: reportes },
-      { path: 'reportes-servicio', lazy: reportesServicio },
+      { path: 'analitica', lazy: analitica },
+      { path: 'reportes', element: <Navigate to="/spa/analitica?tab=ventas" replace /> },
+      { path: 'reportes-servicio', element: <Navigate to="/spa/analitica?tab=operativo" replace /> },
       { path: 'reportes-servicio-docs', lazy: reportesServicioDocs },
       { path: 'cuentas-por-cobrar', lazy: cxc },
       { path: 'fx', lazy: fx },
@@ -136,8 +136,8 @@ export const router = createBrowserRouter([
   legacyRoute('/compras', compras),
   legacyRoute('/remisiones', remisiones),
   legacyRoute('/gastos', gastos),
-  legacyRoute('/reportes', reportes),
-  legacyRoute('/reportes-servicio', reportesServicio),
+  { path: '/reportes', element: <Layout />, children: [{ index: true, element: <Navigate to="/spa/analitica?tab=ventas" replace /> }] },
+  { path: '/reportes-servicio', element: <Layout />, children: [{ index: true, element: <Navigate to="/spa/analitica?tab=operativo" replace /> }] },
   legacyRoute('/reportes-servicio-docs', reportesServicioDocs),
   legacyRoute('/cuentas-por-cobrar', cxc),
   legacyRoute('/fx', fx),
