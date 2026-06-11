@@ -442,12 +442,16 @@ export const useCotizador = create<CotizadorState>((set) => ({
           nom_original: '',
           cost_original: 0,
           marca: d.marca ?? null,
-          // Preservar SAT/marca_id/observaciones del fantasma en el roundtrip:
-          // sin esto, reabrir+guardar borra ClaveProdServ/ClaveUnidad del CFDI.
-          marca_id: (d as any).marca_id ?? null,
-          clave_prod_serv: (d as any).clave_prod_serv ?? null,
-          clave_unidad_sat: (d as any).clave_unidad_sat ?? null,
-          observaciones: (d as any).observaciones ?? null,
+          // Preservar marca + SAT del fantasma en el roundtrip: sin esto,
+          // reabrir+guardar borra ClaveProdServ/ClaveUnidad del CFDI. Estos
+          // campos vienen tipados en OrdenVentaDetail.detalles (el backend los
+          // emite en /detalle-json), así que no necesitan `as any`.
+          // Nota: a nivel línea solo se persiste el TEXTO de marca; `marca_id`
+          // (FK) no existe en DetalleOrden, por eso queda null en edición.
+          marca_id: (d as { marca_id?: number | null }).marca_id ?? null,
+          clave_prod_serv: d.clave_prod_serv ?? null,
+          clave_unidad_sat: d.clave_unidad_sat ?? null,
+          observaciones: (d as { observaciones?: string | null }).observaciones ?? null,
           mostrar_marca: !!d.mostrar_marca,
           max: 0,
           proveedor_sugerido_id: d.proveedor_sugerido_id ?? null,

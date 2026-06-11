@@ -55,7 +55,7 @@ const SECTIONS: NavSection[] = [
     title: 'Reportes',
     items: [
       { to: '/spa/reportes', label: 'Reportes', Icon: BarChart3 },
-      { to: '/spa/reportes-servicio', label: 'Analítica servicios', Icon: Activity },
+      { to: '/spa/reportes-servicio', label: 'Analítica de servicios', Icon: Activity },
     ],
   },
   {

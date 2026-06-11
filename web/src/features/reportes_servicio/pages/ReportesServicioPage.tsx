@@ -442,7 +442,7 @@ export function ReportesServicioPage() {
       <header className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
           <Activity className="h-6 w-6 text-accent-glow" />
-          <h1 className="text-2xl font-semibold">Reportes operativos</h1>
+          <h1 className="text-2xl font-semibold">Analítica de servicios</h1>
         </div>
         <div className="flex items-center gap-2">
           {RANGOS.map((r) => (
