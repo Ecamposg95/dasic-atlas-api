@@ -4,17 +4,40 @@ import { cn } from '@/lib/utils';
 // Tabla genérica reutilizable para listados de seguimiento/borradores/fantasmas.
 // El consumidor maneja sus propias columnas y filas — esto solo provee shell.
 
-export function DataTable({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
+export function DataTable({
+  className,
+  maxBodyHeight,
+  ...props
+}: React.HTMLAttributes<HTMLTableElement> & { maxBodyHeight?: string }) {
+  // maxBodyHeight (opt-in): acota la altura y deja el scroll DENTRO de la tabla
+  // (con DataTableHead sticky) para que la página no crezca sin límite.
   return (
-    <div className="bg-card border border-border rounded-xl overflow-x-auto shadow-elev-1">
+    <div
+      className={cn(
+        'bg-card border border-border rounded-xl overflow-x-auto shadow-elev-1',
+        maxBodyHeight && 'overflow-y-auto',
+      )}
+      style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+    >
       <table className={cn('w-full text-sm min-w-[640px] md:min-w-0', className)} {...props} />
     </div>
   );
 }
 
-export function DataTableHead({ children }: { children: React.ReactNode }) {
+export function DataTableHead({
+  children,
+  sticky,
+}: {
+  children: React.ReactNode;
+  sticky?: boolean;
+}) {
   return (
-    <thead className="bg-surface-2 text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border">
+    <thead
+      className={cn(
+        'bg-surface-2 text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border',
+        sticky && 'sticky top-0 z-10',
+      )}
+    >
       {children}
     </thead>
   );

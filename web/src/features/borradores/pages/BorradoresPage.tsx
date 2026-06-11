@@ -3,7 +3,7 @@ import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileClock, Play, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useBorradores } from '../hooks/useBorradores';
+import { useBorradores, BORRADORES_PAGE_SIZE } from '../hooks/useBorradores';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/data-table';
 import type { BorradorItem } from '../types';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = BORRADORES_PAGE_SIZE;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -143,8 +143,9 @@ export function BorradoresPage() {
   }
 
   const items = data?.items ?? [];
-  const totalCount = items.length; // visible en página actual
-  const hasMore = items.length === PAGE_SIZE;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasMore = page < totalPages;
   const hasPrev = page > 1;
 
   return (
@@ -156,16 +157,15 @@ export function BorradoresPage() {
           <h1 className="text-2xl font-semibold">Borradores de cotizaciones</h1>
           {!isLoading && (
             <span className="text-slate-500 text-sm">
-              ({totalCount} {totalCount === 1 ? 'borrador' : 'borradores'}
-              {page > 1 ? ` en página ${page}` : ''})
+              ({total} {total === 1 ? 'borrador' : 'borradores'})
             </span>
           )}
         </div>
       </header>
 
-      {/* Tabla */}
-      <DataTable>
-        <DataTableHead>
+      {/* Tabla — altura acotada + header sticky para que la página no scrollee de más */}
+      <DataTable maxBodyHeight="calc(100vh - 16rem)">
+        <DataTableHead sticky>
           <tr>
             <th className="px-4 py-3 text-left">Folio</th>
             <th className="px-4 py-3 text-left">Cliente</th>
@@ -217,8 +217,7 @@ export function BorradoresPage() {
           </Button>
 
           <span>
-            Página {page}
-            {hasMore ? ' — hay más registros' : ''}
+            Página {page} de {totalPages}
           </span>
 
           <Button

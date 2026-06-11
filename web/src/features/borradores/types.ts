@@ -18,5 +18,6 @@ export type BorradorItem = {
 export type BorradoresResponse = {
   page: number;
   page_size: number;
+  total: number;
   items: BorradorItem[];
 };

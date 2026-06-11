@@ -1480,6 +1480,8 @@ def listar_borradores(
     if is_owner_scoped(current_user, "read", "cotizacion"):
         query = query.filter(models.OrdenVenta.vendedor_id == current_user.id)
 
+    total = query.count()
+
     rows = (
         query
         .order_by(
@@ -1503,6 +1505,7 @@ def listar_borradores(
     return {
         "page": page,
         "page_size": page_size,
+        "total": total,
         "items": [
             {
                 "id": r.id,
