@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Users, ChevronUp, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -139,11 +140,7 @@ export function ClientesPage() {
   // Estatus badge
   function estatusBadge(est: string | undefined) {
     if (!est) return <span className="text-xs text-muted-foreground">—</span>;
-    const lower = est.toLowerCase();
-    if (lower === 'activo') return <Badge variant="emerald">activo</Badge>;
-    if (lower === 'inactivo') return <Badge variant="slate">inactivo</Badge>;
-    if (lower === 'prospecto') return <Badge variant="cyan">prospecto</Badge>;
-    return <Badge variant="slate">{est}</Badge>;
+    return <StatusBadge status={est} />;
   }
 
   // Mutations
