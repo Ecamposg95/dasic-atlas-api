@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
 import { DataTable, DataTableHead, DataTableBody, DataTableRow, DataTableEmpty } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,25 @@ function useDebounced<T>(value: T, delay = 300): T {
   return debounced;
 }
 
+// Orden por columnas — mismo mecanismo que ClientesPage. El backend de
+// contactos no acepta params sort/dir, así que se ordena client-side sobre la
+// página cargada (faithful al patrón de header clickeable + flecha ↑↓).
+type SortCol = 'nombre' | 'empresa' | 'cargo';
+type SortDir = 'asc' | 'desc';
+
+function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return null;
+  return dir === 'asc'
+    ? <ChevronUp className="inline h-3 w-3 ml-0.5" />
+    : <ChevronDown className="inline h-3 w-3 ml-0.5" />;
+}
+
+function sortKey(c: ContactoGlobal, col: SortCol): string {
+  if (col === 'empresa') return (c.empresa_nombre ?? '').toLowerCase();
+  if (col === 'cargo') return (c.cargo ?? '').toLowerCase();
+  return (c.nombre ?? '').toLowerCase();
+}
+
 export function ContactosPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
@@ -34,8 +53,19 @@ export function ContactosPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ContactoGlobal | null>(null);
   const [histContacto, setHistContacto] = useState<ContactoGlobal | null>(null);
+  const [sort, setSort] = useState<SortCol | ''>('');
+  const [dir, setDir] = useState<SortDir>('asc');
 
   const qDebounced = useDebounced(q);
+
+  function toggleSort(col: SortCol) {
+    if (sort === col) {
+      setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSort(col);
+      setDir('asc');
+    }
+  }
 
   // Reset page when filters change
   const prevFilters = useRef({ q: qDebounced, empresaId });
@@ -49,7 +79,12 @@ export function ContactosPage() {
   const { data, isLoading, isPlaceholderData } = useContactosGlobal(qDebounced, empresaId, page);
   // Empresas para el selector del filtro: carga 500 para llenar el dropdown completo
   const { data: empresas } = useClientes({ page: 1, q: '', pageSize: 500 });
-  const contactos = useMemo(() => data?.items ?? [], [data]);
+  const contactos = useMemo(() => {
+    const base = data?.items ?? [];
+    if (!sort) return base;
+    const factor = dir === 'asc' ? 1 : -1;
+    return [...base].sort((a, b) => sortKey(a, sort).localeCompare(sortKey(b, sort)) * factor);
+  }, [data, sort, dir]);
 
   function onCotizar(c: ContactoGlobal) {
     navigate(`/spa/cotizador?cliente=${c.cliente_id}&contacto=${c.id}`);
@@ -84,9 +119,24 @@ export function ContactosPage() {
       <DataTable>
         <DataTableHead>
           <tr>
-            <th className="p-2 text-left">Contacto</th>
-            <th className="p-2 text-left">Empresa</th>
-            <th className="p-2 text-left">Cargo</th>
+            <th
+              className="p-2 text-left cursor-pointer select-none hover:text-foreground"
+              onClick={() => toggleSort('nombre')}
+            >
+              Contacto <SortIndicator active={sort === 'nombre'} dir={dir} />
+            </th>
+            <th
+              className="p-2 text-left cursor-pointer select-none hover:text-foreground"
+              onClick={() => toggleSort('empresa')}
+            >
+              Empresa <SortIndicator active={sort === 'empresa'} dir={dir} />
+            </th>
+            <th
+              className="p-2 text-left cursor-pointer select-none hover:text-foreground"
+              onClick={() => toggleSort('cargo')}
+            >
+              Cargo <SortIndicator active={sort === 'cargo'} dir={dir} />
+            </th>
             <th className="p-2 text-left">Email</th>
             <th className="p-2 text-left">Teléfono</th>
             <th className="p-2 text-center w-40">Acciones</th>
