@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, BellRing, BookMarked, ClipboardCheck, Coins, Contact, FileClock, FileText, Ghost,
+  BarChart3, BellRing, BookMarked, ClipboardCheck, Coins, Contact, FileClock, FileText, Ghost,
   KanbanSquare, LayoutDashboard, ListChecks, Package, Receipt, ShoppingCart, ShieldCheck, Tags,
   Truck, UserCog, Users, Wallet, Wrench,
 } from 'lucide-react';
@@ -21,7 +21,12 @@ const SECTIONS: NavSection[] = [
       { to: '/spa/borradores', label: 'Borradores', Icon: FileClock },
       { to: '/spa/seguimiento', label: 'Seguimiento', Icon: ListChecks },
       { to: '/spa/recordatorios', label: 'Recordatorios', Icon: BellRing },
-      { to: '/spa/clientes', label: 'Clientes', Icon: Users },
+    ],
+  },
+  {
+    title: 'Clientes',
+    items: [
+      { to: '/spa/clientes', label: 'Empresas', Icon: Users },
       { to: '/spa/contactos', label: 'Contactos', Icon: Contact },
     ],
   },
@@ -29,10 +34,8 @@ const SECTIONS: NavSection[] = [
     title: 'Operación',
     items: [
       { to: '/spa/compras', label: 'Compras', Icon: ShoppingCart },
-      { to: '/spa/fantasmas', label: 'Fantasmas', Icon: Ghost },
       { to: '/spa/remisiones', label: 'Remisiones', Icon: Truck },
       { to: '/spa/reportes-servicio-docs', label: 'Reportes de servicio', Icon: ClipboardCheck },
-      { to: '/spa/gastos', label: 'Gastos', Icon: Receipt },
     ],
   },
   {
@@ -41,6 +44,7 @@ const SECTIONS: NavSection[] = [
       { to: '/spa/inventario', label: 'Catálogo de productos', Icon: Package },
       { to: '/spa/servicios', label: 'Servicios', Icon: Wrench },
       { to: '/spa/precios', label: 'Precios', Icon: Tags },
+      { to: '/spa/fantasmas', label: 'Fantasmas', Icon: Ghost },
       { to: '/spa/catalogos', label: 'Diccionarios', Icon: BookMarked },
     ],
   },
@@ -48,14 +52,14 @@ const SECTIONS: NavSection[] = [
     title: 'Finanzas',
     items: [
       { to: '/spa/cuentas-por-cobrar', label: 'Cuentas por cobrar', Icon: Wallet },
+      { to: '/spa/gastos', label: 'Gastos', Icon: Receipt },
       { to: '/spa/fx', label: 'Tipo de cambio', Icon: Coins },
     ],
   },
   {
-    title: 'Reportes',
+    title: 'Analítica',
     items: [
-      { to: '/spa/reportes', label: 'Reportes', Icon: BarChart3 },
-      { to: '/spa/reportes-servicio', label: 'Analítica de servicios', Icon: Activity },
+      { to: '/spa/analitica', label: 'KPIs', Icon: BarChart3 },
     ],
   },
   {
