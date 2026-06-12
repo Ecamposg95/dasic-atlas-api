@@ -12,6 +12,7 @@ export type ContactoGlobal = {
 export type ContactosResponse = {
   page: number;
   page_size: number;
+  total: number;
   items: ContactoGlobal[];
 };
 

@@ -17,6 +17,8 @@ router = APIRouter(prefix="/api/contactos", tags=["Contactos"])
 def listar_contactos(
     q: Optional[str] = None,
     cliente_id: Optional[int] = None,
+    sort: Optional[str] = None,   # nombre | empresa | cargo
+    dir: str = "asc",
     page: int = 1,
     page_size: int = 200,
     db: Session = Depends(get_db),
@@ -40,12 +42,31 @@ def listar_contactos(
             models.Contacto.email.ilike(like),
             models.Contacto.cargo.ilike(like),
         ))
-    rows = (
-        query.order_by(
+
+    total = query.count()
+
+    # Orden server-side (mismas convenciones que clientes: sort=col, dir=asc|desc).
+    desc = dir == "desc"
+    if sort == "empresa":
+        col = models.Cliente.nombre_empresa
+    elif sort == "cargo":
+        col = models.Contacto.cargo
+    elif sort == "nombre":
+        col = models.Contacto.nombre
+    else:
+        col = None
+    if col is not None:
+        query = query.order_by(col.desc() if desc else col.asc())
+    else:
+        # Orden por defecto (sin sort explícito): empresa → principal → nombre.
+        query = query.order_by(
             models.Cliente.nombre_empresa.asc(),
             models.Contacto.es_principal.desc(),
             models.Contacto.nombre.asc(),
         )
+
+    rows = (
+        query
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -53,6 +74,7 @@ def listar_contactos(
     return {
         "page": page,
         "page_size": page_size,
+        "total": total,
         "items": [
             {
                 "id": c.id,

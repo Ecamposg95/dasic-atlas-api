@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Contact, Search, Plus, Pencil, Trash2, FileText, History } from 'lucide-react';
@@ -27,8 +27,8 @@ function useDebounced<T>(value: T, delay = 300): T {
 }
 
 // Orden por columnas — mismo mecanismo que ClientesPage. El backend de
-// contactos no acepta params sort/dir, así que se ordena client-side sobre la
-// página cargada (faithful al patrón de header clickeable + flecha ↑↓).
+// contactos acepta params sort/dir (server-side sobre el conjunto filtrado
+// completo, no solo la página): header clickeable + flecha ↑↓.
 type SortCol = 'nombre' | 'empresa' | 'cargo';
 type SortDir = 'asc' | 'desc';
 
@@ -37,12 +37,6 @@ function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
   return dir === 'asc'
     ? <ChevronUp className="inline h-3 w-3 ml-0.5" />
     : <ChevronDown className="inline h-3 w-3 ml-0.5" />;
-}
-
-function sortKey(c: ContactoGlobal, col: SortCol): string {
-  if (col === 'empresa') return (c.empresa_nombre ?? '').toLowerCase();
-  if (col === 'cargo') return (c.cargo ?? '').toLowerCase();
-  return (c.nombre ?? '').toLowerCase();
 }
 
 export function ContactosPage() {
@@ -65,6 +59,7 @@ export function ContactosPage() {
       setSort(col);
       setDir('asc');
     }
+    setPage(1);
   }
 
   // Reset page when filters change
@@ -76,15 +71,16 @@ export function ContactosPage() {
     }
   }, [qDebounced, empresaId]);
 
-  const { data, isLoading, isPlaceholderData } = useContactosGlobal(qDebounced, empresaId, page);
+  const { data, isLoading, isPlaceholderData } = useContactosGlobal(
+    qDebounced,
+    empresaId,
+    page,
+    sort || null,
+    dir,
+  );
   // Empresas para el selector del filtro: carga 500 para llenar el dropdown completo
   const { data: empresas } = useClientes({ page: 1, q: '', pageSize: 500 });
-  const contactos = useMemo(() => {
-    const base = data?.items ?? [];
-    if (!sort) return base;
-    const factor = dir === 'asc' ? 1 : -1;
-    return [...base].sort((a, b) => sortKey(a, sort).localeCompare(sortKey(b, sort)) * factor);
-  }, [data, sort, dir]);
+  const contactos = data?.items ?? [];
 
   function onCotizar(c: ContactoGlobal) {
     navigate(`/spa/cotizador?cliente=${c.cliente_id}&contacto=${c.id}`);
