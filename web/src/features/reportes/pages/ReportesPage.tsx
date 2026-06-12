@@ -364,35 +364,43 @@ const RANGOS = [
 // Main page
 // ────────────────────────────────────────────
 
-export function ReportesPage() {
+export function ReportesPage({ embedded = false }: { embedded?: boolean }) {
   const [dias, setDias] = useState<number>(30);
   // Reportes muestra totales de ventas/utilidad a admin + gerente comercial.
   const isAdmin = useIsAdminOrGerente();
 
+  const rangos = (
+    <div className="flex items-center gap-2">
+      {RANGOS.map((r) => (
+        <button
+          key={r.value}
+          onClick={() => setDias(r.value)}
+          className={`px-3 py-1.5 rounded-lg text-sm transition ${
+            dias === r.value
+              ? 'bg-accent-glow/20 text-accent-glow font-semibold border border-accent-glow/40'
+              : 'bg-slate-100/40 text-muted-foreground hover:bg-slate-200/60 dark:bg-slate-800 dark:hover:bg-slate-700'
+          }`}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="p-6 max-w-7xl mx-auto w-full space-y-8">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="h-6 w-6 text-accent-glow" />
-          <h1 className="text-2xl font-semibold">Reportes</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {RANGOS.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => setDias(r.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition ${
-                dias === r.value
-                  ? 'bg-accent-glow/20 text-accent-glow font-semibold border border-accent-glow/40'
-                  : 'bg-slate-100/40 text-muted-foreground hover:bg-slate-200/60 dark:bg-slate-800 dark:hover:bg-slate-700'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className={embedded ? 'w-full space-y-8' : 'p-6 max-w-7xl mx-auto w-full space-y-8'}>
+      {/* Header — oculto cuando va embebido (KpisPage ya rinde el título de la pestaña) */}
+      {embedded ? (
+        <div className="flex justify-end">{rangos}</div>
+      ) : (
+        <header className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-3">
+            <BarChart3 className="h-6 w-6 text-accent-glow" />
+            <h1 className="text-2xl font-semibold">Reportes</h1>
+          </div>
+          {rangos}
+        </header>
+      )}
 
       <VentasMesSection dias={dias} isAdmin={isAdmin} />
       <TopProductosSection dias={dias} />

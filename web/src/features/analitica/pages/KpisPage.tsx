@@ -28,7 +28,7 @@ export function KpisPage() {
           </button>
         ))}
       </div>
-      {active === 'ventas' ? <ReportesPage /> : <ReportesServicioPage />}
+      {active === 'ventas' ? <ReportesPage embedded /> : <ReportesServicioPage embedded />}
     </div>
   );
 }
