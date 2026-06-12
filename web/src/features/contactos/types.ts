@@ -1,13 +1,22 @@
-export type ContactoGlobal = {
+export type Contacto = {
   id: number;
   cliente_id: number;
-  empresa_nombre: string | null;
   nombre: string;
   cargo: string | null;
   email: string | null;
   telefono: string | null;
   es_principal: boolean;
 };
+
+export type ContactoInput = {
+  nombre: string;
+  cargo?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  es_principal?: boolean;
+};
+
+export type ContactoGlobal = Contacto & { empresa_nombre: string | null };
 
 export type ContactosResponse = {
   page: number;

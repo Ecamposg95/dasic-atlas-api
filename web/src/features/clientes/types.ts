@@ -37,23 +37,7 @@ export type ClienteCreate = {
 
 export type ClienteUpdate = Partial<ClienteCreate>;
 
-export type Contacto = {
-  id: number;
-  cliente_id: number;
-  nombre: string;
-  cargo: string | null;
-  email: string | null;
-  telefono: string | null;
-  es_principal: boolean;
-};
-
-export type ContactoInput = {
-  nombre: string;
-  cargo?: string | null;
-  email?: string | null;
-  telefono?: string | null;
-  es_principal?: boolean;
-};
+export type { Contacto, ContactoInput } from '@/features/contactos/types';
 
 export type TransaccionCuenta = {
   id: number;
