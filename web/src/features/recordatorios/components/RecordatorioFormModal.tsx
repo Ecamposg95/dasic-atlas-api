@@ -5,11 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { toast } from '@/lib/toast';
 import { normalizeDetail } from '@/lib/api';
+import { useClientes } from '@/features/clientes/hooks/useClientes';
 import { useCrearRecordatorio } from '../hooks/useRecordatorioMutations';
 import type { TipoAccion } from '../types';
 
 interface Props {
-  ordenId: number;
+  /** Si viene, el recordatorio se ata a esta orden (flujo Seguimiento).
+   *  Si es undefined, es un recordatorio "libre" y se muestra el selector de cliente. */
+  ordenId?: number;
   folio?: string;
   onClose: () => void;
 }
@@ -23,9 +26,19 @@ const TIPO_OPTIONS: { value: TipoAccion; label: string }[] = [
 ];
 
 export function RecordatorioFormModal({ ordenId, folio, onClose }: Props) {
+  const esLibre = ordenId === undefined;
   const [fecha, setFecha] = useState('');
   const [tipo, setTipo] = useState<TipoAccion>('llamada');
   const [descripcion, setDescripcion] = useState('');
+  const [clienteId, setClienteId] = useState<number | ''>('');
+  const [clienteQuery, setClienteQuery] = useState('');
+
+  // Solo cargamos clientes en modo libre (con orden, el cliente se deriva en backend).
+  const { data: clientes, isLoading: clientesLoading } = useClientes({
+    q: clienteQuery,
+    pageSize: 50,
+    estatus: 'activo',
+  });
 
   const crear = useCrearRecordatorio();
 
@@ -40,6 +53,7 @@ export function RecordatorioFormModal({ ordenId, folio, onClose }: Props) {
     try {
       await crear.mutateAsync({
         orden_id: ordenId,
+        cliente_id: esLibre && clienteId !== '' ? clienteId : undefined,
         fecha_proximo_contacto: isoDate,
         tipo_accion: tipo,
         descripcion: descripcion.trim() || undefined,
@@ -57,6 +71,36 @@ export function RecordatorioFormModal({ ordenId, folio, onClose }: Props) {
   return (
     <Modal title={titulo} onClose={onClose} size="sm">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Cliente (solo recordatorio libre) */}
+        {esLibre && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-foreground" htmlFor="rec-cliente">
+              Cliente <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <Input
+              id="rec-cliente-q"
+              type="text"
+              placeholder="Buscar cliente…"
+              value={clienteQuery}
+              onChange={(e) => setClienteQuery(e.target.value)}
+              className="mb-1.5"
+            />
+            <Select
+              id="rec-cliente"
+              value={clienteId === '' ? '' : String(clienteId)}
+              onChange={(e) => setClienteId(e.target.value === '' ? '' : Number(e.target.value))}
+            >
+              <option value="">— Sin cliente —</option>
+              {clientesLoading && <option disabled>Cargando…</option>}
+              {(clientes ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre_empresa}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+
         {/* Fecha */}
         <div className="space-y-1">
           <label className="text-sm font-medium text-foreground" htmlFor="rec-fecha">

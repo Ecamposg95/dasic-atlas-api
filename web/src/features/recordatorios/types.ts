@@ -4,7 +4,8 @@ export type TipoAccion = 'llamada' | 'email' | 'whatsapp' | 'visita' | 'otro';
 
 export interface Recordatorio {
   id: number;
-  orden_id: number;
+  orden_id: number | null;
+  cliente_id: number | null;
   usuario_id: number;
   fecha_proximo_contacto: string;
   tipo_accion: TipoAccion;
@@ -26,7 +27,8 @@ export interface RecordatorioResumen {
 }
 
 export interface RecordatorioCreate {
-  orden_id: number;
+  orden_id?: number; // opcional: recordatorio libre (sin orden)
+  cliente_id?: number; // opcional: cliente destino del follow-up libre
   fecha_proximo_contacto: string; // ISO datetime
   tipo_accion?: TipoAccion;
   descripcion?: string;

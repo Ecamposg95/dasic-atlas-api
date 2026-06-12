@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BellRing, CheckCircle2, Clock, Trash2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -18,6 +18,7 @@ import {
 import { toast } from '@/lib/toast';
 import { confirm } from '@/lib/confirm';
 import { normalizeDetail } from '@/lib/api';
+import { RecordatorioFormModal } from '../components/RecordatorioFormModal';
 import { useRecordatorios } from '../hooks/useRecordatorios';
 import {
   useCompletarRecordatorio,
@@ -150,9 +151,9 @@ function PosponerModal({ rec, onClose }: { rec: Recordatorio; onClose: () => voi
 // ─── RecordatoriosPage ─────────────────────────────────────────────────────────
 
 export function RecordatoriosPage() {
-  const navigate = useNavigate();
   const [vista, setVista] = useState<RecordatorioVista>('pendientes');
   const [posponerRec, setPosponerRec] = useState<Recordatorio | null>(null);
+  const [crearOpen, setCrearOpen] = useState(false);
 
   const { data, isLoading, isPlaceholderData } = useRecordatorios(vista);
   const completar = useCompletarRecordatorio();
@@ -196,8 +197,8 @@ export function RecordatoriosPage() {
             <BellRing className="h-6 w-6 text-accent-glow" />
             <h1 className="text-2xl font-semibold">Recordatorios</h1>
           </div>
-          {/* Los recordatorios se crean por cotización en Seguimiento (requieren orden_id). */}
-          <Button size="sm" onClick={() => navigate('/spa/seguimiento')}>
+          {/* Recordatorio libre (sin orden); para atarlo a una cotización, usa Seguimiento. */}
+          <Button size="sm" onClick={() => setCrearOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Nuevo recordatorio
           </Button>
@@ -350,6 +351,11 @@ export function RecordatoriosPage() {
       {/* Posponer modal */}
       {posponerRec && (
         <PosponerModal rec={posponerRec} onClose={() => setPosponerRec(null)} />
+      )}
+
+      {/* Crear recordatorio libre (sin orden) */}
+      {crearOpen && (
+        <RecordatorioFormModal onClose={() => setCrearOpen(false)} />
       )}
     </div>
   );
