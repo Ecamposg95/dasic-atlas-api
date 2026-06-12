@@ -163,15 +163,9 @@ export function GastosPage() {
   // La lista ya viene filtrada y paginada del servidor
   const filtered = gastos;
 
-  // Total de los gastos visibles en esta página (solo MXN/USD por separado)
-  const totalMXN = useMemo(
-    () => filtered.filter((g) => g.moneda === 'MXN').reduce((acc, g) => acc + Number(g.monto), 0),
-    [filtered],
-  );
-  const totalUSD = useMemo(
-    () => filtered.filter((g) => g.moneda === 'USD').reduce((acc, g) => acc + Number(g.monto), 0),
-    [filtered],
-  );
+  // Gran total del conjunto FILTRADO completo (server-side, no solo la página)
+  const totalMXN = data?.totales?.MXN ?? 0;
+  const totalUSD = data?.totales?.USD ?? 0;
 
   function handleSave(data: GastoCreate) {
     if (modalMode === 'create') {
@@ -333,12 +327,12 @@ export function GastosPage() {
         isLoading={isPlaceholderData}
       />
 
-      {/* Total al pie (de la página actual) */}
-      {filtered.length > 0 && (
+      {/* Gran total del conjunto filtrado completo (server-side, no solo la página) */}
+      {(totalMXN > 0 || totalUSD > 0) && (
         <footer className="flex justify-end gap-6 text-sm border-t border-border pt-4">
           {totalMXN > 0 && (
             <div className="text-right">
-              <span className="text-muted-foreground text-xs block">Total MXN en esta página ({filtered.filter((g) => g.moneda === 'MXN').length} gastos)</span>
+              <span className="text-muted-foreground text-xs block">Total filtrado MXN</span>
               <span className="font-semibold text-foreground">
                 MXN ${totalMXN.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
@@ -346,7 +340,7 @@ export function GastosPage() {
           )}
           {totalUSD > 0 && (
             <div className="text-right">
-              <span className="text-muted-foreground text-xs block">Total USD en esta página ({filtered.filter((g) => g.moneda === 'USD').length} gastos)</span>
+              <span className="text-muted-foreground text-xs block">Total filtrado USD</span>
               <span className="font-semibold text-foreground">
                 USD ${totalUSD.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>

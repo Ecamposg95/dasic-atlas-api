@@ -78,6 +78,20 @@ def listar_gastos(
 
     total = query.count()
 
+    # Gran total del conjunto FILTRADO completo (no solo la página), por moneda.
+    totales_raw = (
+        query.with_entities(
+            func.coalesce(models.Gasto.moneda, "MXN"),
+            func.sum(models.Gasto.monto),
+        )
+        .group_by(func.coalesce(models.Gasto.moneda, "MXN"))
+        .all()
+    )
+    totales = {"MXN": 0.0, "USD": 0.0}
+    for moneda, suma in totales_raw:
+        key = (moneda or "MXN").upper()
+        totales[key] = float(suma or 0)
+
     gastos = (
         query.order_by(desc(models.Gasto.fecha))
         .offset(offset)
@@ -98,7 +112,13 @@ def listar_gastos(
             usuario=nombre_user,
             usuario_id=g.usuario_id,
         ))
-    return {"page": page, "page_size": page_size, "total": total, "items": items}
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "totales": totales,
+        "items": items,
+    }
 
 
 @router.get("/categorias", dependencies=[Depends(allow_admin_asistente)])

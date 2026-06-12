@@ -30,6 +30,8 @@ export type GastosPage = {
   page: number;
   page_size: number;
   total: number;
+  // Gran total por moneda del conjunto FILTRADO completo (no solo la página).
+  totales: { MXN: number; USD: number };
   items: Gasto[];
 };
 
