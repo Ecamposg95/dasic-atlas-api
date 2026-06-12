@@ -5,19 +5,21 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import { useClientes } from '@/features/clientes/hooks/useClientes';
 import { useGuardarContacto } from '../hooks/useContactoMutations';
-import type { ContactoGlobal } from '../types';
+import type { Contacto, ContactoGlobal } from '../types';
 
 export function ContactoFormModal({
   open,
   onClose,
   editing,
+  clienteIdFijo,
 }: {
   open: boolean;
   onClose: () => void;
-  editing: ContactoGlobal | null;
+  editing: Contacto | ContactoGlobal | null;
+  clienteIdFijo?: number;
 }) {
   const { data: empresas } = useClientes({ page: 1, q: '', pageSize: 500 });
-  const [empresaId, setEmpresaId] = useState<number | null>(editing?.cliente_id ?? null);
+  const [empresaId, setEmpresaId] = useState<number | null>(clienteIdFijo ?? editing?.cliente_id ?? null);
   const [nombre, setNombre] = useState(editing?.nombre ?? '');
   const [cargo, setCargo] = useState(editing?.cargo ?? '');
   const [email, setEmail] = useState(editing?.email ?? '');
@@ -59,23 +61,25 @@ export function ContactoFormModal({
   return (
     <Modal title={editing ? 'Editar contacto' : 'Nuevo contacto'} onClose={onClose} size="md">
       <div className="space-y-3">
-        <div>
-          <label className="block text-xs text-slate-500 mb-1">Empresa *</label>
-          {editing ? (
-            <div className="text-sm text-foreground">{editing.empresa_nombre}</div>
-          ) : (
-            <select
-              value={empresaId ?? ''}
-              onChange={(e) => setEmpresaId(e.target.value ? parseInt(e.target.value, 10) : null)}
-              className="w-full h-9 text-sm rounded border border-border-strong bg-card px-2"
-            >
-              <option value="">— Elige empresa —</option>
-              {(empresas ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre_empresa}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        {clienteIdFijo == null && (
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Empresa *</label>
+            {editing ? (
+              <div className="text-sm text-foreground">{(editing as ContactoGlobal).empresa_nombre}</div>
+            ) : (
+              <select
+                value={empresaId ?? ''}
+                onChange={(e) => setEmpresaId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                className="w-full h-9 text-sm rounded border border-border-strong bg-card px-2"
+              >
+                <option value="">— Elige empresa —</option>
+                {(empresas ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre_empresa}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-slate-500 mb-1">Nombre *</label>
