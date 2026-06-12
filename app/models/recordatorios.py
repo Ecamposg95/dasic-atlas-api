@@ -17,10 +17,19 @@ class Recordatorio(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # Nullable: un recordatorio "libre" no está atado a una orden (follow-up genérico).
     orden_id = Column(
         Integer,
         ForeignKey("ordenes_venta.id"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+    # Cliente destino directo. En recordatorios con orden se deriva de la orden;
+    # en recordatorios libres es la única forma de saber a quién es el follow-up.
+    cliente_id = Column(
+        Integer,
+        ForeignKey("clientes.id"),
+        nullable=True,
         index=True,
     )
     # Responsable / asignado (por default = vendedor de la orden)
@@ -47,5 +56,6 @@ class Recordatorio(Base):
 
     # Relationships
     orden = relationship("OrdenVenta", foreign_keys=[orden_id])
+    cliente = relationship("Cliente", foreign_keys=[cliente_id])
     usuario = relationship("Usuario", foreign_keys=[usuario_id])
     creado_por = relationship("Usuario", foreign_keys=[creado_por_id])

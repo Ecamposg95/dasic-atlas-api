@@ -40,16 +40,19 @@ def _enrich(rec: "models.Recordatorio", hoy: date) -> dict:
     """Convierte una fila ORM en dict enriquecido con folio/cliente/dias."""
     orden = rec.orden
     folio = orden.folio if orden else None
-    cliente = (
-        orden.cliente.nombre_empresa
-        if orden and orden.cliente
-        else None
-    )
+    # Cliente: derivado de la orden; si es un recordatorio libre, del cliente directo.
+    if orden and orden.cliente:
+        cliente = orden.cliente.nombre_empresa
+    elif rec.cliente:
+        cliente = rec.cliente.nombre_empresa
+    else:
+        cliente = None
     usuario_nombre = rec.usuario.nombre if rec.usuario else None
     dias = (rec.fecha_proximo_contacto.date() - hoy).days
     return {
         "id": rec.id,
         "orden_id": rec.orden_id,
+        "cliente_id": rec.cliente_id,
         "usuario_id": rec.usuario_id,
         "fecha_proximo_contacto": rec.fecha_proximo_contacto,
         "tipo_accion": rec.tipo_accion,
@@ -91,18 +94,33 @@ def crear_recordatorio(
             f"tipo_accion inválido. Valores permitidos: {sorted(_VALID_TIPOS)}",
         )
 
-    # Validar orden
-    orden = db.query(models.OrdenVenta).filter(
-        models.OrdenVenta.id == payload.orden_id
-    ).first()
-    if not orden:
-        raise HTTPException(404, "Orden/cotización no encontrada")
+    # Validar orden SOLO si viene (recordatorio libre = sin orden)
+    orden = None
+    if payload.orden_id is not None:
+        orden = db.query(models.OrdenVenta).filter(
+            models.OrdenVenta.id == payload.orden_id
+        ).first()
+        if not orden:
+            raise HTTPException(404, "Orden/cotización no encontrada")
 
-    # El usuario asignado es el vendedor de la orden; si no tiene, recae en quien crea
-    usuario_id = orden.vendedor_id or current_user.id
+    # Cliente destino: explícito en el body o derivado de la orden.
+    cliente_id = payload.cliente_id
+    if cliente_id is not None:
+        cliente = db.query(models.Cliente).filter(
+            models.Cliente.id == cliente_id
+        ).first()
+        if not cliente:
+            raise HTTPException(404, "Cliente no encontrado")
+    elif orden is not None:
+        cliente_id = orden.cliente_id
+
+    # El usuario asignado es el vendedor de la orden; si no hay orden o vendedor,
+    # recae en quien crea el recordatorio.
+    usuario_id = (orden.vendedor_id if orden else None) or current_user.id
 
     rec = models.Recordatorio(
         orden_id=payload.orden_id,
+        cliente_id=cliente_id,
         usuario_id=usuario_id,
         fecha_proximo_contacto=payload.fecha_proximo_contacto,
         tipo_accion=payload.tipo_accion,

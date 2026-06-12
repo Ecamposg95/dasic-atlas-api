@@ -13,9 +13,13 @@ class RecordatorioCreate(BaseModel):
 
     usuario_id NO se acepta en el body: el backend lo deriva de
     orden.vendedor_id (o del usuario autenticado como fallback).
+
+    orden_id es opcional: un recordatorio "libre" no está atado a una orden.
+    cliente_id permite apuntar el follow-up a un cliente sin orden.
     """
 
-    orden_id: int
+    orden_id: Optional[int] = None
+    cliente_id: Optional[int] = None
     fecha_proximo_contacto: datetime
     tipo_accion: str = "llamada"
     descripcion: Optional[str] = None
@@ -38,7 +42,8 @@ class RecordatorioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    orden_id: int
+    orden_id: Optional[int] = None
+    cliente_id: Optional[int] = None
     usuario_id: int
     fecha_proximo_contacto: datetime
     tipo_accion: str

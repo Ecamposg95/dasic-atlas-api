@@ -502,6 +502,11 @@ _BACKFILL_DDL = [
         creado_en TIMESTAMPTZ DEFAULT now()
     )""",
     "CREATE INDEX IF NOT EXISTS ix_notas_empresa_cliente_id ON notas_empresa(cliente_id)",
+
+    # 20260611_01 — recordatorio libre (sin orden): orden_id nullable + cliente_id propio
+    "ALTER TABLE IF EXISTS recordatorios ALTER COLUMN orden_id DROP NOT NULL",
+    "ALTER TABLE IF EXISTS recordatorios ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)",
+    "CREATE INDEX IF NOT EXISTS ix_recordatorios_cliente_id ON recordatorios (cliente_id)",
 ]
 
 
