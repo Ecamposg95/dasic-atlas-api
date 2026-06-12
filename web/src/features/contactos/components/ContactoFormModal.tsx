@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import { useClientes } from '@/features/clientes/hooks/useClientes';
-import { useGuardarContacto } from '@/features/clientes/hooks/useEmpresaDetalle';
+import { useGuardarContacto } from '../hooks/useContactoMutations';
 import type { ContactoGlobal } from '../types';
 
 export function ContactoFormModal({

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/toast';
 import { useClientes } from '@/features/clientes/hooks/useClientes';
-import { useEliminarContacto } from '@/features/clientes/hooks/useEmpresaDetalle';
+import { useEliminarContacto } from '../hooks/useContactoMutations';
 import { useContactosGlobal } from '../hooks/useContactosGlobal';
 import { ContactoFormModal } from '../components/ContactoFormModal';
 import { ContactoHistorialDrawer } from '../components/ContactoHistorialDrawer';

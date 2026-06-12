@@ -7,16 +7,16 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/lib/toast';
 import type { Contacto, ContactoInput } from '../../types';
 import {
-  useContactos,
+  useContactosEmpresa,
   useGuardarContacto,
   useEliminarContacto,
-} from '../../hooks/useEmpresaDetalle';
+} from '@/features/contactos/hooks/useContactoMutations';
 
 const VACIO: ContactoInput = { nombre: '', cargo: '', email: '', telefono: '', es_principal: false };
 
 export function ContactosTab({ clienteId }: { clienteId: number }) {
   const navigate = useNavigate();
-  const { data: contactos } = useContactos(clienteId);
+  const { data: contactos } = useContactosEmpresa(clienteId);
   const guardar = useGuardarContacto(clienteId);
   const eliminar = useEliminarContacto(clienteId);
 
