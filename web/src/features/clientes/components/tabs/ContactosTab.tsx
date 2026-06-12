@@ -3,43 +3,20 @@ import { confirm } from '@/lib/confirm';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Star, Trash2, Pencil, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from '@/lib/toast';
-import type { Contacto, ContactoInput } from '../../types';
-import {
-  useContactosEmpresa,
-  useGuardarContacto,
-  useEliminarContacto,
-} from '@/features/contactos/hooks/useContactoMutations';
-
-const VACIO: ContactoInput = { nombre: '', cargo: '', email: '', telefono: '', es_principal: false };
+import type { Contacto } from '@/features/contactos/types';
+import { useContactosEmpresa, useEliminarContacto } from '@/features/contactos/hooks/useContactoMutations';
+import { ContactoFormModal } from '@/features/contactos/components/ContactoFormModal';
 
 export function ContactosTab({ clienteId }: { clienteId: number }) {
   const navigate = useNavigate();
   const { data: contactos } = useContactosEmpresa(clienteId);
-  const guardar = useGuardarContacto(clienteId);
   const eliminar = useEliminarContacto(clienteId);
 
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<ContactoInput>(VACIO);
-  const [showForm, setShowForm] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Contacto | null>(null);
 
-  function abrirNuevo() { setEditId(null); setForm(VACIO); setShowForm(true); }
-  function abrirEditar(c: Contacto) {
-    setEditId(c.id);
-    setForm({ nombre: c.nombre, cargo: c.cargo ?? '', email: c.email ?? '', telefono: c.telefono ?? '', es_principal: c.es_principal });
-    setShowForm(true);
-  }
-  function guardarContacto() {
-    if (!form.nombre.trim()) { toast({ kind: 'warning', title: 'El nombre es requerido' }); return; }
-    guardar.mutate(
-      { id: editId ?? undefined, data: { ...form, nombre: form.nombre.trim() } },
-      {
-        onSuccess: () => { toast({ kind: 'success', title: 'Contacto guardado' }); setShowForm(false); },
-        onError: (e) => toast({ kind: 'error', title: 'No se pudo guardar', description: e.detail }),
-      },
-    );
-  }
+  function abrirNuevo() { setEditing(null); setModalOpen(true); }
+  function abrirEditar(c: Contacto) { setEditing(c); setModalOpen(true); }
 
   return (
     <div className="p-1 space-y-2">
@@ -82,23 +59,14 @@ export function ContactosTab({ clienteId }: { clienteId: number }) {
         {(contactos ?? []).length === 0 && <p className="text-xs text-muted-foreground py-2">Sin contactos.</p>}
       </div>
 
-      {showForm && (
-        <div className="mt-3 rounded-md border border-border p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre *" />
-            <Input value={form.cargo ?? ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} placeholder="Cargo" />
-            <Input value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Correo" />
-            <Input value={form.telefono ?? ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
-          </div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={form.es_principal ?? false} onChange={(e) => setForm({ ...form, es_principal: e.target.checked })} />
-            Contacto principal
-          </label>
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
-            <Button size="sm" onClick={guardarContacto} disabled={guardar.isPending}>Guardar</Button>
-          </div>
-        </div>
+      {modalOpen && (
+        <ContactoFormModal
+          key={editing?.id ?? 'new'}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          editing={editing}
+          clienteIdFijo={clienteId}
+        />
       )}
     </div>
   );
