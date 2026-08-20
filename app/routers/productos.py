@@ -207,7 +207,10 @@ def _diff_precio(previo: dict, producto) -> dict:
         a_n = Decimal(str(a)) if a is not None else None
         d_n = Decimal(str(d)) if d is not None else None
         if a_n != d_n:
-            cambios[campo] = {"antes": str(a_n), "despues": str(d_n)}
+            cambios[campo] = {
+                "antes": str(a_n) if a_n is not None else None,
+                "despues": str(d_n) if d_n is not None else None,
+            }
     if (previo["moneda_compra"] or "") != (getattr(producto, "moneda_compra") or ""):
         cambios["moneda_compra"] = {
             "antes": previo["moneda_compra"], "despues": producto.moneda_compra,

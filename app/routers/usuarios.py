@@ -56,8 +56,8 @@ def crear_usuario(
     if rol_solicitado == RolUsuario.SUPERADMIN and RolUsuario.from_input(current_user.rol) != RolUsuario.SUPERADMIN:
         raise HTTPException(status_code=403, detail="Solo un superadmin puede asignar el rol superadmin.")
 
+    nuevo = UserService.create_user(db, usuario)  # hace commit interno
     try:
-        nuevo = UserService.create_user(db, usuario)  # hace commit interno
         audit_service.registrar(
             db,
             usuario=current_user,
@@ -67,14 +67,12 @@ def crear_usuario(
             resumen=f"Creó usuario {nuevo.email} con rol {RolUsuario.from_input(nuevo.rol).value}",
         )
         db.commit()
-        return nuevo
-    except HTTPException:
+    except Exception:
+        # El alta ya está commiteada; perder el evento es el trade-off
+        # aceptado — nunca convertir un alta exitosa en un 500.
+        logger.exception("auditoria: fallo registrando alta de usuario")
         db.rollback()
-        raise
-    except Exception as exc:
-        db.rollback()
-        logger.exception("usuarios.crear_usuario falló")
-        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
+    return nuevo
 
 @router.put("/{user_id}", response_model=schemas.UsuarioResponse, dependencies=[Depends(allow_user_admin)])
 def actualizar_usuario(

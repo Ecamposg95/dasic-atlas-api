@@ -135,3 +135,21 @@ def test_eliminar_usuario_registra(db, client_as, usuario):
     assert r.status_code == 200
     ev = db.query(models.AuditLog).one()
     assert (ev.accion, ev.entidad, ev.entidad_id) == ("eliminar", "usuario", objetivo.id)
+
+
+def test_crear_usuario_sobrevive_fallo_de_auditoria(db, client_as, monkeypatch):
+    from app.routers import usuarios as usuarios_router
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("auditoria caida")
+
+    monkeypatch.setattr(usuarios_router.audit_service, "registrar", _boom)
+    admin = client_as("administrador")
+    r = admin.post("/api/usuarios/", json={
+        "nombre": "Resiliente", "email": "resiliente@test.local",
+        "password": "secreto123", "rol": "vendedor",
+    })
+    assert r.status_code == 200
+    creado = db.query(models.Usuario).filter(models.Usuario.email == "resiliente@test.local").one()
+    assert creado is not None
+    assert db.query(models.AuditLog).count() == 0
