@@ -81,3 +81,57 @@ def test_eliminar_producto_registra_auditoria(db, client_as):
     ev = db.query(models.AuditLog).one()
     assert (ev.accion, ev.entidad) == ("eliminar", "producto")
     assert "SKU-1" in ev.resumen
+
+
+def test_eliminar_gasto_registra_auditoria(db, client_as):
+    g = models.Gasto(categoria="Viáticos", descripcion="Gasolina", monto=Decimal("500.00"), moneda="MXN")
+    db.add(g)
+    db.commit()
+    admin = client_as("administrador")
+    r = admin.delete(f"/api/gastos/{g.id}")
+    assert r.status_code == 200
+    ev = db.query(models.AuditLog).one()
+    assert (ev.accion, ev.entidad) == ("eliminar", "gasto")
+    assert "Viáticos" in ev.resumen and "500" in ev.resumen
+
+
+def test_crear_usuario_registra_alta(db, client_as):
+    admin = client_as("administrador")
+    r = admin.post("/api/usuarios/", json={
+        "nombre": "Nuevo Vendedor", "email": "nuevo@test.local",
+        "password": "secreto123", "rol": "vendedor",
+    })
+    assert r.status_code == 200
+    ev = db.query(models.AuditLog).one()
+    assert (ev.accion, ev.entidad) == ("crear", "usuario")
+    assert "nuevo@test.local" in ev.resumen
+
+
+def test_cambio_de_rol_y_desactivacion_registran(db, client_as, usuario):
+    objetivo = usuario(rol="vendedor", email="objetivo@test.local")
+    admin = client_as("administrador")
+
+    r = admin.put(f"/api/usuarios/{objetivo.id}", json={"rol": "operativo"})
+    assert r.status_code == 200
+    r = admin.put(f"/api/usuarios/{objetivo.id}", json={"activo": False})
+    assert r.status_code == 200
+
+    acciones = {e.accion for e in db.query(models.AuditLog).all()}
+    assert {"cambio_rol", "desactivar"} <= acciones
+
+
+def test_update_usuario_sin_cambio_sensible_no_registra(db, client_as, usuario):
+    objetivo = usuario(rol="vendedor", email="obj2@test.local")
+    admin = client_as("administrador")
+    r = admin.put(f"/api/usuarios/{objetivo.id}", json={"nombre": "Otro Nombre"})
+    assert r.status_code == 200
+    assert db.query(models.AuditLog).count() == 0
+
+
+def test_eliminar_usuario_registra(db, client_as, usuario):
+    objetivo = usuario(rol="vendedor", email="borrar@test.local")
+    admin = client_as("administrador")
+    r = admin.delete(f"/api/usuarios/{objetivo.id}")
+    assert r.status_code == 200
+    ev = db.query(models.AuditLog).one()
+    assert (ev.accion, ev.entidad, ev.entidad_id) == ("eliminar", "usuario", objetivo.id)

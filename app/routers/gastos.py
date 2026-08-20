@@ -11,6 +11,7 @@ from typing import Optional
 from app import models
 from app.db import get_db
 from app.security import allow_admin, allow_admin_asistente, get_current_user
+from app.services import audit_service
 
 logger = logging.getLogger(__name__)
 
@@ -194,10 +195,23 @@ def editar_gasto(id: int, payload: GastoUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{id}", dependencies=[Depends(allow_admin)])
-def eliminar_gasto(id: int, db: Session = Depends(get_db)):
+def eliminar_gasto(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
     g = db.query(models.Gasto).filter(models.Gasto.id == id).first()
     if not g:
         raise HTTPException(404, "Gasto no encontrado")
+    audit_service.registrar(
+        db,
+        usuario=current_user,
+        accion="eliminar",
+        entidad="gasto",
+        entidad_id=g.id,
+        resumen=f"Eliminó gasto {g.categoria} por {g.monto} {g.moneda} ({g.descripcion or 'sin descripción'})",
+        datos={"categoria": g.categoria, "monto": g.monto, "moneda": g.moneda},
+    )
     db.delete(g)
     db.commit()
     return {"mensaje": "Eliminado"}
