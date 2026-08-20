@@ -43,3 +43,41 @@ def test_eliminar_contacto_registra_auditoria(db, client_as):
     ev = db.query(models.AuditLog).one()
     assert (ev.accion, ev.entidad) == ("eliminar", "contacto")
     assert "Juan Pérez" in ev.resumen
+
+
+def _producto(db, **kw):
+    defaults = dict(sku="SKU-1", nombre="Bomba X", costo_compra=Decimal("100.00"),
+                    moneda_compra="MXN", precio_publico=Decimal("150.00"))
+    defaults.update(kw)
+    p = models.Producto(**defaults)
+    db.add(p)
+    db.commit()
+    return p
+
+
+def test_cambio_de_costo_registra_diff(db, client_as):
+    p = _producto(db)
+    admin = client_as("administrador")
+    r = admin.put(f"/api/productos/{p.id}", json={"costo_compra": 120.5})
+    assert r.status_code == 200
+    ev = db.query(models.AuditLog).one()
+    assert (ev.accion, ev.entidad, ev.entidad_id) == ("cambio_precio", "producto", p.id)
+    assert '"antes": "100.00"' in ev.datos and '"despues": "120.5' in ev.datos
+
+
+def test_update_sin_cambio_de_precio_no_registra(db, client_as):
+    p = _producto(db)
+    admin = client_as("administrador")
+    r = admin.put(f"/api/productos/{p.id}", json={"nombre": "Bomba X v2", "costo_compra": 100.0})
+    assert r.status_code == 200
+    assert db.query(models.AuditLog).count() == 0
+
+
+def test_eliminar_producto_registra_auditoria(db, client_as):
+    p = _producto(db)
+    admin = client_as("administrador")
+    r = admin.delete(f"/api/productos/{p.id}")
+    assert r.status_code == 200
+    ev = db.query(models.AuditLog).one()
+    assert (ev.accion, ev.entidad) == ("eliminar", "producto")
+    assert "SKU-1" in ev.resumen
