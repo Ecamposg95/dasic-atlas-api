@@ -15,6 +15,7 @@ from app.db import get_db
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
 from app.security.permissions import is_owner_scoped, require
 from app.core.fechas import hoy_negocio
+from app.services import audit_service
 
 logger = logging.getLogger(__name__)
 
@@ -410,6 +411,7 @@ def editar_cliente(
 def eliminar_cliente(
     cliente_id: int,
     db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     """Elimina cliente. Bloquea si tiene cotizaciones/ventas o saldo > 0."""
     cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
@@ -451,6 +453,18 @@ def eliminar_cliente(
         )
 
     try:
+        audit_service.registrar(
+            db,
+            usuario=current_user,
+            accion="eliminar",
+            entidad="cliente",
+            entidad_id=cliente.id,
+            resumen=(
+                f"Eliminó cliente {cliente.nombre_empresa} "
+                f"(RFC {cliente.rfc_tax_id or '—'}, saldo {cliente.saldo_actual or 0})"
+            ),
+            datos={"nombre_empresa": cliente.nombre_empresa, "rfc_tax_id": cliente.rfc_tax_id},
+        )
         db.delete(cliente)
         db.commit()
         return {"mensaje": "Cliente eliminado", "id": cliente_id}
@@ -1124,7 +1138,12 @@ def actualizar_contacto(cliente_id: int, contacto_id: int, payload: schemas.Cont
 
 
 @router.delete("/{cliente_id}/contactos/{contacto_id}", dependencies=[Depends(allow_all_staff)])
-def eliminar_contacto(cliente_id: int, contacto_id: int, db: Session = Depends(get_db)):
+def eliminar_contacto(
+    cliente_id: int,
+    contacto_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
     c = (
         db.query(models.Contacto)
         .filter(models.Contacto.id == contacto_id, models.Contacto.cliente_id == cliente_id)
@@ -1132,6 +1151,14 @@ def eliminar_contacto(cliente_id: int, contacto_id: int, db: Session = Depends(g
     )
     if not c:
         raise HTTPException(404, "Contacto no encontrado")
+    audit_service.registrar(
+        db,
+        usuario=current_user,
+        accion="eliminar",
+        entidad="contacto",
+        entidad_id=c.id,
+        resumen=f"Eliminó contacto {c.nombre} ({c.cargo or 'sin cargo'}) del cliente #{cliente_id}",
+    )
     db.delete(c)
     db.commit()
     return {"ok": True}
