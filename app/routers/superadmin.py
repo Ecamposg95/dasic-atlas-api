@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app import models
+from app.models.enums import TipoMovimientoStock
 from app.db import get_db
 from app.security import get_current_user
 from app.security.jwt import allow_superadmin
@@ -79,7 +80,7 @@ def set_config(
 # ---------------------------------------------------------------------------
 
 class AuditEvent(BaseModel):
-    fuente: Literal["cotizacion", "fusion_cliente"]
+    fuente: Literal["cotizacion", "fusion_cliente", "sistema", "stock"]
     fecha: datetime
     usuario: str | None
     usuario_id: int | None
@@ -152,10 +153,56 @@ def _normalize_merge_log(row, nombre_map: dict) -> AuditEvent:
     )
 
 
+_ACCION_SISTEMA = {
+    "eliminar": "Eliminación",
+    "cambio_precio": "Cambio de precio",
+    "cambio_rol": "Cambio de rol",
+    "desactivar": "Desactivación",
+    "crear": "Alta",
+}
+
+_LINK_SISTEMA = {
+    "cliente": "/spa/clientes",
+    "producto": "/spa/productos",
+    "usuario": "/spa/usuarios",
+    "gasto": "/spa/gastos",
+}
+
+
+def _normalize_audit_log(row, nombre_map: dict) -> AuditEvent:
+    return AuditEvent(
+        fuente="sistema",
+        fecha=row.fecha,
+        usuario=(nombre_map.get(row.usuario_id) or "—") if row.usuario_id else "—",
+        usuario_id=row.usuario_id,
+        accion=f"{_ACCION_SISTEMA.get(row.accion, row.accion)} de {row.entidad}",
+        entidad=f"{row.entidad} #{row.entidad_id}" if row.entidad_id else row.entidad,
+        detalle=row.resumen,
+        link=_LINK_SISTEMA.get(row.entidad),
+    )
+
+
+def _normalize_stock_ajuste(mov, producto_map: dict, nombre_map: dict) -> AuditEvent:
+    prod = producto_map.get(mov.producto_id)
+    return AuditEvent(
+        fuente="stock",
+        fecha=mov.creado_en,
+        usuario=(nombre_map.get(mov.usuario_id) or "—") if mov.usuario_id else "—",
+        usuario_id=mov.usuario_id,
+        accion="Ajuste de stock",
+        entidad=prod or f"Producto #{mov.producto_id}",
+        detalle=(
+            f"{'+' if mov.cantidad >= 0 else ''}{mov.cantidad} → stock {mov.stock_resultante}"
+            + (f" · {mov.motivo}" if mov.motivo else "")
+        ),
+        link="/spa/inventario",
+    )
+
+
 @router.get("/audit", dependencies=[Depends(allow_superadmin)])
 def get_audit(
     db: Session = Depends(get_db),
-    fuente: Optional[Literal["cotizacion", "fusion_cliente"]] = None,
+    fuente: Optional[Literal["cotizacion", "fusion_cliente", "sistema", "stock"]] = None,
     usuario_id: Optional[int] = None,
     desde: Optional[date] = None,
     hasta: Optional[date] = None,
@@ -197,10 +244,50 @@ def get_audit(
     else:
         mrows = []
 
+    # --- audit_log (fuente sistema) ---
+    if fuente in (None, "sistema"):
+        a = db.query(models.AuditLog)
+        if usuario_id is not None:
+            a = a.filter(models.AuditLog.usuario_id == usuario_id)
+        if desde is not None:
+            a = a.filter(models.AuditLog.fecha >= datetime.combine(desde, time.min))
+        if hasta is not None:
+            a = a.filter(models.AuditLog.fecha < datetime.combine(hasta + timedelta(days=1), time.min))
+        arows = a.all()
+    else:
+        arows = []
+
+    # --- movimientos_stock tipo AJUSTE (fuente stock) ---
+    if fuente in (None, "stock"):
+        s = db.query(models.MovimientoStock).filter(
+            models.MovimientoStock.tipo == TipoMovimientoStock.AJUSTE.value
+        )
+        if usuario_id is not None:
+            s = s.filter(models.MovimientoStock.usuario_id == usuario_id)
+        if desde is not None:
+            s = s.filter(models.MovimientoStock.creado_en >= datetime.combine(desde, time.min))
+        if hasta is not None:
+            s = s.filter(models.MovimientoStock.creado_en < datetime.combine(hasta + timedelta(days=1), time.min))
+        srows = s.all()
+        producto_map: dict = {}
+        pids = {m.producto_id for m in srows}
+        if pids:
+            for pid, sku, nombre in (
+                db.query(models.Producto.id, models.Producto.sku, models.Producto.nombre)
+                .filter(models.Producto.id.in_(pids))
+                .all()
+            ):
+                producto_map[pid] = f"{sku} — {nombre}"
+    else:
+        srows, producto_map = [], {}
+
     # --- resolución batch de nombres (sin N+1) ---
-    uids = {e.creado_por_id for e in qrows if e.creado_por_id} | {
-        r.merged_by_id for r in mrows if r.merged_by_id
-    }
+    uids = (
+        {e.creado_por_id for e in qrows if e.creado_por_id}
+        | {r.merged_by_id for r in mrows if r.merged_by_id}
+        | {a.usuario_id for a in arows if a.usuario_id}
+        | {m.usuario_id for m in srows if m.usuario_id}
+    )
     nombre_map: dict = {}
     if uids:
         for uid, nombre in (
@@ -212,6 +299,8 @@ def get_audit(
 
     eventos = [_normalize_quote_event(e, folio_map, nombre_map) for e in qrows]
     eventos += [_normalize_merge_log(r, nombre_map) for r in mrows]
+    eventos += [_normalize_audit_log(a, nombre_map) for a in arows]
+    eventos += [_normalize_stock_ajuste(m, producto_map, nombre_map) for m in srows]
 
     # Orden fecha desc. server_default garantiza fecha no-nula.
     eventos.sort(key=lambda x: x.fecha, reverse=True)

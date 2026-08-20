@@ -10,6 +10,13 @@ import { useConfigPlataforma } from '../hooks/useConfigPlataforma';
 
 const PAGE_SIZE = 50;
 
+const FUENTE_BADGE: Record<string, 'emerald' | 'slate' | 'sky' | 'amber'> = {
+  cotizacion: 'emerald',
+  fusion_cliente: 'slate',
+  sistema: 'sky',
+  stock: 'amber',
+};
+
 function fmtFecha(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -82,6 +89,8 @@ export function AuditPage() {
               <option value="">Todas</option>
               <option value="cotizacion">Cotizaciones</option>
               <option value="fusion_cliente">Fusiones</option>
+              <option value="sistema">Sistema</option>
+              <option value="stock">Ajustes de stock</option>
             </select>
           </div>
           <div>
@@ -159,7 +168,7 @@ export function AuditPage() {
                       {e.usuario ?? '—'}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <Badge variant={e.fuente === 'fusion_cliente' ? 'slate' : 'emerald'}>
+                      <Badge variant={FUENTE_BADGE[e.fuente] ?? 'default'}>
                         {e.accion}
                       </Badge>
                     </td>
