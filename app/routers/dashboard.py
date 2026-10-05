@@ -54,8 +54,9 @@ def _scope(query, user: "models.Usuario"):
 
 
 def _naive(dt: Optional[datetime]) -> Optional[datetime]:
-    """Devuelve dt sin tzinfo (las columnas TIMESTAMP WITH TZ vienen aware
-    desde Postgres pero internamente comparamos con datetime.utcnow naive)."""
+    """Devuelve dt sin tzinfo, para instantes (`DateTime(timezone=True)`, que
+    Postgres entrega aware) que se comparan contra `datetime.utcnow()`. No es
+    para `fecha_creacion` / `fecha_vencimiento` de la orden, que son `DATE`."""
     if dt is None:
         return None
     if dt.tzinfo is not None:

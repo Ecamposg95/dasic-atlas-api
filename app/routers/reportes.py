@@ -10,7 +10,7 @@ Reportes disponibles:
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
 import csv
 import io
@@ -21,6 +21,7 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from app import models
+from app.core.fechas import dia_negocio, hoy_negocio
 from app.db import get_db
 from app.security import allow_admin_asistente, allow_all_staff, get_current_user
 from app.security.permissions import is_owner_scoped
@@ -267,8 +268,8 @@ def conversion_cotizaciones(
     tiempos = []
     for o in convertidas:
         if o.fecha_creacion and getattr(o, "actualizado_en", None):
-            delta = o.actualizado_en - o.fecha_creacion
-            tiempos.append(delta.total_seconds() / 86400.0)
+            dias_conv = (dia_negocio(o.actualizado_en) - o.fecha_creacion).days
+            tiempos.append(max(dias_conv, 0))
     tiempo_medio_dias = round(sum(tiempos) / len(tiempos), 1) if tiempos else None
 
     monto_convertido = sum(_to_mxn(o.total, o.moneda, o.tipo_cambio) for o in convertidas)
@@ -378,14 +379,14 @@ def vencimientos_proximos(
     current_user: models.Usuario = Depends(get_current_user),
 ):
     """Cotizaciones activas que vencen en los próximos N días (default 14)."""
-    ahora = datetime.utcnow()
-    horizonte = ahora + timedelta(days=dias)
+    hoy = hoy_negocio()
+    horizonte = hoy + timedelta(days=dias)
     q = (
         db.query(models.OrdenVenta)
         .filter(
             models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
             models.OrdenVenta.fecha_vencimiento.isnot(None),
-            models.OrdenVenta.fecha_vencimiento >= ahora,
+            models.OrdenVenta.fecha_vencimiento >= hoy,
             models.OrdenVenta.fecha_vencimiento <= horizonte,
         )
     )
@@ -394,7 +395,7 @@ def vencimientos_proximos(
 
     items = []
     for o in rows:
-        dias_restantes = (o.fecha_vencimiento - ahora).days
+        dias_restantes = (o.fecha_vencimiento - hoy).days
         items.append({
             "id": o.id,
             "folio": o.folio,
@@ -426,10 +427,7 @@ def ordenes_pendientes_entrega(
     logger = logging.getLogger(__name__)
 
     try:
-        # `ahora` debe ser AWARE: `fecha_creacion` viene de columna con
-        # timezone=True, mezclar con `utcnow()` (naive) revienta con
-        # "can't subtract offset-naive and offset-aware datetimes".
-        ahora = datetime.now(timezone.utc)
+        hoy = hoy_negocio()
         q = (
             db.query(models.OrdenVenta)
             .filter(
@@ -454,20 +452,14 @@ def ordenes_pendientes_entrega(
         ):
             remisiones_por_orden[r.orden_venta_id] = remisiones_por_orden.get(r.orden_venta_id, 0) + 1
 
-        def _aware(dt):
-            """Defensiva: normaliza a UTC si la fila vino naive desde la DB."""
-            if dt is None:
-                return None
-            return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
-
         pendientes = [o for o in ordenes if remisiones_por_orden.get(o.id, 0) == 0]
-        pendientes.sort(key=lambda o: _aware(o.fecha_creacion) or ahora, reverse=False)
+        pendientes.sort(key=lambda o: o.fecha_creacion or hoy, reverse=False)
 
         items = []
         for o in pendientes:
             try:
-                fc = _aware(o.fecha_creacion)
-                dias_desde = (ahora - fc).days if fc else None
+                fc = o.fecha_creacion
+                dias_desde = (hoy - fc).days if fc else None
                 cliente_nombre = o.cliente.nombre_empresa if o.cliente else None
                 estatus_val = o.estatus.value if hasattr(o.estatus, "value") else str(o.estatus)
                 items.append({

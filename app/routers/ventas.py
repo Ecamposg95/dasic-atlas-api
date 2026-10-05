@@ -1532,6 +1532,8 @@ def listar_borradores(
     def _edad_dias(dt):
         if dt is None:
             return None
+        if not isinstance(dt, datetime):  # respaldo a fecha_creacion, que es DATE
+            return max((hoy_negocio() - dt).days, 0)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return max((ahora - dt).days, 0)
