@@ -69,6 +69,7 @@ from app.models.platform import PlatformConfig  # noqa: F401
 from app.models.crm import Pipeline, PipelineStage, Deal, DealActividad  # noqa: F401
 from app.models.recordatorios import Recordatorio  # noqa: F401
 from app.models.instalaciones import Planta, ActivoInstalado  # noqa: F401
+from app.models.audit import AuditLog  # noqa: F401
 
 __all__ = [
     "Base",
@@ -101,4 +102,5 @@ __all__ = [
     "Pipeline", "PipelineStage", "Deal", "DealActividad",
     "Recordatorio",
     "Planta", "ActivoInstalado",
+    "AuditLog",
 ]

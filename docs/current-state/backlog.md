@@ -23,7 +23,7 @@ Nada de esto avanza sin respuesta, y **P1 depende de las tres primeras**.
 
 ### Operativos, no de producto
 
-- **GitHub Actions dejó de crear runs** el 6 de agosto a las 17:51 UTC. Los commits posteriores están en el remoto, el workflow figura `active` y el YAML es válido, pero no se dispara ninguna ejecución. El repositorio no está archivado ni deshabilitado → apunta a un límite o restricción de Actions en la cuenta. **Mientras tanto, CI no valida nada.**
+- ~~GitHub Actions dejó de crear runs el 6 de agosto~~ **Resuelto solo:** desde el 8 de agosto los runs se crean y pasan en verde con normalidad (verificado 2026-08-20).
 - **Staging apunta a `main`**, así que hoy es un espejo y no una compuerta previa. La rama `staging` existe y está subida; falta cambiarla en el panel de Railway (la API rechaza ese cambio desde fuera). 30 segundos.
 
 ---
@@ -39,7 +39,7 @@ Columnas nuevas en `remisiones` (`autorizado_nombre`, `autorizado_usuario_id`, `
 Facturado **se almacena** en la orden; pagado **se deriva** de CxC. Sin columna `pagado` que pueda contradecir al saldo.
 
 **Ola 4 · E5/E6 — endurecer.** *No bloqueada.*
-- Ampliar la auditoría más allá de cotizaciones y fusiones. **Hoy borrar un cliente, cambiar un precio o ajustar stock no dejan rastro** — el mayor hueco de gobernanza del sistema.
+- ~~Ampliar la auditoría más allá de cotizaciones y fusiones~~ **Hecho (2026-08-20):** `audit_log` + `audit_service` capturan deletes de cliente/contacto/producto/gasto, cambios de precio y ciclo de vida de usuarios; la consola expone además los ajustes de stock. Spec: `docs/superpowers/specs/2026-08-20-auditoria-mutaciones-design.md`. Fuera de esa entrega: upload-csv masivo y cambio de contraseña (segunda pasada).
 - Retirar el editor legacy demostrando que ninguna ruta activa lo alcanza.
 - Quitar la carga completa de catálogo del KPI legacy.
 - Suite E2E del golden path.

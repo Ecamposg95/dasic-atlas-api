@@ -16,6 +16,7 @@ from app import schemas
 from app.db import get_db
 from app.models.enums import TipoMovimientoStock
 from app.security import allow_admin, allow_admin_asistente, allow_all_staff, get_current_user
+from app.services import audit_service
 from app.services.stock_service import aplicar_movimiento
 
 logger = logging.getLogger(__name__)
@@ -195,6 +196,26 @@ def _normalize_currency(value: Optional[str]) -> str:
 
 def _resolve_public_price(raw_price: Optional[Decimal], costo_compra: Decimal) -> Optional[Decimal]:
     return raw_price
+
+
+def _diff_precio(previo: dict, producto) -> dict:
+    """Diff viejo→nuevo de los campos sensibles de precio. Compara numéricos
+    como Decimal para no reportar falsos cambios (100.00 vs 100.0)."""
+    cambios = {}
+    for campo in ("costo_compra", "precio_publico"):
+        a, d = previo[campo], getattr(producto, campo)
+        a_n = Decimal(str(a)) if a is not None else None
+        d_n = Decimal(str(d)) if d is not None else None
+        if a_n != d_n:
+            cambios[campo] = {
+                "antes": str(a_n) if a_n is not None else None,
+                "despues": str(d_n) if d_n is not None else None,
+            }
+    if (previo["moneda_compra"] or "") != (getattr(producto, "moneda_compra") or ""):
+        cambios["moneda_compra"] = {
+            "antes": previo["moneda_compra"], "despues": producto.moneda_compra,
+        }
+    return cambios
 
 
 def _read_decimal(row: dict, field_name: str) -> Optional[Decimal]:
@@ -489,6 +510,12 @@ def actualizar_producto(
         if "categoria" in update_data and update_data["categoria"]:
             update_data["categoria"] = update_data["categoria"].strip()
 
+        previo_precio = {
+            "costo_compra": db_producto.costo_compra,
+            "moneda_compra": db_producto.moneda_compra,
+            "precio_publico": db_producto.precio_publico,
+        }
+
         for key, value in update_data.items():
             setattr(db_producto, key, value)
 
@@ -511,6 +538,21 @@ def actualizar_producto(
                     db.rollback()
                     raise HTTPException(status_code=400, detail=str(exc))
 
+        cambios_precio = _diff_precio(previo_precio, db_producto)
+        if cambios_precio:
+            audit_service.registrar(
+                db,
+                usuario=current_user,
+                accion="cambio_precio",
+                entidad="producto",
+                entidad_id=db_producto.id,
+                resumen=(
+                    f"Cambió precios de {db_producto.sku} — "
+                    + ", ".join(sorted(cambios_precio))
+                ),
+                datos=cambios_precio,
+            )
+
         db.commit()
         db.refresh(db_producto)
         return db_producto
@@ -524,7 +566,7 @@ def actualizar_producto(
 
 # --- 5. ELIMINAR PRODUCTO (SOLO ADMIN) ---
 @router.delete("/{id}", dependencies=[Depends(allow_admin)])
-def eliminar_producto(id: int, db: Session = Depends(get_db)):
+def eliminar_producto(id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_user)):
     db_producto = db.query(models.Producto).filter(models.Producto.id == id).first()
     if not db_producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
@@ -547,6 +589,16 @@ def eliminar_producto(id: int, db: Session = Depends(get_db)):
 
     # detalles_orden / detalles_compra ahora son ON DELETE SET NULL: el
     # producto puede borrarse y los detalles históricos conservan sku_libre.
+    audit_service.registrar(
+        db,
+        usuario=current_user,
+        accion="eliminar",
+        entidad="producto",
+        entidad_id=db_producto.id,
+        resumen=f"Eliminó producto {db_producto.sku} — {db_producto.nombre}",
+        datos={"sku": db_producto.sku, "nombre": db_producto.nombre,
+               "costo_compra": db_producto.costo_compra},
+    )
     db.delete(db_producto)
     db.commit()
     return {"mensaje": "Producto eliminado correctamente"}

@@ -11,7 +11,7 @@ from app.db import get_db
 from app.models.enums import RolUsuario
 from app.security import get_current_user
 from app.security.jwt import allow_user_admin
-from app.services import UserService
+from app.services import UserService, audit_service
 
 logger = logging.getLogger(__name__)
 
@@ -56,15 +56,23 @@ def crear_usuario(
     if rol_solicitado == RolUsuario.SUPERADMIN and RolUsuario.from_input(current_user.rol) != RolUsuario.SUPERADMIN:
         raise HTTPException(status_code=403, detail="Solo un superadmin puede asignar el rol superadmin.")
 
+    nuevo = UserService.create_user(db, usuario)  # hace commit interno
     try:
-        return UserService.create_user(db, usuario)
-    except HTTPException:
+        audit_service.registrar(
+            db,
+            usuario=current_user,
+            accion="crear",
+            entidad="usuario",
+            entidad_id=nuevo.id,
+            resumen=f"Creó usuario {nuevo.email} con rol {RolUsuario.from_input(nuevo.rol).value}",
+        )
+        db.commit()
+    except Exception:
+        # El alta ya está commiteada; perder el evento es el trade-off
+        # aceptado — nunca convertir un alta exitosa en un 500.
+        logger.exception("auditoria: fallo registrando alta de usuario")
         db.rollback()
-        raise
-    except Exception as exc:
-        db.rollback()
-        logger.exception("usuarios.crear_usuario falló")
-        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
+    return nuevo
 
 @router.put("/{user_id}", response_model=schemas.UsuarioResponse, dependencies=[Depends(allow_user_admin)])
 def actualizar_usuario(
@@ -85,6 +93,7 @@ def actualizar_usuario(
 
     current_user_rol = RolUsuario.from_input(current_user.rol)
     target_rol = RolUsuario.from_input(target.rol)
+    activo_previo = bool(target.activo)
 
     # Solo un superadmin puede asignar el rol superadmin
     if nuevo_rol == RolUsuario.SUPERADMIN and current_user_rol != RolUsuario.SUPERADMIN:
@@ -122,6 +131,25 @@ def actualizar_usuario(
                 raise HTTPException(400, "El correo ya está registrado")
         for k, v in data.items():
             setattr(target, k, v)
+        if nuevo_rol is not None and nuevo_rol != target_rol:
+            audit_service.registrar(
+                db,
+                usuario=current_user,
+                accion="cambio_rol",
+                entidad="usuario",
+                entidad_id=target.id,
+                resumen=f"Cambió rol de {target.email}: {target_rol.value} → {nuevo_rol.value}",
+                datos={"antes": target_rol.value, "despues": nuevo_rol.value},
+            )
+        if nuevo_activo is False and activo_previo:
+            audit_service.registrar(
+                db,
+                usuario=current_user,
+                accion="desactivar",
+                entidad="usuario",
+                entidad_id=target.id,
+                resumen=f"Desactivó al usuario {target.email}",
+            )
         db.commit()
         db.refresh(target)
         return target
@@ -205,6 +233,14 @@ def eliminar_usuario(
             raise HTTPException(status_code=400, detail="No puedes eliminar al último superadmin activo.")
 
     try:
+        audit_service.registrar(
+            db,
+            usuario=current_user,
+            accion="eliminar",
+            entidad="usuario",
+            entidad_id=user_to_delete.id,
+            resumen=f"Eliminó al usuario {user_to_delete.email} (rol {RolUsuario.from_input(user_to_delete.rol).value})",
+        )
         db.delete(user_to_delete)
         db.commit()
         return {"mensaje": "Usuario eliminado"}
