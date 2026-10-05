@@ -360,12 +360,12 @@ El `return` de `heatmap` no cambia.
 - [ ] **Step 8: Correr las pruebas nuevas**
 
 Run: `python3 -m pytest tests/test_dashboard_fechas.py -q`
-Expected: `7 passed`.
+Expected: `6 passed`.
 
 - [ ] **Step 9: Suite completa y lint**
 
 Run: `python3 -m pytest -q && python3 -m ruff check .`
-Expected: `150 passed, 13 skipped` y `All checks passed!`.
+Expected: `149 passed, 13 skipped` y `All checks passed!`.
 
 - [ ] **Step 10: Commit**
 
@@ -533,7 +533,7 @@ Expected: `4 passed`.
 - [ ] **Step 5: Suite completa y lint**
 
 Run: `python3 -m pytest -q && python3 -m ruff check .`
-Expected: `154 passed, 13 skipped` y `All checks passed!`.
+Expected: `153 passed, 13 skipped` y `All checks passed!`.
 
 - [ ] **Step 6: Anotar el cierre en el backlog**
 
@@ -604,7 +604,7 @@ python3 -m ruff check .
 python3 -m compileall -q app
 ```
 
-Expected: pytest sin fallos. El total esperado es la suma de ambas ramas: **172 passed, 13 skipped** (154 del hotfix + 18 de la auditoría). Si el conteo difiere pero no hay fallos, reportar el número real. ruff: `All checks passed!`. compileall: sin salida.
+Expected: pytest sin fallos. El total esperado es la suma de ambas ramas: **171 passed, 13 skipped** (153 del hotfix + 18 de la auditoría). Si el conteo difiere pero no hay fallos, reportar el número real. ruff: `All checks passed!`. compileall: sin salida.
 
 - [ ] **Step 5: Frontend — typecheck, pruebas y build**
 
