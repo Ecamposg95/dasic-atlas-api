@@ -25,6 +25,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import models
+from app.core.fechas import hoy_negocio
 from app.db import get_db
 from app.security import allow_all_staff, get_current_user
 
@@ -93,7 +94,7 @@ def _date_range(window: str) -> tuple[datetime, datetime]:
 
 
 def _serialize_orden_breve(o: "models.OrdenVenta") -> dict:
-    fc = _naive(o.fecha_creacion)
+    fc = o.fecha_creacion  # DATE: ya es un día de calendario, no un instante
     return {
         "id": o.id,
         "folio": o.folio,
@@ -238,7 +239,7 @@ def pipeline(
     db: Session = Depends(get_db),
     current_user: "models.Usuario" = Depends(get_current_user),
 ):
-    now = datetime.utcnow()
+    hoy = hoy_negocio()
 
     abiertas = _scope(
         db.query(models.OrdenVenta).filter(
@@ -252,7 +253,7 @@ def pipeline(
             models.OrdenVenta.estatus.in_(
                 [models.EstatusOrden.PENDIENTE, models.EstatusOrden.PAGADA]
             ),
-            models.OrdenVenta.fecha_creacion >= now - timedelta(days=30),
+            models.OrdenVenta.fecha_creacion >= hoy - timedelta(days=30),
         ),
         current_user,
     ).all()
@@ -260,10 +261,10 @@ def pipeline(
     columnas = {k: [] for k in ("nueva", "seguimiento", "por_vencer", "vencida", "convertida")}
 
     for o in abiertas:
-        fc = _naive(o.fecha_creacion)
-        fv = _naive(o.fecha_vencimiento)
-        edad = (now - fc).days if fc else 0
-        dias_rest = (fv - now).days if fv else None
+        fc = o.fecha_creacion
+        fv = o.fecha_vencimiento
+        edad = (hoy - fc).days if fc else 0
+        dias_rest = (fv - hoy).days if fv else None
         item = _serialize_orden_breve(o)
         item["edad_dias"] = edad
         item["dias_restantes"] = dias_rest
@@ -355,13 +356,14 @@ def alertas(
     current_user: "models.Usuario" = Depends(get_current_user),
 ):
     now = datetime.utcnow()
+    hoy = hoy_negocio()
 
     por_vencer = _scope(
         db.query(models.OrdenVenta).filter(
             models.OrdenVenta.estatus == models.EstatusOrden.COTIZACION,
             models.OrdenVenta.fecha_vencimiento.is_not(None),
-            models.OrdenVenta.fecha_vencimiento >= now,
-            models.OrdenVenta.fecha_vencimiento <= now + timedelta(days=3),
+            models.OrdenVenta.fecha_vencimiento >= hoy,
+            models.OrdenVenta.fecha_vencimiento <= hoy + timedelta(days=3),
         ),
         current_user,
     ).order_by(models.OrdenVenta.fecha_vencimiento.asc()).limit(15).all()
@@ -369,8 +371,8 @@ def alertas(
     por_vencer_items = []
     for o in por_vencer:
         item = _serialize_orden_breve(o)
-        fv = _naive(o.fecha_vencimiento)
-        item["dias_restantes"] = (fv - now).days if fv else None
+        fv = o.fecha_vencimiento
+        item["dias_restantes"] = (fv - hoy).days if fv else None
         por_vencer_items.append(item)
 
     productos_criticos = (
@@ -607,10 +609,8 @@ def heatmap(
     db: Session = Depends(get_db),
     current_user: "models.Usuario" = Depends(get_current_user),
 ):
-    now = datetime.utcnow()
-    start = (now - timedelta(days=dias - 1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    hoy = hoy_negocio()
+    start = hoy - timedelta(days=dias - 1)
 
     rows = _scope(
         db.query(models.OrdenVenta.fecha_creacion).filter(
@@ -623,11 +623,11 @@ def heatmap(
     for (f,) in rows:
         if f is None:
             continue
-        counts[f.date().isoformat()] += 1
+        counts[f.isoformat()] += 1
 
     series = []
     for i in range(dias):
-        d = (start + timedelta(days=i)).date().isoformat()
+        d = (start + timedelta(days=i)).isoformat()
         series.append({"d": d, "v": counts.get(d, 0)})
 
     return {
