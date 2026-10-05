@@ -560,6 +560,19 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ---
 
+### Adenda (2026-10-05): ola de arreglos del review final
+
+El review de toda la rama, tras las Tasks 1 y 2, encontró que el plan se había quedado corto: la misma clase de fallo seguía viva fuera de los cinco endpoints que mostraban los logs. Se corrigió en la misma rama (commits `8c691f6` y `b618715`):
+
+- `app/routers/reportes.py`: `vencimientos_proximos`, `conversion_cotizaciones` y `ordenes_pendientes_entrega` reventaban con datos. Ahora cuentan días de calendario; `tests/test_reportes_fechas.py` barre todos los GET de `/api/reportes/` con datos.
+- `app/core/fechas.py`: helper nuevo `dia_negocio(instante) -> date`, para llevar un instante al día del negocio antes de restarlo de una fecha.
+- `app/routers/ventas.py::listar_borradores`: `_edad_dias` endurecido para el respaldo a `fecha_creacion` (hoy inalcanzable: `actualizado_en` es `NOT NULL`).
+- `docs/current-state/backlog.md`: la nota de cierre habla de ocho endpoints, y la deuda P3 gana dos filas — filtros que usan el día UTC en vez del de negocio, y `liberar_vencidas`, que libera reservas un día antes.
+
+La rama queda en `159 passed, 13 skipped`. Lo que **no** se tocó, a propósito: `inventario.py::liberar_vencidas` (ruta de escritura; depende de si la vigencia incluye el día de vencimiento) y los filtros con `utcnow()` que no revientan.
+
+---
+
 ### Task 3: Rama de integración con la auditoría de mutaciones
 
 **Contexto:** `worktree-auditoria-mutaciones` contiene la Ola 4 E5 (tabla `audit_log`, `audit_service`, captura en 7 puntos, consola, 18 pruebas y el build de la SPA). Está terminada y con revisión final "Ready to merge" desde 2026-08-20, pero nunca se integró. Esta tarea **no la re-revisa**: la junta con el hotfix en una rama aparte y demuestra con evidencia que la combinación está sana. La rama del hotfix queda intacta para poder desplegarla sola.
@@ -604,7 +617,7 @@ python3 -m ruff check .
 python3 -m compileall -q app
 ```
 
-Expected: pytest sin fallos. El total esperado es la suma de ambas ramas: **171 passed, 13 skipped** (153 del hotfix + 18 de la auditoría). Si el conteo difiere pero no hay fallos, reportar el número real. ruff: `All checks passed!`. compileall: sin salida.
+Expected: pytest sin fallos. El total esperado es la suma de ambas ramas: **177 passed, 13 skipped** (159 del hotfix + 18 de la auditoría). Si el conteo difiere pero no hay fallos, reportar el número real. ruff: `All checks passed!`. compileall: sin salida.
 
 - [ ] **Step 5: Frontend — typecheck, pruebas y build**
 
