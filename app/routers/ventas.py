@@ -1532,6 +1532,8 @@ def listar_borradores(
     def _edad_dias(dt):
         if dt is None:
             return None
+        if not isinstance(dt, datetime):  # respaldo a fecha_creacion, que es DATE
+            return max((hoy_negocio() - dt).days, 0)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return max((ahora - dt).days, 0)
@@ -2432,11 +2434,12 @@ def ultima_cotizacion_cliente(
     q = db.query(models.OrdenVenta).filter(models.OrdenVenta.cliente_id == cliente_id)
     if is_owner_scoped(current_user, "read", "cotizacion"):
         q = q.filter(models.OrdenVenta.vendedor_id == current_user.id)
-    o = q.order_by(desc(models.OrdenVenta.fecha_creacion)).first()
+    # `fecha_creacion` es DATE: dos cotizaciones del mismo día empatan, y el id
+    # es lo que dice cuál se capturó después.
+    o = q.order_by(desc(models.OrdenVenta.fecha_creacion), desc(models.OrdenVenta.id)).first()
     if not o:
         return None
-    fc = o.fecha_creacion.replace(tzinfo=None) if o.fecha_creacion and o.fecha_creacion.tzinfo else o.fecha_creacion
-    dias = (datetime.utcnow() - fc).days if fc else None
+    dias = (hoy_negocio() - o.fecha_creacion).days if o.fecha_creacion else None
     return {
         "id": o.id,
         "folio": o.folio,

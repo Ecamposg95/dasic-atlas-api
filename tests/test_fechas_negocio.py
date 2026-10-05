@@ -107,3 +107,19 @@ def test_acepta_un_dia_explicito(monkeypatch):
     mod = _recargar_con_zona(monkeypatch, "America/Mexico_City")
     inicio, fin = mod.rango_del_dia(_date(2026, 3, 15))
     assert inicio.date() == fin.date() == _date(2026, 3, 15)
+
+
+# ---------------------------------------------------------------------------
+# Instante -> día de negocio
+# ---------------------------------------------------------------------------
+def test_dia_negocio_lleva_un_instante_al_dia_de_la_zona(monkeypatch):
+    """02:00 UTC del 6 de octubre son las 20:00 del 5 en CDMX: el día de
+    negocio es el 5. Un instante sin zona se interpreta como UTC."""
+    from datetime import date as _date, timezone
+
+    mod = _recargar_con_zona(monkeypatch, "America/Mexico_City")
+    con_zona = datetime(2026, 10, 6, 2, 0, tzinfo=timezone.utc)
+    sin_zona = datetime(2026, 10, 6, 2, 0)
+
+    assert mod.dia_negocio(con_zona) == _date(2026, 10, 5)
+    assert mod.dia_negocio(sin_zona) == _date(2026, 10, 5)

@@ -1,7 +1,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
-export type AuditFuente = 'cotizacion' | 'fusion_cliente';
+export type AuditFuente = 'cotizacion' | 'fusion_cliente' | 'sistema' | 'stock';
 
 export type AuditEvent = {
   fuente: AuditFuente;

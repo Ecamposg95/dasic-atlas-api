@@ -16,7 +16,7 @@ timestamps) lo correcto sigue siendo UTC: ahí el punto es justamente
 normalizar, y `datetime.now(timezone.utc)` es la forma adecuada.
 """
 import os
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Configurable por si el tenant opera en otra zona (la vía SaaS de
@@ -42,6 +42,20 @@ def ahora_negocio() -> datetime:
 def hoy_negocio() -> date:
     """Día del calendario donde opera la empresa."""
     return ahora_negocio().date()
+
+
+def dia_negocio(instante: datetime) -> date:
+    """Día del calendario del negocio en que cae un instante.
+
+    Un instante sin zona se interpreta como UTC, que es como lo devuelve SQLite
+    y como se guardan los timestamps del sistema.
+    """
+    tz = _tz()
+    if tz is None:
+        return instante.date()
+    if instante.tzinfo is None:
+        instante = instante.replace(tzinfo=timezone.utc)
+    return instante.astimezone(tz).date()
 
 
 def rango_del_dia(dia: date | None = None) -> tuple[datetime, datetime]:

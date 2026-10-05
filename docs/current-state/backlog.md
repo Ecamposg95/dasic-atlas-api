@@ -23,7 +23,7 @@ Nada de esto avanza sin respuesta, y **P1 depende de las tres primeras**.
 
 ### Operativos, no de producto
 
-- **GitHub Actions dejó de crear runs** el 6 de agosto a las 17:51 UTC. Los commits posteriores están en el remoto, el workflow figura `active` y el YAML es válido, pero no se dispara ninguna ejecución. El repositorio no está archivado ni deshabilitado → apunta a un límite o restricción de Actions en la cuenta. **Mientras tanto, CI no valida nada.**
+- ~~GitHub Actions dejó de crear runs el 6 de agosto~~ **Resuelto solo:** desde el 8 de agosto los runs se crean y pasan en verde con normalidad (verificado 2026-08-20).
 - **Staging apunta a `main`**, así que hoy es un espejo y no una compuerta previa. La rama `staging` existe y está subida; falta cambiarla en el panel de Railway (la API rechaza ese cambio desde fuera). 30 segundos.
 
 ---
@@ -39,7 +39,7 @@ Columnas nuevas en `remisiones` (`autorizado_nombre`, `autorizado_usuario_id`, `
 Facturado **se almacena** en la orden; pagado **se deriva** de CxC. Sin columna `pagado` que pueda contradecir al saldo.
 
 **Ola 4 · E5/E6 — endurecer.** *No bloqueada.*
-- Ampliar la auditoría más allá de cotizaciones y fusiones. **Hoy borrar un cliente, cambiar un precio o ajustar stock no dejan rastro** — el mayor hueco de gobernanza del sistema.
+- ~~Ampliar la auditoría más allá de cotizaciones y fusiones~~ **Hecho (2026-08-20):** `audit_log` + `audit_service` capturan deletes de cliente/contacto/producto/gasto, cambios de precio y ciclo de vida de usuarios; la consola expone además los ajustes de stock. Spec: `docs/superpowers/specs/2026-08-20-auditoria-mutaciones-design.md`. Fuera de esa entrega: upload-csv masivo y cambio de contraseña (segunda pasada).
 - Retirar el editor legacy demostrando que ninguna ruta activa lo alcanza.
 - Quitar la carga completa de catálogo del KPI legacy.
 - Suite E2E del golden path.
@@ -68,6 +68,8 @@ Trabajo empezado y no terminado. Va antes que lo nuevo: media adopción es peor 
 | **`useProveedores` ×4** | Cuatro definiciones (`compras`, `cotizador`, `fantasmas`, `inventario`) con claves divergentes → cachés duplicados. Es la misma clase de bug que se corrigió en cobranza extrayendo un helper | S |
 | **Decimales `number \| string`** | El backend serializa `Decimal` como string y los types lo modelan como unión. Contrato frágil en ordenamientos y sumas | M |
 | **Tipos de fecha en el resto del modelo** | `ordenes_venta` ya usa `DATE`. Conviene revisar si otras tablas guardan fechas de calendario como timestamp — la misma trampa | S, auditoría |
+| **Día UTC vs. día de negocio en filtros** | `hero`, `tendencia` y `tops` del dashboard, y `ventas-mes`, `top-*`, `ranking-vendedores` de reportes, comparan columnas `DATE` contra `datetime.utcnow()`. No revientan (PostgreSQL convierte), pero después de las 18:00 de CDMX usan el día de mañana: la ventana "hoy" se vacía y el borde de 30 días se corre uno. Desde el hotfix de octubre `pipeline` usa el día de negocio y `hero` el de UTC, así que pueden discrepar por la tarde | S |
+| **`liberar_vencidas` libera un día antes** | `inventario.py` filtra `fecha_vencimiento < utcnow()`; con la columna en `DATE`, una cotización que vence **hoy** pierde sus reservas de stock desde las 18:00 del día anterior. El dashboard ya la trata como vigente (0 días). Es regla de negocio sobre una ruta de escritura: requiere confirmar con el equipo si la vigencia incluye el día de vencimiento, y su propia prueba | S, con decisión |
 
 ---
 
@@ -106,5 +108,7 @@ Detalle en `oportunidades-por-modulo.md`. Doce quick wins de esfuerzo S. Las tre
 **Cobertura de pruebas** — de ~75 a **156** en el backend (PostgreSQL) y de 35 a **123** en el frontend, con harness de componentes React. Encontraron **cuatro defectos de producción, todos silenciosos**: un pago que desaparecía del saldo con dos cobradores simultáneos, un importe guardado distinto del aprobado, el calendario adelantado medio día, y errores de formulario que ningún lector de pantalla anunciaba.
 
 **Fechas** — corregido de raíz. `fecha_creacion` y `fecha_vencimiento` pasan de instante a `DATE`, con conversión que distingue los dos orígenes de los datos (139 filas escritas por el cotizador vs. 56 generadas por el backend). Verificado contra producción. Antes, el mismo documento mostraba dos fechas distintas según la pantalla.
+
+**Fechas, segunda parte (2026-10-05)** — el paso a `DATE` dejó **ocho endpoints** tratando la fecha como instante. Cinco devolvían 500 en producción desde el despliegue del 6 de agosto (`pipeline`, `alertas`, `heatmap` y `kpis` del dashboard, y `ultima-cotizacion-cliente` del cotizador): los logs de Railway conservan **859 errores entre el 7 de septiembre y el 2 de octubre**. Otros tres reventaban igual pero nadie abrió esa pantalla en la ventana de los logs (`vencimientos-proximos`, `conversion-cotizaciones` y `ordenes-pendientes-entrega` de reportes); los encontró el review final de la rama, no los logs. De paso se endureció `edad_dias` de borradores, que repetía el patrón en un respaldo hoy inalcanzable (`actualizado_en` es `NOT NULL`). Nadie lo reportó y ninguna prueba lo vio, porque `dashboard.py` y `reportes.py` no tenían ni una. Corregido contando días de calendario contra `hoy_negocio()`; el guardián son dos barridos con datos de todos los GET de dashboard y reportes (`tests/test_dashboard_fechas.py`, `tests/test_reportes_fechas.py`). Queda una lección operativa: **nadie mira los logs de producción** — el hallazgo salió de una revisión manual dos meses después.
 
 **Lint e higiene** — ruff en CI con reglas de alta señal (encontró el 500 del login con "recordar sesión") y `.gitattributes` que normaliza finales de línea, después de que tres archivos cambiaran de formato en silencio dentro de commits ajenos.
