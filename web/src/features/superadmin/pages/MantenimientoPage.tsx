@@ -34,8 +34,8 @@ const JOBS: { which: JobWhich; label: string; desc: string }[] = [
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-emerald-500/20 bg-card overflow-hidden">
-      <div className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/70 px-4 pt-3 pb-2 border-b border-emerald-500/10">
+    <section className="rounded-xl border border-accent-glow/20 bg-card overflow-hidden">
+      <div className="font-mono text-[10px] uppercase tracking-widest text-primary/70 px-4 pt-3 pb-2 border-b border-accent-glow/10">
         {title}
       </div>
       <div className="p-4">
@@ -151,7 +151,7 @@ export function MantenimientoPage() {
             {RESEEDS.map((r) => (
               <div
                 key={r.which}
-                className="flex flex-col gap-1 p-3 rounded-lg border border-emerald-500/10 bg-emerald-500/5"
+                className="flex flex-col gap-1 p-3 rounded-lg border border-accent-glow/10 bg-accent-glow/5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-xs font-semibold text-foreground">{r.label}</span>
@@ -160,7 +160,7 @@ export function MantenimientoPage() {
                     variant="outline"
                     disabled={reseed.isPending}
                     onClick={() => handleReseed(r.which)}
-                    className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/60 shrink-0"
+                    className="border-accent-glow/30 text-primary hover:bg-accent-glow/10 hover:border-accent-glow/60 shrink-0"
                   >
                     Ejecutar
                   </Button>
@@ -180,7 +180,7 @@ export function MantenimientoPage() {
             {JOBS.map((j) => (
               <div
                 key={j.which}
-                className="flex flex-col gap-1 p-3 rounded-lg border border-emerald-500/10 bg-emerald-500/5"
+                className="flex flex-col gap-1 p-3 rounded-lg border border-accent-glow/10 bg-accent-glow/5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-xs font-semibold text-foreground">{j.label}</span>
@@ -189,7 +189,7 @@ export function MantenimientoPage() {
                     variant="outline"
                     disabled={job.isPending}
                     onClick={() => handleJob(j.which)}
-                    className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/60 shrink-0"
+                    className="border-accent-glow/30 text-primary hover:bg-accent-glow/10 hover:border-accent-glow/60 shrink-0"
                   >
                     Ejecutar
                   </Button>
@@ -203,7 +203,7 @@ export function MantenimientoPage() {
         {/* ── Seed context ──────────────────────────────────────────────────── */}
         <Section title="Ingesta context/">
           <p className="font-mono text-[11px] text-muted-foreground mb-4">
-            Ejecuta el seed de contexto desde <code className="text-emerald-400">context/</code>. Usa dry-run para previsualizar sin persistir.
+            Ejecuta el seed de contexto desde <code className="text-primary">context/</code>. Usa dry-run para previsualizar sin persistir.
           </p>
           <div className="flex items-center gap-4 mb-4 flex-wrap">
             <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -211,7 +211,7 @@ export function MantenimientoPage() {
                 type="checkbox"
                 checked={dryRun}
                 onChange={(e) => setDryRun(e.target.checked)}
-                className="rounded border-emerald-500/30 accent-emerald-500"
+                className="rounded border-accent-glow/30 accent-accent-glow"
               />
               <span className="font-mono text-xs text-foreground">Dry-run (preview, sin persistir)</span>
             </label>
@@ -220,15 +220,15 @@ export function MantenimientoPage() {
               variant="outline"
               disabled={seedCtx.isPending}
               onClick={handleSeedContext}
-              className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/60"
+              className="border-accent-glow/30 text-primary hover:bg-accent-glow/10 hover:border-accent-glow/60"
             >
               <Terminal className="h-3.5 w-3.5 mr-1.5" />
               {dryRun ? 'Dry-run preview' : 'Ejecutar seed-context'}
             </Button>
           </div>
           {seedContextResult != null && (
-            <div className="rounded-lg border border-emerald-500/20 bg-surface-2 p-3">
-              <p className="font-mono text-[10px] text-emerald-500/70 uppercase mb-2">Resultado:</p>
+            <div className="rounded-lg border border-accent-glow/20 bg-surface-2 p-3">
+              <p className="font-mono text-[10px] text-primary/70 uppercase mb-2">Resultado:</p>
               <pre className="font-mono text-xs text-foreground whitespace-pre-wrap break-all overflow-x-auto max-h-80">
                 {JSON.stringify(seedContextResult, null, 2)}
               </pre>

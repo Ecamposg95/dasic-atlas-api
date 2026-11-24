@@ -180,7 +180,7 @@ export function UsuariosPlataformaPage() {
           <button
             type="button"
             onClick={() => setModalCrear(true)}
-            className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors"
+            className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md bg-accent-glow/20 text-primary border border-accent-glow/40 hover:bg-accent-glow/30 transition-colors"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Nuevo usuario
@@ -200,23 +200,23 @@ export function UsuariosPlataformaPage() {
 
         {/* Table */}
         {!isLoading && (
-          <div className="rounded-xl border border-emerald-500/20 overflow-hidden">
+          <div className="rounded-xl border border-accent-glow/20 overflow-hidden">
             <DataTable>
               <DataTableHead>
                 <tr>
-                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-emerald-500/70 font-normal">
+                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-primary/70 font-normal">
                     Nombre
                   </th>
-                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-emerald-500/70 font-normal">
+                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-primary/70 font-normal">
                     Email
                   </th>
-                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-emerald-500/70 font-normal">
+                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-primary/70 font-normal">
                     Rol
                   </th>
-                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-emerald-500/70 font-normal">
+                  <th className="p-3 text-left font-mono text-[11px] uppercase tracking-widest text-primary/70 font-normal">
                     Estado
                   </th>
-                  <th className="p-3 text-right font-mono text-[11px] uppercase tracking-widest text-emerald-500/70 font-normal">
+                  <th className="p-3 text-right font-mono text-[11px] uppercase tracking-widest text-primary/70 font-normal">
                     Acciones
                   </th>
                 </tr>
@@ -231,7 +231,7 @@ export function UsuariosPlataformaPage() {
                 {items.map((u) => (
                   <DataTableRow
                     key={u.id}
-                    className={isSelf(u) ? 'bg-emerald-500/[0.04]' : undefined}
+                    className={isSelf(u) ? 'bg-accent-glow/[0.04]' : undefined}
                   >
                     {/* Nombre */}
                     <td className="p-3">
@@ -240,7 +240,7 @@ export function UsuariosPlataformaPage() {
                           {u.nombre}
                         </span>
                         {isSelf(u) && (
-                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
+                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-accent-glow/20 text-primary border border-accent-glow/30 uppercase tracking-wider">
                             tú
                           </span>
                         )}
@@ -273,7 +273,7 @@ export function UsuariosPlataformaPage() {
                       <button
                         type="button"
                         onClick={() => setModalEditar(u)}
-                        className="font-mono text-xs text-muted-foreground hover:text-emerald-400 px-1.5 transition-colors"
+                        className="font-mono text-xs text-muted-foreground hover:text-primary px-1.5 transition-colors"
                       >
                         Editar
                       </button>

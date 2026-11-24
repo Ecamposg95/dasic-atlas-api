@@ -16,7 +16,7 @@ function fmtDate(iso: string | null | undefined): string {
 
 function PanelHeader({ label }: { label: string }) {
   return (
-    <div className="font-mono text-[10px] uppercase tracking-widest text-emerald-500/70 px-3 pt-3 pb-1 border-b border-emerald-500/10">
+    <div className="font-mono text-[10px] uppercase tracking-widest text-primary/70 px-3 pt-3 pb-1 border-b border-accent-glow/10">
       {label}
     </div>
   );
@@ -33,7 +33,7 @@ function Row({ label, value, mono = true }: { label: string; value: React.ReactN
 
 function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-emerald-500/20 bg-card overflow-hidden ${className}`}>
+    <div className={`rounded-xl border border-accent-glow/20 bg-card overflow-hidden ${className}`}>
       {children}
     </div>
   );
@@ -70,7 +70,7 @@ export function SaludPage() {
           <button
             type="button"
             onClick={() => void refetch()}
-            className="flex items-center gap-1.5 font-mono text-xs text-emerald-500 hover:text-emerald-400 transition-colors"
+            className="flex items-center gap-1.5 font-mono text-xs text-primary hover:text-primary transition-colors"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
             Refrescar
@@ -105,7 +105,7 @@ export function SaludPage() {
               <PanelHeader label="Base de datos" />
               <div className="px-3 py-2 flex items-center gap-2">
                 {data.db.status === 'ok' ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
                 ) : (
                   <XCircle className="h-4 w-4 text-rose-400" />
                 )}
@@ -175,7 +175,7 @@ export function SaludPage() {
             {/* ── Conteos ──────────────────────────────────────────────────── */}
             <Panel className="md:col-span-2">
               <PanelHeader label="Conteos" />
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-0 divide-x divide-y divide-emerald-500/10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-0 divide-x divide-y divide-accent-glow/10">
                 {Object.entries(data.counts).map(([key, val]) => (
                   <div key={key} className="px-3 py-2 flex flex-col gap-0.5">
                     <span className="font-mono text-[10px] text-muted-foreground uppercase">

@@ -16,7 +16,7 @@ function Row({ item }: { item: ConfigItem }) {
   const [val, setVal] = useState(String(item.valor_efectivo));
   const set = useSetConfigPlataforma();
   return (
-    <div className="flex items-end gap-3 flex-wrap border-b border-emerald-500/10 py-3 last:border-0">
+    <div className="flex items-end gap-3 flex-wrap border-b border-accent-glow/10 py-3 last:border-0">
       <div className="flex-1 min-w-[200px]">
         <label className="block font-mono text-[11px] text-muted-foreground mb-1">
           {LABELS[item.clave] ?? item.clave}
@@ -24,7 +24,7 @@ function Row({ item }: { item: ConfigItem }) {
         <Input
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          className="max-w-[200px] font-mono text-sm border-emerald-500/20 focus-visible:ring-emerald-500"
+          className="max-w-[200px] font-mono text-sm border-accent-glow/20 focus-visible:ring-ring"
         />
         <div className="font-mono text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
           Default: {item.default}{' '}
@@ -54,7 +54,7 @@ function Row({ item }: { item: ConfigItem }) {
               },
             )
           }
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="bg-accent-glow hover:bg-accent-glow/90 text-slate-950"
         >
           Guardar
         </Button>
@@ -93,7 +93,7 @@ export function ConfigPlataformaPage() {
         <p className="font-mono text-[11px] text-muted-foreground mb-6">
           Cambios aplican sin redeploy. Afectan cotizaciones nuevas y comportamiento global del sistema.
         </p>
-        <div className="rounded-xl border border-emerald-500/20 bg-card divide-y divide-emerald-500/10 overflow-hidden">
+        <div className="rounded-xl border border-accent-glow/20 bg-card divide-y divide-accent-glow/10 overflow-hidden">
           {isLoading ? (
             <p className="font-mono text-sm text-muted-foreground px-4 py-6">Cargando configuración…</p>
           ) : isError ? (

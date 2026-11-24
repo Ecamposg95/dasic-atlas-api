@@ -3,11 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, AlertCircle, Loader2, Check } from 'lucide-react';
 import { api, normalizeDetail } from '@/lib/api';
 import { branding } from '@/lib/branding';
+import { AtlasLockup, AtlasMark, ATLAS_URL } from '@/components/brand/Atlas';
 import { useAuth, type User } from '@/stores/auth';
 import { useSuspension } from '@/stores/suspension';
 
 const VENTAJAS = branding.loginBullets;
-const CREDITO = `Powered by ${branding.poweredBy} · ${branding.productName} ${branding.productVersion}`;
+
+/** Firma de Atlas Tech: lockup + versión. El ember solo aparece aquí. */
+function Credito({ className = '' }: { className?: string }) {
+  return (
+    <a
+      href={ATLAS_URL}
+      target="_blank"
+      rel="noreferrer"
+      className={`group inline-flex items-center gap-2.5 text-[11px] rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-atlas-amber ${className}`}
+    >
+      <span className="opacity-70">Una plataforma de</span>
+      <AtlasLockup className="text-[13px] transition-colors group-hover:text-atlas-ember" markClassName="h-4" />
+      <span className="font-mono text-[10px] opacity-60">{branding.productVersion}</span>
+    </a>
+  );
+}
 
 /** Delay de entrada escalonada (respetando prefers-reduced-motion vía CSS). */
 const stagger = (i: number) => ({ animationDelay: `${120 + i * 110}ms` });
@@ -101,6 +117,16 @@ export function LoginPage() {
           <div className="login-sweep absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-accent-glow to-transparent" />
         </div>
 
+        {/* Horizonte Atlas: arco de luz ember, muy tenue, detrás del crédito */}
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-[236px] h-[280px] w-[150%] rounded-[50%] border-t border-atlas-amber/50 opacity-70"
+          style={{
+            boxShadow: '0 -4px 28px rgba(255,140,60,.38), 0 -18px 90px rgba(255,106,31,.20)',
+            background:
+              'radial-gradient(50% 30% at 50% 0%, rgba(255,140,60,.22), rgba(122,36,10,.14) 45%, rgba(5,5,5,0) 75%)',
+          }}
+        />
+
         {/* Marca */}
         <div className="login-fade-up relative z-10 flex items-center gap-3" style={stagger(0)}>
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-accent-glow to-accent-deep flex items-center justify-center shadow-glow-accent">
@@ -121,10 +147,16 @@ export function LoginPage() {
           <p className="login-fade-up text-[11px] uppercase tracking-[0.32em] text-accent-glow font-semibold mb-4" style={stagger(1)}>
             {branding.tagline}
           </p>
-          <h2 className="login-fade-up text-[46px] leading-[1.02] font-bold tracking-tight" style={stagger(2)}>
-            {branding.productName}
+          <h2
+            className="login-fade-up flex items-center gap-3.5 text-[46px] leading-none tracking-[-0.035em] text-atlas-ink"
+            style={stagger(2)}
+          >
+            <AtlasMark className="h-10" />
+            <span>
+              <span className="font-normal">Atlas</span> <span className="font-light text-slate-400">ONE</span>
+            </span>
           </h2>
-          <p className="login-fade-up mt-5 text-lg text-slate-300 leading-relaxed" style={stagger(3)}>
+          <p className="login-fade-up mt-5 text-lg font-light text-slate-300 leading-relaxed" style={stagger(3)}>
             {branding.loginHeadline}
           </p>
           <ul className="mt-9 space-y-4">
@@ -139,9 +171,9 @@ export function LoginPage() {
           </ul>
         </div>
 
-        <p className="login-fade-up relative z-10 text-[11px] text-slate-500" style={stagger(7)}>
-          {CREDITO}
-        </p>
+        <div className="login-fade-up relative z-10 text-slate-300" style={stagger(7)}>
+          <Credito />
+        </div>
       </aside>
 
       {/* ── Panel del formulario (theme-aware) ─────────────────────────── */}
@@ -167,7 +199,7 @@ export function LoginPage() {
             <div className="h-[3px] bg-gradient-to-r from-accent-glow via-accent-deep to-transparent" />
             <div className="p-7">
               <div className="mb-6">
-                <h1 className="text-xl font-bold tracking-tight">Bienvenido de vuelta</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Bienvenido de vuelta</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Inicia sesión en {branding.productName}
                 </p>
@@ -255,9 +287,9 @@ export function LoginPage() {
             </div>
           </div>
 
-          <p className="login-fade-up mt-8 text-center text-[10px] text-muted-foreground/70 lg:hidden" style={stagger(2)}>
-            {CREDITO}
-          </p>
+          <div className="login-fade-up mt-8 flex justify-center text-muted-foreground lg:hidden" style={stagger(2)}>
+            <Credito />
+          </div>
         </div>
       </main>
     </div>
