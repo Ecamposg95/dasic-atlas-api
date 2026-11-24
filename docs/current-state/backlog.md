@@ -1,4 +1,4 @@
-# Backlog — estado al 6 de agosto de 2026
+# Backlog — estado al 23 de noviembre de 2026
 
 > **Fuente única de qué falta.** Consolida los pendientes repartidos en `bugs-funcionales.md`, `technical-debt.md`, `risk-register.md`, `testing.md`, `consistencia-visual.md`, `oportunidades-por-modulo.md` y el spec del golden path. Esos documentos siguen siendo la referencia de *detalle*; este dice **en qué orden**.
 >
@@ -24,7 +24,8 @@ Nada de esto avanza sin respuesta, y **P1 depende de las tres primeras**.
 ### Operativos, no de producto
 
 - ~~GitHub Actions dejó de crear runs el 6 de agosto~~ **Resuelto solo:** desde el 8 de agosto los runs se crean y pasan en verde con normalidad (verificado 2026-08-20).
-- **Staging apunta a `main`**, así que hoy es un espejo y no una compuerta previa. La rama `staging` existe y está subida; falta cambiarla en el panel de Railway (la API rechaza ese cambio desde fuera). 30 segundos.
+- **Staging apunta a `main`**, así que hoy es un espejo y no una compuerta previa. La rama `staging` existe y está subida; falta cambiarla en el panel de Railway (la API rechaza ese cambio desde fuera). 30 segundos. Al 2026-11-23 la rama `staging` va **73 commits detrás de `main`**: hay que actualizarla antes de apuntar el servicio.
+- **Caída de ~34 horas del workspace completo (2026-11-22 08:03 UTC → 2026-11-23 17:50 UTC).** Railway retiró y luego redesplegó todos los servicios de todos los proyectos, sin commit nuevo. Causa no confirmada; apunta a suspensión por facturación (límite duro de uso de 30). Pendiente: confirmar en Billing/Usage, ajustar el límite y poner un monitor externo de disponibilidad. Ver R12 en `risk-register.md`.
 
 ---
 

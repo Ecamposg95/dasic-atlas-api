@@ -11,7 +11,8 @@ Este directorio contiene documentación del proyecto. La referencia de arquitect
 - **`02_REPO_CURRENT_STATE.md`** — fotografía del repo con cifras verificadas.
 - `RBAC.md` — permisos (la implementación real vive en `app/security/permissions.py`).
 - `CRM_SPEC.md` — spec de dominio; parcialmente realizado (Pipeline/Stage/Deal/DealActividad ya existen en `app/models/crm.py`).
-- `docs/development/testing.md` — **desactualizado**: dice que el backend no tiene tests; sí los tiene (`tests/`).
+- `docs/development/testing.md` — guía vigente de las dos suites y de CI.
+- `docs/current-state/backlog.md` — **fuente única y priorizada de qué falta.**
 
 ## Documentos históricos (con bloque de advertencia, NO seguir)
 
@@ -34,16 +35,16 @@ Este directorio contiene documentación del proyecto. La referencia de arquitect
 ## Tests — sí existen (desde 2026-08)
 
 ```bash
-pytest                     # backend: 75 tests en tests/ (pytest.ini → testpaths=tests)
-cd web && npm run test     # frontend: 35 tests (vitest run)
+pytest                     # backend: 185 funciones de prueba en tests/ (pytest.ini → testpaths=tests)
+cd web && npm run test     # frontend: 117 bloques it/test en 9 archivos (vitest run)
 cd web && npm run test:watch
 cd web && npm run typecheck
 ```
 
 - **`pytest` NO está en `requirements.txt`** — vive en `requirements-dev.txt` (Railway no lo instala): `pip install -r requirements.txt -r requirements-dev.txt`.
-- Los tests de backend usan **SQLite en memoria** (`tests/conftest.py`), que shimea `hashtext` y `pg_advisory_xact_lock` como funciones no-op para ejercitar el código real sin Postgres. Es una **excepción exclusiva de tests**: la aplicación sigue siendo Postgres-only.
-- Los tests de frontend corren en entorno `node` (sin jsdom) — hoy solo cubren lógica pura (`web/src/features/cotizador/lib/calc.ts` y el store del cotizador).
-- Cobertura concentrada en remisiones y en el motor de cálculo del cotizador; el resto del backend aún no tiene tests.
+- Sin `TEST_DATABASE_URL`, los tests de backend usan **SQLite en memoria** (`tests/conftest.py`; con ella corren sobre PostgreSQL real, como en CI), que shimea `hashtext` y `pg_advisory_xact_lock` como funciones no-op para ejercitar el código real sin Postgres. Es una **excepción exclusiva de tests**: la aplicación sigue siendo Postgres-only.
+- Los tests de frontend corren en entorno `node` por defecto; los archivos que montan React declaran `// @vitest-environment jsdom`. Cubren el motor de cálculo y el store del cotizador, helpers de fechas y algunos componentes.
+- El backend cubre remisiones, folios, totales, fechas, stock, cobranza, auditoría y los GET de dashboard y reportes. Faltan suite E2E del golden path y pruebas dedicadas de CRM y compras.
 
 ## Lectura recomendada (orden)
 
