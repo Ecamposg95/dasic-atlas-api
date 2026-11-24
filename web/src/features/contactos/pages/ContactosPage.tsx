@@ -191,7 +191,9 @@ export function ContactosPage() {
         </div>
       )}
 
-      <ContactoFormModal key={editing?.id ?? 'new'} open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
+      {formOpen && (
+        <ContactoFormModal key={editing?.id ?? 'new'} open onClose={() => setFormOpen(false)} editing={editing} />
+      )}
       <ContactoHistorialDrawer contacto={histContacto} onClose={() => setHistContacto(null)} />
     </div>
   );

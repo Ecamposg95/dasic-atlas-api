@@ -347,3 +347,15 @@ describe('resolveDirectionalTcs (modelo direccional DOF ± tolerancia)', () => {
     expect(r.tc_usd_a_mn).toBe(18);
   });
 });
+
+describe('round2 (medio centavo hacia arriba, como el Decimal del backend)', () => {
+  it('no pierde un centavo por el error binario de x * 100', async () => {
+    const { round2 } = await import('./calc');
+    // 0.75 × 1.20 × 0.95 = 0.855 exacto → 0.86. En float, 0.855 * 100 = 85.49999…
+    expect(round2(0.75 * 1.2 * 0.95)).toBe(0.86);
+    // 1.005 → 1.01 (el clásico que Math.round(x*100)/100 deja en 1.00)
+    expect(round2(1.005)).toBe(1.01);
+    expect(round2(2.344)).toBe(2.34);
+    expect(round2(100)).toBe(100);
+  });
+});

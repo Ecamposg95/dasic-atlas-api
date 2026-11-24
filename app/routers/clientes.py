@@ -729,16 +729,9 @@ def registrar_pago_cliente(
     Registra un pago del cliente (ABONO).
     Esto reduce la deuda en 'saldo_actual' y crea un registro histórico.
     """
-    # Lock pesimista para serializar pagos concurrentes (evita lost-update
-    # en saldo_actual cuando dos pagos llegan al mismo cliente).
-    cliente = (
-        db.query(models.Cliente)
-        .filter(
-            models.Cliente.id == cliente_id,
-        )
-        .with_for_update()
-        .first()
-    )
+    from app.services.cuentas_por_cobrar import aplicar_pago
+
+    cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
@@ -746,28 +739,24 @@ def registrar_pago_cliente(
         raise HTTPException(status_code=400, detail="El monto del pago debe ser mayor a 0")
 
     try:
-        # 1. Crear la transacción de ABONO
-        nuevo_abono = models.TransaccionCliente(
-            cliente_id=cliente.id,
-            tipo=models.TipoMovimiento.ABONO,
+        # Mismo camino que /pago-distribuido: el abono se reparte FIFO sobre
+        # los cargos abiertos. Antes solo bajaba `saldo_actual` y los cargos
+        # seguían "pendientes" en CxC, antigüedad y vencimientos.
+        result = aplicar_pago(
+            db,
+            cliente=cliente,
             monto=monto,
             descripcion=f"PAGO RECIBIDO: {descripcion} (Reg. por {current_user.nombre})",
-            referencia_id=nota_id # Puede ser null
         )
-        db.add(nuevo_abono)
-
-        # 2. Actualizar el saldo del cliente
-        # Nota: Al ser abono, RESTAMOS al saldo (Saldo positivo = Deuda)
-        cliente.saldo_actual -= monto
-
         db.commit()
-
         return {
             "mensaje": "Pago registrado exitosamente",
             "nuevo_saldo": cliente.saldo_actual,
-            "transaccion_id": nuevo_abono.id
+            **result,
         }
-
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(400, str(exc))
     except HTTPException:
         db.rollback()
         raise
@@ -1036,8 +1025,13 @@ def registrar_pago_distribuido(
     if not cliente:
         raise HTTPException(404, "Cliente no encontrado")
     try:
-        from decimal import Decimal
-        monto = Decimal(str(payload.get("monto", 0)))
+        from decimal import Decimal, InvalidOperation
+        try:
+            monto = Decimal(str(payload.get("monto", 0)))
+        except InvalidOperation:
+            raise ValueError("Monto inválido")
+        if not monto.is_finite():
+            raise ValueError("Monto inválido")
         result = aplicar_pago(
             db,
             cliente=cliente,
@@ -1048,7 +1042,7 @@ def registrar_pago_distribuido(
     except ValueError as exc:
         raise HTTPException(400, str(exc))
     db.commit()
-    return {"ok": True, **result}
+    return {"ok": True, "nuevo_saldo": cliente.saldo_actual, **result}
 
 
 # --- CONTACTOS (personas por empresa) ---

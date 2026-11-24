@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowRight, AlertCircle, Loader2, Check } from 'lucide-rea
 import { api, normalizeDetail } from '@/lib/api';
 import { branding } from '@/lib/branding';
 import { useAuth, type User } from '@/stores/auth';
+import { useSuspension } from '@/stores/suspension';
 
 const VENTAJAS = branding.loginBullets;
 const CREDITO = `Powered by ${branding.poweredBy} · ${branding.productName} ${branding.productVersion}`;
@@ -63,6 +64,9 @@ export function LoginPage() {
         return;
       }
       const me = await api.get<User>('/api/auth/me');
+      // Un 423 previo en esta pestaña (otra cuenta, o antes de reactivar) deja
+      // marcada la suspensión; un login exitoso la desmiente.
+      useSuspension.getState().limpiar();
       setUser(me);
       navigate('/spa/dashboard', { replace: true });
     } catch {

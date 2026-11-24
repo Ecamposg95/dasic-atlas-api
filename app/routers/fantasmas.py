@@ -147,6 +147,9 @@ def actualizar_fantasma(
         raise HTTPException(409, f"Fantasma en estado {f.estado} es solo lectura")
 
     try:
+        # Los campos opcionales se pueden vaciar: se aplica todo lo que el
+        # cliente envió, aunque venga en null.
+        enviados = payload.model_fields_set
         if payload.descripcion_original is not None:
             f.descripcion_original = payload.descripcion_original
             f.descripcion_normalizada = (payload.descripcion_original or "").strip().lower()
@@ -156,17 +159,17 @@ def actualizar_fantasma(
             f.costo_referencia = payload.costo_referencia
         if payload.moneda_referencia is not None:
             f.moneda_referencia = payload.moneda_referencia.upper()
-        if payload.proveedor_sugerido_id is not None:
+        if "proveedor_sugerido_id" in enviados:
             f.proveedor_sugerido_id = payload.proveedor_sugerido_id
-        if payload.marca is not None:
+        if "marca" in enviados:
             f.marca = payload.marca or None
         if payload.marca_id is not None:
             f.marca_id = payload.marca_id
-        if payload.clave_prod_serv is not None:
+        if "clave_prod_serv" in enviados:
             f.clave_prod_serv = payload.clave_prod_serv or None
-        if payload.clave_unidad_sat is not None:
+        if "clave_unidad_sat" in enviados:
             f.clave_unidad_sat = payload.clave_unidad_sat or None
-        if payload.observaciones is not None:
+        if "observaciones" in enviados:
             f.observaciones = payload.observaciones or None
         db.commit()
         db.refresh(f)

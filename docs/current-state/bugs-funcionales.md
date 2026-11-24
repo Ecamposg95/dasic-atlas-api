@@ -69,3 +69,43 @@ Falsos positivos (se muestra y el backend rechaza): menú completo para Ventas y
 ## Lo que se verificó y está limpio
 
 `lib/calc.ts` (defensivo en conversiones, banda de plausibilidad del TC, redondeo por línea antes de sumar) · protección contra doble submit en todos los formularios · todos los literales `/spa/...` del código existen en el router · los decimales llegan como número, no como string.
+
+## Auditoría de noviembre 2026
+
+Revisión completa de backend y frontend el 2026-11-24. Regresiones en `tests/test_auditoria_2026_11.py` y `web/src/features/cotizador/lib/calc.test.ts`.
+
+### Corregido
+
+| Dónde | Qué pasaba |
+|---|---|
+| `routers/ventas.py::_generar_folio` | Convertir una cotización liberaba su número: la siguiente cotización repetía folio y su conversión respondía 500. El consecutivo del mes ahora es uno para `C-` y `V-` |
+| `services/auto_oc_service.py` | "Sugerir OC" y "Generar OC" respondían 500 siempre que había algo que pedir (`Decimal × float`) |
+| `security/jwt.py`, `routers/auth.py` | Un usuario desactivado seguía usando la API y podía iniciar sesión; solo `/api/auth/me` lo rechazaba |
+| `routers/clientes.py` (`registrar-pago`), `clientes/hooks/useEmpresaDetalle.ts` | El pago desde "Estado de cuenta" bajaba el saldo pero dejaba los cargos como pendientes en CxC, antigüedad y vencimientos. Ahora reparte FIFO como `pago-distribuido` |
+| `routers/ventas.py::crear_orden` | `?tipo_orden=pagada` o `cancelada` sacaba stock sin generar cargo. Solo se acepta `cotizacion` o `pendiente` |
+| `routers/ventas.py::crear_orden` | Las fechas capturadas en una cotización nueva se ignoraban en el primer guardado |
+| `routers/crm.py` (`PATCH /deals/{id}`) | Cambiar la etapa desde el formulario no cerraba el deal ni dejaba rastro; solo `/move` lo hacía |
+| `routers/compras.py` (recepción) | Sin bloqueo sobre la OC: dos recepciones simultáneas podían dar entrada dos veces |
+| `routers/fantasmas.py` | Vaciar proveedor, marca, claves SAT o notas decía "Actualizado" y no cambiaba nada |
+| `db/seeds.py::seed_super_admin` | La contraseña inicial de `admin@dasic.mx` estaba escrita en el código. Ahora sale de `INITIAL_ADMIN_PASSWORD` o se genera y se registra una vez en el log. **La anterior sigue en el historial de git: hay que cambiarla en toda instancia donde no se haya cambiado** |
+| `cotizador/components/EditLineModal.tsx` | "Guardar y actualizar catálogo" pisaba el SKU interno del producto con el SKU comercial. "Reemplazar producto" conservaba el proveedor y la marca del producto anterior |
+| `inventario/components/ProductoFormModal.tsx` | Editar un producto reimponía el stock que el modal vio al abrir, revirtiendo movimientos ocurridos mientras tanto |
+| `cotizador/lib/calc.ts` | El preview podía quedar un centavo abajo del total guardado en empates de medio centavo |
+| `lib/api.ts`, `LoginPage.tsx`, `lib/queryClient.ts` | El 409 de cotización ya enviada mostraba JSON crudo; la pantalla de suspensión se quedaba pegada tras un login correcto; las consultas reintentaban ante 423 |
+| `contactos/pages/ContactosPage.tsx`, `crm/pages/DealDetallePage.tsx` | "Nuevo contacto" reabría con los datos del anterior; registrar una actividad borraba lo escrito sin guardar en el resumen del deal |
+| `routers/superadmin.py` | El enlace a productos de la auditoría apuntaba a una ruta inexistente |
+
+### Abierto — requiere decisión
+
+| Sev | Dónde | Qué pasa |
+|---|---|---|
+| ALTO | `routers/ventas.py::convertir_cotizacion` | El stock se descuenta desde las reservas, no desde las líneas. Una recotización (V2) no tiene reservas: al convertirla se genera el cargo y **no sale stock**, y la original conserva su reserva. Falta decidir si recotizar traslada la reserva o cancela el origen |
+| ALTO | `routers/ventas.py` (detalle-json, pdf, word, versiones, eventos, recotizar, enviar-correo, whatsapp-log, ia-resumen, sugerir-oc, generar-oc) | Solo exigen ser staff: Ventas ve y recotiza cotizaciones ajenas, Operativo lee costos y márgenes, y ambos pueden generar OC. La lectura compartida entre vendedores está documentada como deliberada; lo demás no |
+| ALTO | `services/cuentas_por_cobrar.py`, `models/finance.py` | Las ventas en USD suman al saldo, a la antigüedad y al resumen como si fueran pesos (la transacción no guarda moneda). Igual en el saldo de proveedores |
+| MEDIO | `routers/compras.py:698` | Crear una OC recibida desde cotización (`afecta_stock`) escribe en el catálogo un costo ya convertido a la moneda de la cotización sin cambiar `moneda_compra`. Hoy solo alcanzable por API |
+| MEDIO | `domains/remisiones/service.py:245` | El control de sobre-entrega compara línea por línea: dos líneas del mismo renglón de la orden lo rebasan |
+| MEDIO | `services/auto_oc_service.py::generar_ocs` | Suma las líneas fantasma al total de la OC sin crearles detalle, mezcla MXN y USD en un total, y `detalles_compra.cantidad` es entero (trunca cantidades fraccionarias) |
+| MEDIO | `domains/remisiones/service.py:375` | La cotización creada desde una remisión usa la serie `C-` sola y puede repetir el número de una cotización ya convertida |
+| MEDIO | `crm/pages/CrmKanbanPage.tsx`, `DealFormModal.tsx` | La lista de responsables sale de `/api/usuarios/`, que es solo para administradores: el resto de los roles ve "Sin asignar" |
+| MEDIO | `remisiones/pages/RemisionEditorPage.tsx` | Volver a "Remisiones" desde un borrador conserva ese borrador en el editor (sin verificar en navegador) |
+| BAJO | varios | Enlaces a PDF/Word/CSV muestran JSON crudo bajo suspensión; "Hasta" en remisiones excluye el día elegido; etiqueta de IVA en la OC impresa ignora el override; montos negativos aceptados en `compras/registrar-entrada` y `registrar-pago`; claves de caché sin invalidar (`clientes-count`, `precios-comparar-q`, `marcas`, `compras-proveedores`); no hay ESLint configurado; ninguna ruta de la SPA tiene guarda por rol (el backend sí rechaza) |

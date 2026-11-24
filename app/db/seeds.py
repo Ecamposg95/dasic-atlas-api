@@ -11,6 +11,8 @@ fuente de verdad para entornos limpios.
 
 import json
 import logging
+import os
+import secrets
 from pathlib import Path
 
 from sqlalchemy import func, text
@@ -621,10 +623,21 @@ def seed_super_admin(db: Session) -> None:
         return
 
     logger.info("Inicializando sistema DASIC ERP — creando administrador...")
+    # La contraseña inicial NO vive en el código (el repositorio es público):
+    # sale de INITIAL_ADMIN_PASSWORD o se genera al azar y se registra una sola
+    # vez en el log de arranque para que el operador la cambie.
+    password = (os.getenv("INITIAL_ADMIN_PASSWORD") or "").strip()
+    if not password:
+        password = secrets.token_urlsafe(12)
+        logger.warning(
+            "INITIAL_ADMIN_PASSWORD no definida — contraseña inicial de admin@dasic.mx: %s "
+            "(cámbiala al entrar)",
+            password,
+        )
     admin = UsuarioCreate(
         nombre="Administrador Principal",
         email="admin@dasic.mx",
-        password="784512",
+        password=password,
         rol=models.RolUsuario.SUPERADMIN,
         activo=True,
     )

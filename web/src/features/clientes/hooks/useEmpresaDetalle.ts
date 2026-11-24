@@ -31,8 +31,12 @@ export function useRegistrarPago(clienteId: number) {
   const qc = useQueryClient();
   return useMutation<{ mensaje: string; nuevo_saldo: number }, { status?: number; detail?: string }, { monto: number; descripcion: string }>({
     mutationFn: ({ monto, descripcion }) =>
+      // `pago-distribuido` aplica el abono a los cargos abiertos (FIFO) además
+      // de bajar el saldo; `registrar-pago` solo bajaba el saldo y dejaba los
+      // cargos como pendientes en CxC, antigüedad y vencimientos.
       api.post<{ mensaje: string; nuevo_saldo: number }>(
-        `/api/clientes/${clienteId}/registrar-pago?monto=${monto}&descripcion=${encodeURIComponent(descripcion)}`,
+        `/api/clientes/${clienteId}/pago-distribuido`,
+        { monto, descripcion },
       ),
     onSuccess: () => invalidarCobranza(qc, clienteId),
   });

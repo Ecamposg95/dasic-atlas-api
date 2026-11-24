@@ -608,30 +608,24 @@ def actualizar_deal(
     deal = _deal_or_404(db, deal_id, org_id)
 
     data = payload.model_dump(exclude_unset=True)
+    # El cambio de etapa pasa por la misma lógica que /move (cierre y timeline);
+    # un setattr a ciegas dejaba deals en "Ganado" con cerrado_en vacío.
+    nuevo_stage_id = data.pop("stage_id", None)
     for field, value in data.items():
         setattr(deal, field, value)
+    if nuevo_stage_id is not None and nuevo_stage_id != deal.stage_id:
+        _cambiar_stage(db, deal, nuevo_stage_id, org_id, current_user)
 
     db.commit()
     db.refresh(deal)
     return deal
 
 
-# ---------------------------------------------------------------------------
-# PATCH /deals/{deal_id}/move
-# ---------------------------------------------------------------------------
-@router.patch("/deals/{deal_id}/move", response_model=DealOut, dependencies=[Depends(allow_all_staff)])
-def mover_deal(
-    deal_id: int,
-    payload: DealMove,
-    db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_user),
-):
-    org_id = _org_id(current_user)
-    deal = _deal_or_404(db, deal_id, org_id)
-
-    # Verificar que el target stage pertenece al mismo pipeline y al org
+def _cambiar_stage(db: Session, deal: Deal, stage_id: int, org_id, current_user) -> None:
+    """Mueve el deal de etapa: valida el destino, deja rastro en el timeline y
+    fija o limpia `cerrado_en` según la etapa sea terminal. No hace commit."""
     target_q = db.query(PipelineStage).filter(
-        PipelineStage.id == payload.stage_id,
+        PipelineStage.id == stage_id,
         PipelineStage.pipeline_id == deal.pipeline_id,
     )
     if org_id:
@@ -640,11 +634,8 @@ def mover_deal(
     if not target_stage:
         raise HTTPException(status_code=404, detail="Stage destino no encontrado")
 
-    cambio_stage = deal.stage_id != payload.stage_id
-    deal.stage_id = payload.stage_id
-
-    if payload.orden_en_stage is not None:
-        deal.orden_en_stage = payload.orden_en_stage
+    cambio_stage = deal.stage_id != stage_id
+    deal.stage_id = stage_id
 
     # Timeline automático (mismo commit que el movimiento)
     if cambio_stage:
@@ -663,6 +654,25 @@ def mover_deal(
         deal.cerrado_en = datetime.now(timezone.utc)
     else:
         deal.cerrado_en = None
+
+
+# ---------------------------------------------------------------------------
+# PATCH /deals/{deal_id}/move
+# ---------------------------------------------------------------------------
+@router.patch("/deals/{deal_id}/move", response_model=DealOut, dependencies=[Depends(allow_all_staff)])
+def mover_deal(
+    deal_id: int,
+    payload: DealMove,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    org_id = _org_id(current_user)
+    deal = _deal_or_404(db, deal_id, org_id)
+
+    _cambiar_stage(db, deal, payload.stage_id, org_id, current_user)
+
+    if payload.orden_en_stage is not None:
+        deal.orden_en_stage = payload.orden_en_stage
 
     db.commit()
     db.refresh(deal)

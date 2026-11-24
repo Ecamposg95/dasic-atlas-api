@@ -150,28 +150,32 @@ def _generar_folio(
     es_cot = tipo_orden == models.EstatusOrden.COTIZACION
     prefijo = "C" if es_cot else "V"
 
-    # Advisory lock transaccional: serializa el cómputo del consecutivo por
-    # (prefijo, mes) entre llamadas concurrentes.
-    lock_key = f"folio:{prefijo}:{yymm}"
+    # Advisory lock transaccional: serializa el cómputo del consecutivo del
+    # mes entre llamadas concurrentes.
+    lock_key = f"folio:CV:{yymm}"
     db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": lock_key})
 
-    # La fuente de verdad del consecutivo es el folio mismo (no fecha_creacion,
-    # que puede estar desincronizada por zonas horarias o edición manual).
-    # MAX en lugar de COUNT tolera gaps por borrados o renumeraciones.
-    patron = f"{prefijo}-{yymm}%"
-    ultimo = (
-        db.query(func.max(models.OrdenVenta.folio))
-        .filter(models.OrdenVenta.folio.like(patron))
-        .scalar()
-    )
-    # Extraer SOLO los dígitos del consecutivo. MAX lex puede regresar un folio
-    # versionado tipo `C-2605001V2` (recotizar); un `int("001V2")` truena y el
-    # fallback a 1 garantizaba colisión contra `C-2605001` que ya existía.
+    # El consecutivo es UNO para cotizaciones y ventas del mes: convertir una
+    # cotización renombra `C-2611005` a `V-2611005`, así que ese número sale de
+    # la serie C. Mirando solo la serie propia se volvía a emitir y la
+    # siguiente conversión chocaba contra el folio único (500).
+    #
+    # La fuente de verdad es el folio mismo (no fecha_creacion, que puede
+    # estar desincronizada por zonas horarias o edición manual). MAX en lugar
+    # de COUNT tolera gaps por borrados o renumeraciones.
     consecutivo = 1
-    if ultimo:
-        m = re.match(rf"{re.escape(prefijo)}-{re.escape(yymm)}(\d+)", ultimo)
-        if m:
-            consecutivo = int(m.group(1)) + 1
+    for serie in ("C", "V"):
+        ultimo = (
+            db.query(func.max(models.OrdenVenta.folio))
+            .filter(models.OrdenVenta.folio.like(f"{serie}-{yymm}%"))
+            .scalar()
+        )
+        # Extraer SOLO los dígitos del consecutivo. MAX lex puede regresar un
+        # folio versionado tipo `C-2605001V2` (recotizar).
+        if ultimo:
+            m = re.match(rf"{serie}-{re.escape(yymm)}(\d+)", ultimo)
+            if m:
+                consecutivo = max(consecutivo, int(m.group(1)) + 1)
     return f"{prefijo}-{yymm}{consecutivo:03d}"
 
 
@@ -625,6 +629,10 @@ def crear_orden(
     current_user: models.Usuario = Depends(get_current_user)
 ):
     require(current_user, "create", "cotizacion")  # operativo: 403
+    # Solo se nace como cotización o como venta directa. Con cualquier otro
+    # estatus (p. ej. `pagada`, `cancelada`) salía stock sin generar el cargo.
+    if tipo_orden not in (models.EstatusOrden.COTIZACION, models.EstatusOrden.PENDIENTE):
+        raise HTTPException(400, "tipo_orden debe ser cotizacion o pendiente")
     cliente = (
         db.query(models.Cliente)
         .filter(
@@ -675,7 +683,11 @@ def crear_orden(
             tc_mn_a_usd=orden_data.tc_mn_a_usd,
             tc_usd_a_mn=orden_data.tc_usd_a_mn,
             tolerancia_tc=tolerancia_tc,
-            fecha_vencimiento=hoy_negocio() + timedelta(days=get_quote_validity_days(db)),
+            # Las fechas capturadas en el editor se respetan desde el primer
+            # guardado (antes solo las aplicaba el PUT).
+            fecha_creacion=orden_data.fecha_creacion or hoy_negocio(),
+            fecha_vencimiento=orden_data.fecha_vencimiento
+            or hoy_negocio() + timedelta(days=get_quote_validity_days(db)),
             total=0,
             terminos_condiciones=terminos,
             pdf_unificado=1 if orden_data.pdf_unificado else 0,
