@@ -13,6 +13,7 @@ type BannerHealth = {
 const NAV_LINKS = [
   { to: '/spa/superadmin',               label: 'Overview',        end: true  },
   { to: '/spa/superadmin/usuarios',      label: 'Usuarios',        end: false },
+  { to: '/spa/superadmin/acceso',        label: 'Acceso',          end: false },
   { to: '/spa/superadmin/config',        label: 'Configuración',   end: false },
   { to: '/spa/superadmin/audit',         label: 'Auditoría',       end: false },
   { to: '/spa/superadmin/salud',         label: 'Salud',           end: false },

@@ -4,6 +4,8 @@ import { WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useAuth, type User } from '@/stores/auth';
+import { STATUS_SUSPENDIDA, useSuspension } from '@/stores/suspension';
+import { PlataformaSuspendida } from './PlataformaSuspendida';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -14,6 +16,7 @@ export function Layout() {
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const navigate = useNavigate();
+  const mensajeSuspension = useSuspension((s) => s.mensaje);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1');
   // Los tres reintentos se agotaron sin que el servidor respondiera ni 401 ni
@@ -61,6 +64,9 @@ export function Layout() {
             if (!cancelado) navigate('/', { replace: true });
             return;
           }
+          // Acceso suspendido: `api` ya encendió el store y la pantalla de
+          // suspensión toma el control. No es transitorio, no se reintenta.
+          if (status === STATUS_SUSPENDIDA) return;
           if (cancelado) return;
           if (intento < 2) {
             await new Promise((r) => setTimeout(r, 400 * 2 ** intento));
@@ -73,6 +79,10 @@ export function Layout() {
       cancelado = true;
     };
   }, [user, setUser, navigate, reintento]);
+
+  if (mensajeSuspension !== null) {
+    return <PlataformaSuspendida mensaje={mensajeSuspension} />;
+  }
 
   if (falloSesion) {
     return (

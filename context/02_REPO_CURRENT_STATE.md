@@ -44,7 +44,7 @@ Es un **ERP/CRM en producción**: SPA React (migrada 2026-05-22) sobre FastAPI, 
 
 **Reportes:** `/spa/analitica` con tabs `ventas`/`operativo` (las rutas viejas `/spa/reportes` y `/spa/reportes-servicio` redirigen ahí).
 
-**Plataforma (Consola Super-Admin, solo dev — skin propio vía `PlatformShell`):** Usuarios de plataforma (CRUD + rol superadmin, blindajes anti-escalada) · Configuración runtime (IVA/vigencia/tolerancia TC sin redeploy) · Auditoría global (`audit_log` + `audit_service`: deletes de cliente/contacto/producto/gasto, cambios de precio, ciclo de vida de usuarios, ajustes de stock) · Salud del sistema · Mantenimiento (re-seeds, jobs, seed-context, zona roja drop-all-tables con doble guarda).
+**Plataforma (Consola Super-Admin, solo dev — skin propio vía `PlatformShell`):** Usuarios de plataforma (CRUD + rol superadmin, blindajes anti-escalada) · **Acceso a la plataforma** (interruptor suspender/reactivar en `/spa/superadmin/acceso`: con la plataforma suspendida todo usuario que no sea SUPERADMIN recibe 423 en el login y en cualquier endpoint autenticado, y la SPA muestra la pantalla de suspensión; estado en `platform_config`, sin redeploy — `app/services/acceso_service.py`) · Configuración runtime (IVA/vigencia/tolerancia TC sin redeploy) · Auditoría global (`audit_log` + `audit_service`: deletes de cliente/contacto/producto/gasto, cambios de precio, ciclo de vida de usuarios, ajustes de stock) · Salud del sistema · Mantenimiento (re-seeds, jobs, seed-context, zona roja drop-all-tables con doble guarda).
 
 ## Remisiones v2
 

@@ -138,6 +138,7 @@ Toda cadena de marca visible (nombre de organización, tagline, producto, versi�
 - **Overview · Usuarios de plataforma · Configuración · Auditoría · Salud · Mantenimiento.**
 - **Usuarios** — CRUD con rol superadmin; blindajes anti-escalada (solo superadmin modifica/elimina/resetea otro superadmin), protección último-superadmin-activo, anti-auto-bloqueo.
 - **Configuración** — IVA/vigencia/tolerancia de TC en runtime (sin redeploy).
+- **Acceso** — interruptor para suspender o reactivar la plataforma (`/spa/superadmin/acceso`). Suspendida, solo entra el SUPERADMIN; el resto recibe 423 y ve la pantalla de suspensión con un mensaje editable. Aplica al instante, también a sesiones abiertas; no toca datos. Cada cambio queda en `audit_log`.
 - **Auditoría** — timeline global (cotizaciones + fusiones) más `audit_log`: deletes de cliente/contacto/producto/gasto, cambios de precio, ciclo de vida de usuarios y ajustes de stock.
 - **Salud** — versión/git/uptime, conteos DB, FX, integraciones (booleanos, sin secretos).
 - **Mantenimiento** — re-seeds idempotentes, jobs (CxC vencidas, refresh FX), seed-context, **ZONA ROJA** (drop-all-tables con doble guarda: type-to-confirm "BORRAR TODO" + diálogo danger; solo superadmin).
