@@ -1,7 +1,7 @@
 ---
 title: Atlas ONE — DASIC Industrial (ERP/CRM)
 tags: [proyecto, dasic, atlas-one, erp, crm, fastapi, react, documentacion]
-updated: 2026-08-04
+updated: 2026-11-23
 repo: dasic-atlas-api
 estado: producción (Railway, autodeploy desde main)
 ---
@@ -20,7 +20,7 @@ estado: producción (Railway, autodeploy desde main)
 
 | Capa | Tecnología |
 |------|-----------|
-| **Backend** | FastAPI + SQLAlchemy 2.x + Alembic, Python 3.12 |
+| **Backend** | FastAPI + SQLAlchemy 2.x + Alembic, Python 3.11 (`runtime.txt`) |
 | **DB** | PostgreSQL (solo), vía `psycopg`. Sin SQLite en producción |
 | **Auth** | JWT (`python-jose`) en cookie HttpOnly `access_token`; `passlib[bcrypt]` |
 | **Frontend** | SPA React 18 + Vite 5 + TypeScript + Tailwind (compilado) + shadcn/ui + Zustand + TanStack Query v5 + React Router v6 |
@@ -138,7 +138,7 @@ Toda cadena de marca visible (nombre de organización, tagline, producto, versi�
 - **Overview · Usuarios de plataforma · Configuración · Auditoría · Salud · Mantenimiento.**
 - **Usuarios** — CRUD con rol superadmin; blindajes anti-escalada (solo superadmin modifica/elimina/resetea otro superadmin), protección último-superadmin-activo, anti-auto-bloqueo.
 - **Configuración** — IVA/vigencia/tolerancia de TC en runtime (sin redeploy).
-- **Auditoría** — timeline global (cotizaciones + fusiones).
+- **Auditoría** — timeline global (cotizaciones + fusiones) más `audit_log`: deletes de cliente/contacto/producto/gasto, cambios de precio, ciclo de vida de usuarios y ajustes de stock.
 - **Salud** — versión/git/uptime, conteos DB, FX, integraciones (booleanos, sin secretos).
 - **Mantenimiento** — re-seeds idempotentes, jobs (CxC vencidas, refresh FX), seed-context, **ZONA ROJA** (drop-all-tables con doble guarda: type-to-confirm "BORRAR TODO" + diálogo danger; solo superadmin).
 
@@ -147,7 +147,7 @@ Toda cadena de marca visible (nombre de organización, tagline, producto, versi�
 ## 5. Remisiones v2 (`app/domains/remisiones/`)
 
 > [!success] Primer dominio con la arquitectura por capas y con tests
-> Router legacy retirado. 55 de los 75 tests de backend cubren este módulo.
+> Router legacy retirado. Fue el primer módulo con pruebas; hoy la suite de backend (185 funciones de prueba) cubre además totales, fechas, stock, cobranza, auditoría, dashboard y reportes.
 
 **Ciclo de vida** — `EstadoRemision`: `BORRADOR → EMITIDA → RECIBIDA`, con `CANCELADA` como salida. La emisión asigna folio bajo `pg_advisory_xact_lock` y descuenta stock; la cancelación revierte. Patrón obligatorio en toda mutación con estado: **lock → refresh → re-check** (nunca al revés: evita TOCTOU), con 404 explícito si otra transacción borró la fila mientras se esperaba el lock.
 
@@ -220,8 +220,8 @@ cd web && npm install && npm run dev    # Vite :5173 (proxy a :8000)
 cd web && npm run build                 # build a app/static/dist (pre-push)
 
 # Tests
-pytest                                  # backend: 75 tests en tests/ (pytest.ini → testpaths=tests)
-cd web && npm run test                  # frontend: 35 tests (vitest run)
+pytest                                  # backend: 185 funciones de prueba en tests/ (pytest.ini → testpaths=tests)
+cd web && npm run test                  # frontend: 117 bloques it/test en 9 archivos (vitest run)
 cd web && npm run test:watch            # modo watch
 
 # Alembic
@@ -231,7 +231,7 @@ alembic heads                           # debe devolver UN solo head
 ```
 
 > [!warning] `pytest` no está en `requirements.txt`
-> Vive en `requirements-dev.txt` (Railway no lo instala): `pip install -r requirements.txt -r requirements-dev.txt`. Los tests de backend usan **SQLite en memoria** vía `tests/conftest.py`, que shimea `hashtext`/`pg_advisory_xact_lock` como funciones no-op para poder ejercitar el código de producción sin Postgres. Esto es una excepción **exclusiva de tests** — la app sigue siendo Postgres-only.
+> Vive en `requirements-dev.txt` (Railway no lo instala): `pip install -r requirements.txt -r requirements-dev.txt`. Sin `TEST_DATABASE_URL`, los tests de backend usan **SQLite en memoria** vía `tests/conftest.py` (con ella corren sobre PostgreSQL real, como en CI), que shimea `hashtext`/`pg_advisory_xact_lock` como funciones no-op para poder ejercitar el código de producción sin Postgres. Esto es una excepción **exclusiva de tests** — la app sigue siendo Postgres-only.
 
 **Env requeridas:** `DATABASE_URL`, `SECRET_KEY`. Opcionales clave: `BANXICO_TOKEN`, `ANTHROPIC_API_KEY`, `SMTP_*`, `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`, `BOOTSTRAP_SUPERADMIN_EMAIL`, `VITE_TENANT` (build del front).
 
@@ -257,18 +257,19 @@ alembic heads                           # debe devolver UN solo head
 ## 11. Roadmap
 
 > [!todo] Pendiente
+> La lista priorizada y verificada vive en `docs/current-state/backlog.md`; esto es el resumen.
+> - **Decisiones de producto abiertas** (facturación en parcialidades, "autorizado" de la remisión, importes en la remisión, entre otras) — bloquean las olas 2 y 3 del golden path remisión → factura → pago.
+> - **Golden path, Ola 4:** retirar el editor legacy de remisiones, quitar la carga completa de catálogo del KPI legacy, suite E2E, segunda pasada de auditoría (upload-csv masivo, cambio de contraseña).
+> - **A medias:** estado de error en las 10 páginas que faltan, mitad abierta del bug #7 del cotizador, regla `B904` de ruff.
 > - **Migrar más módulos al patrón `app/domains/`** (siguientes candidatos: ventas/cotizador, compras, inventario) y sacar lógica de los routers gordos.
-> - **Ampliar cobertura de tests** — hoy backend concentra remisiones/folios/stock/unidades; frontend solo el motor de cálculo del cotizador. Falta: cotizador backend, CxC, CRM, y tests de componentes (jsdom).
-> - **Migrar las páginas slate restantes a tokens CIRCUITO** (cotizador, remisiones, primitivas y chrome ya están).
 > - **RBAC:** completar la migración de decoradores `allow_*` a `require()` en endpoints viejos.
-> - **Superadmin:** impersonación, feature flags, Módulo B v2 (`audit_log` + instrumentar login/CRUD usuarios/precio-stock), log de mantenimiento.
-> - **Aprobaciones de descuento** por rol; **WhatsApp nivel B** (API oficial).
 > - **Fase 6 Alembic-only:** retirar `create_all()` del lifespan y el shim `_BACKFILL_DDL` (requiere que Railway corra migraciones).
-> - **`SECRET_KEY` persistente en Railway** (para que no rote por deploy).
-> - **Actualizar `docs/development/testing.md`** — sigue diciendo que el backend no tiene tests.
+> - **Superadmin:** impersonación, feature flags, log de mantenimiento.
+> - **Aprobaciones de descuento** por rol; **WhatsApp nivel B** (API oficial).
+> - **Railway:** apuntar staging a la rama `staging` para que sea compuerta previa y no espejo de `main`.
 
-> [!done] Cerrado recientemente (2026-08)
-> Remisiones v2 completa (dominio, estados, entregas parciales, unidades, permisos, editor híbrido, remisión→cotización) · CRM v2 (detalle de deal, actividades + timeline automático, métricas, CRUD de etapas, deal→cotización) · Base instalada (plantas + activos) · Design system CIRCUITO · Branding por tenant · Primer harness de tests (pytest + vitest) · Modelo direccional de TC · Fase 1 móvil del cotizador.
+> [!done] Cerrado recientemente (2026-08 a 2026-10)
+> Remisiones v2 completa (dominio, estados, entregas parciales, unidades, permisos, editor híbrido, remisión→cotización) · CRM v2 (detalle de deal, actividades + timeline automático, métricas, CRUD de etapas, deal→cotización) · Base instalada (plantas + activos) · Design system CIRCUITO · Branding por tenant · Primer harness de tests (pytest + vitest) · Modelo direccional de TC · Fase 1 móvil del cotizador · Golden path olas 0 y 1 (staging, CI con PostgreSQL 16, 15 bugs de la auditoría) · Cierre de seis endpoints sin autenticación · Fechas de orden a `DATE` y hotfix de octubre · Auditoría de mutaciones (`audit_log`) · `docs/development/testing.md` al día · `SECRET_KEY` fija en Railway.
 
 ---
 

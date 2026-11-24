@@ -4,7 +4,7 @@
 
 ### Requisitos
 
-- Python 3.12+
+- Python 3.11 (lo fija `runtime.txt` y es lo que instala Railway; 3.12 funciona en local)
 - PostgreSQL 15+ corriendo
 - `uv` (recomendado) o `pip` + `venv`
 - `git`

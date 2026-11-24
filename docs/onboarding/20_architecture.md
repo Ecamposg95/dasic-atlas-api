@@ -2,7 +2,7 @@
 
 ## Stack
 
-- **Backend**: FastAPI (Python 3.12), SQLAlchemy 2.x, Alembic, `psycopg` (Postgres driver), Pydantic v2.
+- **Backend**: FastAPI (Python 3.11, fijado en `runtime.txt`), SQLAlchemy 2.x, Alembic, `psycopg` (Postgres driver), Pydantic v2.
 - **DB**: PostgreSQL 15+. Solo Postgres — no SQLite ni mocks.
 - **Frontend**: SSR con Jinja2 templates + Tailwind CDN (Play) + Alpine.js + ECharts (sólo dashboard).
 - **Auth**: JWT con `python-jose`, cookie httponly `access_token` + bearer header opcional.
