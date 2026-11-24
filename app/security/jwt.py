@@ -12,6 +12,7 @@ from app import models
 from app.core import get_settings
 from app.db import get_db
 from app.services import UserService
+from app.services import acceso_service
 
 
 settings = get_settings()
@@ -78,6 +79,11 @@ async def get_current_user(
     user = UserService.get_user_by_email(db, email=email)
     if user is None:
         raise credentials_exception
+
+    # Interruptor de acceso: con la plataforma suspendida solo pasa el
+    # superadmin. Vive aquí porque todo endpoint autenticado depende de esta
+    # función, así que el corte alcanza también a las sesiones ya abiertas.
+    acceso_service.verificar_acceso(db, user)
 
     return user
 

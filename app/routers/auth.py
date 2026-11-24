@@ -10,6 +10,7 @@ from app.core import get_settings
 from app.db import get_db
 from app import schemas
 from app.services import UserService
+from app.services import acceso_service
 from app.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, get_current_user
 from app.security.permissions import capabilities_for
 
@@ -33,6 +34,10 @@ def login_for_access_token(
             detail="Incorrecto",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Plataforma suspendida: no se emite cookie a nadie que no sea superadmin.
+    # Va después de validar credenciales para no revelar el estado a anónimos.
+    acceso_service.verificar_acceso(db, user)
 
     # "Recordar sesión": cookie persistente de larga duración. Sin él: JWT de
     # 12h y cookie de SESIÓN (sin max_age → el navegador la borra al cerrarse).

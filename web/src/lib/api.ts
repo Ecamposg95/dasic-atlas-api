@@ -1,6 +1,8 @@
 // Wrapper de fetch para llamadas al backend FastAPI.
 // Same-origin en prod; Vite dev proxea /api → :8000 (cookie se preserva).
 
+import { STATUS_SUSPENDIDA, useSuspension } from '@/stores/suspension';
+
 const BASE_URL = '';
 
 export type ApiError = {
@@ -56,6 +58,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       status: r.status,
       detail: normalizeDetail((body as { detail?: unknown }).detail, r.statusText),
     };
+    // 423 = acceso suspendido desde la consola de plataforma. Se avisa al
+    // store global para que el Layout tape la app, venga de la pantalla que venga.
+    if (r.status === STATUS_SUSPENDIDA) useSuspension.getState().suspender(err.detail);
     throw err;
   }
   if (r.status === 204) return undefined as T;

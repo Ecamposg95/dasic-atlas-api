@@ -19,6 +19,7 @@ from app.security.jwt import allow_superadmin
 from app.core.runtime_config import EDITABLE_KEYS, effective_summary
 from app.core.config import get_settings
 from app.core.fechas import hoy_negocio
+from app.services import acceso_service, audit_service
 
 router = APIRouter(prefix="/api/superadmin", tags=["Super-Admin"])
 
@@ -73,6 +74,72 @@ def set_config(
             db.add(models.PlatformConfig(clave=payload.clave, valor=payload.valor, actualizado_por_id=current_user.id))
     db.commit()
     return {"items": effective_summary(db)}
+
+
+# ---------------------------------------------------------------------------
+# Interruptor de acceso: suspender / reactivar la plataforma sin redeploy.
+# El superadmin nunca queda fuera (ver acceso_service.verificar_acceso).
+# ---------------------------------------------------------------------------
+class AccesoSet(BaseModel):
+    suspendida: bool
+    mensaje: str | None = None  # None = no tocar; "" = volver al mensaje default
+
+
+def _acceso_out(db: Session) -> dict:
+    actual = acceso_service.estado(db)
+    por = None
+    if actual["actualizado_por_id"]:
+        u = db.get(models.Usuario, actual["actualizado_por_id"])
+        por = u.nombre if u else None
+    afectados = (
+        db.query(models.Usuario)
+        .filter(models.Usuario.activo.is_(True))
+        .filter(models.Usuario.rol != models.RolUsuario.SUPERADMIN)
+        .count()
+    )
+    return {
+        "suspendida": actual["suspendida"],
+        "mensaje": actual["mensaje"],
+        "mensaje_personalizado": actual["mensaje_personalizado"],
+        "mensaje_default": acceso_service.MENSAJE_DEFAULT,
+        "actualizado_en": actual["actualizado_en"],
+        "actualizado_por": por,
+        "usuarios_afectados": afectados,
+    }
+
+
+@router.get("/acceso", dependencies=[Depends(allow_superadmin)])
+def get_acceso(db: Session = Depends(get_db)):
+    return _acceso_out(db)
+
+
+@router.put("/acceso", dependencies=[Depends(allow_superadmin)])
+def set_acceso(
+    payload: AccesoSet,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    if payload.mensaje is not None and len(payload.mensaje.strip()) > acceso_service.MENSAJE_MAX:
+        raise HTTPException(400, f"El mensaje no puede pasar de {acceso_service.MENSAJE_MAX} caracteres")
+    antes = acceso_service.estado(db)["suspendida"]
+    acceso_service.cambiar(
+        db, suspendida=payload.suspendida, mensaje=payload.mensaje, usuario=current_user
+    )
+    if antes != payload.suspendida:
+        audit_service.registrar(
+            db,
+            usuario=current_user,
+            accion="suspender" if payload.suspendida else "reactivar",
+            entidad="plataforma",
+            entidad_id=None,
+            resumen=(
+                "Acceso a la plataforma suspendido"
+                if payload.suspendida
+                else "Acceso a la plataforma reactivado"
+            ),
+        )
+    db.commit()
+    return _acceso_out(db)
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +226,8 @@ _ACCION_SISTEMA = {
     "cambio_rol": "Cambio de rol",
     "desactivar": "Desactivación",
     "crear": "Alta",
+    "suspender": "Suspensión",
+    "reactivar": "Reactivación",
 }
 
 _LINK_SISTEMA = {
@@ -166,6 +235,7 @@ _LINK_SISTEMA = {
     "producto": "/spa/productos",
     "usuario": "/spa/usuarios",
     "gasto": "/spa/gastos",
+    "plataforma": "/spa/superadmin/acceso",
 }
 
 

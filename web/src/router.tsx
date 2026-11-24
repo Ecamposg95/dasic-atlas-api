@@ -64,6 +64,7 @@ const superadminConfig = lazyPage(() => import('@/features/superadmin/pages/Conf
 const superadminAudit = lazyPage(() => import('@/features/superadmin/pages/AuditPage'), 'AuditPage');
 const superadminSalud = lazyPage(() => import('@/features/superadmin/pages/SaludPage'), 'SaludPage');
 const superadminMantenimiento = lazyPage(() => import('@/features/superadmin/pages/MantenimientoPage'), 'MantenimientoPage');
+const superadminAcceso = lazyPage(() => import('@/features/superadmin/pages/AccesoPage'), 'AccesoPage');
 const superadminUsuarios = lazyPage(() => import('@/features/superadmin/pages/UsuariosPlataformaPage'), 'UsuariosPlataformaPage');
 const crm = lazyPage(() => import('@/features/crm/pages/CrmKanbanPage'), 'CrmKanbanPage');
 const crmDealDetalle = lazyPage(() => import('@/features/crm/pages/DealDetallePage'), 'DealDetallePage');
@@ -133,6 +134,7 @@ export const router = createBrowserRouter([
       { path: 'superadmin/salud', lazy: superadminSalud },
       { path: 'superadmin/mantenimiento', lazy: superadminMantenimiento },
       { path: 'superadmin/usuarios', lazy: superadminUsuarios },
+      { path: 'superadmin/acceso', lazy: superadminAcceso },
       { path: 'crm', lazy: crm },
       { path: 'crm/deals/:id', lazy: crmDealDetalle },
       { path: 'recordatorios', lazy: recordatorios },

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { SlidersHorizontal, ScrollText, Activity, Database, UserCog } from 'lucide-react';
+import { SlidersHorizontal, ScrollText, Activity, Database, UserCog, Lock } from 'lucide-react';
 import { PlatformShell } from '../components/PlatformShell';
 
 const CARDS = [
@@ -8,6 +8,13 @@ const CARDS = [
     icon: UserCog,
     title: 'Usuarios de plataforma',
     desc: 'Crear y gestionar cuentas, incl. superadmins.',
+    activo: true,
+  },
+  {
+    to: '/spa/superadmin/acceso',
+    icon: Lock,
+    title: 'Acceso a la plataforma',
+    desc: 'Suspender o reactivar el acceso de todas las cuentas.',
     activo: true,
   },
   {
