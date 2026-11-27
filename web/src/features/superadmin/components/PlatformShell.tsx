@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Hexagon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useIsSuperadmin } from '@/lib/permissions';
+import { AtlasLockup } from '@/components/brand/Atlas';
 
 // ─── Health banner types (minimal — only what the banner needs) ──────────────
 type BannerHealth = {
@@ -37,6 +38,14 @@ export function PlatformShell({ title, children }: PlatformShellProps) {
     retry: false,
   });
 
+  // La consola usa la marca Atlas Tech (Niebla en claro, Horizon en oscuro):
+  // la clase vive en <html> para que también alcance a modales y al sidebar.
+  useEffect(() => {
+    if (!isSuperadmin) return;
+    document.documentElement.classList.add('atlas-console');
+    return () => document.documentElement.classList.remove('atlas-console');
+  }, [isSuperadmin]);
+
   if (!isSuperadmin) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
@@ -49,40 +58,37 @@ export function PlatformShell({ title, children }: PlatformShellProps) {
   const gitSha = health?.app?.git_sha;
   const env = health?.app?.env;
   const shortSha = gitSha ? gitSha.slice(0, 7) : null;
+  const tag = 'font-mono text-[10px] px-2 py-0.5 rounded-full border';
 
   return (
-    <div className="flex flex-col min-h-full">
-      {/* ── Dev banner ──────────────────────────────────────────────────────── */}
-      <div className="bg-emerald-500/10 border-b border-emerald-500/30 px-4 py-2 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Hexagon className="h-4 w-4 text-emerald-400 fill-emerald-400/20" />
-          <span className="font-mono text-xs font-bold text-emerald-400 tracking-widest uppercase">
-            Atlas · Platform Console
-          </span>
-        </div>
-        <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-500/70">
-          entorno de plataforma · solo dev
+    <div className="relative isolate flex flex-col min-h-full overflow-hidden bg-background">
+      {/* Luz de marca: resplandor ember con contraluz índigo, detrás del contenido */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -z-10 -top-40 -right-32 h-[420px] w-[640px] rounded-full blur-3xl opacity-60 dark:opacity-100"
+        style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(255,106,31,.20), rgba(255,106,31,0))' }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -z-10 -bottom-48 -left-40 h-[420px] w-[680px] rounded-full blur-3xl opacity-50 dark:opacity-100"
+        style={{ background: 'radial-gradient(50% 50% at 50% 50%, rgba(91,88,184,.20), rgba(91,88,184,0))' }}
+      />
+
+      {/* ── Barra de marca ──────────────────────────────────────────────────── */}
+      <div className="px-6 py-3 flex items-center gap-3 flex-wrap border-b border-border">
+        <AtlasLockup className="text-[15px] text-foreground" markClassName="h-5" />
+        <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          Consola de plataforma
         </span>
-        {/* Badges: only render when health loaded */}
-        {env && (
-          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 uppercase">
-            {env}
-          </span>
-        )}
-        {version && (
-          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-            v{version}
-          </span>
-        )}
-        {shortSha && (
-          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted-foreground/10 text-muted-foreground border border-muted-foreground/20">
-            {shortSha}
-          </span>
-        )}
+        <span className="flex-1" />
+        {/* Tags: solo cuando cargó la salud */}
+        {env && <span className={`${tag} uppercase border-accent-glow/40 text-primary`}>{env}</span>}
+        {version && <span className={`${tag} border-border-strong text-foreground`}>v{version}</span>}
+        {shortSha && <span className={`${tag} border-border text-muted-foreground`}>{shortSha}</span>}
       </div>
 
-      {/* ── Horizontal sub-nav ──────────────────────────────────────────────── */}
-      <nav className="flex items-center gap-1 px-4 py-1.5 bg-emerald-500/5 border-b border-emerald-500/20 overflow-x-auto">
+      {/* ── Sub-navegación ──────────────────────────────────────────────────── */}
+      <nav className="flex items-center gap-1 px-5 py-2 border-b border-border overflow-x-auto">
         {NAV_LINKS.map((link) => (
           <NavLink
             key={link.to}
@@ -90,10 +96,10 @@ export function PlatformShell({ title, children }: PlatformShellProps) {
             end={link.end}
             className={({ isActive }) =>
               [
-                'font-mono text-xs px-3 py-1.5 rounded-md whitespace-nowrap transition-colors',
+                'text-[13px] px-3.5 py-1.5 rounded-full whitespace-nowrap border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-atlas-amber',
                 isActive
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                  : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10',
+                  ? 'bg-foreground text-background border-transparent font-medium'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border-strong',
               ].join(' ')
             }
           >
@@ -102,17 +108,15 @@ export function PlatformShell({ title, children }: PlatformShellProps) {
         ))}
       </nav>
 
-      {/* ── Page title ──────────────────────────────────────────────────────── */}
-      <div className="px-6 pt-5 pb-3 border-b border-emerald-500/10">
-        <h1 className="font-mono text-xl font-bold text-emerald-400 tracking-tight">
+      {/* ── Título ──────────────────────────────────────────────────────────── */}
+      <div className="px-6 pt-7 pb-4">
+        <h1 className="text-[30px] leading-none font-light tracking-[-0.035em] text-foreground">
           {title}
+          <span className="text-primary">.</span>
         </h1>
       </div>
 
-      {/* ── Content area with faint platform tint ───────────────────────────── */}
-      <div className="flex-1 bg-emerald-500/[0.02] p-6">
-        {children}
-      </div>
+      <div className="flex-1 px-6 pb-6">{children}</div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useIsSuperadmin, useModuloVisible } from '@/lib/permissions';
 import { branding } from '@/lib/branding';
+import { AtlasLockup, AtlasMark, ATLAS_URL } from '@/components/brand/Atlas';
 import { SECTIONS } from './nav-config';
 
 export function Sidebar({
@@ -119,6 +120,25 @@ export function Sidebar({
             </div>
           ))}
         </nav>
+
+        {/* Firma del producto: Atlas ONE por Atlas Tech */}
+        <a
+          href={ATLAS_URL}
+          target="_blank"
+          rel="noreferrer"
+          title={`${branding.productName} · por ${branding.poweredBy}`}
+          className={`group shrink-0 flex items-center gap-2.5 border-t border-sidebar-border px-4 py-3 text-sidebar-text hover:text-sidebar-strong transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-atlas-amber ${
+            collapsed ? 'md:justify-center md:px-0' : ''
+          }`}
+        >
+          <AtlasMark className={`hidden h-5 transition-colors group-hover:text-atlas-ember ${collapsed ? 'md:block' : ''}`} />
+          <span className={`min-w-0 leading-tight ${collapsed ? 'md:hidden' : ''}`}>
+            <AtlasLockup name="ONE" className="text-[13px]" markClassName="h-[18px] transition-colors group-hover:text-atlas-ember" />
+            <span className="mt-1 block text-[9.5px] uppercase tracking-[0.22em] text-sidebar-dim">
+              por {branding.poweredBy}
+            </span>
+          </span>
+        </a>
 
         {onToggleCollapsed && (
           <div className="hidden md:block shrink-0 border-t border-sidebar-border p-2">

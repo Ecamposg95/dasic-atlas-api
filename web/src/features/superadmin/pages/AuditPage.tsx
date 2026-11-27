@@ -61,8 +61,8 @@ export function AuditPage() {
 
         {/* Snapshot de config vigente */}
         {config?.items?.length ? (
-          <div className="flex flex-wrap gap-4 font-mono text-xs border border-emerald-500/20 rounded-lg px-3 py-2 bg-emerald-500/5">
-            <span className="text-emerald-500/70 font-semibold uppercase tracking-widest text-[10px]">
+          <div className="flex flex-wrap gap-4 font-mono text-xs border border-accent-glow/20 rounded-lg px-3 py-2 bg-accent-glow/5">
+            <span className="text-primary/70 font-semibold uppercase tracking-widest text-[10px]">
               Config vigente:
             </span>
             {config.items.map((c) => (
@@ -84,7 +84,7 @@ export function AuditPage() {
             <select
               value={fuente}
               onChange={(e) => resetPage(setFuente)(e.target.value as AuditFuente | '')}
-              className="border border-emerald-500/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
+              className="border border-accent-glow/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
             >
               <option value="">Todas</option>
               <option value="cotizacion">Cotizaciones</option>
@@ -98,7 +98,7 @@ export function AuditPage() {
             <select
               value={usuarioId}
               onChange={(e) => resetPage(setUsuarioId)(e.target.value)}
-              className="border border-emerald-500/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
+              className="border border-accent-glow/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
             >
               <option value="">Todos</option>
               {(usuarios ?? []).map((u) => (
@@ -114,7 +114,7 @@ export function AuditPage() {
               type="date"
               value={desde}
               onChange={(e) => resetPage(setDesde)(e.target.value)}
-              className="border border-emerald-500/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
+              className="border border-accent-glow/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
             />
           </div>
           <div>
@@ -123,15 +123,15 @@ export function AuditPage() {
               type="date"
               value={hasta}
               onChange={(e) => resetPage(setHasta)(e.target.value)}
-              className="border border-emerald-500/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
+              className="border border-accent-glow/20 bg-card text-foreground rounded-md px-2 py-1.5 font-mono text-xs"
             />
           </div>
         </div>
 
         {/* Tabla */}
-        <div className="border border-emerald-500/20 rounded-xl overflow-x-auto bg-card">
+        <div className="border border-accent-glow/20 rounded-xl overflow-x-auto bg-card">
           <table className="w-full text-sm">
-            <thead className="bg-emerald-500/5 font-mono text-[10px] uppercase tracking-widest text-emerald-500/70">
+            <thead className="bg-accent-glow/5 font-mono text-[10px] uppercase tracking-widest text-primary/70">
               <tr>
                 <th className="text-left font-medium px-3 py-2">Fecha</th>
                 <th className="text-left font-medium px-3 py-2">Usuario</th>
@@ -159,7 +159,7 @@ export function AuditPage() {
                 items.map((e, i) => (
                   <tr
                     key={`${e.fuente}-${e.fecha}-${i}`}
-                    className="border-t border-emerald-500/10 align-top"
+                    className="border-t border-accent-glow/10 align-top"
                   >
                     <td className="px-3 py-2 whitespace-nowrap font-mono text-[11px] text-muted-foreground">
                       {fmtFecha(e.fecha)}
@@ -174,7 +174,7 @@ export function AuditPage() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap font-mono text-xs font-medium text-foreground">
                       {e.link ? (
-                        <Link to={e.link} className="text-emerald-400 hover:underline">
+                        <Link to={e.link} className="text-primary hover:underline">
                           {e.entidad}
                         </Link>
                       ) : (

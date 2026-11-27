@@ -16,6 +16,10 @@
   --sidebar-active: #2ee6a8;   /* accent glow (CIRCUITO · esmeralda técnica) */
   --sidebar-activebg: rgba(46, 230, 168, 0.12);
 
+  /* Acento de DASIC en canales RGB (tailwind: accent-glow / accent-deep). */
+  --accent-glow: 46 230 168;
+  --accent-deep: 13 159 110;
+
   /* Semantic design tokens — CIRCUITO light: neutros verdosos + esmeralda profunda */
   --background: 150 20% 97%;
   --surface: 0 0% 100%;
@@ -46,6 +50,48 @@
   --primary-foreground: 160 60% 5%;
   --accent: 160 79% 54%;
   --shadow-color: 160 40% 2%;
+}
+
+/* ── Consola de plataforma: marca Atlas Tech (skill atlas-tech-brand) ──
+   PlatformShell pone .atlas-console en <html> mientras la consola está
+   abierta. Tema claro = Niebla, tema oscuro = Horizon. Fuera de la consola
+   la app conserva la paleta esmeralda de DASIC. */
+.atlas-console {
+  --sidebar-border: #1c1b1a;
+  --sidebar-active: #ff6a1f;
+  --sidebar-activebg: rgba(255, 106, 31, 0.14);
+  --accent-glow: 242 98 42;      /* ember sobre niebla: rellenos y botones */
+  --accent-deep: 181 58 9;
+
+  --background: 240 12% 93%;     /* niebla */
+  --surface: 240 20% 98%;
+  --surface-2: 240 14% 90%;
+  --foreground: 243 32% 13%;     /* tinta índigo */
+  --muted-foreground: 243 12% 37%;
+  --border: 240 10% 83%;
+  --border-strong: 240 9% 72%;
+  --ring: 17 89% 56%;
+  --primary: 17 91% 37%;         /* ember para texto (5:1 sobre niebla) */
+  --primary-foreground: 240 20% 97%;
+  --accent: 17 89% 56%;
+  --shadow-color: 243 32% 13%;
+}
+.dark.atlas-console {
+  --accent-glow: 255 106 31;     /* ember */
+  --accent-deep: 194 65 12;
+
+  --background: 0 0% 2%;         /* #050505 */
+  --surface: 30 6% 6%;
+  --surface-2: 30 5% 10%;
+  --foreground: 34 26% 95%;      /* blanco cálido */
+  --muted-foreground: 34 7% 63%;
+  --border: 30 4% 15%;
+  --border-strong: 30 4% 25%;
+  --ring: 29 100% 65%;           /* amber */
+  --primary: 20 100% 56%;
+  --primary-foreground: 0 0% 2%;
+  --accent: 20 100% 56%;
+  --shadow-color: 0 0% 0%;
 }
 
 @layer base {

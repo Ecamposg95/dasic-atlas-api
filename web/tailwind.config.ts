@@ -19,8 +19,24 @@ export default {
           activebg: 'var(--sidebar-activebg)',
         },
         accent: {
-          glow: '#2ee6a8',   // CIRCUITO · esmeralda técnica
-          deep: '#0d9f6e',
+          // CIRCUITO · esmeralda técnica (DASIC). Van por CSS var para que la
+          // consola de plataforma (.atlas-console) las cambie a ember.
+          glow: 'rgb(var(--accent-glow) / <alpha-value>)',
+          deep: 'rgb(var(--accent-deep) / <alpha-value>)',
+        },
+        // Marca Atlas Tech (skill atlas-tech-brand). Solo para la firma de
+        // Atlas y la consola de plataforma; la app de DASIC sigue en esmeralda.
+        atlas: {
+          ember: '#FF6A1F',
+          amber: '#FFA14A',
+          glow: '#FFD3A8',
+          deep: '#7A240A',
+          'ember-text': '#B53A09',
+          indigo: '#5B58B8',
+          lavanda: '#9AA6E0',
+          tinta: '#17162B',
+          ink: '#F5F2EE',
+          black: '#050505',
         },
         // Semantic tokens (HSL channel format for alpha support)
         background: 'hsl(var(--background) / <alpha-value>)',
@@ -40,7 +56,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Outfit', 'ui-sans-serif', 'system-ui'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Arial', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       boxShadow: {
         'elev-1': '0 1px 2px -1px hsl(var(--shadow-color) / 0.08), 0 2px 6px -2px hsl(var(--shadow-color) / 0.10)',

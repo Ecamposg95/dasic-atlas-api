@@ -66,11 +66,11 @@ export function SuperAdminPage() {
               className={[
                 'text-left rounded-xl p-4 transition-all',
                 c.activo
-                  ? 'border border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/50 hover:bg-emerald-500/10 cursor-pointer'
+                  ? 'border border-accent-glow/20 bg-accent-glow/5 hover:border-accent-glow/50 hover:bg-accent-glow/10 cursor-pointer'
                   : 'border border-dashed border-border opacity-50 cursor-not-allowed',
               ].join(' ')}
             >
-              <c.icon className="h-5 w-5 text-emerald-400 mb-3" />
+              <c.icon className="h-5 w-5 text-primary mb-3" />
               <div className="font-mono text-sm font-semibold text-foreground">{c.title}</div>
               <div className="font-mono text-[11px] text-muted-foreground mt-1">{c.desc}</div>
             </button>

@@ -51,13 +51,13 @@ function Panel({ estado }: { estado: AccesoEstado }) {
     <div className="space-y-6">
       {/* ── Estado actual ───────────────────────────────────────────────── */}
       <div
-        className="rounded-xl border border-emerald-500/20 bg-card p-4 flex items-start gap-4 flex-wrap"
+        className="rounded-xl border border-accent-glow/20 bg-card p-4 flex items-start gap-4 flex-wrap"
         aria-live="polite"
       >
         {estado.suspendida ? (
           <Lock className="h-6 w-6 text-muted-foreground mt-0.5" aria-hidden="true" />
         ) : (
-          <Unlock className="h-6 w-6 text-emerald-400 mt-0.5" aria-hidden="true" />
+          <Unlock className="h-6 w-6 text-emerald-500 mt-0.5" aria-hidden="true" />
         )}
         <div className="flex-1 min-w-[220px]">
           <div className="flex items-center gap-2 flex-wrap">
@@ -132,7 +132,7 @@ function Panel({ estado }: { estado: AccesoEstado }) {
       )}
 
       {/* ── Mensaje ─────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-emerald-500/20 bg-card p-4 space-y-2">
+      <div className="rounded-xl border border-accent-glow/20 bg-card p-4 space-y-2">
         <label htmlFor="acceso-mensaje" className="block font-mono text-[11px] text-muted-foreground">
           Mensaje que ve el usuario mientras está suspendido
         </label>
@@ -142,7 +142,7 @@ function Panel({ estado }: { estado: AccesoEstado }) {
           maxLength={MENSAJE_MAX}
           onChange={(e) => setMensaje(e.target.value)}
           placeholder={estado.mensaje_default}
-          className="font-mono text-sm border-emerald-500/20 focus-visible:ring-emerald-500"
+          className="font-mono text-sm border-accent-glow/20 focus-visible:ring-ring"
         />
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <span className="font-mono text-[10px] text-muted-foreground">
