@@ -98,6 +98,12 @@ export function lineImporte(
 
 export type Totals = { subtotal: number; iva: number; total: number };
 
+/** Redondeo a centavos "half up" como el Decimal del backend: sin el
+ *  toPrecision, 0.855 * 100 = 85.49999… y el preview queda un centavo abajo. */
+export function round2(x: number): number {
+  return Math.round(Number((x * 100).toPrecision(12))) / 100;
+}
+
 export function computeTotals(
   cart: CartItem[],
   monedaCotizacion: Moneda,
@@ -109,7 +115,7 @@ export function computeTotals(
   // cuadre con orden.total guardado y con la suma de las líneas del PDF.
   const subtotal = cart.reduce(
     (acc, item) =>
-      acc + Math.round(lineImporte(item, monedaCotizacion, tcs) * 100) / 100,
+      acc + round2(lineImporte(item, monedaCotizacion, tcs)),
     0,
   );
   const iva = subtotal * ivaRate;

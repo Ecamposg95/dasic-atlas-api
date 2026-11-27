@@ -85,7 +85,10 @@ export function DealDetallePage() {
     setFechaCierre(detalle.fecha_cierre_estimada ? detalle.fecha_cierre_estimada.slice(0, 10) : '');
     setProximoPaso(detalle.proximo_paso ?? '');
     setNotas(detalle.notas ?? '');
-  }, [detalle]);
+    // Solo al cambiar de deal: resembrar en cada refetch (p. ej. al registrar
+    // una actividad) borraba lo escrito sin guardar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detalle?.id]);
 
   // --- Form rápido de actividad ---
   const [tipoActividad, setTipoActividad] = useState<Exclude<ActividadTipo, 'sistema'>>('nota');

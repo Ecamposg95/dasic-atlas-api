@@ -88,7 +88,8 @@ export function EditLineModal() {
   function onSave() {
     setErr(null);
     if (!desc.trim()) { setErr('La descripción es obligatoria.'); return; }
-    const c = parseFloat(cost);
+    // El backend guarda el costo de línea a 2 decimales.
+    const c = Math.round(parseFloat(cost) * 100) / 100;
     if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
     if (!uid) return;
     if (esFantasma) {
@@ -111,7 +112,8 @@ export function EditLineModal() {
   async function onSaveAndCatalog() {
     setErr(null);
     if (!desc.trim()) { setErr('La descripción es obligatoria.'); return; }
-    const c = parseFloat(cost);
+    // El backend guarda el costo de línea a 2 decimales.
+    const c = Math.round(parseFloat(cost) * 100) / 100;
     if (!Number.isFinite(c) || c <= 0) { setErr('El costo debe ser mayor a 0.'); return; }
     if (!uid || !it?.producto_id) return;
     if (!(await confirm({ mensaje: 'Esto cambiará el costo en el catálogo maestro para futuras cotizaciones. ¿Continuar?', tono: 'warning' }))) return;
@@ -119,8 +121,9 @@ export function EditLineModal() {
     setSavingCat(true);
     try {
       await api.put(`/api/productos/${it.producto_id}`, {
+        // Sin `sku`: el de la línea es el SKU comercial y el PUT pisaría la
+        // clave interna (única) del producto.
         nombre: desc.trim(),
-        sku: sku.trim() || null,
         costo_compra: c,
       });
       qc.invalidateQueries({ queryKey: ['productos'] });
@@ -149,6 +152,8 @@ export function EditLineModal() {
       nom_original: p.nombre,
       cost_original: costNuevo,
       max: p.stock_actual,
+      proveedor_sugerido_id: p.proveedor_principal_id ?? null,
+      marca: p.marca ?? null,
     });
     onClose();
   }

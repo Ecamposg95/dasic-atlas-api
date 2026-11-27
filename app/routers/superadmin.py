@@ -232,7 +232,7 @@ _ACCION_SISTEMA = {
 
 _LINK_SISTEMA = {
     "cliente": "/spa/clientes",
-    "producto": "/spa/productos",
+    "producto": "/spa/inventario",
     "usuario": "/spa/usuarios",
     "gasto": "/spa/gastos",
     "plataforma": "/spa/superadmin/acceso",

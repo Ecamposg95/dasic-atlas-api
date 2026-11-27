@@ -36,8 +36,10 @@ export function normalizeDetail(detail: unknown, fallback: string): string {
       .join(' · ');
   }
   if (typeof detail === 'object') {
-    const obj = detail as { msg?: unknown };
+    const obj = detail as { msg?: unknown; message?: unknown };
     if (typeof obj.msg === 'string') return obj.msg;
+    // p. ej. 409 ALREADY_SENT: { code, message, recotizar_url }
+    if (typeof obj.message === 'string') return obj.message;
     return JSON.stringify(detail);
   }
   return String(detail);

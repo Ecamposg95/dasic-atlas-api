@@ -49,14 +49,14 @@ def previsualizar_ocs(db: Session, cotizacion: "models.OrdenVenta") -> dict:
                     "producto_id": d.producto.id,
                     "sku": d.producto.sku_comercial or d.producto.sku,
                     "nombre": d.producto.nombre,
-                    "faltante": faltante,
+                    "faltante": float(faltante),
                 })
                 continue
             entry = {
                 "producto_id": d.producto.id,
                 "sku": d.producto.sku_comercial or d.producto.sku,
                 "nombre": d.producto.nombre,
-                "cantidad": faltante,
+                "cantidad": float(faltante),
                 "costo_unitario": float(d.producto.costo_compra or 0),
                 "moneda": d.producto.moneda_compra or "MXN",
             }
@@ -67,14 +67,14 @@ def previsualizar_ocs(db: Session, cotizacion: "models.OrdenVenta") -> dict:
                     "producto_id": None,
                     "sku": d.sku_libre,
                     "nombre": d.descripcion_libre,
-                    "faltante": d.cantidad,
+                    "faltante": float(d.cantidad),
                 })
                 continue
             entry = {
                 "producto_id": None,
                 "sku": d.sku_libre,
                 "nombre": d.descripcion_libre,
-                "cantidad": d.cantidad,
+                "cantidad": float(d.cantidad),
                 "costo_unitario": float(d.costo_base_linea or 0),
                 "moneda": d.moneda_origen_linea or "MXN",
             }
@@ -86,7 +86,14 @@ def previsualizar_ocs(db: Session, cotizacion: "models.OrdenVenta") -> dict:
     for prov_id, b in por_proveedor.items():
         prov = db.get(models.Proveedor, prov_id)
         b["proveedor_empresa"] = prov.nombre_empresa if prov else None
-        b["subtotal"] = round(sum(i["cantidad"] * i["costo_unitario"] for i in b["items"]), 2)
+        # En Decimal: `cantidad` es Numeric(12,3) y el costo viene como float
+        # solo para serializar; Decimal × float truena con TypeError.
+        b["subtotal"] = float(
+            sum(
+                (Decimal(str(i["cantidad"])) * Decimal(str(i["costo_unitario"])) for i in b["items"]),
+                Decimal("0"),
+            ).quantize(Decimal("0.01"))
+        )
 
     return {
         "por_proveedor": list(por_proveedor.values()),
@@ -133,7 +140,8 @@ def generar_ocs(
                 db.add(models.DetalleCompra(
                     orden_compra_id=oc.id,
                     producto_id=it["producto_id"],
-                    cantidad=it["cantidad"],
+                    # `detalles_compra.cantidad` es Integer.
+                    cantidad=int(it["cantidad"]) if float(it["cantidad"]).is_integer() else it["cantidad"],
                     costo_unitario=Decimal(str(it["costo_unitario"])),
                 ))
         creadas.append({

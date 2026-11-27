@@ -99,7 +99,6 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
       marca_id: marcaId ? parseInt(marcaId, 10) : null,
       categoria: categoria.trim() || null,
       unidad: unidad.trim() || 'PZA',
-      stock_actual: parseInt(stockActual, 10) || 0,
       stock_minimo: parseInt(stockMinimo, 10) || 0,
       moneda_compra: monedaCompra,
       costo_compra: costo,
@@ -113,6 +112,14 @@ export function ProductoFormModal({ producto, marcas, proveedores, onClose }: Pr
       clave_prod_serv: claveProdServ.trim() || null,
       clave_unidad_sat: claveUnidadSat.trim() || null,
     };
+
+    // Al editar, el stock solo viaja si el usuario lo cambió: mandar el valor
+    // que vio el modal al abrir revertía (con un AJUSTE) cualquier movimiento
+    // ocurrido mientras tanto.
+    const stockNuevo = parseInt(stockActual, 10) || 0;
+    if (!isEdit || stockNuevo !== (producto?.stock_actual ?? 0)) {
+      payload.stock_actual = stockNuevo;
+    }
 
     mut.mutate(payload);
   }

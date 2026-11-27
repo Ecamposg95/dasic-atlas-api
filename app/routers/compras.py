@@ -902,7 +902,15 @@ def recibir_oc(
     """Recibe TODO lo pendiente de la OC (delta = cantidad - cantidad_recibida
     por línea) reutilizando _aplicar_recepcion. Idempotente: si ya está todo
     recibido, no hay deltas. Marca la OC como recibida/parcial según resultado."""
-    orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    # FOR UPDATE: dos recepciones simultáneas leían la misma cantidad recibida
+    # y ambas daban entrada al total (stock duplicado).
+    orden = (
+        db.query(models.OrdenCompra)
+        .filter(models.OrdenCompra.id == id)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
     if not orden:
         raise HTTPException(404, "OC no encontrada")
     if orden.estatus == "recibido":
@@ -948,7 +956,15 @@ def recibir_oc_parcial(
     """Recepción parcial incremental: recibe las cantidades indicadas por línea
     (delta de esta recepción). Acumula cantidad_recibida y mueve stock solo para
     líneas de catálogo. La OC pasa a 'recibida_parcial' o 'recibido'."""
-    orden = db.query(models.OrdenCompra).filter(models.OrdenCompra.id == id).first()
+    # FOR UPDATE: dos recepciones simultáneas leían la misma cantidad recibida
+    # y ambas daban entrada al total (stock duplicado).
+    orden = (
+        db.query(models.OrdenCompra)
+        .filter(models.OrdenCompra.id == id)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
     if not orden:
         raise HTTPException(404, "OC no encontrada")
     if orden.estatus == "recibido":

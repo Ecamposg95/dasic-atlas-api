@@ -35,6 +35,13 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Usuario desactivado: no se le emite sesión.
+    if user.activo is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario desactivado",
+        )
+
     # Plataforma suspendida: no se emite cookie a nadie que no sea superadmin.
     # Va después de validar credenciales para no revelar el estado a anónimos.
     acceso_service.verificar_acceso(db, user)

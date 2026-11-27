@@ -80,6 +80,14 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
 
+    # Usuario desactivado: el JWT sigue vigente hasta expirar, así que el corte
+    # tiene que hacerse aquí y no solo en /api/auth/me.
+    if user.activo is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario desactivado",
+        )
+
     # Interruptor de acceso: con la plataforma suspendida solo pasa el
     # superadmin. Vive aquí porque todo endpoint autenticado depende de esta
     # función, así que el corte alcanza también a las sesiones ya abiertas.

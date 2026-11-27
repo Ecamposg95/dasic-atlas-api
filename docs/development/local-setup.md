@@ -62,6 +62,7 @@ cp .env.example .env
 | `SMTP_USE_TLS` | `true` | |
 | `SUPERADMIN_EMAIL` | *(vacío)* | Con `SUPERADMIN_PASSWORD`, crea (o promueve) un superadmin dedicado al boot. Idempotente: si el usuario ya existe, **no** pisa su contraseña |
 | `SUPERADMIN_PASSWORD` | *(vacío)* | Requerida junto con `SUPERADMIN_EMAIL`; si falta cualquiera de las dos, el seed es no-op |
+| `INITIAL_ADMIN_PASSWORD` | *(vacío)* | Contraseña de `admin@dasic.mx` cuando la base arranca sin usuarios. Si falta, se genera una al azar y se escribe una vez en el log de arranque |
 | `SUPERADMIN_NOMBRE` | `Super Admin` | Nombre del superadmin dedicado |
 | `BOOTSTRAP_SUPERADMIN_EMAIL` | *(vacío)* | Promueve a SUPERADMIN un usuario **existente** por email, sin tocar su contraseña |
 | `DASIC_AUTO_CREATE_TABLES` | `1` | `0` desactiva el `create_all()` del arranque (solo si quieres validar un camino Alembic puro) |
